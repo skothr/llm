@@ -127,9 +127,12 @@ ollama run tinyllama-no19 "What is the capital of France?"
 
 4. **Stop token disruption:** The over-generation behavior might indicate that layer 19 also participates in learning when to stop — the model's ability to recognize a complete response may depend on late-layer refinement.
 
+5. **Magnitude-based factual sharpening (speculative):** Cosine similarity only measures angle, not magnitude. Layer 19 may primarily operate by rescaling specific dimensions of the residual stream rather than rotating it — boosting activations corresponding to the *correct specific token* within a semantic category already established by earlier layers. This would explain: (a) low BI despite high functional importance, since direction barely changes; (b) the model choosing tokens from the right *category* (French-sounding, capitalized, place-like) but wrong *identity* (Pregarden vs Élysée, parisum vs Parisii); (c) why generation continues fluently — the categorical/syntactic signal is intact, only the specific selection is degraded. **Testable prediction:** `compare_activations` between original and no19 models should show high cosine similarity (direction preserved) but significant L2 distance (magnitude changed) at layers around position 19. This would be the geometric fingerprint of "same direction, different scaling."
+
 ## Follow-ups
 
 - [ ] Run TruthfulQA / ARC-Challenge on the modified model to quantify factual degradation (Phase 3's eval_downstream)
+- [ ] Test the magnitude hypothesis: run `verify.compare_activations` on original vs no19 model with the France prompt — check if cosine_sim stays high while L2 distance is large at layers near position 19 (would confirm direction-preserved, magnitude-changed pattern)
 - [ ] Remove other low-BI layers individually (17, 11, 18) and compare factual accuracy — is this specific to layer 19 or a general property of low-BI layers?
 - [ ] Remove a high-BI early layer (e.g., layer 2, BI=0.334) — does this destroy linguistic coherence while preserving whatever factual accuracy remains?
 - [ ] Compare attention entropy and residual stream norms before/after layer 19 removal — where exactly does the representation diverge?
