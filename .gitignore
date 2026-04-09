@@ -1,0 +1,25 @@
+# System/editor files
+.bash_profile
+.bashrc
+.zshrc
+.zprofile
+.profile
+.gitconfig
+.gitmodules
+.ripgreprc
+.idea
+.vscode
+.mcp.json
+.claude/
+
+# Build artifacts
+llama.cpp/
+
+# Outputs (generated models, GGUF files — large, regenerable)
+outputs/
+
+# Test scripts (ad-hoc, not part of the toolkit)
+test.py
+
+# Databases (auto-created, not source)
+testing/experiments.db
