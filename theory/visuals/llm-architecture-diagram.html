@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Architecture — Interactive Diagram</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0c0c14;
+    --panel-bg: #12121c;
+    --surface: #1a1a28;
+    --surface2: #222236;
+    --surface3: #2a2a40;
+    --accent: #6c63ff;
+    --accent-glow: rgba(108,99,255,0.15);
+    --accent2: #00d4aa;
+    --accent3: #ff6b8a;
+    --text: #e8e8f0;
+    --text-secondary: #9898b0;
+    --text-dim: #606078;
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.12);
+
+    --c-embed: #00d4aa;
+    --c-pos: #c084fc;
+    --c-attn: #ff6b8a;
+    --c-ffn: #fbbf24;
+    --c-norm: #38bdf8;
+    --c-output: #e879f9;
+    --c-residual: #4ade80;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── LEFT PANEL: Flow Diagram ─── */
+  #left-panel {
+    width: 320px;
+    min-width: 320px;
+    background: var(--panel-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 20px 20px 0;
+    flex-shrink: 0;
+  }
+
+  .panel-header h1 {
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .model-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 3px;
+    margin: 0 20px 16px;
+  }
+
+  .model-tab {
+    flex: 1;
+    padding: 7px 4px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .model-tab:hover { color: var(--text-secondary); }
+  .model-tab.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(108,99,255,0.3);
+  }
+
+  .flow-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 28px 30px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface3) transparent;
+  }
+  .flow-scroll::-webkit-scrollbar { width: 4px; }
+  .flow-scroll::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  /* Flow blocks */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .node {
+    width: 100%;
+    border-radius: 10px;
+    padding: 10px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    border: 1.5px solid transparent;
+    background: var(--surface);
+  }
+  .node:hover {
+    background: var(--surface2);
+    border-color: var(--border-strong);
+  }
+  .node.selected {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    box-shadow: 0 0 24px rgba(108,99,255,0.12);
+  }
+
+  .node-name {
+    font-size: 0.78em;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .node-dim {
+    font-size: 0.62em;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    margin-top: 3px;
+  }
+  .node-dot {
+    position: absolute;
+    left: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .pipe {
+    width: 1.5px;
+    height: 14px;
+    background: var(--border-strong);
+    position: relative;
+  }
+  .pipe::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-top: 4px solid var(--border-strong);
+  }
+
+  /* Layer group */
+  .layer-wrap {
+    width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    padding: 12px 10px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(108,99,255,0.02);
+  }
+  .layer-badge {
+    position: absolute;
+    top: -9px;
+    left: 14px;
+    font-size: 0.58em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    background: var(--panel-bg);
+    padding: 0 8px;
+  }
+  .layer-count {
+    position: absolute;
+    top: -9px;
+    right: 14px;
+    font-size: 0.58em;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--panel-bg);
+    padding: 0 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .residual-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+  }
+  .residual-line { flex: 1; height: 1px; background: var(--c-residual); opacity: 0.2; }
+  .residual-text {
+    font-size: 0.55em;
+    font-weight: 500;
+    color: var(--c-residual);
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  /* Color pips */
+  .c-embed .node-dot { background: var(--c-embed); }
+  .c-pos .node-dot   { background: var(--c-pos); }
+  .c-attn .node-dot  { background: var(--c-attn); }
+  .c-ffn .node-dot   { background: var(--c-ffn); }
+  .c-norm .node-dot  { background: var(--c-norm); }
+  .c-out .node-dot   { background: var(--c-output); }
+
+  .c-embed.selected { border-color: var(--c-embed); background: rgba(0,212,170,0.08); }
+  .c-pos.selected   { border-color: var(--c-pos);   background: rgba(192,132,252,0.08); }
+  .c-attn.selected  { border-color: var(--c-attn);  background: rgba(255,107,138,0.08); }
+  .c-ffn.selected   { border-color: var(--c-ffn);   background: rgba(251,191,36,0.08); }
+  .c-norm.selected  { border-color: var(--c-norm);   background: rgba(56,189,248,0.08); }
+  .c-out.selected   { border-color: var(--c-output); background: rgba(232,121,249,0.08); }
+
+  /* ─── RIGHT PANEL: Details ─── */
+  #right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .detail-header {
+    padding: 24px 36px 0;
+    flex-shrink: 0;
+  }
+
+  .model-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: var(--surface);
+    border-radius: 6px;
+    font-size: 0.72em;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .model-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+  }
+
+  #detail-title {
+    font-size: 1.6em;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  #detail-subtitle {
+    font-size: 0.82em;
+    color: var(--text-dim);
+    margin-bottom: 0;
+  }
+
+  .detail-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 36px 0;
+    flex-shrink: 0;
+  }
+
+  .detail-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 36px 40px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface3) transparent;
+  }
+  .detail-scroll::-webkit-scrollbar { width: 4px; }
+  .detail-scroll::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  /* Detail content styling */
+  .detail-section {
+    margin-bottom: 24px;
+  }
+  .detail-section:last-child { margin-bottom: 0; }
+
+  .section-label {
+    font-size: 0.62em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .detail-content h3 {
+    font-size: 0.72em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent);
+    margin-top: 22px;
+    margin-bottom: 8px;
+  }
+  .detail-content h3:first-child { margin-top: 0; }
+
+  .detail-content p {
+    font-size: 0.85em;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .detail-content ul {
+    padding-left: 18px;
+    margin-bottom: 8px;
+  }
+  .detail-content li {
+    font-size: 0.85em;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin-bottom: 3px;
+  }
+
+  .tensor-shape {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8em;
+    color: var(--accent2);
+    margin: 2px 0;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    background: var(--surface);
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: #ddd;
+    border: 1px solid var(--border);
+  }
+
+  .math {
+    font-family: 'Cambria Math', Georgia, serif;
+    font-style: italic;
+    color: var(--text);
+  }
+
+  .cite {
+    display: block;
+    font-size: 0.72em;
+    color: var(--text-dim);
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Param grid */
+  .param-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .param-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .param-card .label {
+    font-size: 0.62em;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+  .param-card .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--accent2);
+  }
+
+  /* Default state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 40px;
+  }
+  .empty-state svg { margin-bottom: 20px; opacity: 0.3; }
+  .empty-state p {
+    font-size: 0.85em;
+    line-height: 1.6;
+  }
+  .empty-state .hint {
+    font-size: 0.75em;
+    margin-top: 8px;
+    color: var(--text-dim);
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div id="left-panel">
+  <div class="panel-header">
+    <h1>Architecture</h1>
+  </div>
+
+  <div class="model-tabs">
+    <button class="model-tab" data-model="transformer">Original</button>
+    <button class="model-tab" data-model="gpt1">GPT-1</button>
+    <button class="model-tab" data-model="gpt3">GPT-3</button>
+    <button class="model-tab active" data-model="llama7b">LLaMA-7B</button>
+  </div>
+
+  <div class="flow-scroll">
+    <div class="flow" id="flow">
+      <div class="node c-embed" data-component="input" id="block-input">
+        <span class="node-dot"></span>
+        <div class="node-name">Input Tokens</div>
+        <div class="node-dim" id="dim-input"></div>
+      </div>
+      <div class="pipe"></div>
+
+      <div class="node c-embed" data-component="embedding" id="block-embedding">
+        <span class="node-dot"></span>
+        <div class="node-name">Token Embedding</div>
+        <div class="node-dim" id="dim-embedding"></div>
+      </div>
+      <div class="pipe"></div>
+
+      <div class="node c-pos" data-component="position" id="block-position">
+        <span class="node-dot"></span>
+        <div class="node-name" id="name-position">Positional Encoding</div>
+        <div class="node-dim" id="dim-position"></div>
+      </div>
+      <div class="pipe"></div>
+
+      <div class="layer-wrap">
+        <span class="layer-badge">Transformer Layer</span>
+        <span class="layer-count" id="layer-repeat"></span>
+
+        <div class="node c-norm" data-component="norm1" id="block-norm1">
+          <span class="node-dot"></span>
+          <div class="node-name" id="name-norm1">RMSNorm</div>
+          <div class="node-dim" id="dim-norm1"></div>
+        </div>
+        <div class="pipe"></div>
+
+        <div class="node c-attn" data-component="attention" id="block-attention">
+          <span class="node-dot"></span>
+          <div class="node-name">Multi-Head Attention</div>
+          <div class="node-dim" id="dim-attention"></div>
+        </div>
+
+        <div class="residual-row">
+          <div class="residual-line"></div>
+          <span class="residual-text">+ residual</span>
+          <div class="residual-line"></div>
+        </div>
+
+        <div class="node c-norm" data-component="norm2" id="block-norm2">
+          <span class="node-dot"></span>
+          <div class="node-name" id="name-norm2">RMSNorm</div>
+          <div class="node-dim" id="dim-norm2"></div>
+        </div>
+        <div class="pipe"></div>
+
+        <div class="node c-ffn" data-component="ffn" id="block-ffn">
+          <span class="node-dot"></span>
+          <div class="node-name" id="name-ffn">SwiGLU FFN</div>
+          <div class="node-dim" id="dim-ffn"></div>
+        </div>
+
+        <div class="residual-row">
+          <div class="residual-line"></div>
+          <span class="residual-text">+ residual</span>
+          <div class="residual-line"></div>
+        </div>
+      </div>
+
+      <div class="pipe"></div>
+
+      <div class="node c-norm" data-component="final-norm" id="block-final-norm">
+        <span class="node-dot"></span>
+        <div class="node-name" id="name-final-norm">Final RMSNorm</div>
+        <div class="node-dim" id="dim-final-norm"></div>
+      </div>
+      <div class="pipe"></div>
+
+      <div class="node c-out" data-component="output" id="block-output">
+        <span class="node-dot"></span>
+        <div class="node-name">Output Head</div>
+        <div class="node-dim" id="dim-output"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div id="right-panel">
+  <div class="detail-header">
+    <div class="model-badge" id="model-badge">
+      <span class="dot"></span>
+      <span id="badge-text">LLaMA-7B &mdash; 6.7B params</span>
+    </div>
+    <div id="detail-title">Transformer Architecture</div>
+    <div id="detail-subtitle">Select a component to explore</div>
+  </div>
+  <div class="detail-divider"></div>
+  <div class="detail-scroll">
+    <div id="detail-content">
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        <p>Click any component in the flow diagram to see its full details, tensor shapes, and math.</p>
+        <p class="hint">Switch models above to compare architectures</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const models = {
+  "llama7b": {
+    name: "LLaMA-7B", year: 2023, cite: "Touvron et al., 2023",
+    d_model: 4096, n_layers: 32, n_heads: 32, d_k: 128, d_ff: 11008,
+    vocab: 32000, params: "6.7B",
+    norm: "RMSNorm", norm_placement: "Pre-Norm", position: "RoPE",
+    ffn_type: "SwiGLU", activation: "Swish/SiLU",
+    pe_type: "Rotary (applied to Q, K at every layer)",
+    tokenizer: "SentencePiece BPE (byte-fallback)"
+  },
+  "gpt1": {
+    name: "GPT-1", year: 2018, cite: "Radford et al., 2018",
+    d_model: 768, n_layers: 12, n_heads: 12, d_k: 64, d_ff: 3072,
+    vocab: 40000, params: "117M",
+    norm: "LayerNorm", norm_placement: "Pre-Norm", position: "Learned",
+    ffn_type: "Standard (2 matrices)", activation: "GELU",
+    pe_type: "Learned positional embeddings (max 512)",
+    tokenizer: "BPE (40K merges)"
+  },
+  "gpt3": {
+    name: "GPT-3", year: 2020, cite: "Brown et al., 2020",
+    d_model: 12288, n_layers: 96, n_heads: 96, d_k: 128, d_ff: 49152,
+    vocab: 50257, params: "175B",
+    norm: "LayerNorm", norm_placement: "Pre-Norm", position: "Learned",
+    ffn_type: "Standard (2 matrices)", activation: "GELU",
+    pe_type: "Learned positional embeddings (max 2048)",
+    tokenizer: "BPE (50K merges)"
+  },
+  "transformer": {
+    name: "Transformer (base)", year: 2017, cite: "Vaswani et al., 2017",
+    d_model: 512, n_layers: 6, n_heads: 8, d_k: 64, d_ff: 2048,
+    vocab: 37000, params: "65M",
+    norm: "LayerNorm", norm_placement: "Post-Norm", position: "Sinusoidal",
+    ffn_type: "Standard (2 matrices)", activation: "ReLU",
+    pe_type: "Fixed sinusoidal encodings",
+    tokenizer: "BPE (37K shared)"
+  }
+};
+
+let currentModel = "llama7b";
+let selectedComponent = null;
+
+function getComponentInfo(id, m) {
+  const info = {
+    "input": {
+      title: "Input Tokens",
+      subtitle: "Tokenization via BPE",
+      html: `
+        <h3>What it does</h3>
+        <p>Raw text is split into integer token indices by the tokenizer.</p>
+        <h3>Tokenizer</h3>
+        <p>${m.tokenizer}</p>
+        <h3>Tensor shape</h3>
+        <p><span class="tensor-shape">(n,)</span> &mdash; a sequence of <span class="math">n</span> integer indices, each in [0, ${(m.vocab-1).toLocaleString()}]</p>
+        <div class="param-grid">
+          <div class="param-card"><div class="label">Vocab size</div><div class="value">${m.vocab.toLocaleString()}</div></div>
+          <div class="param-card"><div class="label">Method</div><div class="value">BPE</div></div>
+        </div>
+        <h3>How BPE works</h3>
+        <ul>
+          <li>Start with character (or byte) vocabulary</li>
+          <li>Iteratively merge the most frequent adjacent pair</li>
+          <li>Each merge adds one token to the vocabulary</li>
+          <li>Number of merges = only hyperparameter</li>
+        </ul>
+        <span class="cite">Sennrich et al., "Neural Machine Translation of Rare Words with Subword Units," 2016</span>
+      `
+    },
+    "embedding": {
+      title: "Token Embedding",
+      subtitle: "Lookup table mapping tokens to vectors",
+      html: `
+        <h3>What it does</h3>
+        <p>Maps each token index to a dense vector by looking up a row in the embedding matrix.</p>
+        <h3>Embedding matrix</h3>
+        <p><span class="tensor-shape">W<sub>e</sub> &isin; R<sup>${m.vocab.toLocaleString()} &times; ${m.d_model}</sup></span></p>
+        <h3>Operation</h3>
+        <p>For token index <span class="math">t</span>, output = <span class="mono">W_e[t]</span> (row selection)</p>
+        <div class="param-grid">
+          <div class="param-card"><div class="label">Output shape</div><div class="value">(n, ${m.d_model})</div></div>
+          <div class="param-card"><div class="label">Parameters</div><div class="value">${(m.vocab * m.d_model / 1e6).toFixed(0)}M</div></div>
+        </div>
+        <h3>Weight tying</h3>
+        <p>The same matrix W<sub>e</sub> is reused (transposed) in the output projection to convert hidden states back to vocabulary logits. This halves the vocabulary-related parameters.</p>
+        <span class="cite">Vaswani et al., 2017 &sect;3.4; Radford et al., 2018 &sect;3.1</span>
+      `
+    },
+    "position": {
+      title: `${m.position} Positional Encoding`,
+      subtitle: "Injecting sequence order into the model",
+      html: `
+        <h3>Why needed</h3>
+        <p>Self-attention is permutation-invariant &mdash; without position info, the model cannot distinguish token order. Positional encoding breaks this symmetry.</p>
+        <h3>Method: ${m.position}</h3>
+        <p>${m.pe_type}</p>
+        ${m.position === "RoPE" ? `
+        <h3>How RoPE works</h3>
+        <ul>
+          <li>Groups dimensions into pairs</li>
+          <li>Rotates each pair by angle &theta;<sub>i</sub> = pos &middot; &omega;<sub>i</sub></li>
+          <li>Frequencies: &omega;<sub>i</sub> = 10000<sup>&minus;2i/d</sup></li>
+          <li>The dot product Q<sub>m</sub>&middot;K<sub>n</sub> depends only on relative position (m&minus;n)</li>
+          <li>Applied to Q and K only, <em>not</em> V</li>
+          <li>Applied at every layer, not just the first</li>
+        </ul>
+        <span class="cite">Su et al., "RoFormer: Enhanced Transformer with Rotary Position Embedding," 2021</span>
+        ` : m.position === "Learned" ? `
+        <h3>Learned embeddings</h3>
+        <p><span class="tensor-shape">W<sub>p</sub> &isin; R<sup>512 &times; ${m.d_model}</sup></span></p>
+        <p>One learned vector per position, trained jointly with the model. Fixes max context length at training time.</p>
+        <span class="cite">Radford et al., 2018</span>
+        ` : `
+        <h3>Sinusoidal encoding</h3>
+        <p><span class="mono">PE(pos, 2i) = sin(pos / 10000<sup>2i/d</sup>)</span></p>
+        <p><span class="mono">PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d</sup>)</span></p>
+        <p>Each dimension oscillates at a different frequency. Fixed (not learned). Embeddings are scaled by &radic;d<sub>model</sub> before adding PE.</p>
+        <span class="cite">Vaswani et al., 2017 &sect;3.5</span>
+        `}
+        <div class="param-grid">
+          <div class="param-card"><div class="label">Output shape</div><div class="value">(n, ${m.d_model})</div></div>
+          <div class="param-card"><div class="label">Type</div><div class="value">${m.position}</div></div>
+        </div>
+      `
+    },
+    "norm1": {
+      title: `${m.norm} (pre-attention)`,
+      subtitle: `${m.norm_placement} normalization`,
+      html: getNormInfo(m, "before attention")
+    },
+    "attention": {
+      title: "Multi-Head Self-Attention",
+      subtitle: `${m.n_heads} heads, d_k=${m.d_k}`,
+      html: `
+        <h3>What it does</h3>
+        <p>Each position computes a weighted average over all preceding positions (due to causal masking), mixing information across the sequence.</p>
+        <h3>Scaled dot-product</h3>
+        <p><span class="mono">Attention(Q,K,V) = softmax(QK<sup>T</sup>/&radic;d<sub>k</sub> + M) &middot; V</span></p>
+        <p>where M is the causal mask (&minus;&infin; above diagonal, 0 on/below).</p>
+        <div class="param-grid">
+          <div class="param-card"><div class="label">Heads</div><div class="value">${m.n_heads}</div></div>
+          <div class="param-card"><div class="label">d<sub>k</sub></div><div class="value">${m.d_k}</div></div>
+          <div class="param-card"><div class="label">Output</div><div class="value">(n, ${m.d_model})</div></div>
+          <div class="param-card"><div class="label">Params/layer</div><div class="value">${(4 * m.d_model * m.d_model / 1e6).toFixed(1)}M</div></div>
+        </div>
+        <h3>Projection matrices (per head)</h3>
+        <ul>
+          <li><span class="tensor-shape">W<sub>Q</sub> &isin; R<sup>${m.d_model} &times; ${m.d_k}</sup></span></li>
+          <li><span class="tensor-shape">W<sub>K</sub> &isin; R<sup>${m.d_model} &times; ${m.d_k}</sup></span></li>
+          <li><span class="tensor-shape">W<sub>V</sub> &isin; R<sup>${m.d_model} &times; ${m.d_k}</sup></span></li>
+        </ul>
+        <h3>Output projection</h3>
+        <p><span class="tensor-shape">W<sub>O</sub> &isin; R<sup>${m.n_heads * m.d_k} &times; ${m.d_model}</sup></span></p>
+        <h3>Attention matrix</h3>
+        <p><span class="tensor-shape">(n, n)</span> per head &mdash; the O(n&sup2;) bottleneck</p>
+        ${m.position === "RoPE" ? `<h3>RoPE</h3><p>Rotary embeddings applied to Q and K here, before computing scores.</p>` : ""}
+        <h3>Why scale by &radic;d<sub>k</sub>?</h3>
+        <p>For random unit-variance vectors, Var(q&middot;k) = d<sub>k</sub>. Scaling restores unit variance, preventing softmax saturation.</p>
+        <span class="cite">Vaswani et al., "Attention Is All You Need," 2017</span>
+      `
+    },
+    "norm2": {
+      title: `${m.norm} (pre-FFN)`,
+      subtitle: `${m.norm_placement} normalization`,
+      html: getNormInfo(m, "before the feed-forward network")
+    },
+    "ffn": {
+      title: `${m.ffn_type === "SwiGLU" ? "SwiGLU" : m.activation} Feed-Forward`,
+      subtitle: "Position-wise transformation",
+      html: `
+        <h3>What it does</h3>
+        <p>Applied independently at each position. Attention mixes across positions; the FFN transforms <em>within</em> each position.</p>
+        ${m.ffn_type === "SwiGLU" ? `
+        <h3>SwiGLU formulation</h3>
+        <p><span class="mono">FFN(x) = (Swish(xW<sub>gate</sub>) &otimes; xW<sub>up</sub>) W<sub>down</sub></span></p>
+        <p>&otimes; = element-wise multiply, Swish(x) = x &middot; &sigma;(x)</p>
+        <h3>Weight matrices</h3>
+        <ul>
+          <li><span class="tensor-shape">W<sub>gate</sub> &isin; R<sup>${m.d_model} &times; ${m.d_ff}</sup></span></li>
+          <li><span class="tensor-shape">W<sub>up</sub> &isin; R<sup>${m.d_model} &times; ${m.d_ff}</sup></span></li>
+          <li><span class="tensor-shape">W<sub>down</sub> &isin; R<sup>${m.d_ff} &times; ${m.d_model}</sup></span></li>
+        </ul>
+        <h3>Why d<sub>ff</sub> = ${m.d_ff.toLocaleString()}?</h3>
+        <p>SwiGLU uses 3 matrices instead of 2, so d<sub>ff</sub> is reduced by 2/3 to match parameter count: &lfloor;2/3 &times; 4 &times; ${m.d_model}&rfloor; &asymp; ${m.d_ff.toLocaleString()}</p>
+        ` : `
+        <h3>Formulation</h3>
+        <p><span class="mono">FFN(x) = ${m.activation}(xW<sub>1</sub>) W<sub>2</sub></span></p>
+        <h3>Weight matrices</h3>
+        <ul>
+          <li><span class="tensor-shape">W<sub>1</sub> &isin; R<sup>${m.d_model} &times; ${m.d_ff}</sup></span></li>
+          <li><span class="tensor-shape">W<sub>2</sub> &isin; R<sup>${m.d_ff} &times; ${m.d_model}</sup></span></li>
+        </ul>
+        `}
+        <div class="param-grid">
+          <div class="param-card"><div class="label">d<sub>ff</sub></div><div class="value">${m.d_ff.toLocaleString()}</div></div>
+          <div class="param-card"><div class="label">Activation</div><div class="value">${m.activation}</div></div>
+          <div class="param-card"><div class="label">Output</div><div class="value">(n, ${m.d_model})</div></div>
+          <div class="param-card"><div class="label">Params/layer</div><div class="value">${((m.ffn_type === "SwiGLU" ? 3 : 2) * m.d_model * m.d_ff / 1e6).toFixed(0)}M</div></div>
+        </div>
+        <span class="cite">${m.ffn_type === "SwiGLU" ? 'Shazeer, "GLU Variants Improve Transformer," 2020' : m.activation === "GELU" ? "Radford et al., 2018" : "Vaswani et al., 2017"}</span>
+      `
+    },
+    "final-norm": {
+      title: `Final ${m.norm}`,
+      subtitle: "Pre-output normalization",
+      html: `
+        <h3>What it does</h3>
+        <p>${m.norm_placement === "Pre-Norm" ?
+          "In Pre-Norm architectures, the residual stream after the last layer has not been normalized. This final normalization is required before the output projection." :
+          "In Post-Norm, sub-layer outputs are already normalized, but a final norm is still applied."}</p>
+        <h3>Formula: ${m.norm}</h3>
+        ${m.norm === "RMSNorm" ?
+          `<p><span class="mono">RMSNorm(v) = &gamma; &middot; v / RMS(v)</span></p><p>RMS(v) = &radic;(1/d &middot; &Sigma;v<sub>k</sub>&sup2;). No mean subtraction or bias &mdash; 7-64% faster than LayerNorm.</p>` :
+          `<p><span class="mono">LayerNorm(v) = &gamma; &middot; (v-&mu;)/&sigma; + &beta;</span></p>`}
+        <div class="param-grid">
+          <div class="param-card"><div class="label">Output</div><div class="value">(n, ${m.d_model})</div></div>
+          <div class="param-card"><div class="label">Params</div><div class="value">${m.d_model.toLocaleString()}</div></div>
+        </div>
+        <span class="cite">${m.norm === "RMSNorm" ? 'Zhang & Sennrich, "Root Mean Square Layer Normalization," 2019' : "Ba et al., 2016"}</span>
+      `
+    },
+    "output": {
+      title: "Output Head",
+      subtitle: "Projection to vocabulary + softmax",
+      html: `
+        <h3>What it does</h3>
+        <p>Converts the final hidden state into a probability distribution over the vocabulary.</p>
+        <h3>Linear projection</h3>
+        <p><span class="mono">logits = h<sub>final</sub> &middot; W<sub>e</sub><sup>T</sup></span></p>
+        <p><span class="tensor-shape">(n, ${m.d_model}) &times; (${m.d_model}, ${m.vocab.toLocaleString()}) &rarr; (n, ${m.vocab.toLocaleString()})</span></p>
+        <p>Uses the transposed embedding matrix (weight tying) &mdash; no extra parameters.</p>
+        <h3>Softmax</h3>
+        <p><span class="mono">P(t=j) = exp(z<sub>j</sub>) / &Sigma; exp(z<sub>k</sub>)</span></p>
+        <p>Each position produces an independent distribution over ${m.vocab.toLocaleString()} tokens.</p>
+        <h3>Training loss</h3>
+        <p>Cross-entropy: <span class="mono">L = &minus;log P(t<sub>correct</sub>)</span>, summed over all positions.</p>
+        <div class="param-grid">
+          <div class="param-card"><div class="label">Output</div><div class="value">(n, ${m.vocab.toLocaleString()})</div></div>
+          <div class="param-card"><div class="label">Extra params</div><div class="value">0 (tied)</div></div>
+        </div>
+        <span class="cite">Vaswani et al., 2017</span>
+      `
+    }
+  };
+  return info[id] || { title: "Unknown", subtitle: "", html: "" };
+}
+
+function getNormInfo(m, context) {
+  return `
+    <h3>What it does</h3>
+    <p>Normalizes the hidden state ${context}. Part of the ${m.norm_placement} arrangement.</p>
+    <h3>${m.norm_placement} placement</h3>
+    <p>${m.norm_placement === "Pre-Norm" ?
+      "<strong>Pre-Norm:</strong> norm &rarr; sublayer &rarr; residual add. Gradients scale as O(d&middot;&radic;(ln d / L)), enabling stable training without warmup." :
+      "<strong>Post-Norm:</strong> sublayer &rarr; residual add &rarr; norm. Gradients O(d&middot;&radic;ln d), independent of depth. Requires careful warmup."}</p>
+    <h3>Formula: ${m.norm}</h3>
+    ${m.norm === "RMSNorm" ?
+      `<p><span class="mono">RMSNorm(v) = &gamma; &middot; v / RMS(v)</span></p>
+       <p>RMS(v) = &radic;(1/d &middot; &Sigma;v<sub>k</sub>&sup2;). Drops mean subtraction and bias vs LayerNorm. 7-64% faster.</p>` :
+      `<p><span class="mono">LayerNorm(v) = &gamma; &middot; (v-&mu;)/&sigma; + &beta;</span></p>
+       <p>&gamma;, &beta; are learned scale and bias vectors.</p>`}
+    <div class="param-grid">
+      <div class="param-card"><div class="label">Output</div><div class="value">(n, ${m.d_model})</div></div>
+      <div class="param-card"><div class="label">Params</div><div class="value">${m.norm === "RMSNorm" ? m.d_model.toLocaleString() : (2*m.d_model).toLocaleString()}</div></div>
+    </div>
+    <span class="cite">${m.norm === "RMSNorm" ? "Zhang & Sennrich, 2019; Xiong et al., 2020" : 'Xiong et al., "On Layer Normalization in the Transformer Architecture," 2020'}</span>
+  `;
+}
+
+function updateDiagram() {
+  const m = models[currentModel];
+
+  document.getElementById("dim-input").textContent = `(n,) int [0..${(m.vocab-1).toLocaleString()}]`;
+  document.getElementById("dim-embedding").textContent = `(n, ${m.d_model})`;
+  document.getElementById("dim-position").textContent = m.position === "RoPE" ? "applied in attention" : `add to embeddings`;
+  document.getElementById("dim-norm1").textContent = `(n, ${m.d_model})`;
+  document.getElementById("dim-attention").textContent = `${m.n_heads}h \u00d7 ${m.d_k}d`;
+  document.getElementById("dim-norm2").textContent = `(n, ${m.d_model})`;
+  document.getElementById("dim-ffn").textContent = `${m.d_model} \u2192 ${m.d_ff} \u2192 ${m.d_model}`;
+  document.getElementById("dim-final-norm").textContent = `(n, ${m.d_model})`;
+  document.getElementById("dim-output").textContent = `\u2192 (n, ${m.vocab.toLocaleString()})`;
+  document.getElementById("layer-repeat").textContent = `\u00d7${m.n_layers}`;
+
+  document.getElementById("name-position").textContent = `${m.position} Position`;
+  document.getElementById("name-norm1").textContent = m.norm;
+  document.getElementById("name-norm2").textContent = m.norm;
+  document.getElementById("name-final-norm").textContent = `Final ${m.norm}`;
+  document.getElementById("name-ffn").textContent = m.ffn_type === "SwiGLU" ? "SwiGLU FFN" : `FFN (${m.activation})`;
+
+  document.getElementById("badge-text").textContent = `${m.name} \u2014 ${m.params} params`;
+
+  document.querySelectorAll(".model-tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.model === currentModel);
+  });
+
+  if (selectedComponent) showInfo(selectedComponent);
+}
+
+function showInfo(componentId) {
+  const m = models[currentModel];
+  const info = getComponentInfo(componentId, m);
+
+  document.getElementById("detail-title").textContent = info.title;
+  document.getElementById("detail-subtitle").textContent = info.subtitle;
+  document.getElementById("detail-content").innerHTML = `<div class="detail-content">${info.html}</div>`;
+
+  document.querySelectorAll(".node").forEach(n => n.classList.remove("selected"));
+  const node = document.querySelector(`[data-component="${componentId}"]`);
+  if (node) node.classList.add("selected");
+
+  selectedComponent = componentId;
+}
+
+document.querySelectorAll(".node").forEach(node => {
+  node.addEventListener("click", () => showInfo(node.dataset.component));
+});
+
+document.querySelectorAll(".model-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    currentModel = tab.dataset.model;
+    updateDiagram();
+  });
+});
+
+updateDiagram();
+</script>
+</body>
+</html>
