@@ -181,3 +181,94 @@ def extract_hidden_states(
             on_layer(layer_idx, sub, {"hidden_state": tensor})
 
     return HiddenStates(states=captured, prompt_tokens=prompt_tokens)
+
+
+def _project_to_logits(model, hidden_state: torch.Tensor) -> torch.Tensor:
+    """Apply final RMSNorm + lm_head to a hidden state tensor.
+
+    Args:
+        hidden_state: (seq_len, d_model) tensor from the residual stream.
+
+    Returns:
+        (seq_len, vocab_size) logit tensor.
+    """
+    h = hidden_state.unsqueeze(0).to(_get_input_device(model))
+    h = model.model.norm(h)
+    return model.lm_head(h)[0]
+
+
+def logit_lens(
+    model,
+    tokenizer,
+    prompt: str,
+    top_k: int = 10,
+    full_logits: bool = False,
+    positions: Optional[List[int]] = None,
+    on_layer: Optional[Callable[[int, str, Dict], None]] = None,
+) -> LogitLensResult:
+    """Project each layer's residual stream state through the output head.
+
+    Captures at both post-attention and post-FFN points (sub-layer granularity).
+    """
+    captured, prompt_tokens = _capture_residual_stream(
+        model, tokenizer, prompt, sublayers=("attn", "ffn"),
+    )
+
+    seq_len = len(prompt_tokens)
+    if positions is not None:
+        resolved_positions = [p % seq_len for p in positions]
+    else:
+        resolved_positions = list(range(seq_len))
+
+    predictions = []
+    logits_dict: Optional[Dict[Tuple[int, str], torch.Tensor]] = {} if full_logits else None
+
+    for (layer_idx, sublayer), hidden in sorted(captured.items()):
+        with torch.no_grad():
+            layer_logits = _project_to_logits(model, hidden)
+
+        if full_logits:
+            logits_dict[(layer_idx, sublayer)] = layer_logits.cpu()
+
+        probs = F.softmax(layer_logits.float(), dim=-1)
+
+        cb_top_k_summary = []
+        for pos in resolved_positions:
+            pos_probs = probs[pos]
+            topk_probs, topk_ids = pos_probs.topk(min(top_k, pos_probs.shape[0]))
+            top_k_list = []
+            for rank, (tid, tp) in enumerate(zip(topk_ids.tolist(), topk_probs.tolist())):
+                token_str = tokenizer.decode([tid])
+                top_k_list.append({
+                    "token": token_str,
+                    "token_id": tid,
+                    "prob": tp,
+                    "rank": rank,
+                })
+            predictions.append({
+                "layer": layer_idx,
+                "sublayer": sublayer,
+                "position": pos,
+                "top_k": top_k_list,
+            })
+            if top_k_list:
+                cb_top_k_summary.append((top_k_list[0]["token"], top_k_list[0]["prob"]))
+
+        if on_layer is not None:
+            cb_logits = layer_logits.cpu() if full_logits else None
+            on_layer(layer_idx, sublayer, {
+                "hidden_state": hidden,
+                "top_k": cb_top_k_summary,
+                "logits": cb_logits,
+            })
+
+    return LogitLensResult(
+        predictions=predictions,
+        logits=logits_dict,
+        prompt_tokens=prompt_tokens,
+    )
+
+
+def layer_predictions_table(result: LogitLensResult, position: int = -1) -> str:
+    """Format a single position's logit lens predictions as a readable table."""
+    return result.summary(position=position)
