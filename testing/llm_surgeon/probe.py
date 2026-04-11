@@ -272,3 +272,67 @@ def logit_lens(
 def layer_predictions_table(result: LogitLensResult, position: int = -1) -> str:
     """Format a single position's logit lens predictions as a readable table."""
     return result.summary(position=position)
+
+
+# ---------------------------------------------------------------------------
+# Predefined intervention operations
+# ---------------------------------------------------------------------------
+
+class _Op:
+    """Callable wrapper with descriptive repr for experiment logging."""
+
+    def __init__(self, fn, name: str):
+        self._fn = fn
+        self._name = name
+
+    def __call__(self, hidden_state: torch.Tensor, layer_idx: int) -> torch.Tensor:
+        return self._fn(hidden_state, layer_idx)
+
+    def __repr__(self) -> str:
+        return self._name
+
+
+class _Ops:
+    """Factory namespace for predefined intervention operations."""
+
+    @staticmethod
+    def scale(factor: float) -> _Op:
+        return _Op(lambda h, _: h * factor, f"scale({factor})")
+
+    @staticmethod
+    def zero_dims(dims: List[int]) -> _Op:
+        def fn(h, _):
+            out = h.clone()
+            out[:, dims] = 0
+            return out
+        return _Op(fn, f"zero_dims({dims})")
+
+    @staticmethod
+    def clamp(min_val: float, max_val: float) -> _Op:
+        return _Op(lambda h, _: h.clamp(min=min_val, max=max_val), f"clamp({min_val}, {max_val})")
+
+    @staticmethod
+    def noise(std: float, seed: Optional[int] = None) -> _Op:
+        def fn(h, _):
+            gen = torch.Generator(device=h.device)
+            if seed is not None:
+                gen.manual_seed(seed)
+            n = torch.randn(h.shape, generator=gen, device=h.device, dtype=h.dtype)
+            return h + n * std
+        return _Op(fn, f"noise(std={std})")
+
+    @staticmethod
+    def replace(tensor: torch.Tensor) -> _Op:
+        return _Op(lambda h, _: tensor.to(h.device), "replace(<tensor>)")
+
+    @staticmethod
+    def project_out(direction: torch.Tensor) -> _Op:
+        def fn(h, _):
+            d = direction.to(h.device).float()
+            d = d / d.norm()
+            proj = (h.float() @ d).unsqueeze(-1) * d.unsqueeze(0)
+            return (h.float() - proj).to(h.dtype)
+        return _Op(fn, "project_out(<direction>)")
+
+
+ops = _Ops()
