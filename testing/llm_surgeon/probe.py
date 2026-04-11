@@ -336,3 +336,172 @@ class _Ops:
 
 
 ops = _Ops()
+
+
+# ---------------------------------------------------------------------------
+# Intervention API
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Intervention:
+    layer: int
+    sublayer: str  # "attn" or "ffn"
+    fn: Callable[[torch.Tensor, int], torch.Tensor]
+
+
+@dataclass
+class InterventionResult:
+    output_logits: torch.Tensor
+    logit_lens_result: Optional[LogitLensResult]
+    interventions_applied: List[Dict]
+
+
+def intervene(
+    model,
+    tokenizer,
+    prompt: str,
+    interventions: List[Intervention],
+    capture_logit_lens: bool = False,
+    top_k: int = 10,
+    on_layer: Optional[Callable[[int, str, Dict], None]] = None,
+) -> InterventionResult:
+    """Run a forward pass with hidden state modifications at specified points.
+
+    Optionally captures logit lens data at every capture point to observe
+    the downstream effect of interventions.
+    """
+    device = _get_input_device(model)
+    enc = tokenizer(prompt, return_tensors="pt")
+    input_ids = enc["input_ids"].to(device)
+    prompt_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
+
+    num_layers = len(model.model.layers)
+
+    intervention_map: Dict[Tuple[int, str], Callable] = {}
+    for iv in interventions:
+        intervention_map[(iv.layer, iv.sublayer)] = iv.fn
+
+    captured_states: Optional[Dict[Tuple[int, str], torch.Tensor]] = (
+        {} if capture_logit_lens else None
+    )
+
+    hooks = []
+    layer_block_inputs: Dict[int, torch.Tensor] = {}
+
+    for i in range(num_layers):
+        def make_pre(idx):
+            def hook(module, args):
+                layer_block_inputs[idx] = args[0].detach()
+            return hook
+        hooks.append(model.model.layers[i].register_forward_pre_hook(make_pre(i)))
+
+    for i in range(num_layers):
+        def make_attn_hook(idx):
+            def hook(module, inp, out):
+                attn_out = out[0] if isinstance(out, tuple) else out
+                h_post_attn = layer_block_inputs[idx] + attn_out.detach()
+                state = h_post_attn[0]
+
+                modified = False
+                if (idx, "attn") in intervention_map:
+                    state = intervention_map[(idx, "attn")](state, idx)
+                    modified = True
+
+                if captured_states is not None:
+                    captured_states[(idx, "attn")] = state
+
+                if on_layer is not None:
+                    on_layer(idx, "attn", {
+                        "hidden_state": state,
+                        "modified": modified,
+                        "top_k": None,
+                    })
+
+                if modified:
+                    new_attn_out = state.unsqueeze(0) - layer_block_inputs[idx]
+                    if isinstance(out, tuple):
+                        return (new_attn_out,) + out[1:]
+                    return new_attn_out
+            return hook
+        hooks.append(model.model.layers[i].self_attn.register_forward_hook(make_attn_hook(i)))
+
+    for i in range(num_layers):
+        def make_ffn_hook(idx):
+            def hook(module, inp, out):
+                hidden = out[0] if isinstance(out, tuple) else out
+                state = hidden[0].detach()
+
+                modified = False
+                if (idx, "ffn") in intervention_map:
+                    state = intervention_map[(idx, "ffn")](state, idx)
+                    modified = True
+
+                if captured_states is not None:
+                    captured_states[(idx, "ffn")] = state
+
+                if on_layer is not None:
+                    on_layer(idx, "ffn", {
+                        "hidden_state": state,
+                        "modified": modified,
+                        "top_k": None,
+                    })
+
+                if modified:
+                    new_out = state.unsqueeze(0)
+                    if isinstance(out, tuple):
+                        return (new_out,) + out[1:]
+                    return new_out
+            return hook
+        hooks.append(model.model.layers[i].register_forward_hook(make_ffn_hook(i)))
+
+    try:
+        with torch.no_grad():
+            model_output = model(input_ids)
+    finally:
+        for h in hooks:
+            h.remove()
+
+    output_logits = model_output.logits[0]
+
+    logit_lens_result = None
+    if capture_logit_lens and captured_states:
+        seq_len = len(prompt_tokens)
+        all_positions = list(range(seq_len))
+        predictions = []
+        for (layer_idx, sublayer), hidden in sorted(captured_states.items()):
+            with torch.no_grad():
+                layer_logits = _project_to_logits(model, hidden)
+            probs = F.softmax(layer_logits.float(), dim=-1)
+            for pos in all_positions:
+                pos_probs = probs[pos]
+                topk_probs, topk_ids = pos_probs.topk(min(top_k, pos_probs.shape[0]))
+                top_k_list = []
+                for rank, (tid, tp) in enumerate(zip(topk_ids.tolist(), topk_probs.tolist())):
+                    top_k_list.append({
+                        "token": tokenizer.decode([tid]),
+                        "token_id": tid,
+                        "prob": tp,
+                        "rank": rank,
+                    })
+                predictions.append({
+                    "layer": layer_idx,
+                    "sublayer": sublayer,
+                    "position": pos,
+                    "top_k": top_k_list,
+                })
+        logit_lens_result = LogitLensResult(
+            predictions=predictions,
+            logits=None,
+            prompt_tokens=prompt_tokens,
+        )
+
+    interventions_applied = [
+        {"layer": iv.layer, "sublayer": iv.sublayer, "op_repr": repr(iv.fn)}
+        for iv in interventions
+    ]
+
+    return InterventionResult(
+        output_logits=output_logits,
+        logit_lens_result=logit_lens_result,
+        interventions_applied=interventions_applied,
+    )
