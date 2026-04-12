@@ -62,7 +62,8 @@ class TestSessionManager:
         mgr.snapshot("s1")
         tiny_model.model.layers[0].mlp.gate_proj.weight.data.zero_()
         mgr.undo("s1")
-        restored = tiny_model.model.layers[0].mlp.gate_proj.weight
+        restored_model = mgr.get("s1").model
+        restored = restored_model.model.layers[0].mlp.gate_proj.weight
         assert torch.allclose(restored, original_weight)
 
     def test_undo_without_snapshot_raises(self, tiny_model, tiny_tokenizer):
