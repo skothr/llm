@@ -59,13 +59,14 @@ No changes to existing `llm_surgeon` code. The backend imports and calls the too
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/sessions` | Load model by HF ID or local path. Body includes `name` (slug) and `model_id`. Returns session metadata. |
-| `GET` | `/sessions` | List active sessions with metadata (name, model_id, layer count, estimated VRAM MB). |
-| `GET` | `/sessions/{name}/info` | Layer info, head count, hidden size. Wraps `get_layer_info`. |
-| `DELETE` | `/sessions/{name}` | Unload model, free GPU memory via `del model` + `torch.cuda.empty_cache()`. |
-| `POST` | `/sessions/{name}/surgery` | Apply surgery operation. Auto-snapshots `state_dict()` before applying. Returns updated layer info + surgery log. |
-| `POST` | `/sessions/{name}/surgery/undo` | Restore to the most recent pre-surgery snapshot. Only one level of undo. |
-| `POST` | `/sessions/{name}/clone` | Clone session to a new name. See Clone Strategy below. |
+| `POST` | `/api/sessions` | Load model by HF ID or local path. Body includes `name` (slug), `model_id`, and optional `mode` ("inspect" for 4-bit, "eval" for fp16). Returns session metadata. |
+| `GET` | `/api/sessions` | List active sessions with metadata (name, model_id, layer count, estimated VRAM MB). |
+| `GET` | `/api/sessions/{name}/info` | Layer info, head count, hidden size. Wraps `get_layer_info`. |
+| `DELETE` | `/api/sessions/{name}` | Unload model, free GPU memory via `del model` + `torch.cuda.empty_cache()`. |
+| `POST` | `/api/sessions/{name}/surgery` | Apply surgery operation. Auto-snapshots `state_dict()` before applying. Returns updated layer info + surgery log. |
+| `POST` | `/api/sessions/{name}/surgery/undo` | Restore to the most recent pre-surgery snapshot. Only one level of undo. |
+| `POST` | `/api/sessions/{name}/clone` | Clone session to a new name. See Clone Strategy below. |
+| `GET` | `/api/surgery/operations` | List available surgery operations with parameter schemas. See Surgery Discovery below. |
 
 All request/response bodies use Pydantic models for validation.
 
@@ -73,17 +74,17 @@ All request/response bodies use Pydantic models for validation.
 
 | Path | Input | Streaming Output |
 |------|-------|-----------------|
-| `ws://.../sessions/{name}/logit-lens` | `{prompt, top_k}` | Layer-by-layer predictions via `on_layer`. Final message has full result. |
-| `ws://.../sessions/{name}/generate` | See Generation Parameters below | Token-by-token with top-k probabilities per step. |
-| `ws://.../sessions/{name}/intervene` | `{prompt, interventions, capture_logit_lens}` | Streamed intervention results with optional logit lens capture. |
+| `/ws/sessions/{name}/logit-lens` | `{prompt, top_k}` | Layer-by-layer predictions via `on_layer`. Final message has full result. |
+| `/ws/sessions/{name}/generate` | See Generation Parameters below | Token-by-token with top-k probabilities per step. |
+| `/ws/sessions/{name}/intervene` | `{prompt, interventions, capture_logit_lens}` | Streamed intervention results with optional logit lens capture. |
 
 ### Inspect Endpoints (REST)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/sessions/{name}/inspect/influence` | Block influence scores per layer. Body: `{prompts: [...]}`. Response includes progress via streaming JSON lines (one per layer). |
-| `POST` | `/sessions/{name}/inspect/attention` | Attention entropy per head per layer. Body: `{prompt}`. |
-| `POST` | `/sessions/{name}/inspect/residual-norms` | Residual stream L2 norms through network. Body: `{prompt}`. |
+| `POST` | `/api/sessions/{name}/inspect/influence` | Block influence scores per layer. Body: `{prompts: [...]}`. Response includes progress via streaming JSON lines (one per layer). |
+| `POST` | `/api/sessions/{name}/inspect/attention` | Attention entropy per head per layer. Body: `{prompt}`. |
+| `POST` | `/api/sessions/{name}/inspect/residual-norms` | Residual stream L2 norms through network. Body: `{prompt}`. |
 
 ### VRAM Management
 
@@ -99,18 +100,20 @@ CPU offload is out of scope for v1 — models are fully on GPU or not loaded.
 
 ### Clone Strategy
 
-`POST /sessions/{name}/clone` does **not** use `copy.deepcopy()`. Instead:
+`POST /api/sessions/{name}/clone` does **not** use `copy.deepcopy()`. Instead:
 
-1. Extract `state_dict()` from the source model
-2. Instantiate a fresh model via `AutoModelForCausalLM.from_config(source.config)` 
-3. Call `load_state_dict()` on the new instance
-4. Load to GPU with same quantization config as source
+1. Store the source session's original `model_id` and load `mode` (inspect/eval) at load time
+2. Call `from_pretrained(model_id, quantization_config=...)` to get a fresh model with correct quantization
+3. Load the source's (potentially surgically modified) `state_dict()` via `load_state_dict(strict=False)`
+4. `strict=False` because quantized models may have differently-named parameters — log any unexpected missing/extra keys as warnings
 
-This avoids issues with non-picklable attributes, custom hooks, and weight tying. Weight-tied models (embedding ↔ lm_head) get their ties re-established by `from_config()` + `load_state_dict()` since HuggingFace handles tie registration at init time.
+This avoids issues with non-picklable attributes and custom hooks. Quantization is handled correctly because `from_pretrained()` applies `BitsAndBytesConfig` during loading, which `from_config()` cannot do. Weight-tied models get ties re-established by `from_pretrained()`'s initialization path.
+
+**Note:** The clone re-downloads/re-loads from the original model source, then patches in the modified weights. This is slower than a raw copy but produces a correctly quantized clone.
 
 ### Surgery & Undo
 
-Surgery mutates the session's model in place. Before each surgery operation, the backend snapshots `model.state_dict()` (kept in CPU memory). The intended workflow for A/B comparison:
+Surgery mutates the session's model in place. Before each surgery operation, the backend snapshots `model.state_dict()` to CPU memory. **Memory cost:** the snapshot is roughly the size of the full-precision model — ~4.4GB for OpenLLaMA 3B, ~1.1GB for TinyLlama 1.1B. The UI displays the snapshot size when undo is available. The intended workflow for A/B comparison:
 
 1. Load model as "baseline"
 2. Clone "baseline" → "variant"
@@ -122,6 +125,27 @@ If a surgery goes wrong, two recovery paths:
 - **Delete + re-clone** — delete the variant, clone from baseline again.
 
 The surgery log in the UI shows the history of operations but is informational only — it cannot replay operations.
+
+### Surgery Discovery
+
+`GET /api/surgery/operations` returns available surgery operations with their parameter schemas, so the frontend can dynamically build the surgery UI. Response format:
+
+```json
+[
+  {"name": "remove_layers", "params": {"layer_indices": {"type": "array", "items": "int"}}, "description": "Remove specific layers"},
+  {"name": "keep_layers", "params": {"layer_indices": {"type": "array", "items": "int"}}, "description": "Keep only specified layers"},
+  {"name": "zero_heads", "params": {"layer": "int", "heads": {"type": "array", "items": "int"}}, "description": "Zero out attention heads"},
+  {"name": "scale_heads", "params": {"layer": "int", "heads": {"type": "array", "items": "int"}, "factor": "float"}, "description": "Scale attention head contributions"},
+  {"name": "swap_layers", "params": {"i": "int", "j": "int"}, "description": "Swap two layers"},
+  {"name": "duplicate_layer", "params": {"src": "int", "dst": "int"}, "description": "Deep-copy layer to new position"},
+  {"name": "zero_mlp", "params": {"layer": "int"}, "description": "Zero out MLP contribution"},
+  {"name": "zero_attention", "params": {"layer": "int"}, "description": "Zero out attention contribution"},
+  {"name": "swap_heads", "params": {"layer": "int", "h1": "int", "h2": "int"}, "description": "Swap two attention heads"},
+  {"name": "reorder_layers", "params": {"new_order": {"type": "array", "items": "int"}}, "description": "Rearrange layer order"}
+]
+```
+
+This is a static response derived from the `surgery` module's public API. The frontend uses it to render operation-specific parameter forms.
 
 ### Intervention Serialization
 
@@ -145,13 +169,20 @@ Backend maps `op` strings to `probe.ops.*` functions: `scale`, `zero_dims`, `cla
 
 ```json
 {"layer": 5, "sublayer": "ffn", "op": "replace", "params": {
-  "source": {"session": "baseline", "layer": 5, "sublayer": "ffn", "prompt": "The capital of France is"}
+  "source": {"session": "baseline", "layer": 5, "sublayer": "ffn", "position": -1, "prompt": "The capital of France is"}
 }}
 ```
 
-The backend resolves this by running `extract_hidden_states()` on the referenced session/prompt to get the tensor, then wraps it with `ops.replace()`. Same pattern for `project_out` — the `direction` param references a capture point, and the backend extracts the hidden state vector to use as the projection direction.
+The `position` field is required for `replace` and `project_out`. It selects a single position's hidden state vector (shape `[d_model]`) from the source extraction, which avoids shape mismatches when source and target prompts have different token counts. Position `-1` means last token (most common for next-token prediction analysis). The backend:
 
-This keeps the frontend tensor-free. The cost is an extra forward pass to extract the reference tensor, but these are cached per (session, prompt) pair for the duration of the server process.
+1. Runs `extract_hidden_states()` on the referenced session/prompt (cached — see below)
+2. Indexes the result at the specified position to get a `[d_model]` vector
+3. For `replace`: wraps with `ops.replace()`. The intervention function receives the full hidden state tensor and replaces only the specified position.
+4. For `project_out`: wraps with `ops.project_out(direction)` using the extracted vector as the projection direction.
+
+This keeps the frontend tensor-free. The cost is an extra forward pass to extract the reference tensor, but results are cached.
+
+**Hidden state cache:** LRU cache keyed by `(session_name, prompt_hash)`, capped at 500MB. Each entry stores the full `HiddenStates` object. When the cache exceeds the cap, the least-recently-used entries are evicted. Cache is invalidated for a session when surgery is applied to that session (since hidden states would change).
 
 ### Generation Parameters
 
@@ -277,7 +308,7 @@ Zustand store with three slices:
 ### Streaming Data Flow (Logit Lens Example)
 
 1. User types prompt, selects "logit lens", clicks Run
-2. Frontend opens WebSocket to `/sessions/{name}/logit-lens`, sends config
+2. Frontend opens WebSocket to `/ws/sessions/{name}/logit-lens`, sends config
 3. Backend acquires session lock, calls `probe.logit_lens()` with `on_layer` callback
 4. Each callback fires WebSocket message: `{type: "data", layer: 5, sublayer: "ffn", predictions: [...]}`
 5. Frontend appends each row to heatmap incrementally — builds layer by layer
