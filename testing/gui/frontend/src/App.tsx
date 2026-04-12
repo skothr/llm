@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useStore } from "./state/store";
 import { SessionSidebar } from "./components/SessionSidebar";
 import { ProbeConfig } from "./components/ProbeConfig";
+import { VisualizationArea } from "./components/VisualizationArea";
+import { GenerationOutput } from "./components/GenerationOutput";
 
 export default function App() {
   const fetchSessions = useStore((s) => s.fetchSessions);
@@ -22,12 +24,10 @@ export default function App() {
       </aside>
       <main className="main-area">
         <div className="visualization-area">
-          <h2>Visualization</h2>
-          <p style={{ color: "#666" }}>Run a probe to see results here</p>
+          <VisualizationArea />
         </div>
         <div className="generation-output">
-          <h2>Generation Output</h2>
-          <p style={{ color: "#666" }}>Run generate to see token stream here</p>
+          <GenerationOutput />
         </div>
       </main>
     </div>
