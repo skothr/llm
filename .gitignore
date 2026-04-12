@@ -18,8 +18,12 @@ llama.cpp/
 # Outputs (generated models, GGUF files — large, regenerable)
 outputs/
 
+# HF model cache (clean downloads, large)
+models/
+
 # Test scripts (ad-hoc, not part of the toolkit)
 test.py
 
 # Databases (auto-created, not source)
 testing/experiments.db
+testing/gui/frontend/node_modules/
