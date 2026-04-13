@@ -6,7 +6,13 @@ export function GenerationOutput() {
   const results = useStore((s) => s.results);
   const [selectedToken, setSelectedToken] = useState<GenerateData | null>(null);
 
-  const genResults = results.filter((r) => r.operation === "generate");
+  const genResults = results
+    .filter((r) => r.operation === "generate")
+    .sort((a, b) => {
+      const aIsB = a.id.endsWith("-B") ? 1 : 0;
+      const bIsB = b.id.endsWith("-B") ? 1 : 0;
+      return aIsB - bIsB || a.timestamp - b.timestamp;
+    });
   if (genResults.length === 0) {
     return (
       <div>
