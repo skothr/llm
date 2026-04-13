@@ -86,7 +86,8 @@ export function ABDiff({ resultA, resultB }: Props) {
     drawPanel(dataA, 0, resultA.sessionName);
     drawPanel(dataB, panelWidth + gap, resultB.sessionName);
 
-    if (showDiff && dataA.length === dataB.length) {
+    if (showDiff) {
+      const diffRows = Math.min(dataA.length, dataB.length);
       const diffOffset = (panelWidth + gap) * 2;
       const g = svg.append("g").attr("transform", `translate(${diffOffset + margin.left},${margin.top})`);
 
@@ -96,9 +97,9 @@ export function ABDiff({ resultA, resultB }: Props) {
         .attr("text-anchor", "middle")
         .attr("font-size", 12)
         .attr("fill", "#a0a0c0")
-        .text("Diff (A - B)");
+        .text(`Diff (A - B)${dataA.length !== dataB.length ? ` [${diffRows}/${numRows} rows]` : ""}`);
 
-      dataA.forEach((msgA, rowIdx) => {
+      dataA.slice(0, diffRows).forEach((msgA, rowIdx) => {
         const msgB = dataB[rowIdx];
         if (!msgB) return;
 
