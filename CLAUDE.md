@@ -27,11 +27,8 @@ LLM theory — high-level explanations, visualizations, and math related to LLM 
 
 # Build Commands
 ```bash
-# Compile LaTeX document (run twice for TOC/references)
-mv theory/llm-core-architecture.pdf theory/archive/llm-core-architecture-<date/time>.pdf && \
-pdflatex -output-directory=theory/build/llm-core-architecture theory/build/llm-core-architecture/llm-core-architecture.tex && \
-pdflatex -output-directory=theory/build/llm-core-architecture theory/build/llm-core-architecture/llm-core-architecture.tex && \
-mv theory/build/llm-core-architecture/llm-core-architecture.pdf theory/llm-core-architecture.pdf
+# Compile LaTeX document (automatically saves dated copy in archive)
+make -C theory all
 
 # View HTML visualization
 xdg-open theory/visuals/llm-architecture-diagram.html
@@ -42,7 +39,7 @@ xdg-open theory/visuals/llm-architecture-diagram.html
 ## Core Document
 `theory/build/llm-core-architecture/llm-core-architecture.tex` — LaTeX document covering Transformer architecture from original encoder-decoder through modern decoder-only (LLaMA). 10 sections: Transformer overview, Tokenization, Embeddings, Positional Encoding, Attention, FFN, Normalization/Residuals, Decoder-Only Shift, Output Head, Full Forward Pass.
 
-Custom LaTeX environments:
+### Custom LaTeX environments:
 - `\begin{implbox}` — green "Implementation Note" callouts
 - `\begin{evobox}` — blue "Architectural Evolution" callouts
 - `\dimtext{}` — inline dimension annotations
@@ -58,12 +55,20 @@ All claims must be grounded in canonical papers.
 When adding a new source: add entry to `sources/index.json`, download PDF to `sources/papers/`, use the citation key consistently in LaTeX `\cite{}` commands
 
 ## Conventions/Rules
-- ALWAYS define EVERY variable in EVERY equation, directly underneath it (brief is fine, but no undefined variables)
-- FIRST formalize math, THEN describe technical aspects and practical use, THEN elaborate using accessible language and/or analogies
-- Ground all architectural claims in specific source papers with citation keys from `sources/index.json`
+- Define every variable in every equation, directly underneath it (brief is fine, but no undefined variables)
+- First formalize math, then describe technical aspects and practical use, then elaborate using accessible language and/or analogies
+- Ground all architectural claims in specific source papers from core document or original paper(s), with citation keys from `sources/index.json`
 
 
 # TESTING
+
+## Build/Test Commands
+```bash
+# Run llm_surgeon tests
+testing/.venv/bin/python -m pytest testing/tests/ -v
+```
+- Venv: `testing/.venv/` — system python does NOT have torch/pytest
+- llm_surgeon installed editable: `pip install -e .`
 
 ## Research Observations
 Record interesting experimental findings in `research/observations/`.

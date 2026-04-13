@@ -14,12 +14,10 @@ LaTeX document covering Transformer architecture from the original encoder-decod
 - **Sources:** `theory/sources/index.json` (citation index) + `theory/sources/papers/` (local PDFs). All architectural claims grounded in canonical papers.
 - **Glossary:** `theory/GLOSSARY.md` — every technical term used in the workspace
 
-**Build the PDF** (requires two passes for TOC/references):
+**Build the PDF** (automatically archives previous build):
 
 ```bash
-pdflatex -output-directory=theory/build/llm-core-architecture theory/build/llm-core-architecture/llm-core-architecture.tex && \
-pdflatex -output-directory=theory/build/llm-core-architecture theory/build/llm-core-architecture/llm-core-architecture.tex && \
-mv theory/build/llm-core-architecture/llm-core-architecture.pdf theory/llm-core-architecture.pdf
+make -C theory all
 ```
 
 ---
@@ -41,17 +39,29 @@ Python toolkit for layer-level model surgery, probing, and experiment tracking o
 | `recipe` | YAML-based experiment definitions: surgery steps, analysis, evaluation, export pipeline |
 | `export` | Save HuggingFace checkpoints, convert to GGUF, register with ollama |
 
+#### Setup
+
+```bash
+cd testing
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install torch — pick one:
+pip install torch --index-url https://download.pytorch.org/whl/cu128   # CUDA 12.8
+pip install torch --index-url https://download.pytorch.org/whl/cu124   # CUDA 12.4
+pip install torch --index-url https://download.pytorch.org/whl/cpu     # CPU only
+
+pip install -e ".[dev]"
+```
+
+Models are downloaded from HuggingFace on first use and cached in `models/`.
+
 #### Quick Start
 
 ```bash
 cd testing
 source .venv/bin/activate
-python -c "
-from llm_surgeon import surgery, probe
-
-model, tokenizer = surgery.load_model('TinyLlama/TinyLlama-1.1B-Chat-v1.0', mode='inspect')
-result = probe.logit_lens(model, tokenizer, 'The capital of France is', top_k=5)
-print(result.summary())
+python examples/quickstart.py
 ```
 
 #### Run Tests
@@ -88,6 +98,18 @@ Browser (React/Vite/TypeScript)
 Backend holds models in GPU memory across operations
 ```
 
+#### Setup
+
+```bash
+# Install GUI backend dependencies
+cd testing
+pip install -e ".[gui]"
+
+# Install frontend dependencies
+cd gui/frontend
+npm install
+```
+
 #### Start the GUI
 
 ```bash
@@ -95,6 +117,7 @@ Backend holds models in GPU memory across operations
 ```
 
 Opens at `http://localhost:5173` (frontend) with backend on `127.0.0.1:8000`. Local only.
+`run.sh` runs `npm install` automatically, but running it manually first avoids a wait on first launch.
 
 #### Tech Stack
 
@@ -108,8 +131,9 @@ Opens at `http://localhost:5173` (frontend) with backend on `127.0.0.1:8000`. Lo
 #### Run Backend Tests
 
 ```bash
-source testing/.venv/bin/activate
-PYTHONPATH=testing pytest testing/gui/tests/ -v
+cd testing
+source .venv/bin/activate
+pytest gui/tests/ -v
 ```
 
 ---
@@ -158,9 +182,12 @@ torch>=2.0
 transformers>=4.40
 accelerate>=0.27
 bitsandbytes>=0.43
-fastapi
-uvicorn[standard]
-pytest>=8.0
+pyyaml>=6.0
+sentencepiece>=0.1.99
+requests
+pytest>=8.0              # pip install -e ".[dev]"
+fastapi>=0.100           # pip install -e ".[gui]"
+uvicorn[standard]>=0.20  # pip install -e ".[gui]"
 ```
 
 **Node** (in `testing/gui/frontend`):
