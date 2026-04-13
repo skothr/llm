@@ -7,6 +7,18 @@ import type {
   ProbeResult,
 } from "../types/api";
 
+async function apiError(resp: Response): Promise<Error> {
+  const body = await resp.json().catch(() => ({ detail: resp.statusText }));
+  const detail = body.detail;
+  if (typeof detail === "string") return new Error(detail);
+  if (Array.isArray(detail)) {
+    return new Error(detail.map((d: { msg?: string; loc?: string[] }) =>
+      `${(d.loc || []).join(".")}: ${d.msg || "validation error"}`
+    ).join("; "));
+  }
+  return new Error(JSON.stringify(detail));
+}
+
 interface StoreState {
   sessions: SessionSummary[];
   sessionInfo: Record<string, SessionInfo>;
@@ -78,14 +90,14 @@ export const useStore = create<StoreState>((set, get) => ({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ operation, params }),
     });
-    if (!resp.ok) throw new Error((await resp.json()).detail);
+    if (!resp.ok) throw await apiError(resp);
     await get().fetchSessions();
     await get().fetchSessionInfo(name);
   },
 
   undoSurgery: async (name: string) => {
     const resp = await fetch(`/api/sessions/${name}/surgery/undo`, { method: "POST" });
-    if (!resp.ok) throw new Error((await resp.json()).detail);
+    if (!resp.ok) throw await apiError(resp);
     await get().fetchSessions();
     await get().fetchSessionInfo(name);
   },
@@ -96,7 +108,7 @@ export const useStore = create<StoreState>((set, get) => ({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target_name: targetName }),
     });
-    if (!resp.ok) throw new Error((await resp.json()).detail);
+    if (!resp.ok) throw await apiError(resp);
     await get().fetchSessions();
   },
 
