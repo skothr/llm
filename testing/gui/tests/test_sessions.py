@@ -40,19 +40,21 @@ class TestSessionManager:
             mgr.register("s1", tiny_model, tiny_tokenizer,
                           model_id="test/tiny", mode="eval")
 
-    def test_validate_slug_rejects_invalid(self):
+    def test_validate_name_rejects_invalid(self):
         mgr = SessionManager()
-        with pytest.raises(ValueError, match="slug"):
+        with pytest.raises(ValueError, match="Invalid name"):
             mgr.validate_name("Has Spaces")
-        with pytest.raises(ValueError, match="slug"):
-            mgr.validate_name("UPPERCASE")
-        with pytest.raises(ValueError, match="slug"):
+        with pytest.raises(ValueError, match="Invalid name"):
             mgr.validate_name("")
+        with pytest.raises(ValueError, match="Invalid name"):
+            mgr.validate_name("-starts-with-hyphen")
 
-    def test_validate_slug_accepts_valid(self):
+    def test_validate_name_accepts_valid(self):
         mgr = SessionManager()
         mgr.validate_name("my-model-1")
         mgr.validate_name("baseline")
+        mgr.validate_name("TinyLlama_v1.0")
+        mgr.validate_name("Model.3B~test")
 
     def test_snapshot_and_undo(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()

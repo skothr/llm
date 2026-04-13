@@ -25,16 +25,16 @@ class SessionInfo:
             return 0.0
         return sum(p.nelement() * p.element_size() for p in self._snapshot_model.parameters()) / 1e6
 
-_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9\-]{0,63}$")
+_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._~\-]{0,63}$")
 
 class SessionManager:
     def __init__(self):
         self._sessions: Dict[str, SessionInfo] = {}
 
     def validate_name(self, name: str) -> None:
-        if not _SLUG_RE.match(name):
+        if not _NAME_RE.match(name):
             raise ValueError(
-                f"Invalid slug: '{name}'. Must be lowercase alphanumeric + hyphens, 1-64 chars."
+                f"Invalid name: '{name}'. Must be alphanumeric, hyphens, underscores, periods, or tildes, 1-64 chars."
             )
 
     def register(self, name: str, model, tokenizer, *, model_id: str, mode: str) -> SessionInfo:
