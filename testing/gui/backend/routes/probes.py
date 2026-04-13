@@ -140,6 +140,12 @@ async def generate_ws(ws: WebSocket, name: str):
         tok = tokenizer.convert_ids_to_tokens(int(tid))
         if tok is None:
             return ""
+        if tok in ("</s>", "<eos>"):
+            return "<eos>"
+        if tok == "<s>":
+            return "<bos>"
+        import re as _re
+        tok = _re.sub(r"<0x([0-9A-Fa-f]{2})>", lambda m: chr(int(m.group(1), 16)), tok)
         return tok.replace("\u2581", " ")
 
     try:
