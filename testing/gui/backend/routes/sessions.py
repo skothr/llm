@@ -215,6 +215,10 @@ async def clone_session(name: str, req: CloneRequest):
 
     cloned_model.eval()
 
-    mgr.register(req.target_name, cloned_model, info.tokenizer,
-                 model_id=info.model_id, mode=info.mode)
+    try:
+        mgr.register(req.target_name, cloned_model, info.tokenizer,
+                     model_id=info.model_id, mode=info.mode)
+    except ValueError as e:
+        del cloned_model
+        raise HTTPException(409, str(e))
     return _session_summary(mgr.get(req.target_name))
