@@ -171,14 +171,19 @@ async def generate_ws(ws: WebSocket, name: str):
                 input_ids = torch.cat([input_ids, next_token], dim=-1)
                 new_text = info.tokenizer.decode(input_ids[0], skip_special_tokens=True)
                 token_str = new_text[len(prev_text):]
+                if not token_str:
+                    token_str = info.tokenizer.decode(next_token[0], clean_up_tokenization_spaces=False)
                 prev_text = new_text
                 generated_tokens.append(token_str)
 
+                prefix_len = len(new_text) - len(token_str)
                 top_k_list = []
                 for i in range(len(top_indices)):
                     trial = torch.cat([input_ids[0, :-1], top_indices[i:i+1]])
                     trial_text = info.tokenizer.decode(trial, skip_special_tokens=True)
-                    alt_str = trial_text[len(prev_text) - len(token_str):]
+                    alt_str = trial_text[prefix_len:]
+                    if not alt_str:
+                        alt_str = info.tokenizer.decode(top_indices[i:i+1], clean_up_tokenization_spaces=False)
                     top_k_list.append({"token": alt_str, "prob": float(top_probs[i])})
 
                 msg = {
