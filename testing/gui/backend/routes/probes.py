@@ -135,6 +135,13 @@ async def generate_ws(ws: WebSocket, name: str):
     generated_tokens = []
     stop_reason = None
 
+    def _tok_display(tokenizer, tid):
+        """Convert token ID to display string using raw vocab lookup."""
+        tok = tokenizer.convert_ids_to_tokens(int(tid))
+        if tok is None:
+            return ""
+        return tok.replace("\u2581", " ")
+
     try:
         async with info.lock:
             inputs = info.tokenizer(prompt, return_tensors="pt")
@@ -168,23 +175,34 @@ async def generate_ws(ws: WebSocket, name: str):
                 else:
                     next_token = torch.multinomial(probs, 1)
 
+                if next_token[0, 0] == info.tokenizer.eos_token_id:
+                    top_k_list = [
+                        {"token": _tok_display(info.tokenizer, top_indices[i]), "prob": float(top_probs[i])}
+                        for i in range(len(top_indices))
+                    ]
+                    msg = {
+                        "type": "data",
+                        "step": step,
+                        "token": "<eos>",
+                        "token_id": int(next_token[0, 0]),
+                        "top_k": top_k_list,
+                    }
+                    await _send_json(ws, msg)
+                    stop_reason = "eos"
+                    break
+
                 input_ids = torch.cat([input_ids, next_token], dim=-1)
                 new_text = info.tokenizer.decode(input_ids[0], skip_special_tokens=True)
                 token_str = new_text[len(prev_text):]
                 if not token_str:
-                    token_str = info.tokenizer.decode(next_token[0], clean_up_tokenization_spaces=False)
+                    token_str = _tok_display(info.tokenizer, next_token[0, 0])
                 prev_text = new_text
                 generated_tokens.append(token_str)
 
-                prefix_len = len(new_text) - len(token_str)
-                top_k_list = []
-                for i in range(len(top_indices)):
-                    trial = torch.cat([input_ids[0, :-1], top_indices[i:i+1]])
-                    trial_text = info.tokenizer.decode(trial, skip_special_tokens=True)
-                    alt_str = trial_text[prefix_len:]
-                    if not alt_str:
-                        alt_str = info.tokenizer.decode(top_indices[i:i+1], clean_up_tokenization_spaces=False)
-                    top_k_list.append({"token": alt_str, "prob": float(top_probs[i])})
+                top_k_list = [
+                    {"token": _tok_display(info.tokenizer, top_indices[i]), "prob": float(top_probs[i])}
+                    for i in range(len(top_indices))
+                ]
 
                 msg = {
                     "type": "data",
@@ -195,10 +213,6 @@ async def generate_ws(ws: WebSocket, name: str):
                 }
                 if not await _send_json(ws, msg):
                     connected = False
-                    break
-
-                if next_token[0, 0] == info.tokenizer.eos_token_id:
-                    stop_reason = "eos"
                     break
 
                 gen_text = "".join(generated_tokens)
