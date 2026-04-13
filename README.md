@@ -179,3 +179,11 @@ react, react-dom, d3, zustand, vite, typescript
 ## Hardware
 
 Tested on RTX 2080 (8GB VRAM). Two 4-bit quantized TinyLlama models fit comfortably for A/B comparison. OpenLLaMA 3B is tighter but works single-session.
+
+## License
+
+Copyright (C) 2026 Michael Lannum
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3 of the License.
+
+See [LICENSE](LICENSE) for the full text.
