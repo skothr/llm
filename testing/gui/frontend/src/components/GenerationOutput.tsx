@@ -60,22 +60,40 @@ function GenerationPanel({ result }: { result: ProbeResult }) {
       </div>
       <div style={{ fontFamily: "monospace", fontSize: 14, lineHeight: 1.8 }}>
         <span style={{ color: "#6688aa" }}>{result.prompt}</span>
-        {tokens.map((tok) => (
-          <span
-            key={tok.step}
-            onClick={() => setSelectedStep(selectedStep === tok.step ? null : tok.step)}
-            style={{
-              cursor: "pointer",
-              background:
-                selectedStep === tok.step ? "#1a5276" : "transparent",
-              borderRadius: 2,
-              padding: "0 1px",
-              whiteSpace: "pre",
-            }}
-          >
-            {tok.token}
-          </span>
-        ))}
+        {tokens.map((tok) =>
+          tok.token === "<eos>" ? (
+            <span
+              key={tok.step}
+              onClick={() => setSelectedStep(selectedStep === tok.step ? null : tok.step)}
+              style={{
+                cursor: "pointer",
+                background: selectedStep === tok.step ? "#1a5276" : "transparent",
+                color: "#4a6a4a",
+                fontSize: 11,
+                padding: "1px 3px",
+                borderRadius: 2,
+                border: "1px solid #3a5a3a",
+              }}
+            >
+              eos
+            </span>
+          ) : (
+            <span
+              key={tok.step}
+              onClick={() => setSelectedStep(selectedStep === tok.step ? null : tok.step)}
+              style={{
+                cursor: "pointer",
+                background:
+                  selectedStep === tok.step ? "#1a5276" : "transparent",
+                borderRadius: 2,
+                padding: "0 1px",
+                whiteSpace: "pre",
+              }}
+            >
+              {tok.token}
+            </span>
+          )
+        )}
       </div>
 
       {selectedToken && (
