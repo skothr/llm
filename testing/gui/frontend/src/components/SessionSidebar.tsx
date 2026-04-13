@@ -30,8 +30,13 @@ export function SessionSidebar() {
         body: JSON.stringify({ name: loadName, model_id: loadModelId, mode: loadMode }),
       });
       if (!resp.ok) {
-        const detail = await resp.json();
-        throw new Error(detail.detail || "Failed to load model");
+        const body = await resp.json().catch(() => ({ detail: "Failed to load model" }));
+        const detail = body.detail;
+        throw new Error(
+          typeof detail === "string" ? detail :
+          Array.isArray(detail) ? detail.map((d: { msg?: string }) => d.msg || "error").join("; ") :
+          "Failed to load model"
+        );
       }
       await fetchSessions();
       setLoadModelId("");
