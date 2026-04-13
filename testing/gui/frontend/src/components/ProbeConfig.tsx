@@ -15,6 +15,8 @@ export function ProbeConfig() {
   const [topK, setTopK] = useState(10);
   const [maxTokens, setMaxTokens] = useState(64);
   const [temperature, setTemperature] = useState(0.0);
+  const [repPenalty, setRepPenalty] = useState(1.0);
+  const [stopSeqs, setStopSeqs] = useState("\\n\\n");
   const [error, setError] = useState("");
 
   const handleRun = () => {
@@ -52,6 +54,8 @@ export function ProbeConfig() {
     } else if (operation === "generate") {
       connect(`/ws/sessions/${targetSession}/generate`, {
         prompt, max_tokens: maxTokens, temperature, prob_top_k: topK,
+        repetition_penalty: repPenalty,
+        stop_sequences: stopSeqs.split(",").map((s) => s.replace(/\\n/g, "\n").trim()).filter(Boolean),
       }, handlers);
     } else if (operation === "intervene") {
       setError("Configure interventions in the surgery panel first");
@@ -104,6 +108,8 @@ export function ProbeConfig() {
       } else if (operation === "generate") {
         connect(`/ws/sessions/${targetSessionB}/generate`, {
           prompt, max_tokens: maxTokens, temperature, prob_top_k: topK,
+        repetition_penalty: repPenalty,
+        stop_sequences: stopSeqs.split(",").map((s) => s.replace(/\\n/g, "\n").trim()).filter(Boolean),
         }, handlersB);
       }
     }
@@ -155,8 +161,24 @@ export function ProbeConfig() {
               <label>
                 temp: <input type="number" step="0.1" value={temperature} onChange={(e) => setTemperature(+e.target.value)} style={{ width: 50 }} />
               </label>
+              <label>
+                rep: <input type="number" step="0.1" value={repPenalty} onChange={(e) => setRepPenalty(+e.target.value)} style={{ width: 50 }} />
+              </label>
             </>
           )}
+        </div>
+      )}
+
+      {operation === "generate" && (
+        <div style={{ fontSize: 12 }}>
+          <label>
+            stop: <input
+              value={stopSeqs}
+              onChange={(e) => setStopSeqs(e.target.value)}
+              placeholder="comma-separated, use \n for newline"
+              style={{ width: "100%" }}
+            />
+          </label>
         </div>
       )}
 

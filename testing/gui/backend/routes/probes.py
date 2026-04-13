@@ -128,9 +128,12 @@ async def generate_ws(ws: WebSocket, name: str):
     max_tokens = config.get("max_tokens", 256)
     temperature = config.get("temperature", 1.0)
     prob_top_k = config.get("prob_top_k", 10)
+    repetition_penalty = config.get("repetition_penalty", 1.0)
+    stop_sequences = config.get("stop_sequences", [])
 
     connected = True
     generated_tokens = []
+    stop_reason = None
 
     try:
         async with info.lock:
@@ -146,6 +149,13 @@ async def generate_ws(ws: WebSocket, name: str):
                 with torch.no_grad():
                     outputs = info.model(input_ids)
                     logits = outputs.logits[:, -1, :]
+
+                if repetition_penalty != 1.0:
+                    for token_id in set(input_ids[0].tolist()):
+                        if logits[0, token_id] > 0:
+                            logits[0, token_id] /= repetition_penalty
+                        else:
+                            logits[0, token_id] *= repetition_penalty
 
                 if temperature > 0:
                     logits = logits / temperature
@@ -183,6 +193,12 @@ async def generate_ws(ws: WebSocket, name: str):
                     break
 
                 if next_token[0, 0] == info.tokenizer.eos_token_id:
+                    stop_reason = "eos"
+                    break
+
+                gen_text = "".join(generated_tokens)
+                if stop_sequences and any(s in gen_text for s in stop_sequences):
+                    stop_reason = "stop_sequence"
                     break
 
         if connected:
@@ -190,6 +206,7 @@ async def generate_ws(ws: WebSocket, name: str):
                 "type": "complete",
                 "generated_text": "".join(generated_tokens),
                 "num_tokens": len(generated_tokens),
+                "stop_reason": stop_reason or "max_tokens",
             })
 
     except Exception as e:
