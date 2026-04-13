@@ -2,9 +2,16 @@ import { useState } from "react";
 import { useStore } from "../state/store";
 import type { GenerateData, ProbeResult } from "../types/api";
 
+function displayToken(text: string): string {
+  return text
+    .replace(/\n/g, "\\n")
+    .replace(/\t/g, "\\t")
+    .replace(/\r/g, "\\r")
+    || "\\u200b";
+}
+
 export function GenerationOutput() {
   const results = useStore((s) => s.results);
-  const [selectedToken, setSelectedToken] = useState<GenerateData | null>(null);
 
   const genResults = results
     .filter((r) => r.operation === "generate")
@@ -27,30 +34,23 @@ export function GenerationOutput() {
       <h2>Generation Output</h2>
       <div style={{ display: "flex", gap: 16 }}>
         {genResults.slice(0, 2).map((result) => (
-          <GenerationPanel
-            key={result.id}
-            result={result}
-            selectedToken={selectedToken}
-            onSelectToken={setSelectedToken}
-          />
+          <GenerationPanel key={result.id} result={result} />
         ))}
       </div>
     </div>
   );
 }
 
-function GenerationPanel({
-  result,
-  selectedToken,
-  onSelectToken,
-}: {
-  result: ProbeResult;
-  selectedToken: GenerateData | null;
-  onSelectToken: (t: GenerateData | null) => void;
-}) {
+function GenerationPanel({ result }: { result: ProbeResult }) {
+  const [selectedStep, setSelectedStep] = useState<number | null>(null);
+
   const tokens = result.data.filter(
     (m): m is GenerateData => m.type === "data" && "token" in m && "step" in m
   );
+
+  const selectedToken = selectedStep !== null
+    ? tokens.find((t) => t.step === selectedStep) || null
+    : null;
 
   return (
     <div style={{ flex: 1 }}>
@@ -62,13 +62,14 @@ function GenerationPanel({
         {tokens.map((tok) => (
           <span
             key={tok.step}
-            onClick={() => onSelectToken(selectedToken?.step === tok.step ? null : tok)}
+            onClick={() => setSelectedStep(selectedStep === tok.step ? null : tok.step)}
             style={{
               cursor: "pointer",
               background:
-                selectedToken?.step === tok.step ? "#1a5276" : "transparent",
+                selectedStep === tok.step ? "#1a5276" : "transparent",
               borderRadius: 2,
               padding: "0 1px",
+              whiteSpace: "pre",
             }}
           >
             {tok.token}
@@ -91,8 +92,8 @@ function GenerationPanel({
           </div>
           {selectedToken.top_k.map((alt, i) => (
             <div key={i} style={{ display: "flex", gap: 8 }}>
-              <span style={{ color: i === 0 ? "#4ecdc4" : "#888" }}>
-                {alt.token}
+              <span style={{ color: i === 0 ? "#4ecdc4" : "#888", fontFamily: "monospace" }}>
+                {displayToken(alt.token)}
               </span>
               <span style={{ color: "#666" }}>
                 {(alt.prob * 100).toFixed(1)}%
