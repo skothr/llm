@@ -15,6 +15,7 @@ BACKEND_PID=$!
 
 echo "Starting frontend..."
 cd testing/gui/frontend
+npm install
 npm run dev &
 FRONTEND_PID=$!
 

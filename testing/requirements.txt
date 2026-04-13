@@ -1,6 +1,0 @@
-torch>=2.0
-transformers>=4.40
-accelerate>=0.27
-bitsandbytes>=0.43
-requests
-pytest>=8.0
