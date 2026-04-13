@@ -39,6 +39,7 @@ testing/gui/frontend/dist/
 *.out
 *.toc
 texput.log
+theory/build/llm-core-architecture/llm-core-architecture.pdf
 
 # Theory binary assets (large, not source)
 theory/archive/
