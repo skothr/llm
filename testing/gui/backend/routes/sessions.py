@@ -40,8 +40,8 @@ class CloneRequest(BaseModel):
     @field_validator("target_name")
     @classmethod
     def validate_slug(cls, v):
-        if not re.match(r"^[a-z0-9][a-z0-9\-]{0,63}$", v):
-            raise ValueError("Must be a valid slug")
+        if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._~\-]{0,63}$", v):
+            raise ValueError("Must be alphanumeric, hyphens, underscores, periods, or tildes, 1-64 chars")
         return v
 
 class LoadRequest(BaseModel):
@@ -52,8 +52,8 @@ class LoadRequest(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_slug(cls, v):
-        if not re.match(r"^[a-z0-9][a-z0-9\-]{0,63}$", v):
-            raise ValueError("Must be a valid slug")
+        if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._~\-]{0,63}$", v):
+            raise ValueError("Must be alphanumeric, hyphens, underscores, periods, or tildes, 1-64 chars")
         return v
 
 def _session_summary(info) -> dict:
