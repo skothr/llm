@@ -3,11 +3,12 @@ import { useStore } from "../state/store";
 import type { GenerateData, ProbeResult } from "../types/api";
 
 function displayToken(text: string): string {
+  if (text === "") return "<empty>";
   return text
     .replace(/\n/g, "\\n")
     .replace(/\t/g, "\\t")
     .replace(/\r/g, "\\r")
-    || "\\u200b";
+    .replace(/ /g, "\u00B7");  // middle dot for spaces
 }
 
 export function GenerationOutput() {
