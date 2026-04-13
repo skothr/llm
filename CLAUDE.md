@@ -1,26 +1,72 @@
 # Purpose
-This is a workspace for experimentatal LLM research using open source models that can be tested and modified locally, or fine-tuned.
-
-Some semblance of model evaluation, experimental research into model weights fine-tuning
+This is a workspace for robust experimental LLM research using open source models that can be tested and modified locally or fine-tuned.
 
 ## Project Structure
 
-Projects include:
-
-`theory/` -- Theoretical framework: fundamentals reference for mathematics
-  - WebSearch-based publication research for the theoretical/mathematical basis
-  - Various details of different architectures (as a ground truth),
-  - Historical progression and timeline
-
-`testing/`-- experimental research on local LLMs; uses llama.cpp and ollama for inference
+`theory/` — LLM theoretical framework (**GROUND TRUTH**): LLM architectures and math, historical progression/timeline, high-level explanations, and visualizations.
+  - `build/llm-core-architecture/` — LaTeX source and build artifacts
+  - `sources/` — WebSearch-based publication research for the theoretical/mathematical basis
+  - `visuals/` — visual materials
+  - `GLOSSARY.md` — every technical term used in this workspace must be defined here. If you encounter or use a term not in the glossary, add it immediately.
+  - `llm-core-architecture.pdf` — compiled output (kept at theory root)
+`testing/` — experimental research on local LLMs; uses llama.cpp and ollama for inference
   - `llm_surgeon/` — Python toolkit for layer-level model surgery
-  - `research/observations/` — Research log: experimental findings, anomalies, hypotheses
+  - `tests/` — pytest test suite for llm_surgeon
+  - `experiments/` — experiment definitions and database
+  - `prompts/` — prompt templates for experiments
+`lib/` — External libraries
+  - `llama.cpp` — llama.cpp source (built with GPU enabled)
+`models/` — cached HuggingFace models (TinyLlama, OpenLLaMA 3B)
+`outputs/` — experiment output directories (modified model variants, baselines)
+`research/` — Research scripts, experimental findings, anomalies, hypotheses
+  - `observations/` — Research observation log: experimental findings, anomalies, hypotheses
 
-`llama.cpp/` -- Local build of llama.cpp (CPU-only currently, rebuild with CUDA after driver update)
+
+# THEORY
+LLM theory — high-level explanations, visualizations, and math related to LLM theory.
+
+# Build Commands
+```bash
+# Compile LaTeX document (run twice for TOC/references)
+mv theory/llm-core-architecture.pdf theory/archive/llm-core-architecture-<date/time>.pdf && \
+pdflatex -output-directory=theory/build/llm-core-architecture theory/build/llm-core-architecture/llm-core-architecture.tex && \
+pdflatex -output-directory=theory/build/llm-core-architecture theory/build/llm-core-architecture/llm-core-architecture.tex && \
+mv theory/build/llm-core-architecture/llm-core-architecture.pdf theory/llm-core-architecture.pdf
+
+# View HTML visualization
+xdg-open theory/visuals/llm-architecture-diagram.html
+```
+
+# Architecture
+
+## Core Document
+`theory/build/llm-core-architecture/llm-core-architecture.tex` — LaTeX document covering Transformer architecture from original encoder-decoder through modern decoder-only (LLaMA). 10 sections: Transformer overview, Tokenization, Embeddings, Positional Encoding, Attention, FFN, Normalization/Residuals, Decoder-Only Shift, Output Head, Full Forward Pass.
+
+Custom LaTeX environments:
+- `\begin{implbox}` — green "Implementation Note" callouts
+- `\begin{evobox}` — blue "Architectural Evolution" callouts
+- `\dimtext{}` — inline dimension annotations
+
+## HTML Companion
+`visuals/llm-architecture-diagram.html` — standalone interactive diagram with clickable layers showing tensor shapes and data flow. Dark theme, self-contained (no build step).
+
+## Sources
+
+All claims must be grounded in canonical papers.
+- `sources/index.json` — master index (citation key, title, authors, year, URL, local file, summary)
+- `sources/papers/` — local PDF copies, named `{key}_{slug}.pdf`
+When adding a new source: add entry to `sources/index.json`, download PDF to `sources/papers/`, use the citation key consistently in LaTeX `\cite{}` commands
+
+## Conventions/Rules
+- ALWAYS define EVERY variable in EVERY equation, directly underneath it (brief is fine, but no undefined variables)
+- FIRST formalize math, THEN describe technical aspects and practical use, THEN elaborate using accessible language and/or analogies
+- Ground all architectural claims in specific source papers with citation keys from `sources/index.json`
+
+
+# TESTING
 
 ## Research Observations
-
-Record interesting experimental findings in `testing/research/observations/`. These are research notes, not development friction logs.
+Record interesting experimental findings in `research/observations/`.
 
 Each observation file should include:
 - **Date and context** — what experiment was running, what model, what parameters
