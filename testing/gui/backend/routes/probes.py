@@ -137,6 +137,7 @@ async def generate_ws(ws: WebSocket, name: str):
             inputs = info.tokenizer(prompt, return_tensors="pt")
             device = next(info.model.parameters()).device
             input_ids = inputs["input_ids"].to(device)
+            prev_text = info.tokenizer.decode(input_ids[0], skip_special_tokens=True)
 
             for step in range(max_tokens):
                 if not connected:
@@ -157,13 +158,18 @@ async def generate_ws(ws: WebSocket, name: str):
                 else:
                     next_token = torch.multinomial(probs, 1)
 
-                token_str = info.tokenizer.decode(next_token[0])
+                input_ids = torch.cat([input_ids, next_token], dim=-1)
+                new_text = info.tokenizer.decode(input_ids[0], skip_special_tokens=True)
+                token_str = new_text[len(prev_text):]
+                prev_text = new_text
                 generated_tokens.append(token_str)
 
-                top_k_list = [
-                    {"token": info.tokenizer.decode(top_indices[i:i+1]), "prob": float(top_probs[i])}
-                    for i in range(len(top_indices))
-                ]
+                top_k_list = []
+                for i in range(len(top_indices)):
+                    trial = torch.cat([input_ids[0, :-1], top_indices[i:i+1]])
+                    trial_text = info.tokenizer.decode(trial, skip_special_tokens=True)
+                    alt_str = trial_text[len(prev_text) - len(token_str):]
+                    top_k_list.append({"token": alt_str, "prob": float(top_probs[i])})
 
                 msg = {
                     "type": "data",
@@ -175,8 +181,6 @@ async def generate_ws(ws: WebSocket, name: str):
                 if not await _send_json(ws, msg):
                     connected = False
                     break
-
-                input_ids = torch.cat([input_ids, next_token], dim=-1)
 
                 if next_token[0, 0] == info.tokenizer.eos_token_id:
                     break
