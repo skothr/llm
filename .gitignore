@@ -26,4 +26,25 @@ test.py
 
 # Databases (auto-created, not source)
 testing/experiments.db
+testing/experiments/experiments.db
+
+# Frontend build/cache
 testing/gui/frontend/node_modules/
+testing/gui/frontend/.vite/
+testing/gui/frontend/dist/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+texput.log
+
+# Theory binary assets (large, not source)
+theory/archive/
+theory/sources/papers/
+
+# Python
+__pycache__/
+*.pyc
+testing/.venv/
