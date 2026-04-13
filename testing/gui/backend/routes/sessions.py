@@ -207,11 +207,12 @@ async def clone_session(name: str, req: CloneRequest):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
-    state = {k: v.cpu().clone() for k, v in info.model.state_dict().items()}
-    cloned_model = type(info.model)(info.model.config)
-    device = next(info.model.parameters()).device
-    cloned_model.load_state_dict(state)
-    cloned_model.to(device)
+    import copy
+    try:
+        cloned_model = copy.deepcopy(info.model)
+    except Exception as e:
+        raise HTTPException(500, f"Clone failed: {e}")
+
     cloned_model.eval()
 
     mgr.register(req.target_name, cloned_model, info.tokenizer,
