@@ -62,9 +62,16 @@ export const useStore = create<StoreState>((set, get) => ({
   activeResultId: null,
 
   fetchSessions: async () => {
-    const resp = await fetch("/api/sessions");
-    const data = await resp.json();
-    set({ sessions: data });
+    try {
+      const resp = await fetch("/api/sessions");
+      const data = await resp.json();
+      set({ sessions: data });
+      if (get().surgeryOps.length === 0) {
+        get().fetchSurgeryOps();
+      }
+    } catch {
+      // backend not ready yet, ignore
+    }
   },
 
   fetchSessionInfo: async (name: string) => {
@@ -74,9 +81,13 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   fetchSurgeryOps: async () => {
-    const resp = await fetch("/api/surgery/operations");
-    const data = await resp.json();
-    set({ surgeryOps: data });
+    try {
+      const resp = await fetch("/api/surgery/operations");
+      const data = await resp.json();
+      set({ surgeryOps: data });
+    } catch {
+      // backend not ready yet, will retry on next fetchSessions
+    }
   },
 
   deleteSession: async (name: string) => {
