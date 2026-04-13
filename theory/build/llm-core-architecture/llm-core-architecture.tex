@@ -1,0 +1,991 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{fancyvrb}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{caption}
+
+\geometry{margin=1in}
+\pgfplotsset{compat=1.18}
+
+% Custom colors
+\definecolor{implnote}{RGB}{40,80,40}
+\definecolor{implbg}{RGB}{235,245,235}
+\definecolor{dimcolor}{RGB}{0,60,120}
+\definecolor{evobg}{RGB}{240,240,255}
+
+% Custom environments
+\newtcolorbox{implbox}[1][]{
+  colback=implbg, colframe=implnote,
+  fonttitle=\bfseries, title={Implementation Note},
+  #1
+}
+\newtcolorbox{evobox}[1][]{
+  colback=evobg, colframe=blue!40!black,
+  fonttitle=\bfseries, title={Architectural Evolution},
+  #1
+}
+\newtcolorbox{dimbox}[1][]{
+  colback=blue!3, colframe=dimcolor,
+  fonttitle=\bfseries, title={Concrete Dimensions},
+  #1
+}
+
+% Notation shortcuts
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\LayerNorm}{\operatorname{LayerNorm}}
+\newcommand{\RMSNorm}{\operatorname{RMSNorm}}
+\newcommand{\ReLU}{\operatorname{ReLU}}
+\newcommand{\GELU}{\operatorname{GELU}}
+\newcommand{\Swish}{\operatorname{Swish}}
+\newcommand{\SwiGLU}{\operatorname{SwiGLU}}
+\newcommand{\FFN}{\operatorname{FFN}}
+\newcommand{\Attention}{\operatorname{Attention}}
+\newcommand{\MultiHead}{\operatorname{MultiHead}}
+\newcommand{\Concat}{\operatorname{Concat}}
+\newcommand{\dmodel}{d_{\text{model}}}
+\newcommand{\dff}{d_{\text{ff}}}
+\newcommand{\dk}{d_k}
+\newcommand{\dv}{d_v}
+
+\title{\textbf{The Architecture of Large Language Models}\\[0.5em]
+\large From the Original Transformer to Modern Decoder-Only Models}
+\author{LLM Theory Reference}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document provides a top-down architectural reference for the Transformer and its
+evolution into modern large language models. Starting from the original encoder-decoder
+Transformer \cite{vaswani2017}, we trace the development through GPT-1 \cite{radford2018}
+to contemporary decoder-only architectures like LLaMA \cite{touvron2023}. Each component
+is presented with full mathematical formulations, matrix dimensions, and implementation
+context. The goal is understanding \emph{what} each component does, \emph{why} it exists,
+and \emph{how} modern models have refined it.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%=============================================================================
+\section{The Original Transformer}
+\label{sec:transformer}
+%=============================================================================
+
+The Transformer \cite{vaswani2017} was introduced in 2017 as a sequence-to-sequence model
+for machine translation. Its key innovation was replacing recurrence entirely with
+\emph{attention mechanisms}, allowing the model to relate any two positions in a sequence
+in constant time.
+
+\subsection{Why Attention Replaced Recurrence}
+
+Prior architectures (RNNs, LSTMs) processed sequences one step at a time, creating a
+fundamental bottleneck: information from early tokens had to survive through every
+intermediate step to reach later tokens. The Transformer eliminates this by letting every
+position attend directly to every other position.
+
+The computational trade-offs per layer are \cite{vaswani2017}:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Layer Type} & \textbf{Complexity per Layer} & \textbf{Sequential Operations} \\
+\midrule
+Self-Attention & $O(n^2 \cdot d)$ & $O(1)$ \\
+Recurrent & $O(n \cdot d^2)$ & $O(n)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent where $n$ is the sequence length and $d$ is the representation dimension.
+Self-attention is more expensive per layer when $n > d$, but its $O(1)$ sequential
+operations (fully parallelizable) make it dramatically faster on modern hardware. For
+typical LLM configurations ($d = 4096$, $n \leq 8192$), both terms are comparable, and
+the parallelism advantage dominates.
+
+\subsection{High-Level Architecture}
+
+The original Transformer is an \emph{encoder-decoder} model:
+
+\begin{itemize}[nosep]
+  \item \textbf{Encoder} (left): Processes the input sequence. Consists of $N$ identical
+    layers, each containing a self-attention sub-layer followed by a feed-forward network.
+    The encoder sees the entire input at once (bidirectional).
+  \item \textbf{Decoder} (right): Generates the output sequence one token at a time.
+    Also $N$ layers, but each layer has three sub-layers: \emph{masked} self-attention
+    (can only attend to earlier positions), encoder-decoder cross-attention (attends to
+    encoder output), and a feed-forward network.
+\end{itemize}
+
+Both stacks use residual connections and layer normalization around each sub-layer.
+The base model uses $N = 6$ layers in each stack, with $\dmodel = 512$
+\cite{vaswani2017}.
+
+\begin{dimbox}
+\textbf{Original Transformer (base):}
+$N = 6$ layers, $\dmodel = 512$, $h = 8$ heads,
+$\dk = \dv = \dmodel / h = 64$, $\dff = 2048$.
+Total parameters: 65M.
+\end{dimbox}
+
+
+%=============================================================================
+\section{Tokenization}
+\label{sec:tokenization}
+%=============================================================================
+
+Before a model can process text, it must convert characters into discrete integer tokens.
+The dominant method is \textbf{Byte Pair Encoding} (BPE) \cite{sennrich2016}, adapted from
+a data compression algorithm.
+
+\subsection{The BPE Algorithm}
+
+BPE builds a vocabulary of subword units by iteratively merging the most frequent
+adjacent pairs:
+
+\begin{tcolorbox}[colback=white, colframe=black!50, title={Algorithm: BPE vocabulary construction \cite{sennrich2016}}]
+\begin{enumerate}[nosep]
+  \item Initialize vocabulary $\mathcal{V}$ with all individual characters (or bytes)
+  \item Represent each word in the training corpus as a sequence of characters
+  \item \textbf{For} $i = 1$ to $k$ (desired number of merges):
+  \begin{enumerate}[nosep,label=\alph*.]
+    \item Count all adjacent symbol pairs across the corpus
+    \item Find the most frequent pair $(a, b)$
+    \item Merge every occurrence of $(a, b)$ into a new symbol $ab$
+    \item Add $ab$ to vocabulary $\mathcal{V}$
+  \end{enumerate}
+  \item \textbf{Return} $\mathcal{V}$
+\end{enumerate}
+\end{tcolorbox}
+
+The only hyperparameter is the number of merge operations $k$, which directly controls
+the final vocabulary size: $|\mathcal{V}| = |\text{base characters}| + k$.
+
+\textbf{Example.} Starting from the corpus \{``low'', ``lowest'', ``newer'', ``wider''\},
+BPE might learn merges: \texttt{l o} $\to$ \texttt{lo}, then \texttt{lo w} $\to$
+\texttt{low}, then \texttt{e r} $\to$ \texttt{er}. After these merges, the unseen word
+``lower'' segments as \texttt{low er} --- two known tokens \cite{sennrich2016}.
+
+\subsection{Vocabulary Sizes in Practice}
+
+\begin{center}
+\begin{tabular}{lrl}
+\toprule
+\textbf{Model} & \textbf{Vocab Size} & \textbf{Tokenizer} \\
+\midrule
+Original Transformer \cite{vaswani2017} & 37,000 & BPE (shared source/target) \\
+GPT-1 \cite{radford2018} & 40,000 & BPE \\
+GPT-3 \cite{brown2020} & 50,257 & BPE \\
+LLaMA \cite{touvron2023} & 32,000 & SentencePiece BPE (byte-fallback) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{implbox}
+LLaMA uses SentencePiece \cite{touvron2023}, which operates on raw byte sequences
+rather than Unicode characters. This provides a \emph{byte-fallback} mechanism: any byte
+sequence can be tokenized, even if it contains characters unseen during training. All
+numbers are split into individual digits. This means the vocabulary is truly closed ---
+there are no ``unknown token'' failures at inference time.
+\end{implbox}
+
+
+%=============================================================================
+\section{Embeddings}
+\label{sec:embeddings}
+%=============================================================================
+
+Each token index $t \in \{0, 1, \ldots, V-1\}$ is mapped to a dense vector via the
+\textbf{token embedding matrix}:
+\begin{equation}
+  W_e \in \R^{V \times \dmodel}
+\end{equation}
+where $V$ is the vocabulary size and $\dmodel$ is the model dimension. Looking up token
+$t$ simply selects the $t$-th row of $W_e$.
+
+For a sequence of tokens $(t_1, t_2, \ldots, t_n)$, the embedding step produces a matrix:
+\begin{equation}
+  X_{\text{embed}} = \begin{pmatrix} W_e[t_1] \\ W_e[t_2] \\ \vdots \\ W_e[t_n] \end{pmatrix}
+  \in \R^{n \times \dmodel}
+\end{equation}
+
+\subsection{Weight Tying}
+\label{sec:weight-tying}
+
+A key architectural detail: in both the original Transformer \cite{vaswani2017} and GPT-1
+\cite{radford2018}, the \emph{same} weight matrix $W_e$ is used for three purposes:
+
+\begin{enumerate}[nosep]
+  \item Source (encoder) input embeddings
+  \item Target (decoder) input embeddings
+  \item The output projection that converts hidden states back to vocabulary logits
+    (see \Cref{sec:output-head})
+\end{enumerate}
+
+In decoder-only models (which have no encoder), points 1 and 2 collapse, so $W_e$ is
+shared between the input embedding and the output projection:
+\begin{equation}
+  \text{logits} = h_n \cdot W_e^\top
+\end{equation}
+where $h_n \in \R^{\dmodel}$ is the final hidden state. This halves the parameters
+devoted to vocabulary (which can be substantial --- for LLaMA-7B with $V = 32000$ and
+$\dmodel = 4096$, the embedding matrix alone is $32000 \times 4096 \approx 131$M
+parameters).
+
+\subsection{Embedding Scaling}
+
+The original Transformer scales embeddings by $\sqrt{\dmodel}$ before adding positional
+encodings \cite{vaswani2017}:
+\begin{equation}
+  X = \sqrt{\dmodel} \cdot X_{\text{embed}} + X_{\text{pos}}
+\end{equation}
+where $X_{\text{pos}} \in \R^{n \times \dmodel}$ is the positional encoding matrix
+(\Cref{sec:positional-encoding}).
+This compensates for the fact that embedding vectors tend to have small magnitudes
+(roughly unit variance per dimension), while positional encodings have magnitudes on the
+order of 1. The scaling ensures the token identity signal is not overwhelmed by positional
+information. GPT-1 and LLaMA do not use this scaling factor.
+
+
+%=============================================================================
+\section{Positional Encoding}
+\label{sec:positional-encoding}
+%=============================================================================
+
+Self-attention is \emph{permutation-invariant}: if you shuffle the input tokens,
+the attention computation produces the same outputs (just shuffled). The model has no
+inherent sense of token order. Positional encodings inject sequence-position information
+so the model can distinguish ``the cat sat on the mat'' from ``mat the on sat cat the.''
+
+Three major approaches have been used, representing an evolution in how position is
+encoded.
+
+\subsection{Sinusoidal Positional Encoding (2017)}
+
+The original Transformer \cite{vaswani2017} adds fixed sinusoidal functions to the
+embeddings. For position $\text{pos}$ and dimension $i$:
+\begin{align}
+  PE_{(\text{pos}, 2i)}   &= \sin\!\left(\frac{\text{pos}}{10000^{2i/\dmodel}}\right) \\[4pt]
+  PE_{(\text{pos}, 2i+1)} &= \cos\!\left(\frac{\text{pos}}{10000^{2i/\dmodel}}\right)
+\end{align}
+Each dimension oscillates at a different frequency, from $2\pi$ (dimension 0) to
+$10000 \cdot 2\pi$ (last dimension). The intuition: position is encoded as a binary-like
+code where each dimension captures a different ``bit'' of the position at a different
+time scale.
+
+A key property: for any fixed offset $k$, $PE_{\text{pos}+k}$ can be expressed as a
+linear function of $PE_{\text{pos}}$. This means the model can learn to attend to
+relative positions using linear projections.
+
+These encodings are \emph{added} to the token embeddings (not concatenated), so they share
+the same $\dmodel$-dimensional space.
+
+\subsection{Learned Positional Embeddings (2018)}
+
+GPT-1 \cite{radford2018} replaced the fixed sinusoidal functions with a \emph{learned}
+position embedding matrix:
+\begin{equation}
+  W_p \in \R^{n_{\max} \times \dmodel}
+\end{equation}
+where $n_{\max}$ is the maximum sequence length (512 for GPT-1). The position embedding
+for position $\text{pos}$ is simply the $\text{pos}$-th row of $W_p$, trained jointly with
+the rest of the model:
+\begin{equation}
+  h_0 = X_{\text{embed}} \cdot W_e + W_p
+\end{equation}
+
+This gives the model full freedom to learn whatever positional representation is most
+useful, but fixes the maximum context length at training time.
+
+\subsection{Rotary Position Embedding --- RoPE (2021)}
+\label{sec:rope}
+
+RoPE \cite{su2021} takes a fundamentally different approach: instead of \emph{adding}
+position to the embeddings, it \emph{rotates} the query and key vectors by
+position-dependent angles. This makes the dot product between query at position $m$ and
+key at position $n$ depend only on their relative distance $(m - n)$.
+
+For a vector $\bm{x} \in \R^d$, RoPE groups dimensions into pairs and applies a 2D
+rotation to each pair. The rotation angle for pair $i$ at position $m$ is:
+\begin{equation}
+  \theta_i = m \cdot \omega_i, \quad \text{where } \omega_i = 10000^{-2i/d}
+\end{equation}
+where $m$ is the token position in the sequence, $i \in \{0, 1, \ldots, d/2 - 1\}$ is
+the dimension pair index, and $d$ is the head dimension ($\dk$).
+
+The rotation is applied as:
+\begin{equation}
+  f(\bm{x}, m) =
+  \begin{pmatrix}
+    x_0 \cos(m\omega_0) - x_1 \sin(m\omega_0) \\
+    x_0 \sin(m\omega_0) + x_1 \cos(m\omega_0) \\
+    x_2 \cos(m\omega_1) - x_3 \sin(m\omega_1) \\
+    x_2 \sin(m\omega_1) + x_3 \cos(m\omega_1) \\
+    \vdots
+  \end{pmatrix}
+\end{equation}
+where $x_0, x_1, \ldots$ are the scalar components of $\bm{x}$.
+
+The key mathematical property is that for rotated queries $\bm{q}_m = f(\bm{q}, m)$ and
+keys $\bm{k}_n = f(\bm{k}, n)$:
+\begin{equation}
+  \bm{q}_m^\top \bm{k}_n = \bm{q}^\top R_{m-n} \bm{k}
+\end{equation}
+where $R_{m-n}$ is a rotation matrix depending only on the relative position $(m - n)$.
+The dot product --- and thus the attention weight --- naturally encodes relative position
+without any explicit relative position bias.
+
+\begin{evobox}
+\textbf{RoPE} is applied only to the query $Q$ and key $K$ vectors, \emph{not} to values
+$V$ \cite{su2021}. It is applied at every layer, not just the first. This is the
+positional encoding used by LLaMA \cite{touvron2023} and most modern LLMs.
+\end{evobox}
+
+
+%=============================================================================
+\section{Attention Mechanism}
+\label{sec:attention}
+%=============================================================================
+
+Attention is the core operation of the Transformer. Conceptually, it allows each position
+in a sequence to ``look at'' every other position and aggregate information based on
+relevance.
+
+\subsection{Scaled Dot-Product Attention}
+
+Given queries $Q$, keys $K$, and values $V$, attention computes \cite{vaswani2017}:
+\begin{equation}
+\label{eq:attention}
+  \Attention(Q, K, V) = \softmax\!\left(\frac{QK^\top}{\sqrt{\dk}}\right) V
+\end{equation}
+where $Q, K \in \R^{n \times \dk}$ are the query and key matrices, $V \in \R^{n \times \dv}$
+is the value matrix, $n$ is the sequence length, and $\dk$ is the key/query dimension
+(the scaling factor).
+
+Step by step, for a single query vector $\bm{q}$ attending to keys $K$ and values $V$:
+
+\begin{enumerate}[nosep]
+  \item \textbf{Compute similarity scores:} $\bm{s} = \bm{q} K^\top \in \R^n$. Each
+    score $s_j = \bm{q} \cdot \bm{k}_j$ measures how relevant position $j$ is.
+  \item \textbf{Scale:} $\bm{s} \leftarrow \bm{s} / \sqrt{\dk}$. The scaling prevents
+    the dot products from growing large in magnitude with $\dk$, which would push the
+    softmax into regions of extremely small gradients. Without scaling, for random unit-variance
+    vectors, $\text{Var}(\bm{q} \cdot \bm{k}) = \dk$, so dividing by $\sqrt{\dk}$
+    restores unit variance \cite{vaswani2017}.
+  \item \textbf{Softmax:} $\bm{a} = \softmax(\bm{s}) \in \R^n$. Converts scores to a
+    probability distribution (attention weights). Each $a_j \geq 0$ and $\sum_j a_j = 1$.
+  \item \textbf{Weighted sum:} $\text{output} = \sum_j a_j \bm{v}_j$. The output is a
+    weighted combination of value vectors, where the weights are the attention scores.
+\end{enumerate}
+
+In matrix form for all $n$ positions simultaneously:
+\begin{equation}
+  Q, K, V \in \R^{n \times \dk}, \quad
+  QK^\top \in \R^{n \times n}, \quad
+  \Attention(Q, K, V) \in \R^{n \times \dv}
+\end{equation}
+
+The $n \times n$ attention matrix is the computational bottleneck --- it's why
+self-attention is $O(n^2)$ in sequence length.
+
+\subsection{Multi-Head Attention}
+
+Rather than performing a single attention function with $\dmodel$-dimensional keys,
+values, and queries, multi-head attention runs $h$ attention operations in parallel, each
+on a different learned linear projection \cite{vaswani2017}:
+\begin{align}
+  \MultiHead(Q, K, V) &= \Concat(\text{head}_1, \ldots, \text{head}_h) \, W^O \\
+  \text{where } \text{head}_i &= \Attention(Q W_i^Q, \; K W_i^K, \; V W_i^V)
+\end{align}
+
+The projection matrices are:
+\begin{equation}
+  W_i^Q \in \R^{\dmodel \times \dk}, \quad
+  W_i^K \in \R^{\dmodel \times \dk}, \quad
+  W_i^V \in \R^{\dmodel \times \dv}, \quad
+  W^O \in \R^{h\dv \times \dmodel}
+\end{equation}
+
+With $\dk = \dv = \dmodel / h$, the total computation is similar to single-head attention
+with full dimensionality, but the model can attend to information from different
+representation subspaces at different positions simultaneously.
+
+\begin{dimbox}
+\textbf{Original Transformer:} $\dmodel = 512$, $h = 8$, so $\dk = \dv = 64$. Each head
+operates on 64-dimensional projections.\\[4pt]
+\textbf{LLaMA-7B:} $\dmodel = 4096$, $h = 32$, so $\dk = \dv = 128$. With RoPE applied
+to $Q$ and $K$ at every layer.
+\end{dimbox}
+
+\subsection{Three Types of Attention}
+\label{sec:attention-types}
+
+The original encoder-decoder Transformer uses three distinct attention patterns
+\cite{vaswani2017}:
+
+\begin{enumerate}[nosep]
+  \item \textbf{Encoder self-attention:} $Q$, $K$, $V$ all come from the encoder.
+    Every position can attend to every other position (bidirectional). The attention
+    matrix is dense.
+
+  \item \textbf{Decoder masked self-attention:} $Q$, $K$, $V$ all come from the decoder.
+    Position $i$ can only attend to positions $\leq i$ (autoregressive / causal). This
+    is enforced by setting the upper-triangular entries of $QK^\top$ to $-\infty$ before
+    the softmax, so they become zero:
+    \begin{equation}
+      \text{mask}_{ij} =
+      \begin{cases}
+        0 & \text{if } j \leq i \\
+        -\infty & \text{if } j > i
+      \end{cases}
+    \end{equation}
+    where $i$ is the query position and $j$ is the key position.
+
+  \item \textbf{Encoder-decoder cross-attention:} $Q$ comes from the decoder, $K$ and $V$
+    come from the encoder output. This is how the decoder ``reads'' the input. Each
+    decoder position can attend to all encoder positions.
+\end{enumerate}
+
+In decoder-only models (GPT, LLaMA), only type 2 exists. Cross-attention and bidirectional
+self-attention are removed entirely (\Cref{sec:decoder-only}).
+
+
+%=============================================================================
+\section{Feed-Forward Network}
+\label{sec:ffn}
+%=============================================================================
+
+Each Transformer layer contains a \textbf{position-wise feed-forward network} (FFN) ---
+a two-layer fully-connected network applied independently and identically to each position
+in the sequence \cite{vaswani2017}. While attention mixes information \emph{across}
+positions, the FFN transforms the representation \emph{at} each position.
+
+\subsection{Original FFN (ReLU)}
+
+\begin{equation}
+  \FFN(x) = \ReLU(x W_1 + b_1) W_2 + b_2
+  \label{eq:ffn-relu}
+\end{equation}
+where $x \in \R^{\dmodel}$ is the hidden state at a single position,
+$W_1 \in \R^{\dmodel \times \dff}$, $W_2 \in \R^{\dff \times \dmodel}$ are weight matrices,
+$b_1 \in \R^{\dff}$, $b_2 \in \R^{\dmodel}$ are bias vectors, and
+$\ReLU(z) = \max(0, z)$.
+
+The inner dimension $\dff$ is typically $4 \times \dmodel$. In the original Transformer,
+$\dmodel = 512$ and $\dff = 2048$, so the FFN ``expands'' the representation to 4x width,
+applies a nonlinearity, then ``compresses'' back. This expansion is thought to provide
+capacity for the model to process and transform features.
+
+\subsection{GELU Activation (GPT-1)}
+
+GPT-1 \cite{radford2018} replaced ReLU with the \textbf{Gaussian Error Linear Unit}
+(GELU):
+\begin{equation}
+  \GELU(x) = x \cdot \Phi(x)
+\end{equation}
+where $\Phi(x)$ is the cumulative distribution function of the standard normal
+distribution. Unlike ReLU, which hard-clips at zero, GELU applies a smooth,
+input-dependent gate. Values near zero are partially attenuated rather than fully zeroed.
+
+\begin{equation}
+  \FFN_{\text{GELU}}(x) = \GELU(x W_1) W_2
+  \label{eq:ffn-gelu}
+\end{equation}
+where $x$, $W_1$, and $W_2$ are as defined in \Cref{eq:ffn-relu} (without bias terms).
+
+(GPT-1 also drops the bias terms, following the T5 convention \cite{shazeer2020}.)
+
+\subsection{SwiGLU (LLaMA and Modern Models)}
+
+Shazeer \cite{shazeer2020} introduced Gated Linear Unit (GLU) variants into the
+Transformer FFN. The key idea is to use a \emph{gating mechanism}: one linear projection
+produces the content, another produces a gate that controls what passes through.
+
+\textbf{SwiGLU} combines the Swish activation function with a gated linear unit:
+\begin{equation}
+  \FFN_{\SwiGLU}(x, W, V, W_2) = \left(\Swish_1(xW) \otimes xV \right) W_2
+  \label{eq:ffn-swiglu}
+\end{equation}
+where $x \in \R^{\dmodel}$ is the input hidden state,
+$W, V \in \R^{\dmodel \times \dff}$ are the gate and up-projection weight matrices,
+$W_2 \in \R^{\dff \times \dmodel}$ is the down-projection weight matrix,
+$\otimes$ is element-wise multiplication, $\Swish_\beta(x) = x \cdot \sigma(\beta x)$,
+and $\sigma$ is the sigmoid function. When $\beta = 1$, this is also called SiLU.
+
+GLU variants use \emph{three} weight matrices ($W$, $V$, $W_2$) instead of the
+standard two ($W_1$, $W_2$). To keep the parameter count and computation equivalent, the
+inner dimension $\dff$ is reduced by a factor of $\frac{2}{3}$ \cite{shazeer2020}:
+\begin{equation}
+  \dff^{\text{SwiGLU}} = \frac{2}{3} \cdot 4\dmodel
+\end{equation}
+
+\begin{dimbox}
+\textbf{LLaMA-7B:} $\dmodel = 4096$, $\dff = \frac{2}{3} \times 4 \times 4096 = 10922
+\approx 11008$ (rounded to a multiple of 256 for hardware efficiency) \cite{touvron2023}.
+Compare to the standard $4 \times 4096 = 16384$ that a non-gated FFN would use.
+\end{dimbox}
+
+\begin{evobox}
+\textbf{FFN activation evolution:}
+\begin{itemize}[nosep]
+  \item 2017: ReLU \cite{vaswani2017} --- hard zero below 0
+  \item 2018: GELU \cite{radford2018} --- smooth, probabilistic gating
+  \item 2020: SwiGLU \cite{shazeer2020} --- gated architecture with Swish activation
+\end{itemize}
+SwiGLU consistently achieves better perplexity than ReLU and GELU in matched-parameter
+comparisons \cite{shazeer2020}, and is used in LLaMA \cite{touvron2023} and PaLM. The
+original paper offers ``no explanation as to why these architectures seem to work;
+we attribute their success, as all else, to divine benevolence'' \cite{shazeer2020}.
+\end{evobox}
+
+
+%=============================================================================
+\section{Normalization and Residual Connections}
+\label{sec:norm-residual}
+%=============================================================================
+
+Every sub-layer (attention, FFN) in the Transformer is wrapped in a residual connection
+and a normalization step. The placement of normalization relative to the sub-layer has
+significant implications for training dynamics.
+
+\subsection{Residual Connections}
+
+Each sub-layer output is added to its input via a skip connection:
+\begin{equation}
+  \text{output} = x + \text{SubLayer}(x)
+\end{equation}
+where $x$ is the sub-layer input and $\text{SubLayer}(\cdot)$ is either the attention
+or FFN function.
+
+Residual connections serve two critical purposes:
+\begin{enumerate}[nosep]
+  \item \textbf{Gradient flow:} They create a direct path for gradients to flow from
+    the loss back to early layers, mitigating the vanishing gradient problem in deep
+    networks.
+  \item \textbf{Incremental refinement:} Each layer's job becomes learning a
+    \emph{correction} to its input rather than computing the entire representation from
+    scratch. This makes optimization easier.
+\end{enumerate}
+
+\subsection{Layer Normalization}
+
+Layer normalization \cite{xiong2020} normalizes across the feature dimension for each
+individual position and sample:
+\begin{equation}
+  \LayerNorm(\bm{v}) = \gamma \cdot \frac{\bm{v} - \mu}{\sigma} + \beta
+\end{equation}
+where $\bm{v} \in \R^d$ is the input vector ($d$ is the feature dimension, i.e.\ $\dmodel$),
+$\mu = \frac{1}{d}\sum_{k=1}^{d} v_k$ is the mean,
+$\sigma = \sqrt{\frac{1}{d}\sum_{k=1}^{d}(v_k - \mu)^2}$ is the standard deviation,
+and $\gamma, \beta \in \R^d$ are learned scale and bias parameters.
+
+\subsection{Post-LN vs.\ Pre-LN}
+\label{sec:post-pre-ln}
+
+The placement of layer normalization has major implications for training stability
+\cite{xiong2020}:
+
+\textbf{Post-LN} (original Transformer \cite{vaswani2017}):
+\begin{align}
+  x' &= \LayerNorm(x + \text{SubLayer}(x))
+\end{align}
+where $x$ is the layer input and $x'$ is the layer output.
+The sub-layer output is added to the input first, \emph{then} normalized.
+
+\textbf{Pre-LN} (GPT and modern models):
+\begin{align}
+  x' &= x + \text{SubLayer}(\LayerNorm(x))
+\end{align}
+The input is normalized first, \emph{then} passed through the sub-layer, then added back.
+Pre-LN also requires a \emph{final} layer normalization before the output projection.
+
+Xiong et al.\ \cite{xiong2020} proved via mean field theory that these placements have
+different gradient behaviors at initialization:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Variant} & \textbf{Output-layer gradient scale} & \textbf{Warmup needed?} \\
+\midrule
+Post-LN & $O(d\sqrt{\ln d})$, independent of $L$ & Yes (critical) \\
+Pre-LN  & $O\!\left(d\sqrt{\frac{\ln d}{L}}\right)$, decreases with depth & No \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent where $d$ is the model dimension ($\dmodel$) and $L$ is the number of layers.
+
+In Post-LN, gradients near the output layer are large regardless of model depth,
+making training unstable without careful learning rate warmup. In Pre-LN, gradients
+scale inversely with $\sqrt{L}$ (number of layers), keeping them well-behaved even for
+deep models. This is why Pre-LN enables training without warmup and is used by virtually
+all modern LLMs.
+
+\subsection{RMSNorm}
+\label{sec:rmsnorm}
+
+RMSNorm \cite{zhang2019} simplifies layer normalization by removing the mean-centering
+step:
+\begin{equation}
+  \RMSNorm(\bm{v}) = \gamma \cdot \frac{\bm{v}}{\text{RMS}(\bm{v})},
+  \quad \text{where } \text{RMS}(\bm{v}) = \sqrt{\frac{1}{d}\sum_{k=1}^{d} v_k^2}
+\end{equation}
+where $\bm{v} \in \R^d$ is the input vector, $d$ is the feature dimension,
+$v_k$ are the scalar components of $\bm{v}$, and $\gamma \in \R^d$ is a learned
+scale parameter.
+
+By dropping the mean subtraction and the bias term $\beta$, RMSNorm provides:
+\begin{itemize}[nosep]
+  \item Comparable model quality to standard LayerNorm
+  \item 7--64\% reduction in computation time \cite{zhang2019}
+\end{itemize}
+
+LLaMA \cite{touvron2023} uses Pre-LN with RMSNorm --- this is now the standard
+configuration for modern LLMs.
+
+\begin{evobox}
+\textbf{Normalization evolution:}
+\begin{itemize}[nosep]
+  \item 2017: Post-LN with standard LayerNorm \cite{vaswani2017} --- requires warmup
+  \item 2018: Pre-LN with standard LayerNorm \cite{radford2018} --- no warmup needed
+  \item 2023: Pre-LN with RMSNorm \cite{touvron2023} --- no warmup, faster computation
+\end{itemize}
+\end{evobox}
+
+
+%=============================================================================
+\section{The Decoder-Only Shift}
+\label{sec:decoder-only}
+%=============================================================================
+
+Modern LLMs (GPT, LLaMA, Claude, Mistral, etc.) are all \emph{decoder-only} Transformers.
+This section traces why and how the field converged on this architecture.
+
+\subsection{From Encoder-Decoder to Decoder-Only}
+
+GPT-1 \cite{radford2018} made the critical architectural choice: take the Transformer
+decoder, remove the encoder-decoder cross-attention sub-layer, and use the resulting model
+for language modeling. The architecture reduces to:
+
+\begin{align}
+  h_0 &= X_{\text{embed}} \cdot W_e + W_p \\
+  h_l &= \text{transformer\_block}(h_{l-1}) \quad \forall\, l \in [1, L] \\
+  P(t) &= \softmax(h_L \cdot W_e^\top)
+\end{align}
+where $h_0 \in \R^{n \times \dmodel}$ is the initial hidden state,
+$X_{\text{embed}}$ is the token index matrix, $W_e$ is the embedding matrix,
+$W_p \in \R^{n_{\max} \times \dmodel}$ is the learned position embedding,
+$h_l$ is the hidden state after layer $l$, $L$ is the total number of layers,
+and $P(t) \in \R^V$ is the output probability distribution over the vocabulary.
+
+Each transformer block consists of just two sub-layers:
+\begin{enumerate}[nosep]
+  \item Masked multi-head self-attention
+  \item Position-wise feed-forward network
+\end{enumerate}
+
+\subsection{Causal Masking}
+
+The defining feature of decoder-only models is the \textbf{causal mask}: token at position
+$i$ can only attend to tokens at positions $\leq i$. This is implemented by adding a mask
+to the attention scores before the softmax:
+
+\begin{equation}
+  \Attention(Q, K, V) = \softmax\!\left(\frac{QK^\top}{\sqrt{\dk}} + M \right) V
+\end{equation}
+
+where $M \in \R^{n \times n}$ has $M_{ij} = 0$ if $j \leq i$ and $M_{ij} = -\infty$
+if $j > i$.
+
+This enforces autoregressive generation: the prediction for position $i$ depends only on
+tokens $1, \ldots, i$, matching the language modeling objective
+$P(t_i \mid t_1, \ldots, t_{i-1})$.
+
+\subsection{Why Decoder-Only Won}
+
+The encoder-decoder structure was designed for sequence-to-sequence tasks (translation),
+where you have a complete input and generate a complete output. For general language
+modeling and generation:
+
+\begin{itemize}[nosep]
+  \item There is no separate ``input'' to encode --- the model simply continues a sequence.
+  \item The decoder alone is sufficient for the autoregressive objective.
+  \item Removing the encoder and cross-attention cuts the architecture roughly in half,
+    simplifying both the model and the training pipeline.
+  \item The same model serves both understanding and generation --- no separate encoder
+    needed.
+\end{itemize}
+
+\subsection{Architectural Timeline}
+
+\begin{center}
+\begin{tabular}{llp{7.5cm}}
+\toprule
+\textbf{Model} & \textbf{Year} & \textbf{Key changes from Transformer} \\
+\midrule
+Transformer \cite{vaswani2017} & 2017 &
+  Encoder-decoder, Post-LN, sinusoidal PE, ReLU FFN \\
+GPT-1 \cite{radford2018} & 2018 &
+  Decoder-only, Pre-LN\footnotemark, learned PE, GELU, BPE 40K \\
+GPT-3 \cite{brown2020} & 2020 &
+  Scaled to 175B params (96 layers, $d{=}12288$, 96 heads). Alternating dense and
+  locally-banded sparse attention in some layers \\
+LLaMA \cite{touvron2023} & 2023 &
+  Pre-RMSNorm, SwiGLU ($\dff = \frac{2}{3} \cdot 4d$), RoPE at every layer, no bias
+  terms, SentencePiece BPE. Sizes 7B--65B, trained on public data only \\
+\bottomrule
+\end{tabular}
+\end{center}
+\footnotetext{GPT-1's Figure 1 shows Layer Norm placed before each sub-layer (the Pre-LN
+arrangement), which differs from the original Transformer's Post-LN.}
+
+
+%=============================================================================
+\section{Output Head}
+\label{sec:output-head}
+%=============================================================================
+
+The output head converts the final hidden state into a probability distribution over the
+vocabulary.
+
+\subsection{Final Layer Normalization}
+
+In Pre-LN models, the residual stream after the last layer has not been normalized (since
+Pre-LN normalizes \emph{before} each sub-layer). A final layer normalization is therefore
+applied before the output projection \cite{xiong2020}:
+\begin{equation}
+  h_{\text{final}} = \RMSNorm(h_L) \quad \text{(or LayerNorm in older models)}
+\end{equation}
+where $h_L \in \R^{n \times \dmodel}$ is the output of the last Transformer layer ($L$ layers total).
+
+\subsection{Projection to Logits}
+
+The normalized hidden state is projected to vocabulary-sized logits:
+\begin{equation}
+  \bm{z} = h_{\text{final}} \cdot W_e^\top \in \R^V
+\end{equation}
+where $W_e \in \R^{V \times \dmodel}$ is the (shared) embedding matrix
+(\Cref{sec:weight-tying}). Each element $z_j$ is the unnormalized log-probability
+(logit) for vocabulary token $j$.
+
+\subsection{Softmax}
+
+The logits are converted to probabilities:
+\begin{equation}
+  P(t = j \mid t_1, \ldots, t_{i-1}) = \frac{e^{z_j}}{\sum_{k=0}^{V-1} e^{z_k}}
+\end{equation}
+where $z_j$ is the logit for token $j$, and $V$ is the vocabulary size.
+
+During training, the target is the next token $t_i$, and the loss is the cross-entropy:
+\begin{equation}
+  \mathcal{L} = -\log P(t_i \mid t_1, \ldots, t_{i-1})
+\end{equation}
+summed over all positions in the sequence.
+
+During inference, a token is selected from this distribution (via greedy decoding, top-$k$
+sampling, nucleus sampling, etc. --- these are inference-time strategies outside the scope
+of this document).
+
+
+%=============================================================================
+\section{Putting It Together}
+\label{sec:full-forward-pass}
+%=============================================================================
+
+Let us trace a complete forward pass through a modern decoder-only Transformer, using
+LLaMA-7B dimensions \cite{touvron2023} as a concrete example.
+
+\begin{dimbox}
+\textbf{LLaMA-7B hyperparameters:}
+$\dmodel = 4096$, $L = 32$ layers, $h = 32$ heads, $\dk = \dv = 128$,
+$\dff = 11008$, $V = 32{,}000$. Total: $\sim$6.7B parameters.
+\end{dimbox}
+
+\subsection{Step-by-Step Forward Pass}
+
+Given an input sequence of $n$ token indices $(t_1, \ldots, t_n)$:
+
+\medskip
+
+\noindent\textbf{Step 1: Token Embedding}
+\begin{equation}
+  X = W_e[t_1, \ldots, t_n] \in \R^{n \times 4096}
+\end{equation}
+Look up each token index in $W_e \in \R^{32000 \times 4096}$.
+
+\medskip
+
+\noindent\textbf{Step 2: Repeat for each of $L = 32$ layers.} Let $h^{(0)} = X$.
+
+For layer $l = 1, \ldots, 32$:
+
+\medskip
+
+\noindent\textbf{Step 2a: Pre-RMSNorm (attention)}
+\begin{equation}
+  \hat{h} = \RMSNorm(h^{(l-1)}) \in \R^{n \times 4096}
+\end{equation}
+
+\noindent\textbf{Step 2b: Multi-head self-attention with RoPE}
+\begin{align}
+  Q &= \hat{h} \, W^Q \in \R^{n \times 4096} \quad \text{(reshaped to $n \times 32 \times 128$)} \\
+  K &= \hat{h} \, W^K \in \R^{n \times 4096} \quad \text{(reshaped to $n \times 32 \times 128$)} \\
+  V &= \hat{h} \, W^V \in \R^{n \times 4096} \quad \text{(reshaped to $n \times 32 \times 128$)}
+\end{align}
+Apply RoPE rotations to $Q$ and $K$ based on position.
+
+For each head $i$, compute:
+\begin{equation}
+  \text{head}_i = \softmax\!\left(\frac{Q_i K_i^\top}{\sqrt{128}} + M\right) V_i
+  \in \R^{n \times 128}
+\end{equation}
+where $M$ is the causal mask. Concatenate all 32 heads and project:
+\begin{equation}
+  A = \Concat(\text{head}_1, \ldots, \text{head}_{32}) \, W^O \in \R^{n \times 4096}
+\end{equation}
+
+\noindent\textbf{Step 2c: Residual connection (attention)}
+\begin{equation}
+  h' = h^{(l-1)} + A
+\end{equation}
+
+\noindent\textbf{Step 2d: Pre-RMSNorm (FFN)}
+\begin{equation}
+  \hat{h}' = \RMSNorm(h') \in \R^{n \times 4096}
+\end{equation}
+
+\noindent\textbf{Step 2e: SwiGLU FFN}
+\begin{equation}
+  F = \left(\Swish(\hat{h}' W_{\text{gate}}) \otimes \hat{h}' W_{\text{up}}\right) W_{\text{down}}
+  \in \R^{n \times 4096}
+\end{equation}
+where $W_{\text{gate}}, W_{\text{up}} \in \R^{4096 \times 11008}$ and
+$W_{\text{down}} \in \R^{11008 \times 4096}$.
+
+\noindent\textbf{Step 2f: Residual connection (FFN)}
+\begin{equation}
+  h^{(l)} = h' + F
+\end{equation}
+
+\medskip
+
+\noindent\textbf{Step 3: Final RMSNorm}
+\begin{equation}
+  h_{\text{final}} = \RMSNorm(h^{(32)}) \in \R^{n \times 4096}
+\end{equation}
+
+\noindent\textbf{Step 4: Output projection}
+\begin{equation}
+  \text{logits} = h_{\text{final}} \cdot W_e^\top \in \R^{n \times 32000}
+\end{equation}
+
+\noindent\textbf{Step 5: Softmax (per position)}
+\begin{equation}
+  P(t_{i+1} \mid t_1, \ldots, t_i) = \softmax(\text{logits}[i]) \in \R^{32000}
+\end{equation}
+
+\subsection{Parameter Count Breakdown}
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Component} & \textbf{Params per layer} & \textbf{$\times$ 32 layers} & \textbf{Total} \\
+\midrule
+Attention ($W^Q, W^K, W^V, W^O$) & $4 \times 4096^2$ & & 2.1B \\
+FFN ($W_{\text{gate}}, W_{\text{up}}, W_{\text{down}}$) & $3 \times 4096 \times 11008$ & & 4.3B \\
+RMSNorm ($\gamma$ $\times$ 2) & $2 \times 4096$ & & 8.4M \\
+\midrule
+All layers & & & 6.4B \\
+Token embedding $W_e$ & & & 131M \\
+Final RMSNorm & & & 4K \\
+\midrule
+\textbf{Total} & & & $\sim$\textbf{6.7B} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Note: the FFN accounts for roughly two-thirds of per-layer parameters, and attention
+accounts for one-third. This ratio holds across model sizes.
+
+
+%=============================================================================
+% References
+%=============================================================================
+\newpage
+\begin{thebibliography}{9}
+
+\bibitem{vaswani2017}
+  A.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones, A.~N.~Gomez,
+  \L.~Kaiser, and I.~Polosukhin,
+  ``Attention Is All You Need,''
+  \emph{Advances in Neural Information Processing Systems 30 (NeurIPS)}, 2017.
+  \\\url{https://arxiv.org/abs/1706.03762}
+
+\bibitem{radford2018}
+  A.~Radford, K.~Narasimhan, T.~Salimans, and I.~Sutskever,
+  ``Improving Language Understanding by Generative Pre-Training,''
+  OpenAI, 2018.
+  \\\url{https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf}
+
+\bibitem{brown2020}
+  T.~B.~Brown, B.~Mann, N.~Ryder, et al.,
+  ``Language Models are Few-Shot Learners,''
+  \emph{Advances in Neural Information Processing Systems 33 (NeurIPS)}, 2020.
+  \\\url{https://arxiv.org/abs/2005.14165}
+
+\bibitem{touvron2023}
+  H.~Touvron, T.~Lavril, G.~Izacard, et al.,
+  ``LLaMA: Open and Efficient Foundation Language Models,''
+  arXiv preprint arXiv:2302.13971, 2023.
+  \\\url{https://arxiv.org/abs/2302.13971}
+
+\bibitem{sennrich2016}
+  R.~Sennrich, B.~Haddow, and A.~Birch,
+  ``Neural Machine Translation of Rare Words with Subword Units,''
+  \emph{Proceedings of the 54th Annual Meeting of the ACL}, 2016.
+  \\\url{https://arxiv.org/abs/1508.07909}
+
+\bibitem{su2021}
+  J.~Su, Y.~Lu, S.~Pan, B.~Wen, and Y.~Liu,
+  ``RoFormer: Enhanced Transformer with Rotary Position Embedding,''
+  arXiv preprint arXiv:2104.09864, 2021.
+  \\\url{https://arxiv.org/abs/2104.09864}
+
+\bibitem{shazeer2020}
+  N.~Shazeer,
+  ``GLU Variants Improve Transformer,''
+  arXiv preprint arXiv:2002.05202, 2020.
+  \\\url{https://arxiv.org/abs/2002.05202}
+
+\bibitem{xiong2020}
+  R.~Xiong, Y.~Yang, D.~He, et al.,
+  ``On Layer Normalization in the Transformer Architecture,''
+  \emph{Proceedings of the 37th International Conference on Machine Learning (ICML)}, 2020.
+  \\\url{https://arxiv.org/abs/2002.04745}
+
+\bibitem{zhang2019}
+  B.~Zhang and R.~Sennrich,
+  ``Root Mean Square Layer Normalization,''
+  \emph{Advances in Neural Information Processing Systems 32 (NeurIPS)}, 2019.
+  \\\url{https://arxiv.org/abs/1910.07467}
+
+\end{thebibliography}
+
+\end{document}
