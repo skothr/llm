@@ -32,10 +32,15 @@ export function ABDiff({ resultA, resultB }: Props) {
     svg.selectAll("*").remove();
 
     const numPositions = dataA[0]?.predictions.length || 1;
+    const completeMsgA = resultA.data.find((m) => m.type === "complete") as
+      | { type: "complete"; summary?: { prompt_tokens?: string[] } }
+      | undefined;
+    const promptTokens = completeMsgA?.summary?.prompt_tokens;
+
     const numRows = Math.max(dataA.length, dataB.length);
     const cellW = Math.max(24, Math.min(40, 400 / numPositions));
     const cellH = 18;
-    const margin = { top: 30, right: 20, bottom: 30, left: 70 };
+    const margin = { top: promptTokens ? 50 : 30, right: 20, bottom: 30, left: 70 };
     const panelWidth = margin.left + numPositions * cellW + margin.right;
     const gap = 40;
     const totalWidth = showDiff ? panelWidth * 3 + gap * 2 : panelWidth * 2 + gap;
@@ -55,11 +60,24 @@ export function ABDiff({ resultA, resultB }: Props) {
 
       svg.append("text")
         .attr("x", offsetX + margin.left + (numPositions * cellW) / 2)
-        .attr("y", 16)
+        .attr("y", promptTokens ? 14 : 16)
         .attr("text-anchor", "middle")
         .attr("font-size", 12)
         .attr("fill", "#a0a0c0")
         .text(label);
+
+      if (promptTokens) {
+        const tokG = svg.append("g").attr("transform", `translate(${offsetX + margin.left},${margin.top - 6})`);
+        promptTokens.slice(0, numPositions).forEach((tok, i) => {
+          tokG.append("text")
+            .attr("x", i * cellW + cellW / 2)
+            .attr("text-anchor", "middle")
+            .attr("font-size", 9)
+            .attr("font-family", "monospace")
+            .attr("fill", "#6688aa")
+            .text(tok.replace(/ /g, "\u00B7").replace(/\n/g, "\\n"));
+        });
+      }
 
       data.forEach((msg, rowIdx) => {
         g.append("text")
@@ -171,7 +189,7 @@ export function ABDiff({ resultA, resultB }: Props) {
       });
     }
 
-  }, [dataA, dataB, showDiff, resultA.sessionName, resultB.sessionName]);
+  }, [dataA, dataB, showDiff, resultA.sessionName, resultB.sessionName, resultA.data]);
 
   return (
     <div style={{ position: "relative" }}>
