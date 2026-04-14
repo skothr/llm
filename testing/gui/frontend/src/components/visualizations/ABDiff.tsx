@@ -182,6 +182,7 @@ export function ABDiff({ resultA, resultB }: Props) {
             border: "1px solid #1a5276",
             borderRadius: 4,
             padding: "6px 10px",
+            fontFamily: "monospace",
             fontSize: 12,
             whiteSpace: "pre",
             pointerEvents: "none",
