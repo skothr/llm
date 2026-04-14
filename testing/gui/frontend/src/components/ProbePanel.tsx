@@ -155,12 +155,12 @@ export function ProbePanel() {
 
       {(operation === "logit-lens" || operation === "generate") && (
         <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
-          <label>top_k: <input type="number" value={topK} onChange={(e) => setTopK(+e.target.value)} style={{ width: 50 }} /></label>
+          <label>top_k: <input type="number" value={topK} onChange={(e) => setTopK(+e.target.value)} style={{ width: 64 }} /></label>
           {operation === "generate" && (
             <>
-              <label>max: <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(+e.target.value)} style={{ width: 50 }} /></label>
-              <label>temp: <input type="number" step="0.1" value={temperature} onChange={(e) => setTemperature(+e.target.value)} style={{ width: 50 }} /></label>
-              <label>rep: <input type="number" step="0.1" value={repPenalty} onChange={(e) => setRepPenalty(+e.target.value)} style={{ width: 50 }} /></label>
+              <label>max: <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(+e.target.value)} style={{ width: 64 }} /></label>
+              <label>temp: <input type="number" step="0.1" value={temperature} onChange={(e) => setTemperature(+e.target.value)} style={{ width: 64 }} /></label>
+              <label>rep: <input type="number" step="0.1" value={repPenalty} onChange={(e) => setRepPenalty(+e.target.value)} style={{ width: 64 }} /></label>
             </>
           )}
         </div>

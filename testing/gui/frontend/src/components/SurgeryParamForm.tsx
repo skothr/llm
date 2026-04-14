@@ -42,7 +42,7 @@ export function SurgeryParamForm({ operation, params, onChange }: Props) {
                 step={1}
                 value={Number(params[key] ?? 0)}
                 onChange={(e) => onChange({ ...params, [key]: parseInt(e.target.value) || 0 })}
-                style={{ width: 60 }}
+                style={{ width: 72 }}
               />
             </label>
           );
@@ -55,7 +55,7 @@ export function SurgeryParamForm({ operation, params, onChange }: Props) {
                 step={0.1}
                 value={Number(params[key] ?? 0)}
                 onChange={(e) => onChange({ ...params, [key]: parseFloat(e.target.value) || 0 })}
-                style={{ width: 60 }}
+                style={{ width: 72 }}
               />
             </label>
           );

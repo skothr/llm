@@ -44,7 +44,7 @@ function InterventionCard({
     <div style={{ padding: 8, background: "#0d1b2a", borderRadius: 4, marginBottom: 4 }}>
       <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
         <label style={{ fontSize: 12 }}>
-          L<input type="number" value={spec.layer} onChange={(e) => onUpdate(index, { ...spec, layer: +e.target.value })} style={{ width: 36 }} />
+          L<input type="number" value={spec.layer} onChange={(e) => onUpdate(index, { ...spec, layer: +e.target.value })} style={{ width: 52 }} />
         </label>
         <select value={spec.sublayer} onChange={(e) => onUpdate(index, { ...spec, sublayer: e.target.value as "attn" | "ffn" })} style={{ width: 60 }}>
           <option value="ffn">FFN</option>
@@ -60,7 +60,7 @@ function InterventionCard({
         if (p.type === "float") {
           return (
             <label key={p.key} style={{ display: "block", fontSize: 12, marginBottom: 2 }}>
-              {p.key}: <input type="number" step={p.step} value={Number(spec.params[p.key] ?? p.default)} onChange={(e) => updateParam(p.key, +e.target.value)} style={{ width: 70 }} />
+              {p.key}: <input type="number" step={p.step} value={Number(spec.params[p.key] ?? p.default)} onChange={(e) => updateParam(p.key, +e.target.value)} style={{ width: 80 }} />
             </label>
           );
         }
@@ -93,12 +93,12 @@ function InterventionCard({
                 prompt: <input value={source.prompt} onChange={(e) => updateSource("prompt", e.target.value)} />
               </label>
               <div style={{ display: "flex", gap: 4 }}>
-                <label>L<input type="number" value={source.layer} onChange={(e) => updateSource("layer", +e.target.value)} style={{ width: 36 }} /></label>
+                <label>L<input type="number" value={source.layer} onChange={(e) => updateSource("layer", +e.target.value)} style={{ width: 52 }} /></label>
                 <select value={source.sublayer} onChange={(e) => updateSource("sublayer", e.target.value)} style={{ width: 60 }}>
                   <option value="ffn">FFN</option>
                   <option value="attn">Attn</option>
                 </select>
-                <label>pos<input type="number" value={source.position} onChange={(e) => updateSource("position", +e.target.value)} style={{ width: 40 }} /></label>
+                <label>pos<input type="number" value={source.position} onChange={(e) => updateSource("position", +e.target.value)} style={{ width: 52 }} /></label>
               </div>
             </div>
           );
