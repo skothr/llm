@@ -96,6 +96,19 @@ export function ABDiff({ resultA, resultB }: Props) {
               });
             })
             .on("mouseleave", () => setTooltip(null));
+
+          if (cellW >= 28) {
+            const display = topPred.token.replace(/ /g, "\u00B7");
+            g.append("text")
+              .attr("x", posIdx * cellW + cellW / 2)
+              .attr("y", rowIdx * cellH + cellH / 2)
+              .attr("text-anchor", "middle")
+              .attr("dominant-baseline", "middle")
+              .attr("font-size", 8)
+              .attr("fill", topPred.prob > 0.5 ? "#000" : "#fff")
+              .style("pointer-events", "none")
+              .text(display.length > 5 ? display.slice(0, 4) + "\u2026" : display);
+          }
         });
       });
     }
