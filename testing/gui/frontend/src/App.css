@@ -16,22 +16,48 @@ body {
   height: 100vh;
 }
 
-.sidebar {
+.config-panel {
   display: flex;
   flex-direction: column;
   background: #16213e;
   border-right: 1px solid #0f3460;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
-.sidebar-top {
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid #0f3460;
+  flex-shrink: 0;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #8888aa;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.tab-button:hover {
+  background: rgba(26, 82, 118, 0.3);
+}
+
+.tab-button.active {
+  color: #e0e0e0;
+  border-bottom-color: #4ecdc4;
+  background: transparent;
+}
+
+.config-content {
   flex: 1;
   padding: 16px;
-  border-bottom: 1px solid #0f3460;
-}
-
-.sidebar-bottom {
-  padding: 16px;
+  overflow-y: auto;
 }
 
 .main-area {
@@ -91,4 +117,13 @@ textarea {
   resize: vertical;
   min-height: 60px;
   font-family: monospace;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
 }
