@@ -50,14 +50,14 @@ function formatTopK(topK: GenerateData["top_k"]): string {
 }
 
 function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending: boolean }) {
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; step: number; content: string } | null>(null);
 
   const tokens = result.data.filter(
     (m): m is GenerateData => m.type === "data" && "token" in m && "step" in m
   );
 
   return (
-    <div style={{ flex: "1 1 0", minWidth: 0, maxWidth: "50%", overflow: "hidden", position: "relative" }}>
+    <div style={{ flex: "1 1 0", minWidth: 0, maxWidth: "50%", overflow: "hidden", position: "relative" }} onClick={() => setTooltip(null)}>
       <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 4 }}>
         {result.sessionName} - "{result.prompt.slice(0, 30)}"
         {isPending && <span style={{ color: "#4ecdc4", marginLeft: 4 }}>generating...</span>}
@@ -71,14 +71,22 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
               cursor: "pointer",
               borderRadius: 2,
               padding: "0 1px",
+              background: tooltip?.step === tok.step ? "#1a5276" : "transparent",
               ...(tok.token === "<eos>" ? { color: "#4a6a4a", fontSize: 11, padding: "1px 3px", border: "1px solid #3a5a3a" } : {}),
             }}
-            onMouseEnter={(e) => setTooltip({
-              x: e.pageX + 10,
-              y: e.pageY - 10,
-              content: `step ${tok.step}\n${formatTopK(tok.top_k)}`,
-            })}
-            onMouseLeave={() => setTooltip(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (tooltip?.step === tok.step) {
+                setTooltip(null);
+              } else {
+                setTooltip({
+                  x: e.pageX + 10,
+                  y: e.pageY - 10,
+                  step: tok.step,
+                  content: `step ${tok.step}\n${formatTopK(tok.top_k)}`,
+                });
+              }
+            }}
           >
             {tok.token === "<eos>" ? "eos" : tok.token}
           </span>
