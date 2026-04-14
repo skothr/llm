@@ -79,12 +79,14 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
               if (tooltip?.step === tok.step) {
                 setTooltip(null);
               } else {
-                setTooltip({
-                  x: e.pageX + 10,
-                  y: e.pageY - 10,
-                  step: tok.step,
-                  content: `step ${tok.step}\n${formatTopK(tok.top_k)}`,
-                });
+                const content = `step ${tok.step}\n${formatTopK(tok.top_k)}`;
+                const estW = 220, estH = 14 * (tok.top_k.length + 1) + 20;
+                let x = e.clientX + 10;
+                let y = e.clientY - 10;
+                if (x + estW > window.innerWidth) x = e.clientX - estW - 10;
+                if (y + estH > window.innerHeight) y = window.innerHeight - estH - 10;
+                if (y < 10) y = 10;
+                setTooltip({ x, y, step: tok.step, content });
               }
             }}
           >
