@@ -6,6 +6,33 @@ import { AttentionEntropy } from "./visualizations/AttentionEntropy";
 import { ResidualNorms } from "./visualizations/ResidualNorms";
 import type { ProbeResult } from "../types/api";
 
+function InterveneSummary({ result }: { result: ProbeResult }) {
+  const completeMsg = result.data.find((m) => m.type === "complete") as
+    | { type: "complete"; interventions_applied: number }
+    | undefined;
+  const modifiedCount = result.data.filter(
+    (m) => m.type === "data" && "modified" in m && (m as { modified?: boolean }).modified
+  ).length;
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 13, color: "#a0a0c0", marginBottom: 8 }}>
+        Intervention Results - {result.sessionName}
+      </h3>
+      {completeMsg ? (
+        <div style={{ fontSize: 13 }}>
+          {completeMsg.interventions_applied} intervention(s) applied
+          {modifiedCount > 0 && (
+            <span style={{ color: "#8888aa" }}> ({modifiedCount} layer(s) modified)</span>
+          )}
+        </div>
+      ) : (
+        <p style={{ color: "#666" }}>Waiting for results...</p>
+      )}
+    </div>
+  );
+}
+
 function getResult(
   results: ProbeResult[],
   pending: Record<string, ProbeResult>,
@@ -65,8 +92,14 @@ export function VisualizationArea() {
       {activeResult ? (
         abPair && activeResult.operation === "logit-lens" ? (
           <ABDiff resultA={activeResult} resultB={abPair} />
-        ) : activeResult.operation === "logit-lens" || activeResult.operation === "intervene" ? (
+        ) : activeResult.operation === "logit-lens" ? (
           <LogitLensHeatmap result={activeResult} />
+        ) : activeResult.operation === "intervene" ? (
+          activeResult.data.some((m) => m.type === "data" && "predictions" in m) ? (
+            <LogitLensHeatmap result={activeResult} />
+          ) : (
+            <InterveneSummary result={activeResult} />
+          )
         ) : activeResult.operation === "influence" ? (
           <LayerInfluence result={activeResult} />
         ) : activeResult.operation === "attention" ? (
