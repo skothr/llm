@@ -51,8 +51,11 @@ export function VisualizationArea() {
 
   const all = [...Object.values(pendingResults), ...results];
   const vizResults = all.filter((r) => r.operation !== "generate");
-  const activeResult = getResult(results, pendingResults, activeResultId);
-  const isPending = activeResultId ? activeResultId in pendingResults : false;
+  const rawActive = getResult(results, pendingResults, activeResultId);
+  const activeResult = rawActive && rawActive.operation !== "generate"
+    ? rawActive
+    : vizResults.find((r) => !r.id.includes("-B")) || null;
+  const isPending = activeResult ? activeResult.id in pendingResults : false;
 
   const abPair = activeResult && !activeResult.id.includes("-B")
     ? all.find((r) => r.id === `${activeResult.id}-B`)
