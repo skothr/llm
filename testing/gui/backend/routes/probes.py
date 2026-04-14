@@ -39,7 +39,6 @@ async def logit_lens_ws(ws: WebSocket, name: str):
     prompt = config["prompt"]
     top_k = config.get("top_k", 10)
 
-    cancelled = asyncio.Event()
     connected = True
 
     import sys
@@ -52,7 +51,7 @@ async def logit_lens_ws(ws: WebSocket, name: str):
 
     def on_layer(layer_idx, sublayer, data):
         nonlocal connected
-        if cancelled.is_set() or not connected:
+        if not connected:
             return
 
         predictions = data.get("top_k", [])
@@ -92,14 +91,12 @@ async def logit_lens_ws(ws: WebSocket, name: str):
                 connected = False
                 break
 
-        if connected and not cancelled.is_set():
+        if connected:
             summary = {
                 "prompt_tokens": result.prompt_tokens,
                 "num_layers": len(result.predictions),
             }
             await _send_json(ws, {"type": "complete", "summary": summary})
-        elif cancelled.is_set():
-            await _send_json(ws, {"type": "cancelled"})
 
     except Exception as e:
         await _send_json(ws, {"type": "error", "message": str(e)})
