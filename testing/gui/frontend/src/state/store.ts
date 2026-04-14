@@ -5,6 +5,9 @@ import type {
   SurgeryOperation,
   ProbeOperation,
   ProbeResult,
+  ConfigTab,
+  InterventionSpec,
+  WsMessage,
 } from "../types/api";
 
 async function apiError(resp: Response): Promise<Error> {
@@ -20,20 +23,37 @@ async function apiError(resp: Response): Promise<Error> {
 }
 
 interface StoreState {
+  activeTab: ConfigTab;
+  backendOnline: boolean;
+
   sessions: SessionSummary[];
   sessionInfo: Record<string, SessionInfo>;
   surgeryOps: SurgeryOperation[];
+
+  isLoadingModel: boolean;
+  loadingModelId: string | null;
+  availableModels: string[];
+
   prompt: string;
   operation: ProbeOperation;
   targetSession: string;
   targetSessionB: string | null;
   isRunning: boolean;
+
   results: ProbeResult[];
   activeResultId: string | null;
+  pendingResults: Record<string, ProbeResult>;
 
+  interventionSpecs: InterventionSpec[];
+  captureLogitLens: boolean;
+  intervenePrompt: string;
+  interveneSession: string;
+
+  setActiveTab: (tab: ConfigTab) => void;
   fetchSessions: () => Promise<void>;
   fetchSessionInfo: (name: string) => Promise<void>;
   fetchSurgeryOps: () => Promise<void>;
+  fetchAvailableModels: () => Promise<void>;
   deleteSession: (name: string) => Promise<void>;
   applySurgery: (name: string, operation: string, params: Record<string, unknown>) => Promise<void>;
   undoSurgery: (name: string) => Promise<void>;
@@ -44,33 +64,63 @@ interface StoreState {
   setTargetSession: (name: string) => void;
   setTargetSessionB: (name: string | null) => void;
   setRunning: (running: boolean) => void;
+
   addResult: (result: ProbeResult) => void;
   clearResults: () => void;
   setActiveResult: (id: string | null) => void;
+  setPendingResult: (id: string, result: ProbeResult) => void;
+  updatePendingResult: (id: string, msg: WsMessage) => void;
+  finalizePendingResult: (id: string, extraData?: WsMessage) => void;
+  removePendingResult: (id: string) => void;
+
+  addIntervention: () => void;
+  removeIntervention: (index: number) => void;
+  updateIntervention: (index: number, spec: InterventionSpec) => void;
+  clearInterventions: () => void;
+  setCaptureLogitLens: (v: boolean) => void;
+  setIntervenePrompt: (prompt: string) => void;
+  setInterveneSession: (name: string) => void;
 }
 
 export const useStore = create<StoreState>((set, get) => ({
+  activeTab: "sessions",
+  backendOnline: false,
+
   sessions: [],
   sessionInfo: {},
   surgeryOps: [],
+
+  isLoadingModel: false,
+  loadingModelId: null,
+  availableModels: [],
+
   prompt: "",
   operation: "logit-lens",
   targetSession: "",
   targetSessionB: null,
   isRunning: false,
+
   results: [],
   activeResultId: null,
+  pendingResults: {},
+
+  interventionSpecs: [],
+  captureLogitLens: false,
+  intervenePrompt: "",
+  interveneSession: "",
+
+  setActiveTab: (tab) => set({ activeTab: tab }),
 
   fetchSessions: async () => {
     try {
       const resp = await fetch("/api/sessions");
       const data = await resp.json();
-      set({ sessions: data });
+      set({ sessions: data, backendOnline: true });
       if (get().surgeryOps.length === 0) {
         get().fetchSurgeryOps();
       }
     } catch {
-      // backend not ready yet, ignore
+      set({ backendOnline: false });
     }
   },
 
@@ -85,9 +135,15 @@ export const useStore = create<StoreState>((set, get) => ({
       const resp = await fetch("/api/surgery/operations");
       const data = await resp.json();
       set({ surgeryOps: data });
-    } catch {
-      // backend not ready yet, will retry on next fetchSessions
-    }
+    } catch { /* backend not ready */ }
+  },
+
+  fetchAvailableModels: async () => {
+    try {
+      const resp = await fetch("/api/models/available");
+      const data = await resp.json();
+      set({ availableModels: data.map((m: { model_id: string }) => m.model_id) });
+    } catch { /* backend not ready */ }
   },
 
   deleteSession: async (name: string) => {
@@ -128,10 +184,58 @@ export const useStore = create<StoreState>((set, get) => ({
   setTargetSession: (name) => set({ targetSession: name }),
   setTargetSessionB: (name) => set({ targetSessionB: name }),
   setRunning: (running) => set({ isRunning: running }),
+
   addResult: (result) => set((s) => ({
     results: [result, ...s.results],
     activeResultId: result.id,
   })),
   clearResults: () => set({ results: [], activeResultId: null }),
   setActiveResult: (id) => set({ activeResultId: id }),
+
+  setPendingResult: (id, result) => set((s) => ({
+    pendingResults: { ...s.pendingResults, [id]: result },
+    activeResultId: id,
+  })),
+
+  updatePendingResult: (id, msg) => set((s) => {
+    const pending = s.pendingResults[id];
+    if (!pending) return s;
+    return {
+      pendingResults: {
+        ...s.pendingResults,
+        [id]: { ...pending, data: [...pending.data, msg] },
+      },
+    };
+  }),
+
+  finalizePendingResult: (id, extraData) => set((s) => {
+    const pending = s.pendingResults[id];
+    if (!pending) return s;
+    const finalData = extraData ? [...pending.data, extraData] : pending.data;
+    const { [id]: _, ...remaining } = s.pendingResults;
+    return {
+      pendingResults: remaining,
+      results: [{ ...pending, data: finalData }, ...s.results],
+      activeResultId: pending.id,
+    };
+  }),
+
+  removePendingResult: (id) => set((s) => {
+    const { [id]: _, ...remaining } = s.pendingResults;
+    return { pendingResults: remaining };
+  }),
+
+  addIntervention: () => set((s) => ({
+    interventionSpecs: [...s.interventionSpecs, { layer: 0, sublayer: "ffn", op: "scale", params: { factor: 1.0 } }],
+  })),
+  removeIntervention: (index) => set((s) => ({
+    interventionSpecs: s.interventionSpecs.filter((_, i) => i !== index),
+  })),
+  updateIntervention: (index, spec) => set((s) => ({
+    interventionSpecs: s.interventionSpecs.map((existing, i) => i === index ? spec : existing),
+  })),
+  clearInterventions: () => set({ interventionSpecs: [] }),
+  setCaptureLogitLens: (v) => set({ captureLogitLens: v }),
+  setIntervenePrompt: (prompt) => set({ intervenePrompt: prompt }),
+  setInterveneSession: (name) => set({ interveneSession: name }),
 }));

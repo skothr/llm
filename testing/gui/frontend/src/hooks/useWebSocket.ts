@@ -1,20 +1,25 @@
 import { useRef, useCallback } from "react";
 import type { WsMessage } from "../types/api";
 
-interface UseWebSocketOptions {
+interface WsHandlers {
   onMessage: (msg: WsMessage) => void;
   onComplete: (msg: WsMessage) => void;
-  onError: (msg: string) => void;
+  onError: (message: string) => void;
 }
 
 export function useWebSocket() {
-  const wsRef = useRef<WebSocket | null>(null);
+  const connectionsRef = useRef<Map<string, WebSocket>>(new Map());
 
   const connect = useCallback(
-    (path: string, config: Record<string, unknown>, handlers: UseWebSocketOptions) => {
+    (key: string, path: string, config: Record<string, unknown>, handlers: WsHandlers) => {
+      const existing = connectionsRef.current.get(key);
+      if (existing && existing.readyState === WebSocket.OPEN) {
+        existing.close();
+      }
+
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(`${protocol}//${window.location.host}${path}`);
-      wsRef.current = ws;
+      connectionsRef.current.set(key, ws);
 
       ws.onopen = () => {
         ws.send(JSON.stringify(config));
@@ -36,7 +41,7 @@ export function useWebSocket() {
       };
 
       ws.onclose = () => {
-        wsRef.current = null;
+        connectionsRef.current.delete(key);
       };
 
       return ws;
@@ -44,18 +49,30 @@ export function useWebSocket() {
     []
   );
 
-  const cancel = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "cancel" }));
+  const cancel = useCallback((key: string) => {
+    const ws = connectionsRef.current.get(key);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.close();
+    }
+    connectionsRef.current.delete(key);
+  }, []);
+
+  const cancelAll = useCallback(() => {
+    connectionsRef.current.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    });
+    connectionsRef.current.clear();
+  }, []);
+
+  const disconnect = useCallback((key: string) => {
+    const ws = connectionsRef.current.get(key);
+    if (ws) {
+      ws.close();
+      connectionsRef.current.delete(key);
     }
   }, []);
 
-  const disconnect = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-  }, []);
-
-  return { connect, cancel, disconnect };
+  return { connect, cancel, cancelAll, disconnect };
 }

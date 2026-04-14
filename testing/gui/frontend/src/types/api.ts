@@ -58,11 +58,7 @@ export interface WsError {
   message: string;
 }
 
-export interface WsCancelled {
-  type: "cancelled";
-}
-
-export type WsMessage = LogitLensData | GenerateData | InterveneData | WsComplete | WsError | WsCancelled;
+export type WsMessage = LogitLensData | GenerateData | InterveneData | WsComplete | WsError;
 
 export interface InterventionSpec {
   layer: number;
@@ -71,11 +67,13 @@ export interface InterventionSpec {
   params: Record<string, unknown>;
 }
 
-export type ProbeOperation = "logit-lens" | "influence" | "intervene" | "generate";
+export type ProbeOperation = "logit-lens" | "influence" | "attention" | "residual-norms" | "generate";
+export type ResultOperation = ProbeOperation | "intervene";
+export type ConfigTab = "sessions" | "probe" | "intervene";
 
 export interface ProbeResult {
   id: string;
-  operation: ProbeOperation;
+  operation: ResultOperation;
   sessionName: string;
   prompt: string;
   data: WsMessage[];
