@@ -27,7 +27,12 @@ export function LogitLensHeatmap({ result }: Props) {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const margin = { top: 30, right: 20, bottom: 40, left: 80 };
+    const completeMsg = result.data.find((m) => m.type === "complete") as
+      | { type: "complete"; summary?: { prompt_tokens?: string[] } }
+      | undefined;
+    const promptTokens = completeMsg?.summary?.prompt_tokens;
+
+    const margin = { top: promptTokens ? 50 : 30, right: 20, bottom: 40, left: 80 };
     const numPositions = firstPreds.length;
     const numRows = dataMessages.length;
 
@@ -104,6 +109,20 @@ export function LogitLensHeatmap({ result }: Props) {
       });
     });
 
+    if (promptTokens) {
+      g.append("g")
+        .attr("transform", "translate(0,-6)")
+        .selectAll("text")
+        .data(promptTokens.slice(0, numPositions))
+        .join("text")
+        .attr("x", (_, i) => i * cellW + cellW / 2)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 10)
+        .attr("font-family", "monospace")
+        .attr("fill", "#6688aa")
+        .text((d) => d.replace(/ /g, "\u00B7").replace(/\n/g, "\\n"));
+    }
+
     g.append("g")
       .attr("transform", `translate(0,${numRows * cellH + 4})`)
       .selectAll("text")
@@ -111,11 +130,11 @@ export function LogitLensHeatmap({ result }: Props) {
       .join("text")
       .attr("x", (d) => d * cellW + cellW / 2)
       .attr("text-anchor", "middle")
-      .attr("font-size", 10)
-      .attr("fill", "#8888aa")
+      .attr("font-size", 9)
+      .attr("fill", "#666")
       .text((d) => `${d}`);
 
-  }, [dataMessages]);
+  }, [dataMessages, result.data]);
 
   return (
     <div style={{ position: "relative" }}>
