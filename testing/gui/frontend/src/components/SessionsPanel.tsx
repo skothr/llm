@@ -139,7 +139,7 @@ export function SessionsPanel() {
             >x</button>
           </div>
           <div style={{ fontSize: 11, color: "#8888aa" }}>
-            {s.model_id} | {s.mode} | {s.num_layers}L
+            {s.model_id} | {s.mode} | {s.num_layers}L | <span style={{ color: s.device.startsWith("cuda") ? "#4ecdc4" : "#aa8844" }}>{s.device}</span>
             {s.has_snapshot && ` | undo: ${s.undo_depth}x (${s.snapshot_size_mb.toFixed(0)}MB)`}
           </div>
         </div>

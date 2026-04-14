@@ -34,6 +34,8 @@ async def logit_lens_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
+    mgr.ensure_on_gpu(name)
+
     raw = await ws.receive_text()
     config = json.loads(raw)
     prompt = config["prompt"]
@@ -118,6 +120,8 @@ async def generate_ws(ws: WebSocket, name: str):
         await _send_json(ws, {"type": "error", "message": f"Session '{name}' not found"})
         await ws.close()
         return
+
+    mgr.ensure_on_gpu(name)
 
     raw = await ws.receive_text()
     config = json.loads(raw)
@@ -294,6 +298,8 @@ async def intervene_ws(ws: WebSocket, name: str):
         await _send_json(ws, {"type": "error", "message": f"Session '{name}' not found"})
         await ws.close()
         return
+
+    mgr.ensure_on_gpu(name)
 
     raw = await ws.receive_text()
     config = json.loads(raw)

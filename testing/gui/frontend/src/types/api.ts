@@ -6,6 +6,7 @@ export interface SessionSummary {
   has_snapshot: boolean;
   snapshot_size_mb: number;
   undo_depth: number;
+  device: string;
 }
 
 export interface SessionInfo {
