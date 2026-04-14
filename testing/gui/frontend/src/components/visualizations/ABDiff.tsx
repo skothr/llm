@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import * as d3 from "d3";
+import { displayToken } from "../../utils/displayToken";
 import type { LogitLensData, ProbeResult } from "../../types/api";
 
 interface Props {
@@ -75,7 +76,7 @@ export function ABDiff({ resultA, resultB }: Props) {
             .attr("font-size", 9)
             .attr("font-family", "monospace")
             .attr("fill", "#6688aa")
-            .text(tok.replace(/ /g, "\u00B7").replace(/\n/g, "\\n"));
+            .text(displayToken(tok));
         });
       }
 
@@ -102,7 +103,7 @@ export function ABDiff({ resultA, resultB }: Props) {
             .style("cursor", "pointer")
             .on("mouseenter", (event) => {
               const top = posPreds.slice(0, 5);
-              const show = top.map((p) => p.token.replace(/ /g, "\u00B7"));
+              const show = top.map((p) => displayToken(p.token));
               const maxLen = Math.max(...show.map((s) => s.length));
               const lines = top
                 .map((p, i) => `${show[i].padEnd(maxLen)}  ${(p.prob * 100).toFixed(1).padStart(5)}%`)
@@ -116,7 +117,7 @@ export function ABDiff({ resultA, resultB }: Props) {
             .on("mouseleave", () => setTooltip(null));
 
           if (cellW >= 28) {
-            const display = topPred.token.replace(/ /g, "\u00B7");
+            const display = displayToken(topPred.token);
             g.append("text")
               .attr("x", posIdx * cellW + cellW / 2)
               .attr("y", rowIdx * cellH + cellH / 2)

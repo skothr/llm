@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { useStore } from "../state/store";
+import { displayToken } from "../utils/displayToken";
 import type { GenerateData, ProbeResult } from "../types/api";
-
-function displayToken(text: string): string {
-  if (text === "") return "<empty>";
-  return text.replace(/\n/g, "\\n").replace(/\t/g, "\\t").replace(/\r/g, "\\r").replace(/ /g, "\u00B7");
-}
 
 export function GenerationOutput() {
   const results = useStore((s) => s.results);
