@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import * as d3 from "d3";
 import type { LogitLensData, ProbeResult } from "../../types/api";
 
@@ -14,8 +14,9 @@ export function LogitLensHeatmap({ result }: Props) {
     content: string;
   } | null>(null);
 
-  const dataMessages = result.data.filter(
-    (m): m is LogitLensData => m.type === "data" && "predictions" in m
+  const dataMessages = useMemo(
+    () => result.data.filter((m): m is LogitLensData => m.type === "data" && "predictions" in m),
+    [result.data]
   );
 
   useEffect(() => {

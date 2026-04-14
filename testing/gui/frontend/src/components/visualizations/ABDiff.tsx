@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import * as d3 from "d3";
 import type { LogitLensData, ProbeResult } from "../../types/api";
 
@@ -16,11 +16,13 @@ export function ABDiff({ resultA, resultB }: Props) {
     content: string;
   } | null>(null);
 
-  const dataA = resultA.data.filter(
-    (m): m is LogitLensData => m.type === "data" && "predictions" in m
+  const dataA = useMemo(
+    () => resultA.data.filter((m): m is LogitLensData => m.type === "data" && "predictions" in m),
+    [resultA.data]
   );
-  const dataB = resultB.data.filter(
-    (m): m is LogitLensData => m.type === "data" && "predictions" in m
+  const dataB = useMemo(
+    () => resultB.data.filter((m): m is LogitLensData => m.type === "data" && "predictions" in m),
+    [resultB.data]
   );
 
   useEffect(() => {
