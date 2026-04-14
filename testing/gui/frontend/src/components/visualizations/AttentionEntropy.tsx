@@ -85,7 +85,7 @@ export function AttentionEntropy({ result }: Props) {
       <h3 style={{ fontSize: 13, color: "#a0a0c0", marginBottom: 8 }}>Attention Entropy - {result.sessionName}</h3>
       <div style={{ overflowX: "auto" }}><svg ref={svgRef} /></div>
       {tooltip && (
-        <div style={{ position: "fixed", left: tooltip.x, top: tooltip.y, background: "#16213e", border: "1px solid #1a5276", borderRadius: 4, padding: "6px 10px", fontSize: 12, whiteSpace: "pre", pointerEvents: "none", zIndex: 100 }}>
+        <div style={{ position: "fixed", left: tooltip.x, top: tooltip.y, background: "#16213e", border: "1px solid #1a5276", borderRadius: 4, padding: "6px 10px", fontFamily: "monospace", fontSize: 12, whiteSpace: "pre", pointerEvents: "none", zIndex: 100 }}>
           {tooltip.content}
         </div>
       )}
