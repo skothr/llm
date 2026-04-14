@@ -56,7 +56,7 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
         {result.sessionName} - "{result.prompt.slice(0, 30)}"
         {isPending && <span style={{ color: "#4ecdc4", marginLeft: 4 }}>generating...</span>}
       </div>
-      <div style={{ fontFamily: "monospace", fontSize: 14, lineHeight: 1.8, overflowWrap: "break-word", overflowY: "auto", maxHeight: 200 }}>
+      <div style={{ fontFamily: "monospace", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", overflowY: "auto", maxHeight: 200 }}>
         <span style={{ color: "#6688aa" }}>{result.prompt}</span>
         {tokens.map((tok) =>
           tok.token === "<eos>" ? (
@@ -64,7 +64,7 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
               style={{ cursor: "pointer", background: selectedStep === tok.step ? "#1a5276" : "transparent", color: "#4a6a4a", fontSize: 11, padding: "1px 3px", borderRadius: 2, border: "1px solid #3a5a3a" }}>eos</span>
           ) : (
             <span key={tok.step} onClick={() => setSelectedStep(selectedStep === tok.step ? null : tok.step)}
-              style={{ cursor: "pointer", background: selectedStep === tok.step ? "#1a5276" : "transparent", borderRadius: 2, padding: "0 1px", whiteSpace: "pre" }}>{tok.token}</span>
+              style={{ cursor: "pointer", background: selectedStep === tok.step ? "#1a5276" : "transparent", borderRadius: 2, padding: "0 1px" }}>{tok.token}</span>
           )
         )}
         {isPending && <span className="cursor-blink" style={{ color: "#4ecdc4" }}>|</span>}
