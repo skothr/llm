@@ -167,7 +167,10 @@ export function SessionsPanel() {
             <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
               <button onClick={() => handleSurgery(selectedSession)} disabled={!surgeryOp}>Apply</button>
               <button
-                onClick={() => undoSurgery(selectedSession)}
+                onClick={async () => {
+                  try { await undoSurgery(selectedSession); }
+                  catch (e) { setError((e as Error).message); }
+                }}
                 disabled={!sessions.find((s) => s.name === selectedSession)?.has_snapshot}
               >Undo</button>
             </div>
