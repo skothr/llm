@@ -5,6 +5,7 @@ export interface SessionSummary {
   num_layers: number;
   has_snapshot: boolean;
   snapshot_size_mb: number;
+  undo_depth: number;
 }
 
 export interface SessionInfo {
