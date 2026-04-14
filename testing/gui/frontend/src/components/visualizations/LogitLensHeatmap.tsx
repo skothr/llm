@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import * as d3 from "d3";
+import { displayToken } from "../../utils/displayToken";
 import type { LogitLensData, ProbeResult } from "../../types/api";
 
 interface Props {
@@ -84,7 +85,7 @@ export function LogitLensHeatmap({ result }: Props) {
           .style("cursor", "pointer")
           .on("mouseenter", (event) => {
             const top = posPreds.slice(0, 5);
-            const show = top.map((p) => p.token.replace(/ /g, "\u00B7"));
+            const show = top.map((p) => displayToken(p.token));
             const maxLen = Math.max(...show.map((s) => s.length));
             const lines = top
               .map((p, i) => `${show[i].padEnd(maxLen)}  ${(p.prob * 100).toFixed(1).padStart(5)}%`)
@@ -105,7 +106,7 @@ export function LogitLensHeatmap({ result }: Props) {
           .attr("font-size", 9)
           .attr("fill", topPred.prob > 0.5 ? "#000" : "#fff")
           .style("pointer-events", "none")
-          .text(topPred.token.length > 6 ? topPred.token.slice(0, 5) + "..." : topPred.token);
+          .text(() => { const d = displayToken(topPred.token); return d.length > 6 ? d.slice(0, 5) + "\u2026" : d; });
       });
     });
 
@@ -120,7 +121,7 @@ export function LogitLensHeatmap({ result }: Props) {
         .attr("font-size", 10)
         .attr("font-family", "monospace")
         .attr("fill", "#6688aa")
-        .text((d) => d.replace(/ /g, "\u00B7").replace(/\n/g, "\\n"));
+        .text((d) => displayToken(d));
     }
 
     g.append("g")
