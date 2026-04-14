@@ -15,6 +15,9 @@ export function GenerationOutput() {
   const genResults = all
     .filter((r) => r.operation === "generate")
     .sort((a, b) => {
+      const aPending = a.id in pendingResults ? 0 : 1;
+      const bPending = b.id in pendingResults ? 0 : 1;
+      if (aPending !== bPending) return aPending - bPending;
       const aB = a.id.endsWith("-B") ? 1 : 0;
       const bB = b.id.endsWith("-B") ? 1 : 0;
       return aB - bB || b.timestamp - a.timestamp;
