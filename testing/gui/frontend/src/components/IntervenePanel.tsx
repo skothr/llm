@@ -126,6 +126,7 @@ export function IntervenePanel() {
   const setPendingResult = useStore((s) => s.setPendingResult);
   const updatePendingResult = useStore((s) => s.updatePendingResult);
   const finalizePendingResult = useStore((s) => s.finalizePendingResult);
+  const removePendingResult = useStore((s) => s.removePendingResult);
 
   const { connect, cancelAll } = useWebSocket();
   const [error, setError] = useState("");
@@ -139,7 +140,7 @@ export function IntervenePanel() {
 
     setPendingResult(resultId, {
       id: resultId,
-      operation: captureLogitLens ? "intervene" : "intervene",
+      operation: "intervene",
       sessionName: interveneSession,
       prompt: intervenePrompt,
       data: [],
@@ -154,6 +155,7 @@ export function IntervenePanel() {
       onMessage: (msg: WsMessage) => { updatePendingResult(resultId, msg); },
       onComplete: (msg: WsMessage) => { finalizePendingResult(resultId, msg); setRunning(false); },
       onError: (message: string) => { finalizePendingResult(resultId); setError(message); setRunning(false); },
+      onDisconnect: () => { finalizePendingResult(resultId); setError("Connection lost"); setRunning(false); },
     });
   };
 
@@ -188,7 +190,13 @@ export function IntervenePanel() {
         {!isRunning ? (
           <button onClick={handleRun} disabled={!interveneSession || !intervenePrompt || interventionSpecs.length === 0}>Run</button>
         ) : (
-          <button onClick={() => { cancelAll(); setRunning(false); }} style={{ background: "#6b2020" }}>Cancel</button>
+          <button onClick={() => {
+            cancelAll();
+            for (const id of Object.keys(useStore.getState().pendingResults)) {
+              removePendingResult(id);
+            }
+            setRunning(false);
+          }} style={{ background: "#6b2020" }}>Cancel</button>
         )}
       </div>
 

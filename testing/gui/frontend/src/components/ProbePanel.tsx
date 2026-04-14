@@ -21,6 +21,7 @@ export function ProbePanel() {
   const setPendingResult = useStore((s) => s.setPendingResult);
   const updatePendingResult = useStore((s) => s.updatePendingResult);
   const finalizePendingResult = useStore((s) => s.finalizePendingResult);
+  const removePendingResult = useStore((s) => s.removePendingResult);
 
   const { connect, cancelAll } = useWebSocket();
   const [topK, setTopK] = useState(10);
@@ -41,6 +42,11 @@ export function ProbePanel() {
     onError: (message: string) => {
       finalizePendingResult(resultId);
       setError(message);
+      if (isFinalConnection) setRunning(false);
+    },
+    onDisconnect: () => {
+      finalizePendingResult(resultId);
+      setError("Connection lost");
       if (isFinalConnection) setRunning(false);
     },
   });
@@ -170,7 +176,13 @@ export function ProbePanel() {
         {!isRunning ? (
           <button onClick={handleRun} disabled={!targetSession || !prompt}>Run</button>
         ) : (
-          <button onClick={() => { cancelAll(); setRunning(false); }} style={{ background: "#6b2020" }}>Cancel</button>
+          <button onClick={() => {
+            cancelAll();
+            for (const id of Object.keys(useStore.getState().pendingResults)) {
+              removePendingResult(id);
+            }
+            setRunning(false);
+          }} style={{ background: "#6b2020" }}>Cancel</button>
         )}
       </div>
 
