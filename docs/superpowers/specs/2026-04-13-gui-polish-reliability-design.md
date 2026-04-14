@@ -43,6 +43,8 @@ Single 320px sidebar holds sessions, surgery, and probe config stacked verticall
 
 Note: the `ProbeOperation` type in `api.ts` changes from `"logit-lens" | "influence" | "intervene" | "generate"` to `"logit-lens" | "influence" | "attention" | "residual-norms" | "generate"` — "intervene" moves out to its own tab/workflow.
 
+**A/B scope:** A/B comparison applies to logit-lens and generate only (WebSocket streaming). For REST operations (influence, attention, residual-norms), Session B dropdown is disabled — single-session only. Matches current behavior at `ProbeConfig.tsx:87`.
+
 **Influence prompt wrapping:** The backend `InfluenceRequest` takes `prompts: List[str]` (plural) for multi-prompt corpus analysis. The Probe tab has a single prompt textarea. On submit, wrap as `[prompt]`. This underutilizes the feature — a "prompt set" concept is future work.
 
 **REST → ProbeResult bridging:** The three REST operations (influence, attention, residual-norms) bypass the WebSocket `pendingResults` flow. Instead, their `fetch` responses are wrapped as `ProbeResult` objects with `data: [{ type: "complete", ...responseData }]` and added directly to `results[]`. This pattern already exists in `ProbeConfig.tsx:64-84` for influence — attention and residual-norms follow the same pattern.
