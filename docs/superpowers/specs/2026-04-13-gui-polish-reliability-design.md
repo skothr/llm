@@ -52,8 +52,9 @@ Note: the `ProbeOperation` type in `api.ts` changes from `"logit-lens" | "influe
 
 ## 2. WebSocket Connection Manager
 
-### Problem
-`useWebSocket` holds a single `wsRef`. A/B comparison overwrites the first connection. Cancel only affects the last-opened socket.
+### Problems
+1. `useWebSocket` holds a single `wsRef`. A/B comparison overwrites the first connection. Cancel only affects the last-opened socket.
+2. `cancel()` sends `{ type: "cancel" }` over the socket, but **no backend handler reads it**. The `logit_lens_ws` and `intervene_ws` endpoints create a `cancelled = asyncio.Event()` but never call `await ws.receive_text()` after the initial config — nothing ever sets the event. The cancel message is dead code.
 
 ### Fix
 Replace single ref with a keyed `Map<string, WebSocket>`:
@@ -69,8 +70,10 @@ interface ConnectionManager {
 
 - Callers provide a key (e.g. `"logit-lens-A"`, `"logit-lens-B"`)
 - Each connection independently fires its own handlers
-- `cancelAll()` tears down all connections (cancel button, unmount)
-- No backend changes needed
+- `cancel(key)` calls `ws.close()` (not `ws.send({ type: "cancel" })`) — socket closure triggers `WebSocketDisconnect` on the backend, which is the actual cancellation mechanism
+- `cancelAll()` closes all connections (cancel button, unmount)
+- Remove the dead `cancelled = asyncio.Event()` from backend `logit_lens_ws` and `intervene_ws`
+- No other backend changes needed
 
 ## 3. Progressive Rendering
 
@@ -89,8 +92,8 @@ interface ConnectionManager {
 - On error/disconnect: finalize partial result with an error indicator, move to `results[]`
 
 Visualization components check `pendingResults` first (for the active result ID), fall back to completed `results`:
-- **LogitLensHeatmap**: re-renders with each new row (one row per sublayer per layer — e.g. 44 for TinyLlama 22L, 52 for OpenLLaMA 26L — sub-ms D3 redraw each)
-- **GenerationOutput**: tokens appear one-by-one as they arrive
+- **LogitLensHeatmap**: receives rows as individual WebSocket messages. Note: the backend runs the full computation in `run_in_executor` with a sync `on_layer` callback that collects results, then sends all rows as a rapid burst after computation finishes. The frontend processes each message individually, so D3 re-renders per row — the visual effect is a fast cascade rather than true one-at-a-time streaming. For small models (<30 layers) this is imperceptible; true progressive streaming (e.g. via `asyncio.Queue` bridging the executor thread) is a future improvement.
+- **GenerationOutput**: tokens appear one-by-one as calculated. Unlike logit lens, `generate_ws` runs its loop inline and sends each token immediately — this IS true streaming.
 - **LayerInfluence / AttentionEntropy / ResidualNorms**: single REST response, no streaming needed
 
 ### A/B Streaming
@@ -123,8 +126,9 @@ Dedicated panel in the Intervene tab.
 
 ### State
 
-Array of `InterventionSpec` objects in Zustand store:
+Array of `InterventionSpec` objects in Zustand store. Uses the existing `InterventionSpec` type already defined in `api.ts:67-72`:
 ```typescript
+// already exists — no new type needed
 interface InterventionSpec {
   layer: number;
   sublayer: "attn" | "ffn";
@@ -233,14 +237,15 @@ Both new viz components added to the Probe tab operation dropdown and Visualizat
 
 ### Backend (Python)
 - `gui/backend/routes/sessions.py` — add `GET /api/models/available` endpoint
-- No other backend changes needed
+- `gui/backend/routes/probes.py` — remove dead `cancelled = asyncio.Event()` from `logit_lens_ws` and `intervene_ws`
+- No other backend changes needed (all inspect endpoints already exist in `inspect.py`)
 
 ### Frontend (TypeScript/React)
 - `src/App.tsx` — new tabbed layout
 - `src/App.css` — tab bar styles, panel layout grid
 - `src/state/store.ts` — add `pendingResults`, `isLoadingModel`, `interventionSpecs`, `activeTab`
 - `src/hooks/useWebSocket.ts` — keyed connection Map
-- `src/types/api.ts` — add `AttentionEntropyResult`, `ResidualNormsResult` if needed
+- `src/types/api.ts` — update `ProbeOperation` type (drop `"intervene"`, add `"attention" | "residual-norms"`). Existing `AttentionResult` and `ResidualNormsResult` types are already defined and usable as-is. Existing `InterventionSpec` type is also already defined.
 - `src/components/SessionSidebar.tsx` → `src/components/SessionsPanel.tsx` — refactor, add model combobox, surgery param forms
 - `src/components/ProbeConfig.tsx` → `src/components/ProbePanel.tsx` — refactor, add new operations
 - New: `src/components/IntervenePanel.tsx` — intervention builder
