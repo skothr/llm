@@ -14,10 +14,10 @@ This is a workspace for robust experimental LLM research using open source model
   - `tests/` — pytest test suite for llm_surgeon
   - `experiments/` — experiment definitions and database
   - `prompts/` — prompt templates for experiments
+  - `.cache/models/` — cached HuggingFace models (TinyLlama, OpenLLaMA 3B)
+  - `.cache/outputs/` — experiment output directories (modified model variants, baselines)
 `lib/` — External libraries
   - `llama.cpp` — llama.cpp source (built with GPU enabled)
-`models/` — cached HuggingFace models (TinyLlama, OpenLLaMA 3B)
-`outputs/` — experiment output directories (modified model variants, baselines)
 `research/` — Research scripts, experimental findings, anomalies, hypotheses
   - `observations/` — Research observation log: experimental findings, anomalies, hypotheses
 
@@ -45,19 +45,19 @@ xdg-open theory/visuals/llm-architecture-diagram.html
 - `\dimtext{}` — inline dimension annotations
 
 ## HTML Companion
-`visuals/llm-architecture-diagram.html` — standalone interactive diagram with clickable layers showing tensor shapes and data flow. Dark theme, self-contained (no build step).
+`theory/visuals/llm-architecture-diagram.html` — standalone interactive diagram with clickable layers showing tensor shapes and data flow. Dark theme, self-contained (no build step).
 
 ## Sources
 
 All claims must be grounded in canonical papers.
-- `sources/index.json` — master index (citation key, title, authors, year, URL, local file, summary)
-- `sources/papers/` — local PDF copies, named `{key}_{slug}.pdf`
-When adding a new source: add entry to `sources/index.json`, download PDF to `sources/papers/`, use the citation key consistently in LaTeX `\cite{}` commands
+- `theory/sources/index.json` — master index (citation key, title, authors, year, URL, local file, summary)
+- `theory/sources/papers/` — local PDF copies, named `{key}_{slug}.pdf`
+When adding a new source: add entry to `theory/sources/index.json`, download PDF to `theory/sources/papers/`, use the citation key consistently in LaTeX `\cite{}` commands
 
 ## Conventions/Rules
 - Define every variable in every equation, directly underneath it (brief is fine, but no undefined variables)
 - First formalize math, then describe technical aspects and practical use, then elaborate using accessible language and/or analogies
-- Ground all architectural claims in specific source papers from core document or original paper(s), with citation keys from `sources/index.json`
+- Ground all architectural claims in specific source papers from core document or original paper(s), with citation keys from `theory/sources/index.json`
 
 
 # TESTING
@@ -70,9 +70,10 @@ testing/.venv/bin/python -m pytest testing/tests/ -v
 - Venv: `testing/.venv/` — system python does NOT have torch/pytest
 - llm_surgeon installed editable: `pip install -e .`
 
-## Research Observations
-Record interesting experimental findings in `research/observations/`.
 
+# Research Observations
+
+Record interesting experimental findings in `research/observations/`.
 Each observation file should include:
 - **Date and context** — what experiment was running, what model, what parameters
 - **Finding** — what was observed, why it's interesting or unexpected
@@ -81,5 +82,4 @@ Each observation file should include:
 - **Hypotheses** — possible explanations
 - **Follow-ups** — what experiments could test the hypotheses
 - **References** — related published work if known
-
 Format: `YYYY-MM-DD-<descriptive-slug>.md`. No index file needed — scan by filename.
