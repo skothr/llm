@@ -80,7 +80,20 @@ export function ABDiff({ resultA, resultB }: Props) {
             .attr("width", cellW - 1)
             .attr("height", cellH - 1)
             .attr("fill", colorScale(topPred.prob))
-            .attr("rx", 2);
+            .attr("rx", 2)
+            .style("cursor", "pointer")
+            .on("mouseenter", (event) => {
+              const lines = posPreds
+                .slice(0, 5)
+                .map((p) => `${p.token}: ${(p.prob * 100).toFixed(1)}%`)
+                .join("\n");
+              setTooltip({
+                x: event.pageX + 10,
+                y: event.pageY - 10,
+                content: `${label} L${msg.layer}.${msg.sublayer} pos ${posIdx}\n${lines}`,
+              });
+            })
+            .on("mouseleave", () => setTooltip(null));
         });
       });
     }
