@@ -173,14 +173,25 @@ export function SessionsPanel() {
             </div>
           </div>
 
-          {sessionInfo[selectedSession] && (
-            <div style={{ fontSize: 12, color: "#8888aa" }}>
-              <div>Layers: {sessionInfo[selectedSession].num_layers}</div>
-              <div>Heads: {sessionInfo[selectedSession].num_heads}</div>
-              <div>Hidden: {sessionInfo[selectedSession].hidden_size}</div>
-              <div>Params: {(sessionInfo[selectedSession].total_params / 1e6).toFixed(1)}M</div>
-            </div>
-          )}
+          {sessionInfo[selectedSession] && (() => {
+            const info = sessionInfo[selectedSession];
+            return (
+              <div style={{ fontSize: 12, color: "#8888aa" }}>
+                <div>Params: {(info.total_params / 1e6).toFixed(1)}M | Layers: {info.num_layers} | Heads: {info.num_heads}{info.num_kv_heads ? `/${info.num_kv_heads}kv` : ""}</div>
+                <div>Hidden: {info.hidden_size}{info.intermediate_size ? ` | FFN: ${info.intermediate_size}` : ""}{info.vocab_size ? ` | Vocab: ${info.vocab_size.toLocaleString()}` : ""}</div>
+                {info.max_position_embeddings && <div>Max pos: {info.max_position_embeddings}{info.rope_theta ? ` | RoPE θ: ${info.rope_theta.toLocaleString()}` : ""}</div>}
+                {info.bos_token && <div>BOS: {info.bos_token} | EOS: {info.eos_token}</div>}
+                {info.chat_template && (
+                  <details style={{ marginTop: 4 }}>
+                    <summary style={{ cursor: "pointer", color: "#6688aa" }}>Chat template</summary>
+                    <pre style={{ marginTop: 4, padding: 6, background: "#0d1b2a", borderRadius: 4, whiteSpace: "pre-wrap", fontSize: 11, maxHeight: 120, overflowY: "auto" }}>
+                      {info.chat_template}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

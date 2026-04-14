@@ -38,8 +38,16 @@ class SessionSummary(BaseModel):
 class SessionInfoResponse(BaseModel):
     num_layers: int
     num_heads: int
+    num_kv_heads: int | None = None
     hidden_size: int
+    intermediate_size: int | None = None
+    vocab_size: int | None = None
+    max_position_embeddings: int | None = None
+    rope_theta: float | None = None
     total_params: int
+    chat_template: str | None = None
+    bos_token: str | None = None
+    eos_token: str | None = None
 
 class SurgeryRequest(BaseModel):
     operation: str
@@ -86,11 +94,26 @@ def _session_summary(info) -> dict:
 def _session_info(info) -> dict:
     config = info.model.config
     total_params = sum(p.numel() for p in info.model.parameters())
+    chat_template = None
+    bos_token = None
+    eos_token = None
+    if info.tokenizer is not None:
+        chat_template = getattr(info.tokenizer, "chat_template", None)
+        bos_token = getattr(info.tokenizer, "bos_token", None)
+        eos_token = getattr(info.tokenizer, "eos_token", None)
     return SessionInfoResponse(
         num_layers=config.num_hidden_layers,
         num_heads=config.num_attention_heads,
+        num_kv_heads=getattr(config, "num_key_value_heads", None),
         hidden_size=config.hidden_size,
+        intermediate_size=getattr(config, "intermediate_size", None),
+        vocab_size=getattr(config, "vocab_size", None),
+        max_position_embeddings=getattr(config, "max_position_embeddings", None),
+        rope_theta=getattr(config, "rope_theta", None),
         total_params=total_params,
+        chat_template=chat_template,
+        bos_token=bos_token,
+        eos_token=eos_token,
     ).model_dump()
 
 @router.get("/sessions", response_model=List[dict])
