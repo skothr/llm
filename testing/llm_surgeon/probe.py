@@ -232,7 +232,7 @@ def logit_lens(
 
         probs = F.softmax(layer_logits.float(), dim=-1)
 
-        cb_top_k_summary = []
+        cb_top_k_per_position = []
         for pos in resolved_positions:
             pos_probs = probs[pos]
             topk_probs, topk_ids = pos_probs.topk(min(top_k, pos_probs.shape[0]))
@@ -251,14 +251,13 @@ def logit_lens(
                 "position": pos,
                 "top_k": top_k_list,
             })
-            if top_k_list:
-                cb_top_k_summary.append((top_k_list[0]["token"], top_k_list[0]["prob"]))
+            cb_top_k_per_position.append(top_k_list)
 
         if on_layer is not None:
             cb_logits = layer_logits.cpu() if full_logits else None
             on_layer(layer_idx, sublayer, {
                 "hidden_state": hidden,
-                "top_k": cb_top_k_summary,
+                "top_k": cb_top_k_per_position,
                 "logits": cb_logits,
             })
 
