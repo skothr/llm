@@ -43,6 +43,10 @@ Single 320px sidebar holds sessions, surgery, and probe config stacked verticall
 
 Note: the `ProbeOperation` type in `api.ts` changes from `"logit-lens" | "influence" | "intervene" | "generate"` to `"logit-lens" | "influence" | "attention" | "residual-norms" | "generate"` — "intervene" moves out to its own tab/workflow.
 
+**Influence prompt wrapping:** The backend `InfluenceRequest` takes `prompts: List[str]` (plural) for multi-prompt corpus analysis. The Probe tab has a single prompt textarea. On submit, wrap as `[prompt]`. This underutilizes the feature — a "prompt set" concept is future work.
+
+**REST → ProbeResult bridging:** The three REST operations (influence, attention, residual-norms) bypass the WebSocket `pendingResults` flow. Instead, their `fetch` responses are wrapped as `ProbeResult` objects with `data: [{ type: "complete", ...responseData }]` and added directly to `results[]`. This pattern already exists in `ProbeConfig.tsx:64-84` for influence — attention and residual-norms follow the same pattern.
+
 **Intervene tab:**
 - Prompt textarea
 - Session selector
@@ -72,7 +76,12 @@ interface ConnectionManager {
 - Each connection independently fires its own handlers
 - `cancel(key)` calls `ws.close()` (not `ws.send({ type: "cancel" })`) — socket closure triggers `WebSocketDisconnect` on the backend, which is the actual cancellation mechanism
 - `cancelAll()` closes all connections (cancel button, unmount)
-- Remove the dead `cancelled = asyncio.Event()` from backend `logit_lens_ws` and `intervene_ws`
+- Remove the dead cancel machinery from backend `logit_lens_ws` (`probes.py`):
+  - Line 42: `cancelled = asyncio.Event()` creation
+  - Line 55: `cancelled.is_set()` guard in `on_layer` (keep the `if not connected:` guard)
+  - Line 95: `cancelled.is_set()` check before sending complete
+  - Line 101-102: `elif cancelled.is_set():` branch and `{"type": "cancelled"}` response
+- Same cleanup in `intervene_ws` (uses `connected` flag only, no `cancelled` Event — but verify no dead references)
 - No other backend changes needed
 
 ## 3. Progressive Rendering
