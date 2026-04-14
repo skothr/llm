@@ -15,11 +15,8 @@
 # Build artifacts
 llama.cpp/
 
-# Outputs (generated models, GGUF files — large, regenerable)
-outputs/
-
-# HF model cache (clean downloads, large)
-models/
+# Model cache and experiment outputs (large, regenerable)
+testing/.cache/
 
 # Test scripts (ad-hoc, not part of the toolkit)
 test.py

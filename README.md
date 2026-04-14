@@ -54,7 +54,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu     # CPU onl
 pip install -e ".[dev]"
 ```
 
-Models are downloaded from HuggingFace on first use and cached in `models/`.
+Models are downloaded from HuggingFace on first use and cached in `testing/.cache/models/`.
 
 #### Quick Start
 
@@ -164,11 +164,12 @@ llm/
       frontend/              #   React/Vite/TypeScript + D3 visualizations
       tests/                 #   Backend API tests
       run.sh                 #   Start both servers
+    .cache/                  # Gitignored runtime data
+      models/                #   HuggingFace model downloads
+      outputs/               #   Modified model variants from experiments
     experiments/             # Experiment definitions + SQLite database
     prompts/                 # Prompt templates
-  models/                    # Cached HuggingFace models (TinyLlama, OpenLLaMA 3B)
   lib/                       # External libraries (llama.cpp, GPU-built)
-  outputs/                   # Modified model variants from experiments
   research/                  # Observations and findings
   docs/                      # Design specs
 ```
