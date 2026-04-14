@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStore } from "../state/store";
 import { displayToken } from "../utils/displayToken";
 import type { GenerateData, ProbeResult } from "../types/api";
@@ -52,12 +52,24 @@ function formatTopK(topK: GenerateData["top_k"]): string {
 function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending: boolean }) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; step: number; content: string } | null>(null);
 
+  useEffect(() => {
+    if (!tooltip) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setTooltip(null); };
+    const onClick = () => setTooltip(null);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
+    };
+  }, [tooltip]);
+
   const tokens = result.data.filter(
     (m): m is GenerateData => m.type === "data" && "token" in m && "step" in m
   );
 
   return (
-    <div style={{ flex: "1 1 0", minWidth: 0, maxWidth: "50%", overflow: "hidden", position: "relative" }} onClick={() => setTooltip(null)}>
+    <div style={{ flex: "1 1 0", minWidth: 0, maxWidth: "50%", overflow: "hidden", position: "relative" }}>
       <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 4 }}>
         {result.sessionName} - "{result.prompt.slice(0, 30)}"
         {isPending && <span style={{ color: "#4ecdc4", marginLeft: 4 }}>generating...</span>}
