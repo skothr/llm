@@ -11,8 +11,7 @@ body {
 }
 
 .app-layout {
-  display: grid;
-  grid-template-columns: 320px 1fr;
+  display: flex;
   height: 100vh;
 }
 
@@ -22,6 +21,7 @@ body {
   background: #16213e;
   border-right: 1px solid #0f3460;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .tab-bar {
@@ -61,19 +61,46 @@ body {
 }
 
 .main-area {
-  display: grid;
-  grid-template-rows: 1fr 280px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .visualization-area {
+  flex: 1;
   padding: 16px;
   overflow: auto;
+  min-height: 0;
 }
 
 .generation-output {
   padding: 16px;
   border-top: 1px solid #0f3460;
   overflow: auto;
+  flex-shrink: 0;
+}
+
+.resize-handle {
+  flex-shrink: 0;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 20;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  background: rgba(78, 205, 196, 0.3);
+}
+
+.resize-handle.horizontal {
+  width: 5px;
+  cursor: col-resize;
+}
+
+.resize-handle.vertical {
+  height: 5px;
+  cursor: row-resize;
 }
 
 h2 {
