@@ -79,9 +79,10 @@ export function LogitLensHeatmap({ result }: Props) {
           .style("cursor", "pointer")
           .on("mouseenter", (event) => {
             const top = posPreds.slice(0, 5);
-            const maxLen = Math.max(...top.map((p) => p.token.length));
+            const show = top.map((p) => p.token.replace(/ /g, "\u00B7"));
+            const maxLen = Math.max(...show.map((s) => s.length));
             const lines = top
-              .map((p) => `${p.token.padEnd(maxLen)}  ${(p.prob * 100).toFixed(1).padStart(5)}%`)
+              .map((p, i) => `${show[i].padEnd(maxLen)}  ${(p.prob * 100).toFixed(1).padStart(5)}%`)
               .join("\n");
             setTooltip({
               x: event.pageX + 10,
