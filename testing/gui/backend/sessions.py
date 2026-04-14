@@ -29,8 +29,8 @@ class SessionInfo:
         if not self._undo_stack:
             return 0.0
         return sum(
-            sum(p.nelement() * p.element_size() for p in model.parameters())
-            for model in self._undo_stack
+            sum(t.nelement() * t.element_size() for t in entry["state"].values())
+            for entry in self._undo_stack
         ) / 1e6
 
 _NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._~\-]{0,63}$")
@@ -74,14 +74,23 @@ class SessionManager:
     def snapshot(self, name: str) -> None:
         info = self.get(name)
         if len(info._undo_stack) >= info.MAX_UNDO:
-            oldest = info._undo_stack.pop(0)
-            del oldest
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        info._undo_stack.append(copy.deepcopy(info.model))
+            info._undo_stack.pop(0)
+        entry = {
+            "state": {k: v.cpu().clone() for k, v in info.model.state_dict().items()},
+            "config": copy.deepcopy(info.model.config),
+        }
+        info._undo_stack.append(entry)
 
     def undo(self, name: str) -> None:
         info = self.get(name)
         if not info._undo_stack:
             raise ValueError(f"No undo history for session '{name}'")
-        info.model = info._undo_stack.pop()
+        entry = info._undo_stack.pop()
+        device = next(info.model.parameters()).device
+        info.model.config = entry["config"]
+        from transformers import AutoModelForCausalLM
+        restored = AutoModelForCausalLM.from_config(entry["config"])
+        restored.load_state_dict(entry["state"])
+        restored.to(device)
+        restored.eval()
+        info.model = restored
