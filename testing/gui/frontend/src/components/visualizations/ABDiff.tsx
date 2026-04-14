@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { displayToken } from "../../utils/displayToken";
+import { useStore } from "../../state/store";
 import type { LogitLensData, ProbeResult } from "../../types/api";
 
 interface Props {
