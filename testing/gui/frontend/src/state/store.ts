@@ -187,14 +187,14 @@ export const useStore = create<StoreState>((set, get) => ({
 
   addResult: (result) => set((s) => ({
     results: [result, ...s.results],
-    activeResultId: result.operation !== "generate" ? result.id : s.activeResultId,
+    activeResultId: result.operation !== "generate" && !result.id.endsWith("-B") ? result.id : s.activeResultId,
   })),
   clearResults: () => set({ results: [], activeResultId: null }),
   setActiveResult: (id) => set({ activeResultId: id }),
 
   setPendingResult: (id, result) => set((s) => ({
     pendingResults: { ...s.pendingResults, [id]: result },
-    activeResultId: result.operation !== "generate" ? id : s.activeResultId,
+    activeResultId: result.operation !== "generate" && !id.endsWith("-B") ? id : s.activeResultId,
   })),
 
   updatePendingResult: (id, msg) => set((s) => {
@@ -216,7 +216,7 @@ export const useStore = create<StoreState>((set, get) => ({
     return {
       pendingResults: remaining,
       results: [{ ...pending, data: finalData }, ...s.results],
-      activeResultId: pending.operation !== "generate" ? pending.id : s.activeResultId,
+      activeResultId: pending.operation !== "generate" && !pending.id.endsWith("-B") ? pending.id : s.activeResultId,
     };
   }),
 
