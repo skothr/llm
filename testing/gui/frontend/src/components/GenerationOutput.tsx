@@ -41,50 +41,68 @@ export function GenerationOutput() {
   );
 }
 
+function formatTopK(topK: GenerateData["top_k"]): string {
+  const show = topK.map((a) => displayToken(a.token));
+  const maxLen = Math.max(...show.map((s) => s.length));
+  return topK
+    .map((alt, i) => `${show[i].padEnd(maxLen)}  ${(alt.prob * 100).toFixed(1).padStart(5)}%`)
+    .join("\n");
+}
+
 function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending: boolean }) {
-  const [selectedStep, setSelectedStep] = useState<number | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
 
   const tokens = result.data.filter(
     (m): m is GenerateData => m.type === "data" && "token" in m && "step" in m
   );
 
-  const selectedToken = selectedStep !== null ? tokens.find((t) => t.step === selectedStep) || null : null;
-
   return (
-    <div style={{ flex: "1 1 0", minWidth: 0, maxWidth: "50%", overflow: "hidden" }}>
+    <div style={{ flex: "1 1 0", minWidth: 0, maxWidth: "50%", overflow: "hidden", position: "relative" }}>
       <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 4 }}>
         {result.sessionName} - "{result.prompt.slice(0, 30)}"
         {isPending && <span style={{ color: "#4ecdc4", marginLeft: 4 }}>generating...</span>}
       </div>
       <div style={{ fontFamily: "monospace", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", overflowY: "auto", maxHeight: 200 }}>
         <span style={{ color: "#6688aa" }}>{result.prompt}</span>
-        {tokens.map((tok) =>
-          tok.token === "<eos>" ? (
-            <span key={tok.step} onClick={() => setSelectedStep(selectedStep === tok.step ? null : tok.step)}
-              style={{ cursor: "pointer", background: selectedStep === tok.step ? "#1a5276" : "transparent", color: "#4a6a4a", fontSize: 11, padding: "1px 3px", borderRadius: 2, border: "1px solid #3a5a3a" }}>eos</span>
-          ) : (
-            <span key={tok.step} onClick={() => setSelectedStep(selectedStep === tok.step ? null : tok.step)}
-              style={{ cursor: "pointer", background: selectedStep === tok.step ? "#1a5276" : "transparent", borderRadius: 2, padding: "0 1px" }}>{tok.token}</span>
-          )
-        )}
+        {tokens.map((tok) => (
+          <span
+            key={tok.step}
+            style={{
+              cursor: "pointer",
+              borderRadius: 2,
+              padding: "0 1px",
+              ...(tok.token === "<eos>" ? { color: "#4a6a4a", fontSize: 11, padding: "1px 3px", border: "1px solid #3a5a3a" } : {}),
+            }}
+            onMouseEnter={(e) => setTooltip({
+              x: e.pageX + 10,
+              y: e.pageY - 10,
+              content: `step ${tok.step}\n${formatTopK(tok.top_k)}`,
+            })}
+            onMouseLeave={() => setTooltip(null)}
+          >
+            {tok.token === "<eos>" ? "eos" : tok.token}
+          </span>
+        ))}
         {isPending && <span className="cursor-blink" style={{ color: "#4ecdc4" }}>|</span>}
       </div>
-
-      {selectedToken && (() => {
-        const show = selectedToken.top_k.map((a) => displayToken(a.token));
-        const maxLen = Math.max(...show.map((s) => s.length));
-        return (
-          <div style={{ marginTop: 8, padding: 8, background: "#0d1b2a", borderRadius: 4, fontSize: 12, fontFamily: "monospace", whiteSpace: "pre" }}>
-            <div style={{ color: "#a0a0c0", marginBottom: 4 }}>Step {selectedToken.step} - top alternatives:</div>
-            {selectedToken.top_k.map((alt, i) => (
-              <div key={i}>
-                <span style={{ color: i === 0 ? "#4ecdc4" : "#888" }}>{show[i].padEnd(maxLen)}</span>
-                <span style={{ color: "#666" }}>  {(alt.prob * 100).toFixed(1).padStart(5)}%</span>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
+      {tooltip && (
+        <div style={{
+          position: "fixed",
+          left: tooltip.x,
+          top: tooltip.y,
+          background: "#16213e",
+          border: "1px solid #1a5276",
+          borderRadius: 4,
+          padding: "6px 10px",
+          fontFamily: "monospace",
+          fontSize: 12,
+          whiteSpace: "pre",
+          pointerEvents: "none",
+          zIndex: 100,
+        }}>
+          {tooltip.content}
+        </div>
+      )}
     </div>
   );
 }
