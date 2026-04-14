@@ -21,6 +21,7 @@ export interface SessionInfo {
   chat_template: string | null;
   bos_token: string | null;
   eos_token: string | null;
+  layer_map: number[];
 }
 
 export interface SurgeryOperation {

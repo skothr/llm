@@ -14,6 +14,7 @@ class SessionInfo:
     mode: str
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _undo_stack: list = field(default_factory=list, repr=False)
+    _layer_map: list = field(default_factory=list, repr=False)
     MAX_UNDO: int = 5
 
     @property
@@ -35,6 +36,26 @@ class SessionInfo:
 
 _NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._~\-]{0,63}$")
 
+def update_layer_map(current_map: list, operation: str, params: dict) -> list:
+    m = list(current_map)
+    if operation == "remove_layers":
+        for i in sorted(params["layer_indices"], reverse=True):
+            if i < len(m):
+                m.pop(i)
+    elif operation == "keep_layers":
+        m = [current_map[i] for i in params["layer_indices"] if i < len(current_map)]
+    elif operation == "swap_layers":
+        i, j = params["i"], params["j"]
+        if i < len(m) and j < len(m):
+            m[i], m[j] = m[j], m[i]
+    elif operation == "reorder_layers":
+        m = [current_map[i] for i in params["new_order"] if i < len(current_map)]
+    elif operation == "duplicate_layer":
+        src, dst = params["src"], params["dst"]
+        if src < len(current_map):
+            m.insert(dst, current_map[src])
+    return m
+
 class SessionManager:
     def __init__(self):
         self._sessions: Dict[str, SessionInfo] = {}
@@ -49,9 +70,11 @@ class SessionManager:
         self.validate_name(name)
         if name in self._sessions:
             raise ValueError(f"Session '{name}' already exists")
+        num_layers = model.config.num_hidden_layers
         info = SessionInfo(
             name=name, model=model, tokenizer=tokenizer,
             model_id=model_id, mode=mode,
+            _layer_map=list(range(num_layers)),
         )
         self._sessions[name] = info
         return info
@@ -78,6 +101,7 @@ class SessionManager:
         entry = {
             "state": {k: v.cpu().clone() for k, v in info.model.state_dict().items()},
             "config": copy.deepcopy(info.model.config),
+            "layer_map": list(info._layer_map),
         }
         info._undo_stack.append(entry)
 
@@ -94,3 +118,4 @@ class SessionManager:
         restored.to(device)
         restored.eval()
         info.model = restored
+        info._layer_map = entry.get("layer_map", list(range(entry["config"].num_hidden_layers)))

@@ -48,6 +48,7 @@ class SessionInfoResponse(BaseModel):
     chat_template: str | None = None
     bos_token: str | None = None
     eos_token: str | None = None
+    layer_map: list[int] = []
 
 class SurgeryRequest(BaseModel):
     operation: str
@@ -114,6 +115,7 @@ def _session_info(info) -> dict:
         chat_template=chat_template,
         bos_token=bos_token,
         eos_token=eos_token,
+        layer_map=list(info._layer_map),
     ).model_dump()
 
 @router.get("/sessions", response_model=List[dict])
@@ -221,6 +223,9 @@ async def apply_surgery(name: str, req: SurgeryRequest):
     except (IndexError, ValueError) as e:
         mgr.undo(name)
         raise HTTPException(422, str(e))
+
+    from ..sessions import update_layer_map
+    info._layer_map = update_layer_map(info._layer_map, req.operation, req.params)
 
     return SurgeryResponse(
         operations=[{"operation": op.operation, "description": op.description} for op in log.ops],
