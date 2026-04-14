@@ -74,17 +74,21 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
         {isPending && <span className="cursor-blink" style={{ color: "#4ecdc4" }}>|</span>}
       </div>
 
-      {selectedToken && (
-        <div style={{ marginTop: 8, padding: 8, background: "#0d1b2a", borderRadius: 4, fontSize: 12 }}>
-          <div style={{ color: "#a0a0c0", marginBottom: 4 }}>Step {selectedToken.step} - top alternatives:</div>
-          {selectedToken.top_k.map((alt, i) => (
-            <div key={i} style={{ display: "flex", gap: 8 }}>
-              <span style={{ color: i === 0 ? "#4ecdc4" : "#888", fontFamily: "monospace" }}>{displayToken(alt.token)}</span>
-              <span style={{ color: "#666" }}>{(alt.prob * 100).toFixed(1)}%</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {selectedToken && (() => {
+        const show = selectedToken.top_k.map((a) => displayToken(a.token));
+        const maxLen = Math.max(...show.map((s) => s.length));
+        return (
+          <div style={{ marginTop: 8, padding: 8, background: "#0d1b2a", borderRadius: 4, fontSize: 12, fontFamily: "monospace", whiteSpace: "pre" }}>
+            <div style={{ color: "#a0a0c0", marginBottom: 4 }}>Step {selectedToken.step} - top alternatives:</div>
+            {selectedToken.top_k.map((alt, i) => (
+              <div key={i}>
+                <span style={{ color: i === 0 ? "#4ecdc4" : "#888" }}>{show[i].padEnd(maxLen)}</span>
+                <span style={{ color: "#666" }}>  {(alt.prob * 100).toFixed(1).padStart(5)}%</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
