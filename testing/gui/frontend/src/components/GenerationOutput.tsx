@@ -51,7 +51,7 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
   const selectedToken = selectedStep !== null ? tokens.find((t) => t.step === selectedStep) || null : null;
 
   return (
-    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+    <div style={{ flex: "1 1 0", minWidth: 0, maxWidth: "50%", overflow: "hidden" }}>
       <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 4 }}>
         {result.sessionName} - "{result.prompt.slice(0, 30)}"
         {isPending && <span style={{ color: "#4ecdc4", marginLeft: 4 }}>generating...</span>}
