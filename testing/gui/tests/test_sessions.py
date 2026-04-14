@@ -68,9 +68,34 @@ class TestSessionManager:
         restored = restored_model.model.layers[0].mlp.gate_proj.weight
         assert torch.allclose(restored, original_weight)
 
+    def test_multi_undo(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        w0 = tiny_model.model.layers[0].mlp.gate_proj.weight.clone()
+
+        mgr.snapshot("s1")
+        tiny_model.model.layers[0].mlp.gate_proj.weight.data.zero_()
+        w1 = tiny_model.model.layers[0].mlp.gate_proj.weight.clone()
+
+        mgr.snapshot("s1")
+        tiny_model.model.layers[0].mlp.gate_proj.weight.data.fill_(1.0)
+
+        assert mgr.get("s1").undo_depth == 2
+
+        mgr.undo("s1")
+        restored = mgr.get("s1").model.model.layers[0].mlp.gate_proj.weight
+        assert torch.allclose(restored, w1)
+
+        mgr.undo("s1")
+        restored = mgr.get("s1").model.model.layers[0].mlp.gate_proj.weight
+        assert torch.allclose(restored, w0)
+
+        assert mgr.get("s1").undo_depth == 0
+
     def test_undo_without_snapshot_raises(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
                       model_id="test/tiny", mode="eval")
-        with pytest.raises(ValueError, match="No snapshot"):
+        with pytest.raises(ValueError, match="No undo history"):
             mgr.undo("s1")

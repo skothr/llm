@@ -20,12 +20,14 @@ export function LogitLensHeatmap({ result }: Props) {
 
   useEffect(() => {
     if (!svgRef.current || dataMessages.length === 0) return;
+    const firstPreds = dataMessages[0]?.predictions;
+    if (!firstPreds || firstPreds.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
     const margin = { top: 30, right: 20, bottom: 40, left: 80 };
-    const numPositions = dataMessages[0].predictions.length || 1;
+    const numPositions = firstPreds.length;
     const numRows = dataMessages.length;
 
     const cellW = Math.max(30, Math.min(60, 600 / numPositions));

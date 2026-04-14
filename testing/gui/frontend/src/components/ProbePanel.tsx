@@ -88,34 +88,41 @@ export function ProbePanel() {
         connect(idB, getWsPath(targetSessionB!), getWsConfig(), makeWsHandlers(idB, true));
       }
     } else {
-      let url = "";
-      let body: unknown = {};
+      const fetchInspect = (session: string, id: string) => {
+        let url = "";
+        let body: unknown = {};
+        if (operation === "influence") {
+          url = `/api/sessions/${session}/inspect/influence`;
+          body = { prompts: [prompt] };
+        } else if (operation === "attention") {
+          url = `/api/sessions/${session}/inspect/attention`;
+          body = { prompt };
+        } else if (operation === "residual-norms") {
+          url = `/api/sessions/${session}/inspect/residual-norms`;
+          body = { prompt };
+        }
+        return fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            addResult({
+              id, operation, sessionName: session, prompt,
+              data: [{ type: "complete" as const, ...data }],
+              timestamp: Date.now(),
+            });
+          });
+      };
 
-      if (operation === "influence") {
-        url = `/api/sessions/${targetSession}/inspect/influence`;
-        body = { prompts: [prompt] };
-      } else if (operation === "attention") {
-        url = `/api/sessions/${targetSession}/inspect/attention`;
-        body = { prompt };
-      } else if (operation === "residual-norms") {
-        url = `/api/sessions/${targetSession}/inspect/residual-norms`;
-        body = { prompt };
+      const fetches = [fetchInspect(targetSession, resultId)];
+      if (targetSessionB) {
+        fetches.push(fetchInspect(targetSessionB, `${resultId}-B`));
       }
 
-      fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          addResult({
-            id: resultId, operation, sessionName: targetSession, prompt,
-            data: [{ type: "complete" as const, ...data }],
-            timestamp: Date.now(),
-          });
-          setRunning(false);
-        })
+      Promise.all(fetches)
+        .then(() => setRunning(false))
         .catch((e) => { setError((e as Error).message); setRunning(false); });
     }
   };
@@ -145,8 +152,6 @@ export function ProbePanel() {
         <select
           value={targetSessionB ?? ""}
           onChange={(e) => setTargetSessionB(e.target.value || null)}
-          disabled={!isWs}
-          title={!isWs ? "A/B not available for REST operations" : ""}
         >
           <option value="">Session B (A/B)...</option>
           {sessions.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}

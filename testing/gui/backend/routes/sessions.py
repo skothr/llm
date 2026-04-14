@@ -33,6 +33,7 @@ class SessionSummary(BaseModel):
     num_layers: int
     has_snapshot: bool
     snapshot_size_mb: float
+    undo_depth: int
 
 class SessionInfoResponse(BaseModel):
     num_layers: int
@@ -79,6 +80,7 @@ def _session_summary(info) -> dict:
         num_layers=config.num_hidden_layers,
         has_snapshot=info.has_snapshot,
         snapshot_size_mb=info.snapshot_size_mb,
+        undo_depth=info.undo_depth,
     ).model_dump()
 
 def _session_info(info) -> dict:

@@ -140,7 +140,7 @@ export function SessionsPanel() {
           </div>
           <div style={{ fontSize: 11, color: "#8888aa" }}>
             {s.model_id} | {s.mode} | {s.num_layers}L
-            {s.has_snapshot && ` | undo: ${s.snapshot_size_mb.toFixed(0)}MB`}
+            {s.has_snapshot && ` | undo: ${s.undo_depth}x (${s.snapshot_size_mb.toFixed(0)}MB)`}
           </div>
         </div>
       ))}
