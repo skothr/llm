@@ -11,8 +11,16 @@ export interface SessionSummary {
 export interface SessionInfo {
   num_layers: number;
   num_heads: number;
+  num_kv_heads: number | null;
   hidden_size: number;
+  intermediate_size: number | null;
+  vocab_size: number | null;
+  max_position_embeddings: number | null;
+  rope_theta: number | null;
   total_params: number;
+  chat_template: string | null;
+  bos_token: string | null;
+  eos_token: string | null;
 }
 
 export interface SurgeryOperation {
