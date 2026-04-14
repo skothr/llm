@@ -1,5 +1,6 @@
 import asyncio
 import re
+from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
@@ -7,6 +8,19 @@ from pydantic import BaseModel, field_validator
 from ..sessions import SessionManager
 
 router = APIRouter(tags=["sessions"])
+
+MODELS_CACHE = Path(__file__).resolve().parent.parent.parent.parent / ".cache" / "models"
+
+def _scan_model_cache(cache_dir: Path) -> list:
+    if not cache_dir.exists():
+        return []
+    models = []
+    for entry in cache_dir.iterdir():
+        if entry.is_dir() and entry.name.startswith("models--"):
+            parts = entry.name[len("models--"):].split("--", 1)
+            if len(parts) == 2:
+                models.append(parts[0] + "/" + parts[1])
+    return sorted(models)
 
 def get_manager() -> SessionManager:
     from ..app import manager
@@ -111,7 +125,6 @@ async def load_session(req: LoadRequest):
         raise HTTPException(409, f"Session '{req.name}' already exists")
 
     import sys
-    from pathlib import Path
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import surgery
 
@@ -144,6 +157,10 @@ SURGERY_OPS = [
 async def surgery_operations():
     return SURGERY_OPS
 
+@router.get("/models/available")
+async def list_available_models():
+    return [{"model_id": m} for m in _scan_model_cache(MODELS_CACHE)]
+
 @router.post("/sessions/{name}/surgery")
 async def apply_surgery(name: str, req: SurgeryRequest):
     mgr = get_manager()
@@ -153,7 +170,6 @@ async def apply_surgery(name: str, req: SurgeryRequest):
         raise HTTPException(404, f"Session '{name}' not found")
 
     import sys
-    from pathlib import Path
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import surgery
 
