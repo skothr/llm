@@ -83,9 +83,10 @@ export function ABDiff({ resultA, resultB }: Props) {
             .attr("rx", 2)
             .style("cursor", "pointer")
             .on("mouseenter", (event) => {
-              const lines = posPreds
-                .slice(0, 5)
-                .map((p) => `${p.token}: ${(p.prob * 100).toFixed(1)}%`)
+              const top = posPreds.slice(0, 5);
+              const maxLen = Math.max(...top.map((p) => p.token.length));
+              const lines = top
+                .map((p) => `${p.token.padEnd(maxLen)}  ${(p.prob * 100).toFixed(1).padStart(5)}%`)
                 .join("\n");
               setTooltip({
                 x: event.pageX + 10,
