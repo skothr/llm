@@ -113,6 +113,10 @@ input, textarea, select {
   width: 100%;
 }
 
+input[type="number"] {
+  padding-right: 4px;
+}
+
 textarea {
   resize: vertical;
   min-height: 60px;

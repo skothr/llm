@@ -17,7 +17,7 @@ export function GenerationOutput() {
     .sort((a, b) => {
       const aB = a.id.endsWith("-B") ? 1 : 0;
       const bB = b.id.endsWith("-B") ? 1 : 0;
-      return aB - bB || a.timestamp - b.timestamp;
+      return aB - bB || b.timestamp - a.timestamp;
     });
 
   if (genResults.length === 0) {
@@ -51,12 +51,12 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
   const selectedToken = selectedStep !== null ? tokens.find((t) => t.step === selectedStep) || null : null;
 
   return (
-    <div style={{ flex: 1 }}>
+    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
       <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 4 }}>
         {result.sessionName} - "{result.prompt.slice(0, 30)}"
         {isPending && <span style={{ color: "#4ecdc4", marginLeft: 4 }}>generating...</span>}
       </div>
-      <div style={{ fontFamily: "monospace", fontSize: 14, lineHeight: 1.8 }}>
+      <div style={{ fontFamily: "monospace", fontSize: 14, lineHeight: 1.8, overflowWrap: "break-word", wordBreak: "break-word", overflowY: "auto", maxHeight: 200 }}>
         <span style={{ color: "#6688aa" }}>{result.prompt}</span>
         {tokens.map((tok) =>
           tok.token === "<eos>" ? (

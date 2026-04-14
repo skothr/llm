@@ -124,6 +124,7 @@ export function ABDiff({ resultA, resultB }: Props) {
             .attr("width", cellW - 1)
             .attr("height", cellH - 1)
             .attr("fill", diffScale(diff))
+            .attr("opacity", Math.max(0.15, Math.abs(diff)))
             .attr("rx", 2)
             .attr("stroke", tokensDiffer ? "#ff6b6b" : "none")
             .attr("stroke-width", tokensDiffer ? 1.5 : 0)
