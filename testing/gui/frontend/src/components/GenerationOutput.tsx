@@ -11,19 +11,20 @@ export function GenerationOutput() {
   const results = useStore((s) => s.results);
   const pendingResults = useStore((s) => s.pendingResults);
 
-  const all = [...Object.values(pendingResults), ...results];
-  const genResults = all
-    .filter((r) => r.operation === "generate")
-    .sort((a, b) => {
-      const aPending = a.id in pendingResults ? 0 : 1;
-      const bPending = b.id in pendingResults ? 0 : 1;
-      if (aPending !== bPending) return aPending - bPending;
-      const aB = a.id.endsWith("-B") ? 1 : 0;
-      const bB = b.id.endsWith("-B") ? 1 : 0;
-      return aB - bB || b.timestamp - a.timestamp;
-    });
+  const allGen = [...Object.values(pendingResults), ...results]
+    .filter((r) => r.operation === "generate");
 
-  if (genResults.length === 0) {
+  const latestA = allGen
+    .filter((r) => !r.id.endsWith("-B"))
+    .sort((a, b) => b.timestamp - a.timestamp)[0];
+
+  const latestB = latestA
+    ? allGen.find((r) => r.id === `${latestA.id}-B`)
+    : undefined;
+
+  const panels = [latestA, latestB].filter(Boolean) as ProbeResult[];
+
+  if (panels.length === 0) {
     return (
       <div>
         <h2>Generation Output</h2>
@@ -36,7 +37,7 @@ export function GenerationOutput() {
     <div>
       <h2>Generation Output</h2>
       <div style={{ display: "flex", gap: 16 }}>
-        {genResults.slice(0, 2).map((r) => (
+        {panels.map((r) => (
           <GenerationPanel key={r.id} result={r} isPending={r.id in pendingResults} />
         ))}
       </div>
