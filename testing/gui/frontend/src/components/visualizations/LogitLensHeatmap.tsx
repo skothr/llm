@@ -40,6 +40,7 @@ export function LogitLensHeatmap({ result }: Props) {
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
     dataMessages.forEach((msg, rowIdx) => {
+      const isModified = "modified" in msg && (msg as { modified?: boolean }).modified;
       const label = `L${msg.layer}.${msg.sublayer}`;
 
       g.append("text")
@@ -50,6 +51,16 @@ export function LogitLensHeatmap({ result }: Props) {
         .attr("font-size", 10)
         .attr("fill", "#8888aa")
         .text(label);
+
+      if (isModified) {
+        g.append("rect")
+          .attr("x", -8)
+          .attr("y", rowIdx * cellH)
+          .attr("width", 3)
+          .attr("height", cellH - 1)
+          .attr("fill", "#ff6b6b")
+          .attr("rx", 1);
+      }
 
       msg.predictions.forEach((posPreds, posIdx) => {
         const topPred = posPreds[0];
