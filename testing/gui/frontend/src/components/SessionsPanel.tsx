@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useStore } from "../state/store";
 import { ModelCombobox } from "./ModelCombobox";
 import { SurgeryParamForm } from "./SurgeryParamForm";
-import type { SessionSummary, SurgeryOperation, StagedOp } from "../types/api";
+import type { SessionSummary, SurgeryOperation, StagedOp, AvailableModel } from "../types/api";
 
 export function SessionsPanel() {
   const sessions = useStore((s) => s.sessions);
@@ -24,7 +24,7 @@ export function SessionsPanel() {
 
   const [loadModelId, setLoadModelId] = useState("");
   const [loadName, setLoadName] = useState("");
-  const [loadMode, setLoadMode] = useState<"inspect" | "eval">("inspect");
+  const [loadMode, setLoadMode] = useState("nf4");
   const [error, setError] = useState("");
 
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
@@ -34,7 +34,44 @@ export function SessionsPanel() {
 
   useEffect(() => { fetchAvailableModels(); }, [fetchAvailableModels]);
 
+  const selectedModel: AvailableModel | null =
+    availableModels.find((m) => m.model_id === loadModelId) ?? null;
+
   const selectedOpDef = surgeryOps.find((op) => op.name === surgeryOp) || null;
+
+  const fmtSize = (bytes: number) =>
+    bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${(bytes / 1e6).toFixed(0)} MB`;
+
+  const DTYPE_LABELS: Record<string, string> = {
+    bfloat16: "BF16", float16: "FP16", float32: "FP32",
+    "torch.bfloat16": "BF16", "torch.float16": "FP16", "torch.float32": "FP32",
+  };
+  const fmtDtype = (m: AvailableModel): string | null => {
+    if (m.quantization) return m.quantization;
+    if (m.dtype) return DTYPE_LABELS[m.dtype] ?? m.dtype;
+    return null;
+  };
+
+  const getParams = (m: AvailableModel): number | null => {
+    if (m.total_params) return m.total_params;
+    const { num_layers, hidden_size, num_heads, num_kv_heads, intermediate_size, vocab_size } = m;
+    if (num_layers == null || hidden_size == null || vocab_size == null) return null;
+    const h = hidden_size;
+    const kvDim = (num_kv_heads ?? num_heads ?? 1) * (h / (num_heads ?? 1));
+    const ffn = intermediate_size ?? Math.round(h * 2.67);
+    const perLayer = 2 * h * h + 2 * h * kvDim + 3 * h * ffn + 2 * h;
+    return 2 * vocab_size * h + num_layers * perLayer + h;
+  };
+
+  const BYTES_PER_PARAM: Record<string, number> = {
+    nf4: 0.55, int8: 1.1, bf16: 2, fp16: 2, fp32: 4, "fp32-cpu": 4,
+  };
+
+  const estimateLoadedBytes = (m: AvailableModel, mode: string): number | null => {
+    const params = getParams(m);
+    if (params == null) return null;
+    return Math.round(params * (BYTES_PER_PARAM[mode] ?? 2));
+  };
 
   const formatParams = (params: Record<string, unknown>) => {
     return Object.entries(params)
@@ -113,9 +150,12 @@ export function SessionsPanel() {
           style={{ marginTop: 4, marginBottom: 4 }}
         />
         <div style={{ display: "flex", gap: 4 }}>
-          <select value={loadMode} onChange={(e) => setLoadMode(e.target.value as "inspect" | "eval")}>
-            <option value="inspect">4-bit (inspect)</option>
-            <option value="eval">fp16 (eval)</option>
+          <select value={loadMode} onChange={(e) => setLoadMode(e.target.value)}>
+            <option value="nf4">NF4 (4-bit)</option>
+            <option value="int8">INT8 (8-bit)</option>
+            <option value="bf16">BF16</option>
+            <option value="fp16">FP16</option>
+            <option value="fp32">FP32</option>
           </select>
           <button onClick={handleLoad} disabled={isLoadingModel || !loadModelId || !loadName}>
             {isLoadingModel ? "Loading..." : "Load"}
@@ -123,10 +163,84 @@ export function SessionsPanel() {
         </div>
         {isLoadingModel && (
           <div style={{ fontSize: 12, color: "#8888aa", marginTop: 4 }}>
-            {availableModels.includes(loadModelId) ? `Loading ${loadingModelId} from cache...` : `Downloading ${loadingModelId}...`}
+            {availableModels.some((m) => m.model_id === loadModelId) ? `Loading ${loadingModelId} from cache...` : `Downloading ${loadingModelId}...`}
           </div>
         )}
       </div>
+
+      {selectedModel && (
+        <div style={{
+          padding: 8,
+          background: "#0d1b2a",
+          borderRadius: 4,
+          border: "1px solid #1a527644",
+          fontSize: 11,
+          color: "#8888aa",
+          lineHeight: 1.6,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+            <span style={{ color: "#a0a0c0", fontWeight: 600, fontSize: 12 }}>
+              {selectedModel.architecture ?? "unknown"}{selectedModel.model_size_label ? ` (${selectedModel.model_size_label})` : ""}
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
+              background: selectedModel.quantization ? "#7c6cf022" : "#ff9d0022",
+              color: selectedModel.quantization ? "#b8aaff" : "#ffcc66",
+              border: `1px solid ${selectedModel.quantization ? "#7c6cf044" : "#ff9d0044"}`,
+            }}>
+              {fmtDtype(selectedModel) ?? "unknown"}
+            </span>
+          </div>
+          <div>
+            {selectedModel.num_layers != null && <span>Layers: {selectedModel.num_layers}</span>}
+            {selectedModel.hidden_size != null && <span> | Hidden: {selectedModel.hidden_size}</span>}
+            {selectedModel.num_heads != null && (
+              <span> | Heads: {selectedModel.num_heads}{selectedModel.num_kv_heads && selectedModel.num_kv_heads !== selectedModel.num_heads ? `/${selectedModel.num_kv_heads}kv` : ""}</span>
+            )}
+          </div>
+          <div>
+            {selectedModel.vocab_size != null && <span>Vocab: {selectedModel.vocab_size.toLocaleString()}</span>}
+            {selectedModel.intermediate_size != null && <span> | FFN: {selectedModel.intermediate_size}</span>}
+            {selectedModel.max_position_embeddings != null && <span> | Ctx: {selectedModel.max_position_embeddings.toLocaleString()}</span>}
+          </div>
+          {(() => {
+            const params = getParams(selectedModel);
+            const loaded = estimateLoadedBytes(selectedModel, loadMode);
+            const exact = !!selectedModel.total_params;
+            const bpw = selectedModel.bits_per_weight;
+            return (
+              <div>
+                {selectedModel.file_size_bytes != null && <span>Disk: {fmtSize(selectedModel.file_size_bytes)}</span>}
+                {selectedModel.total_bytes != null && selectedModel.total_bytes !== selectedModel.file_size_bytes && (
+                  <span>{selectedModel.file_size_bytes != null ? " " : ""}({fmtSize(selectedModel.total_bytes)} weights)</span>
+                )}
+                {selectedModel.safetensors && <span> | safetensors</span>}
+                {bpw != null && <span> | {bpw} bpw</span>}
+                {params != null && (
+                  <span>
+                    {(selectedModel.file_size_bytes != null || bpw != null) ? " | " : ""}
+                    {exact ? "" : "~"}{(params / 1e9).toFixed(2)}B params
+                  </span>
+                )}
+                {loaded != null && (
+                  <span> | <span style={{ color: loaded > 7.5e9 ? "#ff6b6b" : loaded > 4e9 ? "#f0ad4e" : "#5cb85c" }}>
+                    ~{fmtSize(loaded)} loaded
+                  </span>{" "}
+                    <span style={{ color: "#666" }}>
+                      ({(() => {
+                        const src = fmtDtype(selectedModel);
+                        const tgt = loadMode.toUpperCase();
+                        if (!src) return tgt;
+                        return src.toUpperCase() === tgt.toUpperCase() ? tgt : `${src}\u2192${tgt}`;
+                      })()})
+                    </span>
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {error && <div style={{ color: "#ff6b6b", fontSize: 12 }}>{error}</div>}
 

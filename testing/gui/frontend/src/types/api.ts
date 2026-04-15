@@ -88,6 +88,31 @@ export interface InterventionSpec {
 
 export type ProbeOperation = "logit-lens" | "influence" | "attention" | "residual-norms" | "generate";
 export type ResultOperation = ProbeOperation | "intervene";
+export interface AvailableModel {
+  model_id: string;
+  source: "huggingface" | "ollama";
+  safetensors: boolean;
+  architecture?: string;
+  model_name?: string;
+  dtype?: string;
+  quantization?: string;
+  model_size_label?: string;
+  num_layers?: number;
+  hidden_size?: number;
+  num_heads?: number;
+  num_kv_heads?: number;
+  vocab_size?: number;
+  intermediate_size?: number;
+  max_position_embeddings?: number;
+  rope_theta?: number;
+  file_size_bytes?: number;
+  num_tensors?: number;
+  tensor_type_counts?: Record<string, number>;
+  total_params?: number;
+  total_bytes?: number;
+  bits_per_weight?: number;
+}
+
 export type ConfigTab = "sessions" | "probe" | "intervene";
 
 export interface ProbeResult {
