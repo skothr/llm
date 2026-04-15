@@ -324,3 +324,27 @@ class TestStagingValidation:
         info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
         assert info.num_original_layers == 8
 
+    def test_duplicate_remove_layers_rejected(self):
+        model = _make_model(8)
+        mgr = SessionManager()
+        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info.stage_op("remove_layers", {"layer_indices": [3, 5]})
+        with pytest.raises(ValueError, match="already staged for removal"):
+            info.stage_op("remove_layers", {"layer_indices": [5]})
+
+    def test_remove_layers_disjoint_allowed(self):
+        model = _make_model(8)
+        mgr = SessionManager()
+        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info.stage_op("remove_layers", {"layer_indices": [3]})
+        info.stage_op("remove_layers", {"layer_indices": [5]})
+        assert len(info.pending_ops) == 2
+
+    def test_op_on_removed_layer_rejected(self):
+        model = _make_model(8)
+        mgr = SessionManager()
+        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info.stage_op("remove_layers", {"layer_indices": [5]})
+        with pytest.raises(ValueError, match="staged for removal"):
+            info.stage_op("zero_mlp", {"layer": 5})
+
