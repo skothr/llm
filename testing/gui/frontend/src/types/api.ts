@@ -3,10 +3,14 @@ export interface SessionSummary {
   model_id: string;
   mode: string;
   num_layers: number;
-  has_snapshot: boolean;
-  snapshot_size_mb: number;
-  undo_depth: number;
+  pending_count: number;
+  applied_count: number;
   device: string;
+}
+
+export interface StagedOp {
+  operation: string;
+  params: Record<string, unknown>;
 }
 
 export interface SessionInfo {
@@ -23,6 +27,9 @@ export interface SessionInfo {
   bos_token: string | null;
   eos_token: string | null;
   layer_map: number[];
+  original_num_layers: number;
+  pending_ops: StagedOp[];
+  applied_ops: StagedOp[];
 }
 
 export interface SurgeryOperation {
