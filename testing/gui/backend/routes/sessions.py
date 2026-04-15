@@ -254,6 +254,114 @@ async def get_pending_ops(name: str):
         raise HTTPException(404, f"Session '{name}' not found")
     return {"pending": info.pending_ops}
 
+@router.post("/sessions/{name}/surgery/commit")
+async def commit_surgery(name: str):
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+
+    if not info.has_pending:
+        raise HTTPException(409, "No pending operations to commit")
+
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+    from llm_surgeon import surgery
+    from ..sessions import update_layer_map
+
+    op_map = {
+        "remove_layers": lambda m, p: surgery.remove_layers(m, p["layer_indices"]),
+        "keep_layers": lambda m, p: surgery.keep_layers(m, p["layer_indices"]),
+        "zero_heads": lambda m, p: surgery.zero_heads(m, p["layer"], p["heads"]),
+        "scale_heads": lambda m, p: surgery.scale_heads(m, p["layer"], p["heads"], p["factor"]),
+        "swap_layers": lambda m, p: surgery.swap_layers(m, p["i"], p["j"]),
+        "duplicate_layer": lambda m, p: surgery.duplicate_layer(m, p["src"], p["dst"]),
+        "zero_mlp": lambda m, p: surgery.zero_mlp(m, p["layer"]),
+        "zero_attention": lambda m, p: surgery.zero_attention(m, p["layer"]),
+        "swap_heads": lambda m, p: surgery.swap_heads(m, p["layer"], p["h1"], p["h2"]),
+        "reorder_layers": lambda m, p: surgery.reorder_layers(m, p["new_order"]),
+    }
+
+    pending = info.pending_ops
+    applied = []
+
+    for op in pending:
+        op_name = op["operation"]
+        params = op["params"]
+        if op_name not in op_map:
+            raise HTTPException(422, f"Unknown operation in queue: '{op_name}'")
+        log.info("Committing op on '%s': %s(%s)", name, op_name, params)
+        try:
+            op_map[op_name](info.model, params)
+        except (IndexError, ValueError) as e:
+            log.warning("Commit failed on '%s' at op %s: %s", name, op_name, e)
+            raise HTTPException(422, f"Operation '{op_name}' failed: {e}")
+        info._layer_map = update_layer_map(info._layer_map, op_name, params)
+        applied.append(op)
+
+    info.record_applied(applied)
+    info.clear_pending()
+
+    return {
+        "applied_count": len(applied),
+        "pending": info.pending_ops,
+        "info": _session_info(info),
+    }
+
+@router.post("/sessions/{name}/surgery/revert")
+async def revert_surgery(name: str):
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+
+    if not info.applied_ops:
+        raise HTTPException(409, "No applied operations to revert")
+
+    log.info("Reverting session '%s' — reloading clean model", name)
+    info.revert()
+
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+    from llm_surgeon import surgery
+    from llm_surgeon.surgery import _snapshot_dir
+
+    try:
+        if _snapshot_dir(info.model_id):
+            model, _ = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: surgery.load_model(info.model_id, mode=info.mode),
+            )
+        else:
+            from transformers import AutoModelForCausalLM
+            model = AutoModelForCausalLM.from_config(info._original_config)
+        model.eval()
+        model.requires_grad_(False)
+        if not hasattr(model, "hf_device_map"):
+            model = model.cpu()
+    except Exception as e:
+        log.exception("Revert failed for session '%s'", name)
+        raise HTTPException(500, f"Revert failed: {e}")
+
+    info.model = model
+    info._layer_map = list(range(info._original_config.num_hidden_layers))
+
+    return {
+        "pending": info.pending_ops,
+        "info": _session_info(info),
+    }
+
+@router.get("/sessions/{name}/surgery/history")
+async def get_op_history(name: str):
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    return {"history": info.op_history}
+
 @router.post("/sessions/{name}/clone")
 async def clone_session(name: str, req: CloneRequest):
     mgr = get_manager()
