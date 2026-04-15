@@ -12,7 +12,7 @@ def clear_sessions():
 def register_tiny(tiny_model, tiny_tokenizer):
     def _register(name="baseline"):
         manager.register(name, tiny_model, tiny_tokenizer,
-                         model_id="test/tiny", mode="eval")
+                         model_id="test/tiny", mode="fp16")
     return _register
 
 @pytest.mark.asyncio

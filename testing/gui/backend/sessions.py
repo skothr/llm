@@ -223,30 +223,58 @@ class SessionManager:
     def _is_dispatch_model(self, info) -> bool:
         return hasattr(info.model, "hf_device_map")
 
+    @staticmethod
+    def _is_bnb_model(info) -> bool:
+        try:
+            import bitsandbytes as bnb
+            return any(isinstance(p, bnb.nn.Params4bit) or isinstance(p, bnb.nn.Int8Params)
+                       for p in info.model.parameters())
+        except ImportError:
+            return False
+
+    @staticmethod
+    def _move_bnb_params(model, device: str) -> None:
+        import bitsandbytes as bnb
+        for param in model.parameters():
+            if isinstance(param, bnb.nn.Params4bit):
+                param.data = param.data.to(device)
+                if hasattr(param, "quant_state") and param.quant_state is not None:
+                    qs = param.quant_state
+                    if hasattr(qs, "absmax") and qs.absmax is not None:
+                        qs.absmax = qs.absmax.to(device)
+                    if hasattr(qs, "code") and qs.code is not None:
+                        qs.code = qs.code.to(device)
+            elif isinstance(param, bnb.nn.Int8Params):
+                param.data = param.data.to(device)
+                if hasattr(param, "SCB") and param.SCB is not None:
+                    param.SCB = param.SCB.to(device)
+            else:
+                param.data = param.data.to(device)
+
     def to_cpu(self, name: str) -> None:
         info = self.get(name)
         if next(info.model.parameters()).device.type == "cpu":
             return
-        if self._is_dispatch_model(info):
-            return
         log.info("Moving session '%s' to CPU", name)
-        info.model = info.model.cpu()
+        if self._is_bnb_model(info):
+            self._move_bnb_params(info.model, "cpu")
+        else:
+            info.model = info.model.cpu()
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
     def to_gpu(self, name: str, device: str = "cuda:0") -> None:
         info = self.get(name)
-        if self._is_dispatch_model(info):
-            return
         log.info("Moving session '%s' to %s", name, device)
-        info.model = info.model.to(device)
+        if self._is_bnb_model(info):
+            self._move_bnb_params(info.model, device)
+        else:
+            info.model = info.model.to(device)
 
     def ensure_on_gpu(self, name: str) -> None:
         info = self.get(name)
         if next(info.model.parameters()).device.type == "cuda":
-            return
-        if self._is_dispatch_model(info):
             return
         if not torch.cuda.is_available():
             return
@@ -256,18 +284,24 @@ class SessionManager:
                   name, model_bytes / 1e6, free / 1e6)
         if free < model_bytes * 1.3:
             for other_name, other in self._sessions.items():
-                if other_name != name and not self._is_dispatch_model(other) and next(other.model.parameters()).device.type == "cuda":
+                if other_name != name and next(other.model.parameters()).device.type == "cuda":
                     log.info("Evicting '%s' to CPU to make room for '%s'", other_name, name)
                     self.to_cpu(other_name)
                     free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
                     if free >= model_bytes * 1.3:
                         break
         try:
-            info.model = info.model.to("cuda:0")
+            if self._is_bnb_model(info):
+                self._move_bnb_params(info.model, "cuda:0")
+            else:
+                info.model = info.model.to("cuda:0")
             log.info("Session '%s' moved to GPU", name)
         except RuntimeError as e:
             log.error("Failed to move '%s' to GPU: %s", name, e)
-            info.model = info.model.cpu()
+            if self._is_bnb_model(info):
+                self._move_bnb_params(info.model, "cpu")
+            else:
+                info.model = info.model.cpu()
             gc.collect()
             torch.cuda.empty_cache()
             raise

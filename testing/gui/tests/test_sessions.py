@@ -23,7 +23,7 @@ class TestSessionManager:
     def test_register_and_list(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("test-model", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         sessions = mgr.list_sessions()
         assert len(sessions) == 1
         assert sessions[0].name == "test-model"
@@ -32,7 +32,7 @@ class TestSessionManager:
     def test_get_session(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         assert info.model is tiny_model
         assert info.tokenizer is tiny_tokenizer
@@ -45,17 +45,17 @@ class TestSessionManager:
     def test_delete(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         mgr.delete("s1")
         assert mgr.list_sessions() == []
 
     def test_duplicate_name_raises(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         with pytest.raises(ValueError, match="already exists"):
             mgr.register("s1", tiny_model, tiny_tokenizer,
-                          model_id="test/tiny", mode="eval")
+                          model_id="test/tiny", mode="fp16")
 
     def test_validate_name_rejects_invalid(self):
         mgr = SessionManager()
@@ -76,7 +76,7 @@ class TestSessionManager:
     def test_stage_op(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         info.stage_op("zero_mlp", {"layer": 0})
         assert len(info.pending_ops) == 1
@@ -86,7 +86,7 @@ class TestSessionManager:
     def test_undo_op_pops_last(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         info.stage_op("zero_mlp", {"layer": 0})
         info.stage_op("remove_layers", {"layer_indices": [1]})
@@ -97,7 +97,7 @@ class TestSessionManager:
     def test_undo_op_empty_raises(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         with pytest.raises(ValueError, match="No pending operations"):
             info.undo_op()
@@ -105,7 +105,7 @@ class TestSessionManager:
     def test_clear_pending(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         info.stage_op("zero_mlp", {"layer": 0})
         info.stage_op("zero_mlp", {"layer": 1})
@@ -115,7 +115,7 @@ class TestSessionManager:
     def test_record_applied_ops(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         ops = [
             {"operation": "zero_mlp", "params": {"layer": 0}},
@@ -128,7 +128,7 @@ class TestSessionManager:
     def test_revert_moves_applied_to_pending(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         ops = [
             {"operation": "zero_mlp", "params": {"layer": 0}},
@@ -144,7 +144,7 @@ class TestSessionManager:
     def test_revert_empty_raises(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         with pytest.raises(ValueError, match="No applied operations"):
             info.revert()
@@ -152,7 +152,7 @@ class TestSessionManager:
     def test_has_pending(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         assert not info.has_pending
         info.stage_op("zero_mlp", {"layer": 0})
@@ -162,7 +162,7 @@ class TestSessionManager:
         mgr = SessionManager()
         tiny_model.train()  # force training mode
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         assert not info.model.training
 
@@ -171,14 +171,14 @@ class TestSessionManager:
         for p in tiny_model.parameters():
             p.requires_grad = True  # force grads on
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         info = mgr.get("s1")
         assert all(not p.requires_grad for p in info.model.parameters())
 
     def test_delete_calls_gc_collect(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
+                      model_id="test/tiny", mode="fp16")
         with patch("gui.backend.sessions.gc.collect") as mock_gc:
             mgr.delete("s1")
             mock_gc.assert_called_once()
@@ -287,21 +287,21 @@ class TestStagingValidation:
     def test_stage_rejects_out_of_range(self):
         model = _make_model(8)
         mgr = SessionManager()
-        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info = mgr.register("test", model, None, model_id="test/model", mode="nf4")
         with pytest.raises(ValueError, match="out of range"):
             info.stage_op("remove_layers", {"layer_indices": [8]})
 
     def test_stage_accepts_valid_original(self):
         model = _make_model(8)
         mgr = SessionManager()
-        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info = mgr.register("test", model, None, model_id="test/model", mode="nf4")
         info.stage_op("remove_layers", {"layer_indices": [0, 7]})
         assert len(info.pending_ops) == 1
 
     def test_delete_op_removes_by_index(self):
         model = _make_model(4)
         mgr = SessionManager()
-        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info = mgr.register("test", model, None, model_id="test/model", mode="nf4")
         info.stage_op("zero_mlp", {"layer": 0})
         info.stage_op("zero_mlp", {"layer": 1})
         info.stage_op("zero_mlp", {"layer": 2})
@@ -314,20 +314,20 @@ class TestStagingValidation:
     def test_delete_op_out_of_range(self):
         model = _make_model(4)
         mgr = SessionManager()
-        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info = mgr.register("test", model, None, model_id="test/model", mode="nf4")
         with pytest.raises(IndexError, match="out of range"):
             info.delete_op(0)
 
     def test_num_original_layers(self):
         model = _make_model(8)
         mgr = SessionManager()
-        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info = mgr.register("test", model, None, model_id="test/model", mode="nf4")
         assert info.num_original_layers == 8
 
     def test_duplicate_remove_layers_rejected(self):
         model = _make_model(8)
         mgr = SessionManager()
-        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info = mgr.register("test", model, None, model_id="test/model", mode="nf4")
         info.stage_op("remove_layers", {"layer_indices": [3, 5]})
         with pytest.raises(ValueError, match="already staged for removal"):
             info.stage_op("remove_layers", {"layer_indices": [5]})
@@ -335,7 +335,7 @@ class TestStagingValidation:
     def test_remove_layers_disjoint_allowed(self):
         model = _make_model(8)
         mgr = SessionManager()
-        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info = mgr.register("test", model, None, model_id="test/model", mode="nf4")
         info.stage_op("remove_layers", {"layer_indices": [3]})
         info.stage_op("remove_layers", {"layer_indices": [5]})
         assert len(info.pending_ops) == 2
@@ -343,7 +343,7 @@ class TestStagingValidation:
     def test_op_on_removed_layer_rejected(self):
         model = _make_model(8)
         mgr = SessionManager()
-        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info = mgr.register("test", model, None, model_id="test/model", mode="nf4")
         info.stage_op("remove_layers", {"layer_indices": [5]})
         with pytest.raises(ValueError, match="staged for removal"):
             info.stage_op("zero_mlp", {"layer": 5})

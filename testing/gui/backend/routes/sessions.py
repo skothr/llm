@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import List
@@ -12,6 +14,56 @@ log = logging.getLogger("gui.backend.routes.sessions")
 router = APIRouter(tags=["sessions"])
 
 MODELS_CACHE = Path(__file__).resolve().parent.parent.parent.parent / ".cache" / "models"
+OLLAMA_MODELS_DIR = Path(os.environ.get("OLLAMA_MODELS", "/usr/share/ollama/.ollama/models"))
+
+
+def _hf_cache_dir(model_id: str) -> Path:
+    org, name = model_id.split("/", 1)
+    return MODELS_CACHE / f"models--{org}--{name}"
+
+
+def _read_hf_config(model_id: str) -> dict | None:
+    cache = _hf_cache_dir(model_id)
+    snapshots = cache / "snapshots"
+    if not snapshots.exists():
+        return None
+    for snap in snapshots.iterdir():
+        cfg = snap / "config.json"
+        if cfg.exists():
+            try:
+                return json.loads(cfg.read_text())
+            except (json.JSONDecodeError, OSError):
+                pass
+    return None
+
+
+def _hf_file_size(model_id: str) -> int | None:
+    cache = _hf_cache_dir(model_id)
+    blobs = cache / "blobs"
+    if not blobs.exists():
+        return None
+    return sum(f.stat().st_size for f in blobs.iterdir() if f.is_file())
+
+
+def _hf_model_meta(model_id: str) -> dict:
+    meta: dict = {"model_id": model_id, "source": "huggingface",
+                  "safetensors": _has_safetensors_cached(model_id)}
+    cfg = _read_hf_config(model_id)
+    if cfg:
+        meta["architecture"] = cfg.get("model_type")
+        meta["dtype"] = cfg.get("torch_dtype")
+        meta["num_layers"] = cfg.get("num_hidden_layers")
+        meta["hidden_size"] = cfg.get("hidden_size")
+        meta["num_heads"] = cfg.get("num_attention_heads")
+        meta["num_kv_heads"] = cfg.get("num_key_value_heads")
+        meta["vocab_size"] = cfg.get("vocab_size")
+        meta["intermediate_size"] = cfg.get("intermediate_size")
+        meta["max_position_embeddings"] = cfg.get("max_position_embeddings")
+    size = _hf_file_size(model_id)
+    if size is not None:
+        meta["file_size_bytes"] = size
+    return meta
+
 
 def _scan_model_cache(cache_dir: Path) -> list:
     if not cache_dir.exists():
@@ -23,6 +75,81 @@ def _scan_model_cache(cache_dir: Path) -> list:
             if len(parts) == 2:
                 models.append(parts[0] + "/" + parts[1])
     return sorted(models)
+
+
+def _read_ollama_manifest(models_dir: Path, model_id: str) -> dict | None:
+    name, _, tag = model_id.partition(":")
+    manifest_path = models_dir / "manifests" / "registry.ollama.ai" / "library" / name / tag
+    if not manifest_path.exists():
+        return None
+    try:
+        return json.loads(manifest_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _read_ollama_config(models_dir: Path, manifest: dict) -> dict | None:
+    digest = manifest.get("config", {}).get("digest", "")
+    if not digest:
+        return None
+    blob = models_dir / "blobs" / digest.replace(":", "-")
+    if not blob.exists():
+        return None
+    try:
+        return json.loads(blob.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _ollama_model_meta(models_dir: Path, model_id: str) -> dict:
+    meta: dict = {"model_id": model_id, "source": "ollama", "safetensors": False}
+    manifest = _read_ollama_manifest(models_dir, model_id)
+    if not manifest:
+        return meta
+
+    blob_path = None
+    for layer in manifest.get("layers", []):
+        if layer.get("mediaType") == "application/vnd.ollama.image.model":
+            meta["file_size_bytes"] = layer["size"]
+            digest = layer["digest"].replace("sha256:", "sha256-")
+            candidate = models_dir / "blobs" / digest
+            if candidate.exists():
+                blob_path = candidate
+            break
+
+    if blob_path:
+        try:
+            import sys
+            sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+            from llm_surgeon.gguf_reader import gguf_model_meta
+            gguf_meta = gguf_model_meta(blob_path)
+            for k, v in gguf_meta.items():
+                if v is not None:
+                    meta[k] = v
+        except Exception:
+            pass
+
+    cfg = _read_ollama_config(models_dir, manifest)
+    if cfg:
+        meta.setdefault("architecture", cfg.get("model_family"))
+        meta.setdefault("quantization", cfg.get("file_type"))
+        meta["model_size_label"] = cfg.get("model_type")
+
+    return meta
+
+
+def _scan_ollama_models(models_dir: Path) -> list:
+    manifests = models_dir / "manifests" / "registry.ollama.ai" / "library"
+    if not manifests.exists():
+        return []
+    models = []
+    for model_dir in sorted(manifests.iterdir()):
+        if not model_dir.is_dir():
+            continue
+        for tag_file in sorted(model_dir.iterdir()):
+            if tag_file.is_file():
+                models.append(f"{model_dir.name}:{tag_file.name}")
+    return models
 
 def get_manager() -> SessionManager:
     from ..app import manager
@@ -72,7 +199,7 @@ class CloneRequest(BaseModel):
 class LoadRequest(BaseModel):
     name: str
     model_id: str
-    mode: str = "inspect"
+    mode: str = "nf4"
 
     @field_validator("name")
     @classmethod
@@ -192,7 +319,10 @@ async def surgery_operations():
 
 @router.get("/models/available")
 async def list_available_models():
-    return [{"model_id": m, "safetensors": _has_safetensors_cached(m)} for m in _scan_model_cache(MODELS_CACHE)]
+    hf = [_hf_model_meta(m) for m in _scan_model_cache(MODELS_CACHE)]
+    ollama = [_ollama_model_meta(OLLAMA_MODELS_DIR, m)
+              for m in _scan_ollama_models(OLLAMA_MODELS_DIR)]
+    return hf + ollama
 
 def _has_safetensors_cached(model_id: str) -> bool:
     import sys
