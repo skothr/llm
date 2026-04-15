@@ -176,9 +176,16 @@ async def generate_ws(ws: WebSocket, name: str):
                 if not connected:
                     break
 
-                with torch.no_grad():
-                    outputs = info.model(input_ids)
-                    logits = outputs.logits[:, -1, :]
+                try:
+                    with torch.no_grad():
+                        outputs = info.model(input_ids)
+                        logits = outputs.logits[:, -1, :]
+                except torch.OutOfMemoryError:
+                    log.warning("OOM during generate on '%s' at step %d — returning partial output", name, step)
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    stop_reason = "oom"
+                    break
 
                 if repetition_penalty != 1.0:
                     for token_id in set(input_ids[0].tolist()):
