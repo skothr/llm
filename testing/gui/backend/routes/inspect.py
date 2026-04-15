@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import sys
 from pathlib import Path
 from typing import List
@@ -9,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from ..sessions import SessionManager
 
+log = logging.getLogger("gui.backend.routes.inspect")
 router = APIRouter(tags=["inspect"])
 
 def get_manager() -> SessionManager:
@@ -32,12 +34,17 @@ async def inspect_influence(name: str, req: InfluenceRequest):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
+    log.info("Block influence on '%s' (%d prompts)", name, len(req.prompts))
     from llm_surgeon import inspect as insp
 
-    scores = await asyncio.get_event_loop().run_in_executor(
-        None,
-        lambda: insp.block_influence(info.model, info.tokenizer, req.prompts),
-    )
+    try:
+        scores = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: insp.block_influence(info.model, info.tokenizer, req.prompts),
+        )
+    except Exception as e:
+        log.exception("Block influence failed on '%s'", name)
+        raise HTTPException(500, str(e))
     return {"scores": {str(k): float(v) for k, v in scores.items()}}
 
 @router.post("/sessions/{name}/inspect/attention")
@@ -48,12 +55,17 @@ async def inspect_attention(name: str, req: AttentionRequest):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
+    log.info("Attention entropy on '%s'", name)
     from llm_surgeon import inspect as insp
 
-    entropy = await asyncio.get_event_loop().run_in_executor(
-        None,
-        lambda: insp.attention_entropy(info.model, info.tokenizer, req.prompt),
-    )
+    try:
+        entropy = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: insp.attention_entropy(info.model, info.tokenizer, req.prompt),
+        )
+    except Exception as e:
+        log.exception("Attention entropy failed on '%s'", name)
+        raise HTTPException(500, str(e))
     return {"entropy": {str(k): v for k, v in entropy.items()}}
 
 @router.post("/sessions/{name}/inspect/residual-norms")
@@ -64,10 +76,15 @@ async def inspect_residual_norms(name: str, req: ResidualNormsRequest):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
+    log.info("Residual norms on '%s'", name)
     from llm_surgeon import inspect as insp
 
-    norms = await asyncio.get_event_loop().run_in_executor(
-        None,
-        lambda: insp.residual_stream_norms(info.model, info.tokenizer, req.prompt),
-    )
+    try:
+        norms = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: insp.residual_stream_norms(info.model, info.tokenizer, req.prompt),
+        )
+    except Exception as e:
+        log.exception("Residual norms failed on '%s'", name)
+        raise HTTPException(500, str(e))
     return {"norms": [float(n) for n in norms]}
