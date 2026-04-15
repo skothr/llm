@@ -188,7 +188,31 @@ async def surgery_operations():
 
 @router.get("/models/available")
 async def list_available_models():
-    return [{"model_id": m} for m in _scan_model_cache(MODELS_CACHE)]
+    return [{"model_id": m, "safetensors": _has_safetensors_cached(m)} for m in _scan_model_cache(MODELS_CACHE)]
+
+def _has_safetensors_cached(model_id: str) -> bool:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+    from llm_surgeon.surgery import _has_safetensors
+    return _has_safetensors(model_id, str(MODELS_CACHE))
+
+class ConvertRequest(BaseModel):
+    model_id: str
+
+@router.post("/models/convert-safetensors")
+async def convert_model_safetensors(req: ConvertRequest):
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+    from llm_surgeon.surgery import convert_to_safetensors
+
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: convert_to_safetensors(req.model_id, str(MODELS_CACHE)),
+        )
+    except (ValueError, Exception) as e:
+        raise HTTPException(500, str(e))
+    return result
 
 @router.post("/sessions/{name}/surgery")
 async def apply_surgery(name: str, req: SurgeryRequest):
