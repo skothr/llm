@@ -57,42 +57,90 @@ class TestSessionManager:
         mgr.validate_name("TinyLlama_v1.0")
         mgr.validate_name("Model.3B~test")
 
-    def test_snapshot_and_undo(self, tiny_model, tiny_tokenizer):
+    def test_stage_op(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
                       model_id="test/tiny", mode="eval")
-        original_weight = tiny_model.model.layers[0].mlp.gate_proj.weight.clone()
-        mgr.snapshot("s1")
-        tiny_model.model.layers[0].mlp.gate_proj.weight.data.zero_()
-        mgr.undo("s1")
-        restored_model = mgr.get("s1").model
-        restored = restored_model.model.layers[0].mlp.gate_proj.weight
-        assert torch.allclose(restored, original_weight)
+        info = mgr.get("s1")
+        info.stage_op("zero_mlp", {"layer": 0})
+        assert len(info.pending_ops) == 1
+        assert info.pending_ops[0]["operation"] == "zero_mlp"
+        assert info.pending_ops[0]["params"] == {"layer": 0}
 
-    def test_multi_undo(self, tiny_model, tiny_tokenizer):
+    def test_undo_op_pops_last(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
                       model_id="test/tiny", mode="eval")
-        w0 = tiny_model.model.layers[0].mlp.gate_proj.weight.clone()
+        info = mgr.get("s1")
+        info.stage_op("zero_mlp", {"layer": 0})
+        info.stage_op("remove_layers", {"layer_indices": [1]})
+        popped = info.undo_op()
+        assert popped["operation"] == "remove_layers"
+        assert len(info.pending_ops) == 1
 
-        mgr.snapshot("s1")
-        tiny_model.model.layers[0].mlp.gate_proj.weight.data.zero_()
-        w1 = tiny_model.model.layers[0].mlp.gate_proj.weight.clone()
+    def test_undo_op_empty_raises(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        info = mgr.get("s1")
+        with pytest.raises(ValueError, match="No pending operations"):
+            info.undo_op()
 
-        mgr.snapshot("s1")
-        tiny_model.model.layers[0].mlp.gate_proj.weight.data.fill_(1.0)
+    def test_clear_pending(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        info = mgr.get("s1")
+        info.stage_op("zero_mlp", {"layer": 0})
+        info.stage_op("zero_mlp", {"layer": 1})
+        info.clear_pending()
+        assert len(info.pending_ops) == 0
 
-        assert mgr.get("s1").undo_depth == 2
+    def test_record_applied_ops(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        info = mgr.get("s1")
+        ops = [
+            {"operation": "zero_mlp", "params": {"layer": 0}},
+            {"operation": "remove_layers", "params": {"layer_indices": [1]}},
+        ]
+        info.record_applied(ops)
+        assert len(info.applied_ops) == 2
+        assert info.applied_ops[0]["operation"] == "zero_mlp"
 
-        mgr.undo("s1")
-        restored = mgr.get("s1").model.model.layers[0].mlp.gate_proj.weight
-        assert torch.allclose(restored, w1)
+    def test_revert_moves_applied_to_pending(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        info = mgr.get("s1")
+        ops = [
+            {"operation": "zero_mlp", "params": {"layer": 0}},
+            {"operation": "remove_layers", "params": {"layer_indices": [1]}},
+        ]
+        info.record_applied(ops)
+        info.revert()
+        assert len(info.applied_ops) == 0
+        assert len(info.pending_ops) == 2
+        assert len(info.op_history) == 1
+        assert info.pending_ops[0]["operation"] == "zero_mlp"
 
-        mgr.undo("s1")
-        restored = mgr.get("s1").model.model.layers[0].mlp.gate_proj.weight
-        assert torch.allclose(restored, w0)
+    def test_revert_empty_raises(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        info = mgr.get("s1")
+        with pytest.raises(ValueError, match="No applied operations"):
+            info.revert()
 
-        assert mgr.get("s1").undo_depth == 0
+    def test_has_pending(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        info = mgr.get("s1")
+        assert not info.has_pending
+        info.stage_op("zero_mlp", {"layer": 0})
+        assert info.has_pending
 
     def test_register_sets_eval_mode(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
@@ -119,9 +167,3 @@ class TestSessionManager:
             mgr.delete("s1")
             mock_gc.assert_called_once()
 
-    def test_undo_without_snapshot_raises(self, tiny_model, tiny_tokenizer):
-        mgr = SessionManager()
-        mgr.register("s1", tiny_model, tiny_tokenizer,
-                      model_id="test/tiny", mode="eval")
-        with pytest.raises(ValueError, match="No undo history"):
-            mgr.undo("s1")
