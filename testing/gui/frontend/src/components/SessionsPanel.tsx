@@ -24,7 +24,7 @@ export function SessionsPanel() {
 
   const [loadModelId, setLoadModelId] = useState("");
   const [loadName, setLoadName] = useState("");
-  const [loadMode, setLoadMode] = useState("nf4");
+  const [loadMode, setLoadMode] = useState("auto");
   const [error, setError] = useState("");
 
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
@@ -51,6 +51,24 @@ export function SessionsPanel() {
     if (m.dtype) return DTYPE_LABELS[m.dtype] ?? m.dtype;
     return null;
   };
+
+  const resolveAutoMode = (m: AvailableModel | null): string => {
+    if (!m) return "fp16";
+    if (m.source === "ollama") {
+      const q = m.quantization?.toUpperCase() ?? "";
+      if (q === "F32") return "fp32";
+      if (q === "F16") return "fp16";
+      const bpw = m.bits_per_weight;
+      if (bpw != null) return bpw <= 6 ? "nf4" : "int8";
+      return "fp16";
+    }
+    const dt = m.dtype;
+    if (dt === "bfloat16" || dt === "torch.bfloat16") return "bf16";
+    if (dt === "float32" || dt === "torch.float32") return "fp32";
+    return "fp16";
+  };
+
+  const effectiveMode = loadMode === "auto" ? resolveAutoMode(selectedModel) : loadMode;
 
   const getParams = (m: AvailableModel): number | null => {
     if (m.total_params) return m.total_params;
@@ -98,7 +116,7 @@ export function SessionsPanel() {
       const resp = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: loadName, model_id: loadModelId, mode: loadMode }),
+        body: JSON.stringify({ name: loadName, model_id: loadModelId, mode: effectiveMode }),
       });
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({ detail: "Failed to load model" }));
@@ -151,6 +169,7 @@ export function SessionsPanel() {
         />
         <div style={{ display: "flex", gap: 4 }}>
           <select value={loadMode} onChange={(e) => setLoadMode(e.target.value)}>
+            <option value="auto">Default{selectedModel ? ` (${effectiveMode.toUpperCase()})` : ""}</option>
             <option value="nf4">NF4 (4-bit)</option>
             <option value="int8">INT8 (8-bit)</option>
             <option value="bf16">BF16</option>
@@ -205,7 +224,7 @@ export function SessionsPanel() {
           </div>
           {(() => {
             const params = getParams(selectedModel);
-            const loaded = estimateLoadedBytes(selectedModel, loadMode);
+            const loaded = estimateLoadedBytes(selectedModel, effectiveMode);
             const exact = !!selectedModel.total_params;
             const bpw = selectedModel.bits_per_weight;
             return (
@@ -229,7 +248,7 @@ export function SessionsPanel() {
                     <span style={{ color: "#666" }}>
                       ({(() => {
                         const src = fmtDtype(selectedModel);
-                        const tgt = loadMode.toUpperCase();
+                        const tgt = effectiveMode.toUpperCase();
                         if (!src) return tgt;
                         return src.toUpperCase() === tgt.toUpperCase() ? tgt : `${src}\u2192${tgt}`;
                       })()})
