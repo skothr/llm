@@ -77,6 +77,7 @@ async def logit_lens_ws(ws: WebSocket, name: str):
         msg = {
             "type": "data",
             "layer": layer_idx,
+            "original_layer": info._layer_map[layer_idx] if layer_idx < len(info._layer_map) else layer_idx,
             "sublayer": sublayer,
             "predictions": serializable_preds,
         }

@@ -50,7 +50,9 @@ export function LogitLensHeatmap({ result }: Props) {
 
     dataMessages.forEach((msg, rowIdx) => {
       const isModified = "modified" in msg && (msg as { modified?: boolean }).modified;
-      const label = `L${msg.layer}.${msg.sublayer}`;
+      const label = msg.original_layer != null && msg.original_layer !== msg.layer
+        ? `L${msg.layer}(\u2190${msg.original_layer}).${msg.sublayer}`
+        : `L${msg.layer}.${msg.sublayer}`;
 
       g.append("text")
         .attr("x", -4)

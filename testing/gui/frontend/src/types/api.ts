@@ -46,6 +46,7 @@ export interface SurgeryRequest {
 export interface LogitLensData {
   type: "data";
   layer: number;
+  original_layer?: number;
   sublayer: string;
   predictions: Array<Array<{ token: string; prob: number }>>;
 }
