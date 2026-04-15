@@ -193,6 +193,33 @@ async def test_revert_empty_returns_409(register_tiny):
     assert resp.status_code == 409
 
 @pytest.mark.asyncio
+async def test_surgery_delete_by_index(register_tiny):
+    register_tiny("test-model")
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        await c.post("/api/sessions/test-model/surgery", json={"operation": "zero_mlp", "params": {"layer": 0}})
+        await c.post("/api/sessions/test-model/surgery", json={"operation": "zero_mlp", "params": {"layer": 1}})
+        await c.post("/api/sessions/test-model/surgery", json={"operation": "zero_mlp", "params": {"layer": 2}})
+
+        resp = await c.delete("/api/sessions/test-model/surgery/1")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["removed"]["params"]["layer"] == 1
+        assert len(body["pending"]) == 2
+        assert body["pending"][0]["params"]["layer"] == 0
+        assert body["pending"][1]["params"]["layer"] == 2
+
+
+@pytest.mark.asyncio
+async def test_surgery_delete_out_of_range(register_tiny):
+    register_tiny("test-model")
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.delete("/api/sessions/test-model/surgery/0")
+        assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_history_shows_reverted_sequences(register_tiny):
     register_tiny("test-model")
     transport = ASGITransport(app=app)
