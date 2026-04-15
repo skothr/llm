@@ -57,6 +57,9 @@ interface StoreState {
   deleteSession: (name: string) => Promise<void>;
   applySurgery: (name: string, operation: string, params: Record<string, unknown>) => Promise<void>;
   undoSurgery: (name: string) => Promise<void>;
+  deleteStagedOp: (name: string, index: number) => Promise<void>;
+  commitSurgery: (name: string) => Promise<void>;
+  revertSurgery: (name: string) => Promise<void>;
   cloneSession: (name: string, targetName: string) => Promise<void>;
 
   setPrompt: (prompt: string) => void;
@@ -163,7 +166,28 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   undoSurgery: async (name: string) => {
-    const resp = await fetch(`/api/sessions/${name}/surgery/undo`, { method: "POST" });
+    const resp = await fetch(`/api/sessions/${name}/surgery/last`, { method: "DELETE" });
+    if (!resp.ok) throw await apiError(resp);
+    await get().fetchSessions();
+    await get().fetchSessionInfo(name);
+  },
+
+  deleteStagedOp: async (name: string, index: number) => {
+    const resp = await fetch(`/api/sessions/${name}/surgery/${index}`, { method: "DELETE" });
+    if (!resp.ok) throw await apiError(resp);
+    await get().fetchSessions();
+    await get().fetchSessionInfo(name);
+  },
+
+  commitSurgery: async (name: string) => {
+    const resp = await fetch(`/api/sessions/${name}/surgery/commit`, { method: "POST" });
+    if (!resp.ok) throw await apiError(resp);
+    await get().fetchSessions();
+    await get().fetchSessionInfo(name);
+  },
+
+  revertSurgery: async (name: string) => {
+    const resp = await fetch(`/api/sessions/${name}/surgery/revert`, { method: "POST" });
     if (!resp.ok) throw await apiError(resp);
     await get().fetchSessions();
     await get().fetchSessionInfo(name);

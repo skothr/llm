@@ -250,6 +250,19 @@ async def undo_staged_op(name: str):
         raise HTTPException(409, str(e))
     return {"removed": removed, "pending": info.pending_ops}
 
+@router.delete("/sessions/{name}/surgery/{index}")
+async def delete_staged_op(name: str, index: int):
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    try:
+        removed = info.delete_op(index)
+    except IndexError as e:
+        raise HTTPException(409, str(e))
+    return {"removed": removed, "pending": info.pending_ops}
+
 @router.get("/sessions/{name}/surgery/pending")
 async def get_pending_ops(name: str):
     mgr = get_manager()
