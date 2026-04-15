@@ -279,16 +279,25 @@ async def clone_session(name: str, req: CloneRequest):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
-    import copy
+    import copy, sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+
     try:
-        original_device = next(info.model.parameters()).device
-        info.model = info.model.cpu()
-        cloned_model = copy.deepcopy(info.model)
-        info.model = info.model.to(original_device)
+        # For quantized HF models: offload source, re-load from cache
+        from llm_surgeon.surgery import _snapshot_dir
+        if _snapshot_dir(info.model_id):
+            mgr.to_cpu(name)
+            from llm_surgeon import surgery
+            cloned_model, _ = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: surgery.load_model(info.model_id, mode=info.mode),
+            )
+        else:
+            # Fallback: deepcopy (works for non-quantized / test models)
+            cloned_model = copy.deepcopy(info.model)
+            cloned_model.eval()
     except Exception as e:
         raise HTTPException(500, f"Clone failed: {e}")
-
-    cloned_model.eval()
 
     try:
         mgr.register(req.target_name, cloned_model, info.tokenizer,
