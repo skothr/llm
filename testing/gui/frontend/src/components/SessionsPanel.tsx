@@ -90,8 +90,10 @@ export function SessionsPanel() {
   };
 
   const handleSurgery = async (name: string) => {
-    try { await applySurgery(name, surgeryOp, surgeryParams); }
-    catch (e) { setError((e as Error).message); }
+    try {
+      await applySurgery(name, surgeryOp, surgeryParams);
+      setSurgeryOp("");
+    } catch (e) { setError((e as Error).message); }
   };
 
   return (

@@ -45,9 +45,30 @@ class SessionInfo:
 
     def stage_op(self, operation: str, params: dict) -> dict:
         validate_original_indices(operation, params, self.num_original_layers)
+        self._check_conflicts(operation, params)
         entry = {"operation": operation, "params": params}
         self._pending_ops.append(entry)
         return entry
+
+    def _check_conflicts(self, operation: str, params: dict) -> None:
+        pending_removals: set[int] = set()
+        for op in self._pending_ops:
+            if op["operation"] == "remove_layers":
+                pending_removals.update(op["params"]["layer_indices"])
+
+        if operation == "remove_layers":
+            dups = pending_removals & set(params["layer_indices"])
+            if dups:
+                raise ValueError(
+                    f"Layer(s) {sorted(dups)} already staged for removal"
+                )
+
+        layer_idx = params.get("layer")
+        if layer_idx is not None and layer_idx in pending_removals:
+            raise ValueError(
+                f"Layer {layer_idx} is staged for removal — "
+                f"cannot stage {operation} on it"
+            )
 
     def undo_op(self) -> dict:
         if not self._pending_ops:
@@ -227,24 +248,29 @@ class SessionManager:
             return
         if self._is_dispatch_model(info):
             return
-        if torch.cuda.is_available():
-            model_bytes = sum(p.nelement() * p.element_size() for p in info.model.parameters())
-            free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
-            log.debug("GPU check for '%s': need %.0fMB, free %.0fMB",
-                      name, model_bytes / 1e6, free / 1e6)
-            if free < model_bytes * 1.3:
-                for other_name, other in self._sessions.items():
-                    if other_name != name and not self._is_dispatch_model(other) and next(other.model.parameters()).device.type == "cuda":
-                        log.info("Evicting '%s' to CPU to make room for '%s'", other_name, name)
-                        self.to_cpu(other_name)
-                        free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
-                        if free >= model_bytes * 1.3:
-                            break
+        if not torch.cuda.is_available():
+            return
+        model_bytes = sum(p.nelement() * p.element_size() for p in info.model.parameters())
+        free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
+        log.debug("GPU check for '%s': need %.0fMB, free %.0fMB",
+                  name, model_bytes / 1e6, free / 1e6)
+        if free < model_bytes * 1.3:
+            for other_name, other in self._sessions.items():
+                if other_name != name and not self._is_dispatch_model(other) and next(other.model.parameters()).device.type == "cuda":
+                    log.info("Evicting '%s' to CPU to make room for '%s'", other_name, name)
+                    self.to_cpu(other_name)
+                    free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
+                    if free >= model_bytes * 1.3:
+                        break
         try:
             info.model = info.model.to("cuda:0")
             log.info("Session '%s' moved to GPU", name)
         except RuntimeError as e:
             log.error("Failed to move '%s' to GPU: %s", name, e)
+            info.model = info.model.cpu()
+            gc.collect()
+            torch.cuda.empty_cache()
+            raise
 
     def delete(self, name: str) -> None:
         info = self.get(name)
