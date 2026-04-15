@@ -59,6 +59,15 @@ class SessionInfo:
             raise IndexError(f"Pending op index {index} out of range [0, {len(self._pending_ops)})")
         return self._pending_ops.pop(index)
 
+    def build_manifest(self) -> "SurgeryManifest":
+        from .manifest import SurgeryManifest
+        return SurgeryManifest(
+            model_id=self.model_id,
+            original_num_layers=self.num_original_layers,
+            applied_ops=list(self._applied_ops),
+            layer_map=list(self._layer_map),
+        )
+
     def clear_pending(self) -> None:
         self._pending_ops.clear()
 

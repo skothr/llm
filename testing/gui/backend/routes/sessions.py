@@ -51,6 +51,7 @@ class SessionInfoResponse(BaseModel):
     bos_token: str | None = None
     eos_token: str | None = None
     layer_map: list[int] = []
+    original_num_layers: int
     pending_ops: list[dict] = []
     applied_ops: list[dict] = []
 
@@ -116,6 +117,7 @@ def _session_info(info) -> dict:
         bos_token=bos_token,
         eos_token=eos_token,
         layer_map=list(info._layer_map),
+        original_num_layers=info._original_config.num_hidden_layers,
         pending_ops=info.pending_ops,
         applied_ops=info.applied_ops,
     ).model_dump()
