@@ -1,9 +1,23 @@
 import pytest
 import torch
 from unittest.mock import patch
+from transformers import LlamaConfig, LlamaForCausalLM
 from gui.backend.sessions import (
     SessionManager, SessionInfo, translate_to_current, validate_original_indices,
 )
+
+def _make_model(n: int) -> LlamaForCausalLM:
+    config = LlamaConfig(
+        vocab_size=64,
+        hidden_size=32,
+        intermediate_size=64,
+        num_hidden_layers=n,
+        num_attention_heads=4,
+        max_position_embeddings=128,
+    )
+    model = LlamaForCausalLM(config)
+    model.eval()
+    return model
 
 class TestSessionManager:
     def test_register_and_list(self, tiny_model, tiny_tokenizer):
@@ -267,4 +281,46 @@ class TestValidateOriginalIndices:
         validate_original_indices("reorder_layers", {"new_order": [7, 6, 5, 4, 3, 2, 1, 0]}, 8)
         with pytest.raises(ValueError, match="out of range"):
             validate_original_indices("reorder_layers", {"new_order": [0, 1, 2, 9]}, 8)
+
+
+class TestStagingValidation:
+    def test_stage_rejects_out_of_range(self):
+        model = _make_model(8)
+        mgr = SessionManager()
+        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        with pytest.raises(ValueError, match="out of range"):
+            info.stage_op("remove_layers", {"layer_indices": [8]})
+
+    def test_stage_accepts_valid_original(self):
+        model = _make_model(8)
+        mgr = SessionManager()
+        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info.stage_op("remove_layers", {"layer_indices": [0, 7]})
+        assert len(info.pending_ops) == 1
+
+    def test_delete_op_removes_by_index(self):
+        model = _make_model(4)
+        mgr = SessionManager()
+        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        info.stage_op("zero_mlp", {"layer": 0})
+        info.stage_op("zero_mlp", {"layer": 1})
+        info.stage_op("zero_mlp", {"layer": 2})
+        removed = info.delete_op(1)
+        assert removed["params"]["layer"] == 1
+        assert len(info.pending_ops) == 2
+        assert info.pending_ops[0]["params"]["layer"] == 0
+        assert info.pending_ops[1]["params"]["layer"] == 2
+
+    def test_delete_op_out_of_range(self):
+        model = _make_model(4)
+        mgr = SessionManager()
+        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        with pytest.raises(IndexError, match="out of range"):
+            info.delete_op(0)
+
+    def test_num_original_layers(self):
+        model = _make_model(8)
+        mgr = SessionManager()
+        info = mgr.register("test", model, None, model_id="test/model", mode="inspect")
+        assert info.num_original_layers == 8
 

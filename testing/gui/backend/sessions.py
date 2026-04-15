@@ -39,7 +39,12 @@ class SessionInfo:
     def has_pending(self) -> bool:
         return len(self._pending_ops) > 0
 
+    @property
+    def num_original_layers(self) -> int:
+        return self._original_config.num_hidden_layers
+
     def stage_op(self, operation: str, params: dict) -> dict:
+        validate_original_indices(operation, params, self.num_original_layers)
         entry = {"operation": operation, "params": params}
         self._pending_ops.append(entry)
         return entry
@@ -48,6 +53,11 @@ class SessionInfo:
         if not self._pending_ops:
             raise ValueError("No pending operations to undo")
         return self._pending_ops.pop()
+
+    def delete_op(self, index: int) -> dict:
+        if index < 0 or index >= len(self._pending_ops):
+            raise IndexError(f"Pending op index {index} out of range [0, {len(self._pending_ops)})")
+        return self._pending_ops.pop(index)
 
     def clear_pending(self) -> None:
         self._pending_ops.clear()

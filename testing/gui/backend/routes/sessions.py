@@ -34,6 +34,7 @@ class SessionSummary(BaseModel):
     mode: str
     num_layers: int
     pending_count: int
+    applied_count: int
     device: str
 
 class SessionInfoResponse(BaseModel):
@@ -50,6 +51,8 @@ class SessionInfoResponse(BaseModel):
     bos_token: str | None = None
     eos_token: str | None = None
     layer_map: list[int] = []
+    pending_ops: list[dict] = []
+    applied_ops: list[dict] = []
 
 class SurgeryRequest(BaseModel):
     operation: str
@@ -85,6 +88,7 @@ def _session_summary(info) -> dict:
         mode=info.mode,
         num_layers=config.num_hidden_layers,
         pending_count=len(info.pending_ops),
+        applied_count=len(info.applied_ops),
         device=str(next(info.model.parameters()).device),
     ).model_dump()
 
@@ -112,6 +116,8 @@ def _session_info(info) -> dict:
         bos_token=bos_token,
         eos_token=eos_token,
         layer_map=list(info._layer_map),
+        pending_ops=info.pending_ops,
+        applied_ops=info.applied_ops,
     ).model_dump()
 
 @router.get("/sessions", response_model=List[dict])
@@ -225,7 +231,10 @@ async def stage_surgery(name: str, req: SurgeryRequest):
         raise HTTPException(422, f"Unknown surgery operation: '{req.operation}'")
 
     log.info("Staging op on '%s': %s(%s)", name, req.operation, req.params)
-    info.stage_op(req.operation, req.params)
+    try:
+        info.stage_op(req.operation, req.params)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
     return {"pending": info.pending_ops}
 
 @router.delete("/sessions/{name}/surgery/last")
@@ -264,7 +273,7 @@ async def commit_surgery(name: str):
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import surgery
-    from ..sessions import update_layer_map
+    from ..sessions import update_layer_map, translate_to_current
 
     op_map = {
         "remove_layers": lambda m, p: surgery.remove_layers(m, p["layer_indices"]),
@@ -287,13 +296,14 @@ async def commit_surgery(name: str):
         params = op["params"]
         if op_name not in op_map:
             raise HTTPException(422, f"Unknown operation in queue: '{op_name}'")
-        log.info("Committing op on '%s': %s(%s)", name, op_name, params)
+        translated = translate_to_current(op_name, params, info._layer_map)
+        log.info("Committing op on '%s': %s(%s) [original: %s]", name, op_name, translated, params)
         try:
-            op_map[op_name](info.model, params)
+            op_map[op_name](info.model, translated)
         except (IndexError, ValueError) as e:
             log.warning("Commit failed on '%s' at op %s: %s", name, op_name, e)
             raise HTTPException(422, f"Operation '{op_name}' failed: {e}")
-        info._layer_map = update_layer_map(info._layer_map, op_name, params)
+        info._layer_map = update_layer_map(info._layer_map, op_name, translated)
         applied.append(op)
 
     info.record_applied(applied)
