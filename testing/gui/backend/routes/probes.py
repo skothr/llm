@@ -1,11 +1,14 @@
 import json
 import asyncio
 import hashlib
+import logging
 import torch
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..sessions import SessionManager
 from ..hidden_state_cache import HiddenStateCache
+
+log = logging.getLogger("gui.backend.routes.probes")
 
 _hs_cache = HiddenStateCache(max_bytes=500_000_000)
 
@@ -25,11 +28,13 @@ async def _send_json(ws: WebSocket, data: dict) -> bool:
 @router.websocket("/sessions/{name}/logit-lens")
 async def logit_lens_ws(ws: WebSocket, name: str):
     await ws.accept()
+    log.info("WS logit-lens connected (session='%s')", name)
     mgr = get_manager()
 
     try:
         info = mgr.get(name)
     except KeyError:
+        log.warning("WS logit-lens: session '%s' not found", name)
         await _send_json(ws, {"type": "error", "message": f"Session '{name}' not found"})
         await ws.close()
         return
@@ -38,6 +43,7 @@ async def logit_lens_ws(ws: WebSocket, name: str):
     config = json.loads(raw)
     prompt = config["prompt"]
     top_k = config.get("top_k", 10)
+    log.debug("WS logit-lens config: prompt=%r, top_k=%d", prompt[:80], top_k)
 
     connected = True
 
@@ -99,8 +105,10 @@ async def logit_lens_ws(ws: WebSocket, name: str):
             await _send_json(ws, {"type": "complete", "summary": summary})
 
     except Exception as e:
+        log.exception("WS logit-lens error (session='%s')", name)
         await _send_json(ws, {"type": "error", "message": str(e)})
     finally:
+        log.info("WS logit-lens disconnected (session='%s')", name)
         try:
             await ws.close()
         except RuntimeError:
@@ -110,11 +118,13 @@ async def logit_lens_ws(ws: WebSocket, name: str):
 @router.websocket("/sessions/{name}/generate")
 async def generate_ws(ws: WebSocket, name: str):
     await ws.accept()
+    log.info("WS generate connected (session='%s')", name)
     mgr = get_manager()
 
     try:
         info = mgr.get(name)
     except KeyError:
+        log.warning("WS generate: session '%s' not found", name)
         await _send_json(ws, {"type": "error", "message": f"Session '{name}' not found"})
         await ws.close()
         return
@@ -122,12 +132,14 @@ async def generate_ws(ws: WebSocket, name: str):
     try:
         mgr.ensure_on_gpu(name)
     except Exception as e:
+        log.error("WS generate: GPU error for '%s': %s", name, e)
         await _send_json(ws, {"type": "error", "message": f"GPU error: {e}"})
         await ws.close()
         return
 
     raw = await ws.receive_text()
     config = json.loads(raw)
+    log.debug("WS generate config: %s", {k: v for k, v in config.items() if k != "prompt"})
     prompt = config["prompt"]
     max_tokens = config.get("max_tokens", 256)
     temperature = config.get("temperature", 1.0)
@@ -239,9 +251,18 @@ async def generate_ws(ws: WebSocket, name: str):
             })
 
     except Exception as e:
+        log.exception("WS generate error (session='%s')", name)
         await _send_json(ws, {"type": "error", "message": str(e)})
     finally:
+        log.info("WS generate disconnected (session='%s', tokens=%d, stop=%s)",
+                 name, len(generated_tokens), stop_reason or "disconnect")
+        try:
+            mgr.to_cpu(name)
+        except Exception:
+            pass
         if torch.cuda.is_available():
+            import gc
+            gc.collect()
             torch.cuda.empty_cache()
         try:
             await ws.close()
@@ -295,11 +316,13 @@ def _resolve_op(op_name: str, params: dict, mgr, cache):
 @router.websocket("/sessions/{name}/intervene")
 async def intervene_ws(ws: WebSocket, name: str):
     await ws.accept()
+    log.info("WS intervene connected (session='%s')", name)
     mgr = get_manager()
 
     try:
         info = mgr.get(name)
     except KeyError:
+        log.warning("WS intervene: session '%s' not found", name)
         await _send_json(ws, {"type": "error", "message": f"Session '{name}' not found"})
         await ws.close()
         return
@@ -324,7 +347,9 @@ async def intervene_ws(ws: WebSocket, name: str):
                 sublayer=spec["sublayer"],
                 fn=fn,
             ))
+        log.info("WS intervene: %d intervention(s) on '%s'", len(interventions), name)
     except (KeyError, ValueError) as e:
+        log.warning("WS intervene: invalid intervention spec: %s", e)
         await _send_json(ws, {"type": "error", "message": f"Invalid intervention: {e}"})
         await ws.close()
         return
@@ -383,8 +408,10 @@ async def intervene_ws(ws: WebSocket, name: str):
             })
 
     except Exception as e:
+        log.exception("WS intervene error (session='%s')", name)
         await _send_json(ws, {"type": "error", "message": str(e)})
     finally:
+        log.info("WS intervene disconnected (session='%s')", name)
         try:
             await ws.close()
         except RuntimeError:

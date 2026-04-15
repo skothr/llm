@@ -1,4 +1,5 @@
 import copy
+import gc
 import logging
 import re
 import asyncio
@@ -109,6 +110,7 @@ class SessionManager:
             return
         log.info("Moving session '%s' to CPU", name)
         info.model = info.model.cpu()
+        gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
@@ -149,6 +151,7 @@ class SessionManager:
         log.info("Deleting session '%s'", name)
         del self._sessions[name]
         del info.model
+        gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
