@@ -1,5 +1,6 @@
 import pytest
 import torch
+from unittest.mock import patch
 from gui.backend.sessions import SessionManager, SessionInfo
 
 class TestSessionManager:
@@ -109,6 +110,14 @@ class TestSessionManager:
                       model_id="test/tiny", mode="eval")
         info = mgr.get("s1")
         assert all(not p.requires_grad for p in info.model.parameters())
+
+    def test_delete_calls_gc_collect(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        with patch("gui.backend.sessions.gc.collect") as mock_gc:
+            mgr.delete("s1")
+            mock_gc.assert_called_once()
 
     def test_undo_without_snapshot_raises(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
