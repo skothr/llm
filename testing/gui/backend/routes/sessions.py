@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
@@ -54,10 +54,6 @@ class SessionInfoResponse(BaseModel):
 class SurgeryRequest(BaseModel):
     operation: str
     params: dict
-
-class SurgeryResponse(BaseModel):
-    operations: list
-    info: SessionInfoResponse
 
 class CloneRequest(BaseModel):
     target_name: str
