@@ -170,7 +170,9 @@ async def generate_ws(ws: WebSocket, name: str):
             inputs = info.tokenizer(prompt, return_tensors="pt")
             device = next(info.model.parameters()).device
             input_ids = inputs["input_ids"].to(device)
-            prev_text = info.tokenizer.decode(input_ids[0], skip_special_tokens=True)
+            all_token_ids = input_ids[0].tolist()
+            prev_text = info.tokenizer.decode(all_token_ids, skip_special_tokens=True)
+            past_key_values = None
 
             for step in range(max_tokens):
                 if not connected:
@@ -178,17 +180,23 @@ async def generate_ws(ws: WebSocket, name: str):
 
                 try:
                     with torch.no_grad():
-                        outputs = info.model(input_ids)
+                        outputs = info.model(
+                            input_ids,
+                            past_key_values=past_key_values,
+                            use_cache=True,
+                        )
                         logits = outputs.logits[:, -1, :]
+                        past_key_values = outputs.past_key_values
                 except torch.OutOfMemoryError:
                     log.warning("OOM during generate on '%s' at step %d — returning partial output", name, step)
+                    past_key_values = None
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
                     stop_reason = "oom"
                     break
 
                 if repetition_penalty != 1.0:
-                    for token_id in set(input_ids[0].tolist()):
+                    for token_id in set(all_token_ids):
                         if logits[0, token_id] > 0:
                             logits[0, token_id] /= repetition_penalty
                         else:
@@ -221,8 +229,8 @@ async def generate_ws(ws: WebSocket, name: str):
                     stop_reason = "eos"
                     break
 
-                input_ids = torch.cat([input_ids, next_token], dim=-1)
-                new_text = info.tokenizer.decode(input_ids[0], skip_special_tokens=True)
+                all_token_ids.append(int(next_token[0, 0]))
+                new_text = info.tokenizer.decode(all_token_ids, skip_special_tokens=True)
                 token_str = new_text[len(prev_text):]
                 if not token_str:
                     token_str = _tok_display(info.tokenizer, next_token[0, 0])
@@ -245,6 +253,8 @@ async def generate_ws(ws: WebSocket, name: str):
                     connected = False
                     break
 
+                input_ids = next_token
+
                 gen_text = "".join(generated_tokens)
                 if stop_sequences and any(s in gen_text for s in stop_sequences):
                     stop_reason = "stop_sequence"
@@ -262,6 +272,7 @@ async def generate_ws(ws: WebSocket, name: str):
         log.exception("WS generate error (session='%s')", name)
         await _send_json(ws, {"type": "error", "message": str(e)})
     finally:
+        past_key_values = None
         log.info("WS generate disconnected (session='%s', tokens=%d, stop=%s)",
                  name, len(generated_tokens), stop_reason or "disconnect")
         try:
