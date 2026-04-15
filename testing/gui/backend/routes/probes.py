@@ -145,7 +145,7 @@ async def generate_ws(ws: WebSocket, name: str):
     max_tokens = config.get("max_tokens", 256)
     temperature = config.get("temperature", 1.0)
     prob_top_k = config.get("prob_top_k", 10)
-    repetition_penalty = config.get("repetition_penalty", 1.0)
+    repetition_penalty = max(0.01, float(config.get("repetition_penalty", 1.0)))
     stop_sequences = config.get("stop_sequences", [])
 
     connected = True
