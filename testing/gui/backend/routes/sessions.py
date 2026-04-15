@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import re
 from pathlib import Path
 from typing import List, Optional
@@ -7,6 +8,7 @@ from pydantic import BaseModel, field_validator
 
 from ..sessions import SessionManager
 
+log = logging.getLogger("gui.backend.routes.sessions")
 router = APIRouter(tags=["sessions"])
 
 MODELS_CACHE = Path(__file__).resolve().parent.parent.parent.parent / ".cache" / "models"
@@ -31,9 +33,7 @@ class SessionSummary(BaseModel):
     model_id: str
     mode: str
     num_layers: int
-    has_snapshot: bool
-    snapshot_size_mb: float
-    undo_depth: int
+    pending_count: int
     device: str
 
 class SessionInfoResponse(BaseModel):
@@ -88,9 +88,7 @@ def _session_summary(info) -> dict:
         model_id=info.model_id,
         mode=info.mode,
         num_layers=config.num_hidden_layers,
-        has_snapshot=info.has_snapshot,
-        snapshot_size_mb=info.snapshot_size_mb,
-        undo_depth=info.undo_depth,
+        pending_count=len(info.pending_ops),
         device=str(next(info.model.parameters()).device),
     ).model_dump()
 
@@ -157,12 +155,14 @@ async def load_session(req: LoadRequest):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import surgery
 
+    log.info("Loading model '%s' as session '%s' (mode=%s)", req.model_id, req.name, req.mode)
     try:
         model, tokenizer = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: surgery.load_model(req.model_id, mode=req.mode),
         )
     except Exception as e:
+        log.exception("Failed to load model '%s'", req.model_id)
         raise HTTPException(500, f"Failed to load model: {e}")
 
     mgr.register(req.name, model, tokenizer,
@@ -211,65 +211,48 @@ async def convert_model_safetensors(req: ConvertRequest):
             lambda: convert_to_safetensors(req.model_id, str(MODELS_CACHE)),
         )
     except (ValueError, Exception) as e:
+        log.exception("Safetensors conversion failed for '%s'", req.model_id)
         raise HTTPException(500, str(e))
     return result
 
+VALID_OPS = {op["name"] for op in SURGERY_OPS}
+
 @router.post("/sessions/{name}/surgery")
-async def apply_surgery(name: str, req: SurgeryRequest):
+async def stage_surgery(name: str, req: SurgeryRequest):
     mgr = get_manager()
     try:
         info = mgr.get(name)
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-    from llm_surgeon import surgery
-
-    op_map = {
-        "remove_layers": lambda m, p: surgery.remove_layers(m, p["layer_indices"]),
-        "keep_layers": lambda m, p: surgery.keep_layers(m, p["layer_indices"]),
-        "zero_heads": lambda m, p: surgery.zero_heads(m, p["layer"], p["heads"]),
-        "scale_heads": lambda m, p: surgery.scale_heads(m, p["layer"], p["heads"], p["factor"]),
-        "swap_layers": lambda m, p: surgery.swap_layers(m, p["i"], p["j"]),
-        "duplicate_layer": lambda m, p: surgery.duplicate_layer(m, p["src"], p["dst"]),
-        "zero_mlp": lambda m, p: surgery.zero_mlp(m, p["layer"]),
-        "zero_attention": lambda m, p: surgery.zero_attention(m, p["layer"]),
-        "swap_heads": lambda m, p: surgery.swap_heads(m, p["layer"], p["h1"], p["h2"]),
-        "reorder_layers": lambda m, p: surgery.reorder_layers(m, p["new_order"]),
-    }
-
-    if req.operation not in op_map:
+    if req.operation not in VALID_OPS:
         raise HTTPException(422, f"Unknown surgery operation: '{req.operation}'")
 
-    mgr.snapshot(name)
+    log.info("Staging op on '%s': %s(%s)", name, req.operation, req.params)
+    info.stage_op(req.operation, req.params)
+    return {"pending": info.pending_ops}
 
-    try:
-        log = op_map[req.operation](info.model, req.params)
-    except (IndexError, ValueError) as e:
-        mgr.undo(name)
-        raise HTTPException(422, str(e))
-
-    from ..sessions import update_layer_map
-    info._layer_map = update_layer_map(info._layer_map, req.operation, req.params)
-
-    return SurgeryResponse(
-        operations=[{"operation": op.operation, "description": op.description} for op in log.ops],
-        info=SessionInfoResponse(**_session_info(info)),
-    ).model_dump()
-
-@router.post("/sessions/{name}/surgery/undo")
-async def undo_surgery(name: str):
+@router.delete("/sessions/{name}/surgery/last")
+async def undo_staged_op(name: str):
     mgr = get_manager()
     try:
         info = mgr.get(name)
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
     try:
-        mgr.undo(name)
+        removed = info.undo_op()
     except ValueError as e:
         raise HTTPException(409, str(e))
-    return {"undone": name, "info": _session_info(info)}
+    return {"removed": removed, "pending": info.pending_ops}
+
+@router.get("/sessions/{name}/surgery/pending")
+async def get_pending_ops(name: str):
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    return {"pending": info.pending_ops}
 
 @router.post("/sessions/{name}/clone")
 async def clone_session(name: str, req: CloneRequest):
@@ -278,6 +261,7 @@ async def clone_session(name: str, req: CloneRequest):
         info = mgr.get(name)
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
+    log.info("Cloning session '%s' -> '%s'", name, req.target_name)
 
     import copy, sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
@@ -294,6 +278,8 @@ async def clone_session(name: str, req: CloneRequest):
         else:
             cloned_model = copy.deepcopy(info.model)
             cloned_model.eval()
+        if not hasattr(cloned_model, "hf_device_map"):
+            cloned_model = cloned_model.cpu()
     except Exception as e:
         raise HTTPException(500, f"Clone failed: {e}")
 
