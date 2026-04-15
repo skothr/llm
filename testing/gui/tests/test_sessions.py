@@ -1,7 +1,9 @@
 import pytest
 import torch
 from unittest.mock import patch
-from gui.backend.sessions import SessionManager, SessionInfo
+from gui.backend.sessions import (
+    SessionManager, SessionInfo, translate_to_current, validate_original_indices,
+)
 
 class TestSessionManager:
     def test_register_and_list(self, tiny_model, tiny_tokenizer):
@@ -166,4 +168,103 @@ class TestSessionManager:
         with patch("gui.backend.sessions.gc.collect") as mock_gc:
             mgr.delete("s1")
             mock_gc.assert_called_once()
+
+
+class TestTranslateToCurrentIndex:
+    def test_remove_layers_identity(self):
+        layer_map = [0, 1, 2, 3, 4, 5, 6, 7]
+        result = translate_to_current("remove_layers", {"layer_indices": [5]}, layer_map)
+        assert result == {"layer_indices": [5]}
+
+    def test_remove_layers_after_prior_removal(self):
+        layer_map = [0, 1, 2, 3, 4, 6, 7]  # original 5 already removed
+        result = translate_to_current("remove_layers", {"layer_indices": [6]}, layer_map)
+        assert result == {"layer_indices": [5]}  # original 6 is now at current 5
+
+    def test_keep_layers(self):
+        layer_map = [0, 1, 2, 3, 4, 5, 6, 7]
+        result = translate_to_current("keep_layers", {"layer_indices": [0, 1, 5, 7]}, layer_map)
+        assert result == {"layer_indices": [0, 1, 5, 7]}
+
+    def test_keep_layers_after_removal(self):
+        layer_map = [0, 2, 4, 6]  # kept even layers only
+        result = translate_to_current("keep_layers", {"layer_indices": [0, 4]}, layer_map)
+        assert result == {"layer_indices": [0, 2]}
+
+    def test_zero_heads(self):
+        layer_map = [0, 1, 2, 3, 4, 6, 7]
+        result = translate_to_current("zero_heads", {"layer": 6, "heads": [0, 2]}, layer_map)
+        assert result == {"layer": 5, "heads": [0, 2]}
+
+    def test_scale_heads(self):
+        layer_map = [0, 1, 2, 3, 4, 6, 7]
+        result = translate_to_current("scale_heads", {"layer": 7, "heads": [1], "factor": 0.5}, layer_map)
+        assert result == {"layer": 6, "heads": [1], "factor": 0.5}
+
+    def test_swap_layers(self):
+        layer_map = [0, 2, 4, 6]
+        result = translate_to_current("swap_layers", {"i": 2, "j": 6}, layer_map)
+        assert result == {"i": 1, "j": 3}
+
+    def test_swap_heads(self):
+        layer_map = [0, 1, 2, 4, 5]
+        result = translate_to_current("swap_heads", {"layer": 4, "h1": 0, "h2": 3}, layer_map)
+        assert result == {"layer": 3, "h1": 0, "h2": 3}
+
+    def test_zero_mlp(self):
+        layer_map = [0, 1, 2, 3, 4, 6, 7]
+        result = translate_to_current("zero_mlp", {"layer": 7}, layer_map)
+        assert result == {"layer": 6}
+
+    def test_zero_attention(self):
+        layer_map = [0, 1, 2, 3, 4, 6, 7]
+        result = translate_to_current("zero_attention", {"layer": 6}, layer_map)
+        assert result == {"layer": 5}
+
+    def test_duplicate_layer_src_translated_dst_unchanged(self):
+        layer_map = [0, 1, 2, 4, 5]
+        result = translate_to_current("duplicate_layer", {"src": 4, "dst": 1}, layer_map)
+        assert result == {"src": 3, "dst": 1}
+
+    def test_reorder_layers(self):
+        layer_map = [0, 2, 4, 6]
+        result = translate_to_current("reorder_layers", {"new_order": [6, 4, 2, 0]}, layer_map)
+        assert result == {"new_order": [3, 2, 1, 0]}
+
+    def test_missing_original_raises(self):
+        layer_map = [0, 1, 2, 4, 5]  # original 3 removed
+        with pytest.raises(ValueError, match="not found in current model"):
+            translate_to_current("zero_mlp", {"layer": 3}, layer_map)
+
+
+class TestValidateOriginalIndices:
+    def test_valid_remove_layers(self):
+        validate_original_indices("remove_layers", {"layer_indices": [0, 5, 7]}, 8)
+
+    def test_remove_layers_out_of_range(self):
+        with pytest.raises(ValueError, match="out of range"):
+            validate_original_indices("remove_layers", {"layer_indices": [8]}, 8)
+
+    def test_negative_index_rejected(self):
+        with pytest.raises(ValueError, match="out of range"):
+            validate_original_indices("zero_mlp", {"layer": -1}, 8)
+
+    def test_valid_layer_ops(self):
+        for op in ("zero_heads", "scale_heads", "zero_mlp", "zero_attention", "swap_heads"):
+            validate_original_indices(op, {"layer": 7}, 8)
+
+    def test_swap_layers_both_checked(self):
+        validate_original_indices("swap_layers", {"i": 0, "j": 7}, 8)
+        with pytest.raises(ValueError, match="out of range"):
+            validate_original_indices("swap_layers", {"i": 0, "j": 8}, 8)
+
+    def test_duplicate_layer_src_checked(self):
+        validate_original_indices("duplicate_layer", {"src": 7, "dst": 0}, 8)
+        with pytest.raises(ValueError, match="out of range"):
+            validate_original_indices("duplicate_layer", {"src": 8, "dst": 0}, 8)
+
+    def test_reorder_layers_all_checked(self):
+        validate_original_indices("reorder_layers", {"new_order": [7, 6, 5, 4, 3, 2, 1, 0]}, 8)
+        with pytest.raises(ValueError, match="out of range"):
+            validate_original_indices("reorder_layers", {"new_order": [0, 1, 2, 9]}, 8)
 
