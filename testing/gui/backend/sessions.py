@@ -17,26 +17,50 @@ class SessionInfo:
     model_id: str
     mode: str
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    _undo_stack: list = field(default_factory=list, repr=False)
+    _pending_ops: list = field(default_factory=list, repr=False)
+    _applied_ops: list = field(default_factory=list, repr=False)
+    _op_history: list = field(default_factory=list, repr=False)
     _layer_map: list = field(default_factory=list, repr=False)
-    MAX_UNDO: int = 5
+    _original_config: object = field(default=None, repr=False)
 
     @property
-    def has_snapshot(self) -> bool:
-        return len(self._undo_stack) > 0
+    def pending_ops(self) -> list:
+        return list(self._pending_ops)
 
     @property
-    def undo_depth(self) -> int:
-        return len(self._undo_stack)
+    def applied_ops(self) -> list:
+        return list(self._applied_ops)
 
     @property
-    def snapshot_size_mb(self) -> float:
-        if not self._undo_stack:
-            return 0.0
-        return sum(
-            sum(t.nelement() * t.element_size() for t in entry["state"].values())
-            for entry in self._undo_stack
-        ) / 1e6
+    def op_history(self) -> list:
+        return list(self._op_history)
+
+    @property
+    def has_pending(self) -> bool:
+        return len(self._pending_ops) > 0
+
+    def stage_op(self, operation: str, params: dict) -> dict:
+        entry = {"operation": operation, "params": params}
+        self._pending_ops.append(entry)
+        return entry
+
+    def undo_op(self) -> dict:
+        if not self._pending_ops:
+            raise ValueError("No pending operations to undo")
+        return self._pending_ops.pop()
+
+    def clear_pending(self) -> None:
+        self._pending_ops.clear()
+
+    def record_applied(self, ops: list) -> None:
+        self._applied_ops.extend(ops)
+
+    def revert(self) -> None:
+        if not self._applied_ops:
+            raise ValueError("No applied operations to revert")
+        self._op_history.append(list(self._applied_ops))
+        self._pending_ops = list(self._applied_ops) + list(self._pending_ops)
+        self._applied_ops.clear()
 
 _NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._~\-]{0,63}$")
 
@@ -81,6 +105,7 @@ class SessionManager:
             name=name, model=model, tokenizer=tokenizer,
             model_id=model_id, mode=mode,
             _layer_map=list(range(num_layers)),
+            _original_config=copy.deepcopy(model.config),
         )
         self._sessions[name] = info
         log.info("Registered session '%s' (model=%s, mode=%s, layers=%d)",
@@ -155,30 +180,3 @@ class SessionManager:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    def snapshot(self, name: str) -> None:
-        info = self.get(name)
-        log.debug("Snapshot for '%s' (undo depth: %d/%d)", name, len(info._undo_stack), info.MAX_UNDO)
-        if len(info._undo_stack) >= info.MAX_UNDO:
-            info._undo_stack.pop(0)
-        entry = {
-            "state": {k: v.cpu().clone() for k, v in info.model.state_dict().items()},
-            "config": copy.deepcopy(info.model.config),
-            "layer_map": list(info._layer_map),
-        }
-        info._undo_stack.append(entry)
-
-    def undo(self, name: str) -> None:
-        info = self.get(name)
-        if not info._undo_stack:
-            raise ValueError(f"No undo history for session '{name}'")
-        log.info("Undoing last operation on '%s'", name)
-        entry = info._undo_stack.pop()
-        device = next(info.model.parameters()).device
-        info.model.config = entry["config"]
-        from transformers import AutoModelForCausalLM
-        restored = AutoModelForCausalLM.from_config(entry["config"])
-        restored.load_state_dict(entry["state"])
-        restored.to(device)
-        restored.eval()
-        info.model = restored
-        info._layer_map = entry.get("layer_map", list(range(entry["config"].num_hidden_layers)))
