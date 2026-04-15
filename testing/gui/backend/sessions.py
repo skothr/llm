@@ -84,6 +84,62 @@ def update_layer_map(current_map: list, operation: str, params: dict) -> list:
             m.insert(dst, current_map[src])
     return m
 
+def translate_to_current(operation: str, params: dict, layer_map: list[int]) -> dict:
+    """Translate original-index params to current-index params for surgery execution.
+
+    All layer indices in staged ops reference the *original* model topology.
+    This function converts them to current indices using the layer map
+    (where layer_map[current_idx] = original_idx).
+    """
+    translated = dict(params)
+
+    def _current(original: int) -> int:
+        try:
+            return layer_map.index(original)
+        except ValueError:
+            raise ValueError(
+                f"Original layer {original} not found in current model "
+                f"(current layer map: {layer_map})"
+            )
+
+    if operation in ("remove_layers", "keep_layers"):
+        translated["layer_indices"] = [_current(o) for o in params["layer_indices"]]
+    elif operation in ("zero_heads", "scale_heads", "zero_mlp", "zero_attention", "swap_heads"):
+        translated["layer"] = _current(params["layer"])
+    elif operation == "swap_layers":
+        translated["i"] = _current(params["i"])
+        translated["j"] = _current(params["j"])
+    elif operation == "duplicate_layer":
+        translated["src"] = _current(params["src"])
+    elif operation == "reorder_layers":
+        translated["new_order"] = [_current(o) for o in params["new_order"]]
+
+    return translated
+
+
+def validate_original_indices(operation: str, params: dict, num_original_layers: int) -> None:
+    """Validate that all layer indices are valid original model indices."""
+    def _check(idx: int):
+        if idx < 0 or idx >= num_original_layers:
+            raise ValueError(
+                f"Layer index {idx} out of range [0, {num_original_layers})"
+            )
+
+    if operation in ("remove_layers", "keep_layers"):
+        for idx in params["layer_indices"]:
+            _check(idx)
+    elif operation in ("zero_heads", "scale_heads", "zero_mlp", "zero_attention", "swap_heads"):
+        _check(params["layer"])
+    elif operation == "swap_layers":
+        _check(params["i"])
+        _check(params["j"])
+    elif operation == "duplicate_layer":
+        _check(params["src"])
+    elif operation == "reorder_layers":
+        for idx in params["new_order"]:
+            _check(idx)
+
+
 class SessionManager:
     def __init__(self):
         self._sessions: Dict[str, SessionInfo] = {}
