@@ -91,15 +91,23 @@ class SessionManager:
         info = self.get(name)
         return str(next(info.model.parameters()).device)
 
+    def _is_dispatch_model(self, info) -> bool:
+        return hasattr(info.model, "hf_device_map")
+
     def to_cpu(self, name: str) -> None:
         info = self.get(name)
-        if next(info.model.parameters()).device.type != "cpu":
-            info.model = info.model.cpu()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+        if next(info.model.parameters()).device.type == "cpu":
+            return
+        if self._is_dispatch_model(info):
+            return
+        info.model = info.model.cpu()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def to_gpu(self, name: str, device: str = "cuda:0") -> None:
         info = self.get(name)
+        if self._is_dispatch_model(info):
+            return
         info.model = info.model.to(device)
 
     def ensure_on_gpu(self, name: str) -> None:

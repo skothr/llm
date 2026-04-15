@@ -283,7 +283,6 @@ async def clone_session(name: str, req: CloneRequest):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
     try:
-        # For quantized HF models: offload source, re-load from cache
         from llm_surgeon.surgery import _snapshot_dir
         if _snapshot_dir(info.model_id):
             mgr.to_cpu(name)
@@ -293,7 +292,6 @@ async def clone_session(name: str, req: CloneRequest):
                 lambda: surgery.load_model(info.model_id, mode=info.mode),
             )
         else:
-            # Fallback: deepcopy (works for non-quantized / test models)
             cloned_model = copy.deepcopy(info.model)
             cloned_model.eval()
     except Exception as e:
