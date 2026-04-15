@@ -281,7 +281,10 @@ async def clone_session(name: str, req: CloneRequest):
 
     import copy
     try:
+        original_device = next(info.model.parameters()).device
+        info.model = info.model.cpu()
         cloned_model = copy.deepcopy(info.model)
+        info.model = info.model.to(original_device)
     except Exception as e:
         raise HTTPException(500, f"Clone failed: {e}")
 
