@@ -119,7 +119,12 @@ async def generate_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
-    mgr.ensure_on_gpu(name)
+    try:
+        mgr.ensure_on_gpu(name)
+    except Exception as e:
+        await _send_json(ws, {"type": "error", "message": f"GPU error: {e}"})
+        await ws.close()
+        return
 
     raw = await ws.receive_text()
     config = json.loads(raw)
@@ -236,6 +241,8 @@ async def generate_ws(ws: WebSocket, name: str):
     except Exception as e:
         await _send_json(ws, {"type": "error", "message": str(e)})
     finally:
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         try:
             await ws.close()
         except RuntimeError:
