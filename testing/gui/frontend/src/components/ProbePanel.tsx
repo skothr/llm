@@ -66,7 +66,7 @@ export function ProbePanel() {
   };
 
   const handleRun = () => {
-    if (!targetSession || !prompt) return;
+    if (!targetSession || (!prompt && operation !== "generate")) return;
     setError("");
     setRunning(true);
 
@@ -179,7 +179,7 @@ export function ProbePanel() {
 
       <div style={{ display: "flex", gap: 4 }}>
         {!isRunning ? (
-          <button onClick={handleRun} disabled={!targetSession || !prompt}>Run</button>
+          <button onClick={handleRun} disabled={!targetSession || (!prompt && operation !== "generate")}>Run</button>
         ) : (
           <button onClick={() => {
             cancelAll();
