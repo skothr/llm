@@ -116,13 +116,13 @@ class SessionManager:
             return
         if torch.cuda.is_available():
             model_bytes = sum(p.nelement() * p.element_size() for p in info.model.parameters())
-            free = torch.cuda.get_device_properties(0).total_mem - torch.cuda.memory_allocated(0)
+            free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
             if free < model_bytes * 1.3:
                 for other in self._sessions.values():
                     if other.name != name and next(other.model.parameters()).device.type == "cuda":
                         other.model = other.model.cpu()
                         torch.cuda.empty_cache()
-                        free = torch.cuda.get_device_properties(0).total_mem - torch.cuda.memory_allocated(0)
+                        free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
                         if free >= model_bytes * 1.3:
                             break
         info.model = info.model.to("cuda:0" if torch.cuda.is_available() else "cpu")
