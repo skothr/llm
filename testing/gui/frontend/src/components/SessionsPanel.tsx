@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useStore } from "../state/store";
 import { ModelCombobox } from "./ModelCombobox";
 import { SurgeryParamForm } from "./SurgeryParamForm";
-import type { SessionSummary, SurgeryOperation } from "../types/api";
+import type { SessionSummary, SurgeryOperation, StagedOp } from "../types/api";
 
 export function SessionsPanel() {
   const sessions = useStore((s) => s.sessions);
@@ -17,7 +17,9 @@ export function SessionsPanel() {
   const fetchAvailableModels = useStore((s) => s.fetchAvailableModels);
   const deleteSession = useStore((s) => s.deleteSession);
   const applySurgery = useStore((s) => s.applySurgery);
-  const undoSurgery = useStore((s) => s.undoSurgery);
+  const commitSurgery = useStore((s) => s.commitSurgery);
+  const revertSurgery = useStore((s) => s.revertSurgery);
+  const deleteStagedOp = useStore((s) => s.deleteStagedOp);
   const cloneSession = useStore((s) => s.cloneSession);
 
   const [loadModelId, setLoadModelId] = useState("");
@@ -33,6 +35,12 @@ export function SessionsPanel() {
   useEffect(() => { fetchAvailableModels(); }, [fetchAvailableModels]);
 
   const selectedOpDef = surgeryOps.find((op) => op.name === surgeryOp) || null;
+
+  const formatParams = (params: Record<string, unknown>) => {
+    return Object.entries(params)
+      .map(([k, v]) => `${k}=${Array.isArray(v) ? `[${v.join(",")}]` : v}`)
+      .join(" ");
+  };
 
   useEffect(() => {
     if (!selectedOpDef) { setSurgeryParams({}); return; }
@@ -140,7 +148,8 @@ export function SessionsPanel() {
           </div>
           <div style={{ fontSize: 11, color: "#8888aa" }}>
             {s.model_id} | {s.mode} | {s.num_layers}L | <span style={{ color: s.device.startsWith("cuda") ? "#4ecdc4" : "#aa8844" }}>{s.device}</span>
-            {s.has_snapshot && ` | undo: ${s.undo_depth}x (${s.snapshot_size_mb.toFixed(0)}MB)`}
+            {s.pending_count > 0 && <span style={{ color: "#f0ad4e" }}> | {s.pending_count} staged</span>}
+            {s.applied_count > 0 && <span style={{ color: "#5cb85c" }}> | {s.applied_count} applied</span>}
           </div>
         </div>
       ))}
@@ -161,38 +170,97 @@ export function SessionsPanel() {
                 <option key={op.name} value={op.name}>{op.name}</option>
               ))}
             </select>
+            {selectedOpDef && sessionInfo[selectedSession] && (
+              <div style={{ fontSize: 10, color: "#666", marginBottom: 2 }}>
+                Original layers: 0–{sessionInfo[selectedSession].original_num_layers - 1}
+              </div>
+            )}
             {selectedOpDef && (
               <SurgeryParamForm operation={selectedOpDef} params={surgeryParams} onChange={setSurgeryParams} />
             )}
             <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-              <button onClick={() => handleSurgery(selectedSession)} disabled={!surgeryOp}>Apply</button>
-              <button
-                onClick={async () => {
-                  try { await undoSurgery(selectedSession); }
-                  catch (e) { setError((e as Error).message); }
-                }}
-                disabled={!sessions.find((s) => s.name === selectedSession)?.has_snapshot}
-              >Undo</button>
+              <button onClick={() => handleSurgery(selectedSession)} disabled={!surgeryOp}>Stage</button>
             </div>
           </div>
 
           {sessionInfo[selectedSession] && (() => {
             const info = sessionInfo[selectedSession];
+            const hasPending = info.pending_ops?.length > 0;
+            const hasApplied = info.applied_ops?.length > 0;
             return (
-              <div style={{ fontSize: 12, color: "#8888aa" }}>
-                <div>Params: {(info.total_params / 1e6).toFixed(1)}M | Layers: {info.num_layers} | Heads: {info.num_heads}{info.num_kv_heads ? `/${info.num_kv_heads}kv` : ""}</div>
-                <div>Hidden: {info.hidden_size}{info.intermediate_size ? ` | FFN: ${info.intermediate_size}` : ""}{info.vocab_size ? ` | Vocab: ${info.vocab_size.toLocaleString()}` : ""}</div>
-                {info.max_position_embeddings && <div>Max pos: {info.max_position_embeddings}{info.rope_theta ? ` | RoPE θ: ${info.rope_theta.toLocaleString()}` : ""}</div>}
-                {info.bos_token && <div>BOS: {info.bos_token} | EOS: {info.eos_token}</div>}
-                {info.chat_template && (
-                  <details style={{ marginTop: 4 }}>
-                    <summary style={{ cursor: "pointer", color: "#6688aa" }}>Chat template</summary>
-                    <pre style={{ marginTop: 4, padding: 6, background: "#0d1b2a", borderRadius: 4, whiteSpace: "pre-wrap", fontSize: 11, maxHeight: 120, overflowY: "auto" }}>
-                      {info.chat_template}
-                    </pre>
-                  </details>
+              <>
+                {hasPending && (
+                  <div style={{ marginBottom: 8, padding: 6, background: "#1a1a2e", borderRadius: 4, border: "1px solid #f0ad4e44" }}>
+                    <div style={{ fontSize: 11, color: "#f0ad4e", marginBottom: 4, fontWeight: 600 }}>
+                      Pending ({info.pending_ops.length})
+                    </div>
+                    {info.pending_ops.map((op: StagedOp, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "#ccccdd", padding: "2px 0", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: i < info.pending_ops.length - 1 ? "1px solid #ffffff0a" : "none" }}>
+                        <span>
+                          <span style={{ color: "#88aacc" }}>{i + 1}.</span>{" "}
+                          <span style={{ color: "#ddd" }}>{op.operation}</span>{" "}
+                          <span style={{ color: "#888" }}>{formatParams(op.params)}</span>
+                        </span>
+                        <button
+                          style={{ padding: "1px 5px", fontSize: 10, background: "#4a2020", border: "1px solid #ff6b6b44", cursor: "pointer" }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try { await deleteStagedOp(selectedSession, i); }
+                            catch (err) { setError((err as Error).message); }
+                          }}
+                        >x</button>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                      <button
+                        style={{ background: "#2e7d32", border: "1px solid #4caf50", fontSize: 11, padding: "3px 10px" }}
+                        onClick={async () => {
+                          try { await commitSurgery(selectedSession); }
+                          catch (e) { setError((e as Error).message); }
+                        }}
+                      >Commit All</button>
+                    </div>
+                  </div>
                 )}
-              </div>
+
+                {hasApplied && (
+                  <div style={{ marginBottom: 8, padding: 6, background: "#1a1a2e", borderRadius: 4, border: "1px solid #5cb85c44" }}>
+                    <div style={{ fontSize: 11, color: "#5cb85c", marginBottom: 4, fontWeight: 600 }}>
+                      Applied ({info.applied_ops.length})
+                    </div>
+                    {info.applied_ops.map((op: StagedOp, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "#99aa99", padding: "2px 0" }}>
+                        <span style={{ color: "#6b8f6b" }}>{i + 1}.</span>{" "}
+                        {op.operation} <span style={{ color: "#666" }}>{formatParams(op.params)}</span>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                      <button
+                        style={{ background: "#6d3a00", border: "1px solid #e67700", fontSize: 11, padding: "3px 10px" }}
+                        onClick={async () => {
+                          try { await revertSurgery(selectedSession); }
+                          catch (e) { setError((e as Error).message); }
+                        }}
+                      >Revert to Clean</button>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ fontSize: 12, color: "#8888aa" }}>
+                  <div>Params: {(info.total_params / 1e6).toFixed(1)}M | Layers: {info.num_layers} | Heads: {info.num_heads}{info.num_kv_heads ? `/${info.num_kv_heads}kv` : ""}</div>
+                  <div>Hidden: {info.hidden_size}{info.intermediate_size ? ` | FFN: ${info.intermediate_size}` : ""}{info.vocab_size ? ` | Vocab: ${info.vocab_size.toLocaleString()}` : ""}</div>
+                  {info.max_position_embeddings && <div>Max pos: {info.max_position_embeddings}{info.rope_theta ? ` | RoPE θ: ${info.rope_theta.toLocaleString()}` : ""}</div>}
+                  {info.bos_token && <div>BOS: {info.bos_token} | EOS: {info.eos_token}</div>}
+                  {info.chat_template && (
+                    <details style={{ marginTop: 4 }}>
+                      <summary style={{ cursor: "pointer", color: "#6688aa" }}>Chat template</summary>
+                      <pre style={{ marginTop: 4, padding: 6, background: "#0d1b2a", borderRadius: 4, whiteSpace: "pre-wrap", fontSize: 11, maxHeight: 120, overflowY: "auto" }}>
+                        {info.chat_template}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              </>
             );
           })()}
         </div>
