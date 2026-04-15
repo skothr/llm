@@ -9,8 +9,35 @@ interface Props {
   resultB: ProbeResult;
 }
 
+interface AlignedRow {
+  originalLayer: number;
+  sublayer: string;
+  label: string;
+  duplicate: boolean;
+  dataA: LogitLensData | null;
+  dataB: LogitLensData | null;
+}
+
+function buildOriginalLookup(data: LogitLensData[]) {
+  const primary = new Map<string, LogitLensData>();
+  const duplicates: { originalLayer: number; sublayer: string; insertAfter: number; data: LogitLensData }[] = [];
+
+  for (const msg of data) {
+    const orig = msg.original_layer ?? msg.layer;
+    const key = `${orig}.${msg.sublayer}`;
+    if (primary.has(key)) {
+      const prevOrig = data[data.indexOf(msg) - 1]?.original_layer ?? data[data.indexOf(msg) - 1]?.layer ?? orig;
+      duplicates.push({ originalLayer: orig, sublayer: msg.sublayer, insertAfter: prevOrig, data: msg });
+    } else {
+      primary.set(key, msg);
+    }
+  }
+  return { primary, duplicates };
+}
+
 export function ABDiff({ resultA, resultB }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const sessionInfo = useStore((s) => s.sessionInfo);
   const [showDiff, setShowDiff] = useState(false);
   const [tooltip, setTooltip] = useState<{
     x: number;
@@ -27,22 +54,72 @@ export function ABDiff({ resultA, resultB }: Props) {
     [resultB.data]
   );
 
+  const alignedRows = useMemo(() => {
+    const infoA = sessionInfo[resultA.sessionName];
+    const infoB = sessionInfo[resultB.sessionName];
+
+    const lookupA = buildOriginalLookup(dataA);
+    const lookupB = buildOriginalLookup(dataB);
+
+    const numOrig = Math.max(
+      infoA?.original_num_layers ?? Math.ceil(dataA.length / 2),
+      infoB?.original_num_layers ?? Math.ceil(dataB.length / 2),
+    );
+
+    const rows: AlignedRow[] = [];
+    for (let i = 0; i < numOrig; i++) {
+      for (const sub of ["attn", "ffn"]) {
+        const key = `${i}.${sub}`;
+        rows.push({
+          originalLayer: i,
+          sublayer: sub,
+          label: `L${i}.${sub}`,
+          duplicate: false,
+          dataA: lookupA.primary.get(key) ?? null,
+          dataB: lookupB.primary.get(key) ?? null,
+        });
+      }
+
+      const dupsA = lookupA.duplicates.filter((d) => d.insertAfter === i);
+      const dupsB = lookupB.duplicates.filter((d) => d.insertAfter === i);
+      const maxDups = Math.max(dupsA.length, dupsB.length);
+      for (let d = 0; d < maxDups; d++) {
+        const dupA = dupsA[d];
+        const dupB = dupsB[d];
+        const orig = dupA?.originalLayer ?? dupB?.originalLayer ?? i;
+        const sub = dupA?.sublayer ?? dupB?.sublayer ?? "attn";
+        rows.push({
+          originalLayer: orig,
+          sublayer: sub,
+          label: `[L${orig}].${sub}`,
+          duplicate: true,
+          dataA: dupA?.data ?? null,
+          dataB: dupB?.data ?? null,
+        });
+      }
+    }
+
+    return rows;
+  }, [dataA, dataB, sessionInfo, resultA.sessionName, resultB.sessionName]);
+
   useEffect(() => {
-    if (!svgRef.current || dataA.length === 0) return;
+    if (!svgRef.current || alignedRows.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const numPositions = dataA[0]?.predictions.length || 1;
+    const firstData = alignedRows.find((r) => r.dataA || r.dataB);
+    const numPositions = (firstData?.dataA ?? firstData?.dataB)?.predictions.length ?? 1;
+
     const completeMsgA = resultA.data.find((m) => m.type === "complete") as
       | { type: "complete"; summary?: { prompt_tokens?: string[] } }
       | undefined;
     const promptTokens = completeMsgA?.summary?.prompt_tokens;
 
-    const numRows = Math.max(dataA.length, dataB.length);
+    const numRows = alignedRows.length;
     const cellW = Math.max(24, Math.min(40, 400 / numPositions));
     const cellH = 18;
-    const margin = { top: promptTokens ? 50 : 30, right: 20, bottom: 30, left: 70 };
+    const margin = { top: promptTokens ? 50 : 30, right: 20, bottom: 30, left: 80 };
     const panelWidth = margin.left + numPositions * cellW + margin.right;
     const gap = 40;
     const totalWidth = showDiff ? panelWidth * 3 + gap * 2 : panelWidth * 2 + gap;
@@ -54,9 +131,9 @@ export function ABDiff({ resultA, resultB }: Props) {
     const diffScale = d3.scaleDiverging(d3.interpolateRdBu).domain([-1, 0, 1]);
 
     function drawPanel(
-      data: LogitLensData[],
+      side: "A" | "B",
       offsetX: number,
-      label: string
+      label: string,
     ) {
       const g = svg.append("g").attr("transform", `translate(${offsetX + margin.left},${margin.top})`);
 
@@ -81,15 +158,30 @@ export function ABDiff({ resultA, resultB }: Props) {
         });
       }
 
-      data.forEach((msg, rowIdx) => {
-        g.append("text")
-          .attr("x", -4)
-          .attr("y", rowIdx * cellH + cellH / 2)
-          .attr("text-anchor", "end")
-          .attr("dominant-baseline", "middle")
-          .attr("font-size", 9)
-          .attr("fill", "#8888aa")
-          .text(`L${msg.layer}.${msg.sublayer}`);
+      alignedRows.forEach((row, rowIdx) => {
+        const msg = side === "A" ? row.dataA : row.dataB;
+
+        if (offsetX === 0 || side === "A") {
+          g.append("text")
+            .attr("x", -4)
+            .attr("y", rowIdx * cellH + cellH / 2)
+            .attr("text-anchor", "end")
+            .attr("dominant-baseline", "middle")
+            .attr("font-size", 9)
+            .attr("fill", row.duplicate ? "#cc88ff" : "#8888aa")
+            .text(row.label);
+        }
+
+        if (!msg) {
+          g.append("rect")
+            .attr("x", 0)
+            .attr("y", rowIdx * cellH)
+            .attr("width", numPositions * cellW - 1)
+            .attr("height", cellH - 1)
+            .attr("fill", "#0a0a15")
+            .attr("rx", 2);
+          return;
+        }
 
         msg.predictions.forEach((posPreds, posIdx) => {
           const topPred = posPreds[0];
@@ -112,7 +204,7 @@ export function ABDiff({ resultA, resultB }: Props) {
               setTooltip({
                 x: event.pageX + 10,
                 y: event.pageY - 10,
-                content: `${label} L${msg.layer}.${msg.sublayer} pos ${posIdx}\n${lines}`,
+                content: `${label} ${row.label} pos ${posIdx}\n${lines}`,
               });
             })
             .on("mouseleave", () => setTooltip(null));
@@ -133,37 +225,44 @@ export function ABDiff({ resultA, resultB }: Props) {
       });
     }
 
-    drawPanel(dataA, 0, resultA.sessionName);
-    drawPanel(dataB, panelWidth + gap, resultB.sessionName);
+    drawPanel("A", 0, resultA.sessionName);
+    drawPanel("B", panelWidth + gap, resultB.sessionName);
 
     if (showDiff) {
-      const diffRows = Math.min(dataA.length, dataB.length);
       const diffOffset = (panelWidth + gap) * 2;
       const g = svg.append("g").attr("transform", `translate(${diffOffset + margin.left},${margin.top})`);
 
       svg.append("text")
         .attr("x", diffOffset + margin.left + (numPositions * cellW) / 2)
-        .attr("y", 16)
+        .attr("y", promptTokens ? 14 : 16)
         .attr("text-anchor", "middle")
         .attr("font-size", 12)
         .attr("fill", "#a0a0c0")
-        .text(`Diff (A - B)${dataA.length !== dataB.length ? ` [${diffRows}/${numRows} rows]` : ""}`);
+        .text("Diff (A \u2212 B)");
 
-      dataA.slice(0, diffRows).forEach((msgA, rowIdx) => {
-        const msgB = dataB[rowIdx];
-        if (!msgB) return;
-
+      alignedRows.forEach((row, rowIdx) => {
         g.append("text")
           .attr("x", -4)
           .attr("y", rowIdx * cellH + cellH / 2)
           .attr("text-anchor", "end")
           .attr("dominant-baseline", "middle")
           .attr("font-size", 9)
-          .attr("fill", "#8888aa")
-          .text(`L${msgA.layer}`);
+          .attr("fill", row.duplicate ? "#cc88ff" : "#8888aa")
+          .text(row.label);
 
-        msgA.predictions.forEach((predsA, posIdx) => {
-          const predsB = msgB.predictions[posIdx];
+        if (!row.dataA || !row.dataB) {
+          g.append("rect")
+            .attr("x", 0)
+            .attr("y", rowIdx * cellH)
+            .attr("width", numPositions * cellW - 1)
+            .attr("height", cellH - 1)
+            .attr("fill", "#0a0a15")
+            .attr("rx", 2);
+          return;
+        }
+
+        row.dataA.predictions.forEach((predsA, posIdx) => {
+          const predsB = row.dataB!.predictions[posIdx];
           if (!predsA?.[0] || !predsB?.[0]) return;
           const diff = predsA[0].prob - predsB[0].prob;
           const tokensDiffer = predsA[0].token !== predsB[0].token;
@@ -183,7 +282,7 @@ export function ABDiff({ resultA, resultB }: Props) {
               setTooltip({
                 x: event.pageX + 10,
                 y: event.pageY - 10,
-                content: `L${msgA.layer} pos ${posIdx}\nA: ${predsA[0].token} (${(predsA[0].prob * 100).toFixed(1)}%)\nB: ${predsB[0].token} (${(predsB[0].prob * 100).toFixed(1)}%)\nd: ${(diff * 100).toFixed(1)}%`,
+                content: `${row.label} pos ${posIdx}\nA: ${predsA[0].token} (${(predsA[0].prob * 100).toFixed(1)}%)\nB: ${predsB[0].token} (${(predsB[0].prob * 100).toFixed(1)}%)\n\u0394: ${(diff * 100).toFixed(1)}%`,
               });
             })
             .on("mouseleave", () => setTooltip(null));
@@ -191,7 +290,7 @@ export function ABDiff({ resultA, resultB }: Props) {
       });
     }
 
-  }, [dataA, dataB, showDiff, resultA.sessionName, resultB.sessionName, resultA.data]);
+  }, [alignedRows, showDiff, resultA.sessionName, resultB.sessionName, resultA.data]);
 
   return (
     <div style={{ position: "relative" }}>
