@@ -3,6 +3,7 @@ import type {
   SessionSummary,
   SessionInfo,
   SurgeryOperation,
+  AvailableModel,
   ProbeOperation,
   ProbeResult,
   ConfigTab,
@@ -32,7 +33,7 @@ interface StoreState {
 
   isLoadingModel: boolean;
   loadingModelId: string | null;
-  availableModels: string[];
+  availableModels: AvailableModel[];
 
   prompt: string;
   operation: ProbeOperation;
@@ -144,8 +145,8 @@ export const useStore = create<StoreState>((set, get) => ({
   fetchAvailableModels: async () => {
     try {
       const resp = await fetch("/api/models/available");
-      const data = await resp.json();
-      set({ availableModels: data.map((m: { model_id: string }) => m.model_id) });
+      const data: AvailableModel[] = await resp.json();
+      set({ availableModels: data });
     } catch { /* backend not ready */ }
   },
 
