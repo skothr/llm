@@ -161,16 +161,14 @@ export function ABDiff({ resultA, resultB }: Props) {
       alignedRows.forEach((row, rowIdx) => {
         const msg = side === "A" ? row.dataA : row.dataB;
 
-        if (offsetX === 0 || side === "A") {
-          g.append("text")
-            .attr("x", -4)
-            .attr("y", rowIdx * cellH + cellH / 2)
-            .attr("text-anchor", "end")
-            .attr("dominant-baseline", "middle")
-            .attr("font-size", 9)
-            .attr("fill", row.duplicate ? "#cc88ff" : "#8888aa")
-            .text(row.label);
-        }
+        g.append("text")
+          .attr("x", -4)
+          .attr("y", rowIdx * cellH + cellH / 2)
+          .attr("text-anchor", "end")
+          .attr("dominant-baseline", "middle")
+          .attr("font-size", 9)
+          .attr("fill", row.duplicate ? "#cc88ff" : "#8888aa")
+          .text(row.label);
 
         if (!msg) {
           g.append("rect")
