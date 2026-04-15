@@ -1,9 +1,12 @@
 import copy
+import logging
 import re
 import asyncio
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple
 import torch
+
+log = logging.getLogger("gui.backend.sessions")
 
 @dataclass
 class SessionInfo:
@@ -70,6 +73,8 @@ class SessionManager:
         self.validate_name(name)
         if name in self._sessions:
             raise ValueError(f"Session '{name}' already exists")
+        model.eval()
+        model.requires_grad_(False)
         num_layers = model.config.num_hidden_layers
         info = SessionInfo(
             name=name, model=model, tokenizer=tokenizer,
@@ -77,6 +82,8 @@ class SessionManager:
             _layer_map=list(range(num_layers)),
         )
         self._sessions[name] = info
+        log.info("Registered session '%s' (model=%s, mode=%s, layers=%d)",
+                 name, model_id, mode, num_layers)
         return info
 
     def get(self, name: str) -> SessionInfo:
@@ -100,6 +107,7 @@ class SessionManager:
             return
         if self._is_dispatch_model(info):
             return
+        log.info("Moving session '%s' to CPU", name)
         info.model = info.model.cpu()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -108,6 +116,7 @@ class SessionManager:
         info = self.get(name)
         if self._is_dispatch_model(info):
             return
+        log.info("Moving session '%s' to %s", name, device)
         info.model = info.model.to(device)
 
     def ensure_on_gpu(self, name: str) -> None:
@@ -119,20 +128,25 @@ class SessionManager:
         if torch.cuda.is_available():
             model_bytes = sum(p.nelement() * p.element_size() for p in info.model.parameters())
             free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
+            log.debug("GPU check for '%s': need %.0fMB, free %.0fMB",
+                      name, model_bytes / 1e6, free / 1e6)
             if free < model_bytes * 1.3:
                 for other_name, other in self._sessions.items():
                     if other_name != name and not self._is_dispatch_model(other) and next(other.model.parameters()).device.type == "cuda":
+                        log.info("Evicting '%s' to CPU to make room for '%s'", other_name, name)
                         self.to_cpu(other_name)
                         free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
                         if free >= model_bytes * 1.3:
                             break
         try:
             info.model = info.model.to("cuda:0")
-        except RuntimeError:
-            pass
+            log.info("Session '%s' moved to GPU", name)
+        except RuntimeError as e:
+            log.error("Failed to move '%s' to GPU: %s", name, e)
 
     def delete(self, name: str) -> None:
         info = self.get(name)
+        log.info("Deleting session '%s'", name)
         del self._sessions[name]
         del info.model
         if torch.cuda.is_available():
@@ -140,6 +154,7 @@ class SessionManager:
 
     def snapshot(self, name: str) -> None:
         info = self.get(name)
+        log.debug("Snapshot for '%s' (undo depth: %d/%d)", name, len(info._undo_stack), info.MAX_UNDO)
         if len(info._undo_stack) >= info.MAX_UNDO:
             info._undo_stack.pop(0)
         entry = {
@@ -153,6 +168,7 @@ class SessionManager:
         info = self.get(name)
         if not info._undo_stack:
             raise ValueError(f"No undo history for session '{name}'")
+        log.info("Undoing last operation on '%s'", name)
         entry = info._undo_stack.pop()
         device = next(info.model.parameters()).device
         info.model.config = entry["config"]

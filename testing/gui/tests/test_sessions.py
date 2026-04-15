@@ -93,6 +93,23 @@ class TestSessionManager:
 
         assert mgr.get("s1").undo_depth == 0
 
+    def test_register_sets_eval_mode(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        tiny_model.train()  # force training mode
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        info = mgr.get("s1")
+        assert not info.model.training
+
+    def test_register_disables_grad(self, tiny_model, tiny_tokenizer):
+        mgr = SessionManager()
+        for p in tiny_model.parameters():
+            p.requires_grad = True  # force grads on
+        mgr.register("s1", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="eval")
+        info = mgr.get("s1")
+        assert all(not p.requires_grad for p in info.model.parameters())
+
     def test_undo_without_snapshot_raises(self, tiny_model, tiny_tokenizer):
         mgr = SessionManager()
         mgr.register("s1", tiny_model, tiny_tokenizer,
