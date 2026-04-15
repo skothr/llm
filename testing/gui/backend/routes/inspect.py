@@ -32,7 +32,6 @@ async def inspect_influence(name: str, req: InfluenceRequest):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
-    mgr.ensure_on_gpu(name)
     from llm_surgeon import inspect as insp
 
     scores = await asyncio.get_event_loop().run_in_executor(
@@ -49,7 +48,6 @@ async def inspect_attention(name: str, req: AttentionRequest):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
-    mgr.ensure_on_gpu(name)
     from llm_surgeon import inspect as insp
 
     entropy = await asyncio.get_event_loop().run_in_executor(
@@ -66,7 +64,6 @@ async def inspect_residual_norms(name: str, req: ResidualNormsRequest):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
 
-    mgr.ensure_on_gpu(name)
     from llm_surgeon import inspect as insp
 
     norms = await asyncio.get_event_loop().run_in_executor(
