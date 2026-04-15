@@ -65,9 +65,9 @@ export default function App() {
       <aside className="config-panel" style={{ width: panelWidth }}>
         <TabBar />
         <div className="config-content">
-          {activeTab === "sessions" && <SessionsPanel />}
-          {activeTab === "probe" && <ProbePanel />}
-          {activeTab === "intervene" && <IntervenePanel />}
+          <div style={{ display: activeTab === "sessions" ? "contents" : "none" }}><SessionsPanel /></div>
+          <div style={{ display: activeTab === "probe" ? "contents" : "none" }}><ProbePanel /></div>
+          <div style={{ display: activeTab === "intervene" ? "contents" : "none" }}><IntervenePanel /></div>
         </div>
       </aside>
       <div className="resize-handle horizontal" onMouseDown={onHResize} />
