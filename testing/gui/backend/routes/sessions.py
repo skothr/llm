@@ -495,11 +495,13 @@ async def commit_surgery(name: str):
         "reorder_layers": lambda m, p: surgery.reorder_layers(m, p["new_order"]),
     }
 
-    pending = info.pending_ops
-    applied = []
-
     async with info.lock:
-        for op in pending:
+        # Advance ops one-at-a-time from pending → applied so a failure mid-way
+        # leaves pending_ops/applied_ops/layer_map/model all mutually consistent.
+        # The user can fix the offending op and retry commit on whatever remains.
+        applied_count = 0
+        while info._pending_ops:
+            op = info._pending_ops[0]
             op_name = op["operation"]
             params = op["params"]
             if op_name not in op_map:
@@ -512,15 +514,15 @@ async def commit_surgery(name: str):
                 log.warning("Commit failed on '%s' at op %s: %s", name, op_name, e)
                 raise HTTPException(422, f"Operation '{op_name}' failed: {e}")
             info._layer_map = update_layer_map(info._layer_map, op_name, translated)
-            applied.append(op)
+            info._applied_ops.append(op)
+            info._pending_ops.pop(0)
+            applied_count += 1
 
-        info.record_applied(applied)
-        info.clear_pending()
-        if info.llama is not None:
+        if applied_count > 0 and info.llama is not None:
             info.dirty = True
 
     return {
-        "applied_count": len(applied),
+        "applied_count": applied_count,
         "pending": info.pending_ops,
         "info": _session_info(info),
     }
@@ -536,35 +538,45 @@ async def revert_surgery(name: str):
     if not info.applied_ops:
         raise HTTPException(409, "No applied operations to revert")
 
-    import sys
+    import sys, gc
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import surgery
     from llm_surgeon.surgery import _snapshot_dir
     import shutil
+    import torch as _torch
 
     async with info.lock:
         log.info("Reverting session '%s' — reloading clean model", name)
-        info.revert()
 
+        # Build the replacement model BEFORE mutating op lists, so a load
+        # failure doesn't leave pending/applied/history in a half-reverted
+        # state that can't be recovered.
         try:
             if _snapshot_dir(info.model_id):
-                model, _ = await asyncio.get_event_loop().run_in_executor(
+                new_model, _ = await asyncio.get_event_loop().run_in_executor(
                     None,
                     lambda: surgery.load_model(info.model_id, mode=info.mode),
                 )
             else:
                 from transformers import AutoModelForCausalLM
-                model = AutoModelForCausalLM.from_config(info._original_config)
-            model.eval()
-            model.requires_grad_(False)
-            if not hasattr(model, "hf_device_map"):
-                model = model.cpu()
+                new_model = AutoModelForCausalLM.from_config(info._original_config)
+            new_model.eval()
+            new_model.requires_grad_(False)
+            if not hasattr(new_model, "hf_device_map"):
+                new_model = new_model.cpu()
         except Exception as e:
             log.exception("Revert failed for session '%s'", name)
             raise HTTPException(500, f"Revert failed: {e}")
 
-        info.model = model
+        # Now atomically swap: mutate op lists, drop the old model, install the new.
+        info.revert()
+        old_model = info.model
+        info.model = new_model
         info._layer_map = list(range(info._original_config.num_hidden_layers))
+        del old_model
+        gc.collect()
+        if _torch.cuda.is_available():
+            _torch.cuda.empty_cache()
 
         if info.llama is not None and info.gguf_path != info.source_gguf_path:
             from llm_surgeon.llama_engine import LlamaEngine
