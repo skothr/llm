@@ -167,7 +167,7 @@ export function SessionsPanel() {
         />
         <div style={{ display: "flex", gap: 4 }}>
           <select value={loadMode} onChange={(e) => setLoadMode(e.target.value)}>
-            <option value="auto">Default{selectedModel ? ` (${effectiveMode.toUpperCase()})` : ""}</option>
+            <option value="auto">Default{selectedModel ? ` (${resolveAutoMode(selectedModel).toUpperCase()})` : ""}</option>
             <option value="nf4">NF4 (4-bit)</option>
             <option value="int8">INT8 (8-bit)</option>
             <option value="bf16">BF16</option>
