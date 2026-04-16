@@ -16,7 +16,7 @@ export function useWebSocket() {
   const connect = useCallback(
     (key: string, path: string, config: Record<string, unknown>, handlers: WsHandlers) => {
       const existing = connectionsRef.current.get(key);
-      if (existing && existing.readyState === WebSocket.OPEN) {
+      if (existing && existing.readyState !== WebSocket.CLOSED) {
         existing.close();
       }
       resolvedRef.current.delete(key);
@@ -57,6 +57,7 @@ export function useWebSocket() {
       };
 
       ws.onclose = () => {
+        if (connectionsRef.current.get(key) !== ws) return;
         connectionsRef.current.delete(key);
         if (!resolvedRef.current.has(key) && !cancelledRef.current.has(key)) {
           handlers.onDisconnect?.();
@@ -73,7 +74,7 @@ export function useWebSocket() {
   const cancel = useCallback((key: string) => {
     cancelledRef.current.add(key);
     const ws = connectionsRef.current.get(key);
-    if (ws && ws.readyState === WebSocket.OPEN) {
+    if (ws && ws.readyState !== WebSocket.CLOSED) {
       ws.close();
     }
     connectionsRef.current.delete(key);
@@ -84,7 +85,7 @@ export function useWebSocket() {
       cancelledRef.current.add(key);
     });
     connectionsRef.current.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws.readyState !== WebSocket.CLOSED) {
         ws.close();
       }
     });
