@@ -81,6 +81,33 @@
       "url": "https://arxiv.org/abs/1910.07467",
       "local_file": "papers/zhang2019_rmsnorm.pdf",
       "summary": "RMSNorm: simplifies LayerNorm by removing mean-centering, keeping only RMS re-scaling. Comparable performance with 7-64% faster runtime. Used by LLaMA instead of standard LayerNorm."
+    },
+    {
+      "key": "chowdhery2022",
+      "title": "PaLM: Scaling Language Modeling with Pathways",
+      "authors": "Chowdhery, Narang, Devlin, et al.",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2204.02311",
+      "local_file": null,
+      "summary": "PaLM: 540B-parameter decoder-only Transformer trained on Pathways. Architecture choices: SwiGLU activation, RoPE, parallel attention/FFN layers, multi-query attention for inference efficiency."
+    },
+    {
+      "key": "jiang2023",
+      "title": "Mistral 7B",
+      "authors": "Jiang, Sablayrolles, Mensch, et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2310.06825",
+      "local_file": null,
+      "summary": "Mistral 7B: open-weights decoder-only LLM with grouped-query attention (GQA) and sliding-window attention. Outperforms LLaMA 2 13B on multiple benchmarks at smaller size. Foundational reference for the modern compact-LLM architecture family."
+    },
+    {
+      "key": "raffel2019",
+      "title": "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer",
+      "authors": "Raffel, Shazeer, Roberts, et al.",
+      "year": 2019,
+      "url": "https://arxiv.org/abs/1910.10683",
+      "local_file": null,
+      "summary": "T5: encoder-decoder Transformer that casts every NLP task as text-to-text. Contributes several conventions reused across the field (SentencePiece, relative positional bias). Cited for the 'T5 convention' of using SiLU/Swish-style activations and GLU variants."
     }
   ]
 }

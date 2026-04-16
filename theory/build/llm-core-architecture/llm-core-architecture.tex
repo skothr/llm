@@ -397,7 +397,8 @@ Step by step, for a single query vector $\bm{q}$ attending to keys $K$ and value
 
 In matrix form for all $n$ positions simultaneously:
 \begin{equation}
-  Q, K, V \in \R^{n \times \dk}, \quad
+  Q, K \in \R^{n \times \dk}, \quad
+  V \in \R^{n \times \dv}, \quad
   QK^\top \in \R^{n \times n}, \quad
   \Attention(Q, K, V) \in \R^{n \times \dv}
 \end{equation}
@@ -550,7 +551,8 @@ Compare to the standard $4 \times 4096 = 16384$ that a non-gated FFN would use.
   \item 2020: SwiGLU \cite{shazeer2020} --- gated architecture with Swish activation
 \end{itemize}
 SwiGLU consistently achieves better perplexity than ReLU and GELU in matched-parameter
-comparisons \cite{shazeer2020}, and is used in LLaMA \cite{touvron2023} and PaLM. The
+comparisons \cite{shazeer2020}, and is used in LLaMA \cite{touvron2023} and PaLM
+\cite{chowdhery2022}. The
 original paper offers ``no explanation as to why these architectures seem to work;
 we attribute their success, as all else, to divine benevolence'' \cite{shazeer2020}.
 \end{evobox}
@@ -675,8 +677,9 @@ configuration for modern LLMs.
 \label{sec:decoder-only}
 %=============================================================================
 
-Modern LLMs (GPT, LLaMA, Claude, Mistral, etc.) are all \emph{decoder-only} Transformers.
-This section traces why and how the field converged on this architecture.
+Modern LLMs (GPT \cite{radford2018, brown2020}, LLaMA \cite{touvron2023}, Mistral
+\cite{jiang2023}, Claude, etc.) are all \emph{decoder-only} Transformers. This section
+traces why and how the field converged on this architecture.
 
 \subsection{From Encoder-Decoder to Decoder-Only}
 

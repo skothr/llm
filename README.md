@@ -38,6 +38,8 @@ Python toolkit for layer-level model surgery, probing, and experiment tracking o
 | `tracking` | SQLite-backed experiment database — log surgery ops, metrics, generation samples |
 | `recipe` | YAML-based experiment definitions: surgery steps, analysis, evaluation, export pipeline |
 | `export` | Save HuggingFace checkpoints, convert to GGUF, register with ollama |
+| `gguf_reader` | Load GGUF files back into HuggingFace models: dequantize tensors, build config, reverse Q/K head permutation, reconstruct tokenizer |
+| `llama_engine` | Native llama.cpp wrapper: tokenize, logits, streaming generate with sampling, perplexity, HF→GGUF F16 exporter |
 
 #### Setup
 
