@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
 import type { InterventionSpec, WsMessage } from "../types/api";
+
+const num = (v: string, fallback: number): number => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
 
 type OpParam = { key: string; type: string; default?: number | string; step?: number };
 
@@ -44,7 +49,7 @@ function InterventionCard({
     <div style={{ padding: 8, background: "#0d1b2a", borderRadius: 4, marginBottom: 4 }}>
       <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
         <label style={{ fontSize: 12 }}>
-          L<input type="number" value={spec.layer} onChange={(e) => onUpdate(index, { ...spec, layer: +e.target.value })} style={{ width: 52 }} />
+          L<input type="number" value={spec.layer} onChange={(e) => onUpdate(index, { ...spec, layer: num(e.target.value, spec.layer) })} style={{ width: 52 }} />
         </label>
         <select value={spec.sublayer} onChange={(e) => onUpdate(index, { ...spec, sublayer: e.target.value as "attn" | "ffn" })} style={{ width: 60 }}>
           <option value="ffn">FFN</option>
@@ -60,7 +65,7 @@ function InterventionCard({
         if (p.type === "float") {
           return (
             <label key={p.key} style={{ display: "block", fontSize: 12, marginBottom: 2 }}>
-              {p.key}: <input type="number" step={p.step} value={Number(spec.params[p.key] ?? p.default)} onChange={(e) => updateParam(p.key, +e.target.value)} style={{ width: 80 }} />
+              {p.key}: <input type="number" step={p.step} value={Number(spec.params[p.key] ?? p.default)} onChange={(e) => updateParam(p.key, num(e.target.value, Number(spec.params[p.key] ?? p.default ?? 0)))} style={{ width: 80 }} />
             </label>
           );
         }
@@ -93,12 +98,12 @@ function InterventionCard({
                 prompt: <input value={source.prompt} onChange={(e) => updateSource("prompt", e.target.value)} />
               </label>
               <div style={{ display: "flex", gap: 4 }}>
-                <label>L<input type="number" value={source.layer} onChange={(e) => updateSource("layer", +e.target.value)} style={{ width: 52 }} /></label>
+                <label>L<input type="number" value={source.layer} onChange={(e) => updateSource("layer", num(e.target.value, source.layer))} style={{ width: 52 }} /></label>
                 <select value={source.sublayer} onChange={(e) => updateSource("sublayer", e.target.value)} style={{ width: 60 }}>
                   <option value="ffn">FFN</option>
                   <option value="attn">Attn</option>
                 </select>
-                <label>pos<input type="number" value={source.position} onChange={(e) => updateSource("position", +e.target.value)} style={{ width: 52 }} /></label>
+                <label>pos<input type="number" value={source.position} onChange={(e) => updateSource("position", num(e.target.value, source.position))} style={{ width: 52 }} /></label>
               </div>
             </div>
           );
@@ -130,6 +135,7 @@ export function IntervenePanel() {
   const removePendingResult = useStore((s) => s.removePendingResult);
 
   const { connect, cancelAll } = useWebSocket();
+  const localPendingIdsRef = useRef<Set<string>>(new Set());
   const [error, setError] = useState("");
 
   const handleRun = () => {
@@ -138,6 +144,7 @@ export function IntervenePanel() {
     setRunning(true);
 
     const resultId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    localPendingIdsRef.current.add(resultId);
 
     setPendingResult(resultId, {
       id: resultId,
@@ -148,15 +155,17 @@ export function IntervenePanel() {
       timestamp: Date.now(),
     });
 
+    const clearLocal = () => localPendingIdsRef.current.delete(resultId);
+
     connect(resultId, `/ws/sessions/${interveneSession}/intervene`, {
       prompt: intervenePrompt,
       interventions: interventionSpecs,
       capture_logit_lens: captureLogitLens,
     }, {
       onMessage: (msg: WsMessage) => { updatePendingResult(resultId, msg); },
-      onComplete: (msg: WsMessage) => { finalizePendingResult(resultId, msg); setRunning(false); },
-      onError: (message: string) => { finalizePendingResult(resultId); setError(message); setRunning(false); },
-      onDisconnect: () => { finalizePendingResult(resultId); setError("Connection lost"); setRunning(false); },
+      onComplete: (msg: WsMessage) => { finalizePendingResult(resultId, msg); clearLocal(); setRunning(false); },
+      onError: (message: string) => { finalizePendingResult(resultId); clearLocal(); setError(message); setRunning(false); },
+      onDisconnect: () => { finalizePendingResult(resultId); clearLocal(); setError("Connection lost"); setRunning(false); },
     });
   };
 
@@ -193,9 +202,10 @@ export function IntervenePanel() {
         ) : (
           <button onClick={() => {
             cancelAll();
-            for (const id of Object.keys(pendingResults)) {
-              removePendingResult(id);
+            for (const id of localPendingIdsRef.current) {
+              if (pendingResults[id]) removePendingResult(id);
             }
+            localPendingIdsRef.current.clear();
             setRunning(false);
           }} style={{ background: "#6b2020" }}>Cancel</button>
         )}
