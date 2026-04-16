@@ -146,6 +146,7 @@ async def generate_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
+    was_on_gpu_before = mgr.is_on_gpu(name)
     try:
         mgr.ensure_on_gpu(name)
     except Exception as e:
@@ -382,10 +383,11 @@ async def generate_ws(ws: WebSocket, name: str):
         past_key_values = None
         log.info("WS generate disconnected (session='%s', tokens=%d, stop=%s)",
                  name, len(generated_tokens), stop_reason or "disconnect")
-        try:
-            mgr.to_cpu(name)
-        except Exception:
-            pass
+        if not was_on_gpu_before:
+            try:
+                mgr.to_cpu(name)
+            except Exception:
+                pass
         if torch.cuda.is_available():
             import gc
             gc.collect()

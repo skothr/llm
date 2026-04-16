@@ -645,6 +645,7 @@ async def validate_session(name: str, req: ValidateRequest):
             None, lambda: engine.logits(tokens)
         )
 
+        was_on_gpu = mgr.is_on_gpu(name)
         mgr.ensure_on_gpu(name)
         try:
             input_ids = torch.tensor([tokens], dtype=torch.long).to(
@@ -653,7 +654,11 @@ async def validate_session(name: str, req: ValidateRequest):
             with torch.no_grad():
                 pytorch_logits = info.model(input_ids=input_ids).logits[0, -1].float().cpu().numpy()
         finally:
-            mgr.to_cpu(name)
+            if not was_on_gpu:
+                try:
+                    mgr.to_cpu(name)
+                except Exception:
+                    log.exception("validate: to_cpu failed for '%s'", name)
 
     result = compare_logits(native_logits, pytorch_logits, top_k=req.top_k)
 
