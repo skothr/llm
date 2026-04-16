@@ -118,7 +118,15 @@ export const useStore = create<StoreState>((set, get) => ({
   fetchSessions: async () => {
     try {
       const resp = await fetch("/api/sessions");
+      if (!resp.ok) {
+        set({ backendOnline: false });
+        return;
+      }
       const data = await resp.json();
+      if (!Array.isArray(data)) {
+        set({ backendOnline: false });
+        return;
+      }
       set({ sessions: data, backendOnline: true });
       if (get().surgeryOps.length === 0) {
         get().fetchSurgeryOps();
@@ -152,7 +160,22 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   deleteSession: async (name: string) => {
-    await fetch(`/api/sessions/${name}`, { method: "DELETE" });
+    const resp = await fetch(`/api/sessions/${name}`, { method: "DELETE" });
+    if (!resp.ok) throw await apiError(resp);
+    set((s) => {
+      const { [name]: _removed, ...remainingInfo } = s.sessionInfo;
+      const filteredPending: Record<string, ProbeResult> = {};
+      for (const [id, r] of Object.entries(s.pendingResults)) {
+        if (r.sessionName !== name) filteredPending[id] = r;
+      }
+      return {
+        sessionInfo: remainingInfo,
+        pendingResults: filteredPending,
+        targetSession: s.targetSession === name ? "" : s.targetSession,
+        targetSessionB: s.targetSessionB === name ? null : s.targetSessionB,
+        interveneSession: s.interveneSession === name ? "" : s.interveneSession,
+      };
+    });
     await get().fetchSessions();
   },
 
