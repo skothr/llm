@@ -123,6 +123,7 @@ export function IntervenePanel() {
   const setIntervenePrompt = useStore((s) => s.setIntervenePrompt);
   const setInterveneSession = useStore((s) => s.setInterveneSession);
   const setRunning = useStore((s) => s.setRunning);
+  const pendingResults = useStore((s) => s.pendingResults);
   const setPendingResult = useStore((s) => s.setPendingResult);
   const updatePendingResult = useStore((s) => s.updatePendingResult);
   const finalizePendingResult = useStore((s) => s.finalizePendingResult);
@@ -132,7 +133,7 @@ export function IntervenePanel() {
   const [error, setError] = useState("");
 
   const handleRun = () => {
-    if (!interveneSession || !intervenePrompt || interventionSpecs.length === 0) return;
+    if (!interveneSession || interventionSpecs.length === 0) return;
     setError("");
     setRunning(true);
 
@@ -188,11 +189,11 @@ export function IntervenePanel() {
 
       <div style={{ display: "flex", gap: 4 }}>
         {!isRunning ? (
-          <button onClick={handleRun} disabled={!interveneSession || !intervenePrompt || interventionSpecs.length === 0}>Run</button>
+          <button onClick={handleRun} disabled={!interveneSession || interventionSpecs.length === 0}>Run</button>
         ) : (
           <button onClick={() => {
             cancelAll();
-            for (const id of Object.keys(useStore.getState().pendingResults)) {
+            for (const id of Object.keys(pendingResults)) {
               removePendingResult(id);
             }
             setRunning(false);

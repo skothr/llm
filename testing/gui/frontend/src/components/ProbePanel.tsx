@@ -3,6 +3,10 @@ import { useStore } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
 import type { WsMessage, ProbeOperation } from "../types/api";
 
+// Streaming operations use WebSocket (live per-layer or per-token frames).
+// One-shot inspection ops (influence, attention, residual-norms) go via REST
+// because the backend returns a single complete result — a WS would buy
+// nothing but a handshake cost. Keep in sync with backend route types.
 const WS_OPS = new Set<ProbeOperation>(["logit-lens", "generate"]);
 
 export function ProbePanel() {
@@ -18,6 +22,7 @@ export function ProbePanel() {
   const setTargetSessionB = useStore((s) => s.setTargetSessionB);
   const setRunning = useStore((s) => s.setRunning);
   const addResult = useStore((s) => s.addResult);
+  const pendingResults = useStore((s) => s.pendingResults);
   const setPendingResult = useStore((s) => s.setPendingResult);
   const updatePendingResult = useStore((s) => s.updatePendingResult);
   const finalizePendingResult = useStore((s) => s.finalizePendingResult);
@@ -66,7 +71,7 @@ export function ProbePanel() {
   };
 
   const handleRun = () => {
-    if (!targetSession || (!prompt && operation !== "generate")) return;
+    if (!targetSession) return;
     setError("");
     setRunning(true);
 
@@ -100,13 +105,21 @@ export function ProbePanel() {
         } else if (operation === "residual-norms") {
           url = `/api/sessions/${session}/inspect/residual-norms`;
           body = { prompt };
+        } else {
+          return Promise.reject(new Error(`Unsupported REST operation: ${operation}`));
         }
         return fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
-          .then((r) => r.json())
+          .then(async (r) => {
+            if (!r.ok) {
+              const text = await r.text().catch(() => r.statusText);
+              throw new Error(`${r.status} ${text || r.statusText}`);
+            }
+            return r.json();
+          })
           .then((data) => {
             addResult({
               id, operation, sessionName: session, prompt,
@@ -179,11 +192,11 @@ export function ProbePanel() {
 
       <div style={{ display: "flex", gap: 4 }}>
         {!isRunning ? (
-          <button onClick={handleRun} disabled={!targetSession || (!prompt && operation !== "generate")}>Run</button>
+          <button onClick={handleRun} disabled={!targetSession}>Run</button>
         ) : (
           <button onClick={() => {
             cancelAll();
-            for (const id of Object.keys(useStore.getState().pendingResults)) {
+            for (const id of Object.keys(pendingResults)) {
               removePendingResult(id);
             }
             setRunning(false);
