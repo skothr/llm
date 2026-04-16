@@ -45,6 +45,7 @@ theory/sources/papers/
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
 testing/.venv/
 
 # Node (root-level lockfile is an empty stub)
