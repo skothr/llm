@@ -2,6 +2,7 @@ import json
 import asyncio
 import hashlib
 import logging
+from pathlib import Path
 import torch
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -154,8 +155,25 @@ async def generate_ws(ws: WebSocket, name: str):
     generated_tokens = []
     stop_reason = None
 
-    if info.llama is not None and not info.dirty:
+    if info.llama is not None:
         import numpy as np
+
+        if info.dirty and info.model is not None:
+            from llm_surgeon.llama_engine import LlamaEngine, export_hf_to_gguf
+            import tempfile
+            await _send_json(ws, {"type": "status", "message": "Re-exporting modified model to GGUF..."})
+            export_dir = Path(tempfile.mkdtemp(prefix="llm_surgeon_"))
+            export_path = export_dir / "modified.gguf"
+            await asyncio.get_event_loop().run_in_executor(
+                None, lambda: export_hf_to_gguf(info.model, info.tokenizer, export_path)
+            )
+            info.llama.close()
+            info.llama = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: LlamaEngine(export_path)
+            )
+            info.gguf_path = export_path
+            info.dirty = False
+
         try:
             async with info.lock:
                 tokens = info.llama.tokenize(prompt)
