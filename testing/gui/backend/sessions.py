@@ -324,6 +324,15 @@ class SessionManager:
         else:
             info.model = info.model.to(device)
 
+    def is_on_gpu(self, name: str) -> bool:
+        info = self.get(name)
+        if info.model is None:
+            return False
+        try:
+            return next(info.model.parameters()).device.type == "cuda"
+        except StopIteration:
+            return False
+
     def ensure_on_gpu(self, name: str) -> None:
         info = self.get(name)
         if info.model is None:
