@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 from typing import List
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
 from ..sessions import SessionManager
@@ -305,6 +305,10 @@ async def delete_session(name: str):
         mgr.delete(name)
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
+    # Drop any cached hidden states keyed to this session so memory is freed
+    # and a later session with the same name doesn't read stale tensors.
+    from .probes import _hs_cache
+    _hs_cache.invalidate_session(name)
     return {"deleted": name}
 
 @router.post("/sessions")
@@ -494,25 +498,26 @@ async def commit_surgery(name: str):
     pending = info.pending_ops
     applied = []
 
-    for op in pending:
-        op_name = op["operation"]
-        params = op["params"]
-        if op_name not in op_map:
-            raise HTTPException(422, f"Unknown operation in queue: '{op_name}'")
-        translated = translate_to_current(op_name, params, info._layer_map)
-        log.info("Committing op on '%s': %s(%s) [original: %s]", name, op_name, translated, params)
-        try:
-            op_map[op_name](info.model, translated)
-        except (IndexError, ValueError) as e:
-            log.warning("Commit failed on '%s' at op %s: %s", name, op_name, e)
-            raise HTTPException(422, f"Operation '{op_name}' failed: {e}")
-        info._layer_map = update_layer_map(info._layer_map, op_name, translated)
-        applied.append(op)
+    async with info.lock:
+        for op in pending:
+            op_name = op["operation"]
+            params = op["params"]
+            if op_name not in op_map:
+                raise HTTPException(422, f"Unknown operation in queue: '{op_name}'")
+            translated = translate_to_current(op_name, params, info._layer_map)
+            log.info("Committing op on '%s': %s(%s) [original: %s]", name, op_name, translated, params)
+            try:
+                op_map[op_name](info.model, translated)
+            except (IndexError, ValueError) as e:
+                log.warning("Commit failed on '%s' at op %s: %s", name, op_name, e)
+                raise HTTPException(422, f"Operation '{op_name}' failed: {e}")
+            info._layer_map = update_layer_map(info._layer_map, op_name, translated)
+            applied.append(op)
 
-    info.record_applied(applied)
-    info.clear_pending()
-    if info.llama is not None:
-        info.dirty = True
+        info.record_applied(applied)
+        info.clear_pending()
+        if info.llama is not None:
+            info.dirty = True
 
     return {
         "applied_count": len(applied),
@@ -531,42 +536,57 @@ async def revert_surgery(name: str):
     if not info.applied_ops:
         raise HTTPException(409, "No applied operations to revert")
 
-    log.info("Reverting session '%s' — reloading clean model", name)
-    info.revert()
-
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import surgery
     from llm_surgeon.surgery import _snapshot_dir
+    import shutil
 
-    try:
-        if _snapshot_dir(info.model_id):
-            model, _ = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: surgery.load_model(info.model_id, mode=info.mode),
-            )
-        else:
-            from transformers import AutoModelForCausalLM
-            model = AutoModelForCausalLM.from_config(info._original_config)
-        model.eval()
-        model.requires_grad_(False)
-        if not hasattr(model, "hf_device_map"):
-            model = model.cpu()
-    except Exception as e:
-        log.exception("Revert failed for session '%s'", name)
-        raise HTTPException(500, f"Revert failed: {e}")
+    async with info.lock:
+        log.info("Reverting session '%s' — reloading clean model", name)
+        info.revert()
 
-    info.model = model
-    info._layer_map = list(range(info._original_config.num_hidden_layers))
+        try:
+            if _snapshot_dir(info.model_id):
+                model, _ = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: surgery.load_model(info.model_id, mode=info.mode),
+                )
+            else:
+                from transformers import AutoModelForCausalLM
+                model = AutoModelForCausalLM.from_config(info._original_config)
+            model.eval()
+            model.requires_grad_(False)
+            if not hasattr(model, "hf_device_map"):
+                model = model.cpu()
+        except Exception as e:
+            log.exception("Revert failed for session '%s'", name)
+            raise HTTPException(500, f"Revert failed: {e}")
 
-    if info.llama is not None and info.gguf_path != info.source_gguf_path:
-        from llm_surgeon.llama_engine import LlamaEngine
-        info.llama.close()
-        info.llama = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: LlamaEngine(info.source_gguf_path)
-        )
-        info.gguf_path = info.source_gguf_path
-    info.dirty = False
+        info.model = model
+        info._layer_map = list(range(info._original_config.num_hidden_layers))
+
+        if info.llama is not None and info.gguf_path != info.source_gguf_path:
+            from llm_surgeon.llama_engine import LlamaEngine
+            old_engine = info.llama
+            old_owned = info._owned_export_dir
+            try:
+                info.llama = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: LlamaEngine(info.source_gguf_path)
+                )
+            except Exception as e:
+                log.exception("Revert: reopening source GGUF failed for '%s'", name)
+                raise HTTPException(500, f"Revert failed to reload source GGUF: {e}")
+            # Only close/cleanup old resources after the new engine is live.
+            try:
+                old_engine.close()
+            except Exception:
+                log.exception("old llama.close() failed for '%s'", name)
+            if old_owned is not None:
+                shutil.rmtree(old_owned, ignore_errors=True)
+                info._owned_export_dir = None
+            info.gguf_path = info.source_gguf_path
+        info.dirty = False
 
     return {
         "pending": info.pending_ops,
@@ -582,8 +602,20 @@ async def get_op_history(name: str):
         raise HTTPException(404, f"Session '{name}' not found")
     return {"history": info.op_history}
 
+class ValidateRequest(BaseModel):
+    prompt: str = "The capital of France is"
+    top_k: int = 10
+
+    @field_validator("top_k")
+    @classmethod
+    def _top_k_positive(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("top_k must be > 0")
+        return v
+
+
 @router.post("/sessions/{name}/validate")
-async def validate_session(name: str, req: dict = Body(...)):
+async def validate_session(name: str, req: ValidateRequest):
     mgr = get_manager()
     try:
         info = mgr.get(name)
@@ -595,40 +627,47 @@ async def validate_session(name: str, req: dict = Body(...)):
     if info.model is None:
         raise HTTPException(409, "PyTorch model not loaded yet — run logit lens first to trigger load")
 
-    prompt = req.get("prompt", "The capital of France is")
-    top_k = req.get("top_k", 10)
-
     import numpy as np
     import torch
     from llm_surgeon.llama_engine import compare_logits
+    from ..sessions import ensure_fresh_gguf
 
-    tokens = info.llama.tokenize(prompt)
-    native_logits = await asyncio.get_event_loop().run_in_executor(
-        None, lambda: info.llama.logits(tokens)
-    )
+    async with info.lock:
+        # Auto re-export if PyTorch has uncommitted-to-GGUF surgery, so both
+        # engines reflect the same weights before we compare.
+        if info.dirty:
+            log.info("Validate: re-exporting dirty session '%s' before compare", name)
+            await ensure_fresh_gguf(info)
 
-    mgr.ensure_pytorch(name)
-    mgr.ensure_on_gpu(name)
-    input_ids = torch.tensor([tokens], dtype=torch.long).to(
-        next(info.model.parameters()).device
-    )
-    with torch.no_grad():
-        pytorch_logits = info.model(input_ids=input_ids).logits[0, -1].float().cpu().numpy()
-    mgr.to_cpu(name)
+        engine = info.llama
+        tokens = engine.tokenize(req.prompt)
+        native_logits = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: engine.logits(tokens)
+        )
 
-    result = compare_logits(native_logits, pytorch_logits, top_k=top_k)
+        mgr.ensure_on_gpu(name)
+        try:
+            input_ids = torch.tensor([tokens], dtype=torch.long).to(
+                next(info.model.parameters()).device
+            )
+            with torch.no_grad():
+                pytorch_logits = info.model(input_ids=input_ids).logits[0, -1].float().cpu().numpy()
+        finally:
+            mgr.to_cpu(name)
+
+    result = compare_logits(native_logits, pytorch_logits, top_k=req.top_k)
 
     def _top_k_tokens(logits, k):
         probs = np.exp(logits - logits.max())
         probs /= probs.sum()
         top_idx = np.argsort(logits)[-k:][::-1]
         return [
-            {"token": info.llama.detokenize([int(i)]), "logit": float(logits[i]), "prob": float(probs[i])}
+            {"token": engine.detokenize([int(i)]), "logit": float(logits[i]), "prob": float(probs[i])}
             for i in top_idx
         ]
 
-    result["native_top_k"] = _top_k_tokens(native_logits, top_k)
-    result["pytorch_top_k"] = _top_k_tokens(pytorch_logits, top_k)
+    result["native_top_k"] = _top_k_tokens(native_logits, req.top_k)
+    result["pytorch_top_k"] = _top_k_tokens(pytorch_logits, req.top_k)
 
     return result
 
@@ -643,6 +682,15 @@ async def clone_session(name: str, req: CloneRequest):
 
     import copy, sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+
+    # Remember whether the original was on GPU so we can move it back after
+    # briefly evicting it for the clone's fresh load.
+    was_on_gpu = False
+    try:
+        if info.model is not None:
+            was_on_gpu = next(info.model.parameters()).device.type == "cuda"
+    except StopIteration:
+        was_on_gpu = False
 
     try:
         from llm_surgeon.surgery import _snapshot_dir
@@ -660,6 +708,12 @@ async def clone_session(name: str, req: CloneRequest):
             cloned_model = cloned_model.cpu()
     except Exception as e:
         raise HTTPException(500, f"Clone failed: {e}")
+    finally:
+        if was_on_gpu:
+            try:
+                mgr.ensure_on_gpu(name)
+            except Exception:
+                log.exception("Clone: failed to restore '%s' to GPU", name)
 
     try:
         mgr.register(req.target_name, cloned_model, info.tokenizer,

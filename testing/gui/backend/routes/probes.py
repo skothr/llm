@@ -40,11 +40,24 @@ async def logit_lens_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
-    mgr.ensure_pytorch(name)
+    try:
+        mgr.ensure_pytorch(name)
+    except Exception as e:
+        log.exception("WS logit-lens: ensure_pytorch failed for '%s'", name)
+        await _send_json(ws, {"type": "error", "message": f"Failed to load PyTorch model: {e}"})
+        await ws.close()
+        return
 
-    raw = await ws.receive_text()
-    config = json.loads(raw)
-    prompt = config["prompt"]
+    try:
+        raw = await ws.receive_text()
+        config = json.loads(raw)
+    except json.JSONDecodeError as e:
+        await _send_json(ws, {"type": "error", "message": f"Invalid JSON config: {e}"})
+        await ws.close()
+        return
+    except WebSocketDisconnect:
+        return
+    prompt = config.get("prompt", "")
     top_k = config.get("top_k", 10)
     log.debug("WS logit-lens config: prompt=%r, top_k=%d", prompt[:80], top_k)
 
@@ -141,10 +154,17 @@ async def generate_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
-    raw = await ws.receive_text()
-    config = json.loads(raw)
+    try:
+        raw = await ws.receive_text()
+        config = json.loads(raw)
+    except json.JSONDecodeError as e:
+        await _send_json(ws, {"type": "error", "message": f"Invalid JSON config: {e}"})
+        await ws.close()
+        return
+    except WebSocketDisconnect:
+        return
     log.debug("WS generate config: %s", {k: v for k, v in config.items() if k != "prompt"})
-    prompt = config["prompt"]
+    prompt = config.get("prompt", "")
     max_tokens = config.get("max_tokens", 256)
     temperature = config.get("temperature", 1.0)
     prob_top_k = config.get("prob_top_k", 10)
@@ -157,67 +177,68 @@ async def generate_ws(ws: WebSocket, name: str):
 
     if info.llama is not None:
         import numpy as np
+        from ..sessions import ensure_fresh_gguf
 
-        if info.dirty and info.model is not None:
-            from llm_surgeon.llama_engine import LlamaEngine, export_hf_to_gguf
-            import tempfile
-            await _send_json(ws, {"type": "status", "message": "Re-exporting modified model to GGUF..."})
-            export_dir = Path(tempfile.mkdtemp(prefix="llm_surgeon_"))
-            export_path = export_dir / "modified.gguf"
-            await asyncio.get_event_loop().run_in_executor(
-                None, lambda: export_hf_to_gguf(info.model, info.tokenizer, export_path)
-            )
-            info.llama.close()
-            info.llama = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: LlamaEngine(export_path)
-            )
-            info.gguf_path = export_path
-            info.dirty = False
-
+        # Re-export (if dirty) happens under the lock; streaming then runs
+        # on a captured engine reference so surgery/revert can't yank it.
         try:
             async with info.lock:
-                tokens = info.llama.tokenize(prompt)
-                step_num = 0
-                for step in info.llama.generate(
-                    tokens,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    repetition_penalty=repetition_penalty,
-                    stop_sequences=stop_sequences,
-                    emit_logits=(prob_top_k > 0),
-                ):
-                    if not connected:
-                        break
-                    generated_tokens.append(step.token_str)
+                if info.dirty and info.model is not None:
+                    await _send_json(ws, {"type": "status", "message": "Re-exporting modified model to GGUF..."})
+                    await ensure_fresh_gguf(info)
+                engine = info.llama
+        except Exception as e:
+            log.exception("WS generate: re-export failed for '%s'", name)
+            await _send_json(ws, {"type": "error", "message": f"Re-export failed: {e}"})
+            try:
+                await ws.close()
+            except RuntimeError:
+                pass
+            return
 
-                    top_k_list = []
-                    if step.logits is not None:
-                        probs = np.exp(step.logits - step.logits.max())
-                        probs /= probs.sum()
-                        top_idx = np.argsort(probs)[-prob_top_k:][::-1]
-                        top_k_list = [
-                            {"token": info.llama.detokenize([int(i)]), "prob": float(probs[i])}
-                            for i in top_idx
-                        ]
+        try:
+            tokens = engine.tokenize(prompt)
+            step_num = 0
+            for step in engine.generate(
+                tokens,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                repetition_penalty=repetition_penalty,
+                stop_sequences=stop_sequences,
+                emit_logits=(prob_top_k > 0),
+            ):
+                if not connected:
+                    break
+                generated_tokens.append(step.token_str)
 
-                    msg = {
-                        "type": "data",
-                        "step": step_num,
-                        "token": step.token_str,
-                        "token_id": step.token_id,
-                        "top_k": top_k_list,
-                        "engine": "llama.cpp",
-                    }
-                    if not await _send_json(ws, msg):
-                        connected = False
-                        break
+                top_k_list = []
+                if step.logits is not None:
+                    probs = np.exp(step.logits - step.logits.max())
+                    probs /= probs.sum()
+                    top_idx = np.argsort(probs)[-prob_top_k:][::-1]
+                    top_k_list = [
+                        {"token": engine.detokenize([int(i)]), "prob": float(probs[i])}
+                        for i in top_idx
+                    ]
 
-                    gen_text = "".join(generated_tokens)
-                    if stop_sequences and any(s in gen_text for s in stop_sequences):
-                        stop_reason = "stop_sequence"
-                        break
+                msg = {
+                    "type": "data",
+                    "step": step_num,
+                    "token": step.token_str,
+                    "token_id": step.token_id,
+                    "top_k": top_k_list,
+                    "engine": "llama.cpp",
+                }
+                if not await _send_json(ws, msg):
+                    connected = False
+                    break
 
-                    step_num += 1
+                gen_text = "".join(generated_tokens)
+                if stop_sequences and any(s in gen_text for s in stop_sequences):
+                    stop_reason = "stop_sequence"
+                    break
+
+                step_num += 1
 
             if connected:
                 stop_reason = stop_reason or "max_tokens"
@@ -432,11 +453,24 @@ async def intervene_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
-    mgr.ensure_pytorch(name)
+    try:
+        mgr.ensure_pytorch(name)
+    except Exception as e:
+        log.exception("WS intervene: ensure_pytorch failed for '%s'", name)
+        await _send_json(ws, {"type": "error", "message": f"Failed to load PyTorch model: {e}"})
+        await ws.close()
+        return
 
-    raw = await ws.receive_text()
-    config = json.loads(raw)
-    prompt = config["prompt"]
+    try:
+        raw = await ws.receive_text()
+        config = json.loads(raw)
+    except json.JSONDecodeError as e:
+        await _send_json(ws, {"type": "error", "message": f"Invalid JSON config: {e}"})
+        await ws.close()
+        return
+    except WebSocketDisconnect:
+        return
+    prompt = config.get("prompt", "")
     capture_logit_lens = config.get("capture_logit_lens", False)
 
     import sys
