@@ -58,9 +58,7 @@ export function SessionsPanel() {
       const q = m.quantization?.toUpperCase() ?? "";
       if (q === "F32") return "fp32";
       if (q === "F16") return "fp16";
-      const bpw = m.bits_per_weight;
-      if (bpw != null) return bpw <= 6 ? "nf4" : "int8";
-      return "fp16";
+      return "bf16";
     }
     const dt = m.dtype;
     if (dt === "bfloat16" || dt === "torch.bfloat16") return "bf16";
