@@ -2,8 +2,11 @@ import copy
 import gc
 import logging
 import re
+import shutil
+import tempfile
 import asyncio
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 import torch
 
@@ -25,6 +28,9 @@ class SessionInfo:
     llama: object = field(default=None, repr=False)
     gguf_path: object = field(default=None, repr=False)
     source_gguf_path: object = field(default=None, repr=False)
+    # Temp dir we created via re-export; we own cleanup of this one only
+    # (source_gguf_path is user-supplied and left alone).
+    _owned_export_dir: Optional[Path] = field(default=None, repr=False)
     dirty: bool = field(default=False)
 
     @property
@@ -332,12 +338,19 @@ class SessionManager:
                   name, model_bytes / 1e6, free / 1e6)
         if free < model_bytes * 1.3:
             for other_name, other in self._sessions.items():
-                if other_name != name and next(other.model.parameters()).device.type == "cuda":
-                    log.info("Evicting '%s' to CPU to make room for '%s'", other_name, name)
-                    self.to_cpu(other_name)
-                    free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
-                    if free >= model_bytes * 1.3:
-                        break
+                if other_name == name or other.model is None:
+                    continue
+                try:
+                    other_device = next(other.model.parameters()).device
+                except StopIteration:
+                    continue
+                if other_device.type != "cuda":
+                    continue
+                log.info("Evicting '%s' to CPU to make room for '%s'", other_name, name)
+                self.to_cpu(other_name)
+                free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
+                if free >= model_bytes * 1.3:
+                    break
         try:
             if self._is_bnb_model(info):
                 self._move_bnb_params(info.model, "cuda:0")
@@ -359,9 +372,61 @@ class SessionManager:
         log.info("Deleting session '%s'", name)
         del self._sessions[name]
         if info.llama is not None:
-            info.llama.close()
+            try:
+                info.llama.close()
+            except Exception:
+                log.exception("llama.close() failed for '%s'", name)
+        if info._owned_export_dir is not None:
+            shutil.rmtree(info._owned_export_dir, ignore_errors=True)
+            info._owned_export_dir = None
         del info.model
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+
+async def ensure_fresh_gguf(info: "SessionInfo") -> None:
+    """Re-export PyTorch surgery → GGUF and rebuild the llama.cpp engine.
+
+    No-op if the session is not dirty or has no PyTorch model.
+
+    Caller must hold ``info.lock`` — this mutates ``info.llama``,
+    ``info.gguf_path``, ``info._owned_export_dir``, ``info.dirty``.
+
+    On failure (export or engine init), the existing engine is left intact
+    and the raised exception reaches the caller. The caller may retry or
+    fall back to reporting an error to the client.
+    """
+    if not info.dirty or info.model is None:
+        return
+
+    from llm_surgeon.llama_engine import LlamaEngine, export_hf_to_gguf
+
+    export_dir = Path(tempfile.mkdtemp(prefix="llm_surgeon_"))
+    export_path = export_dir / "modified.gguf"
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(
+            None, lambda: export_hf_to_gguf(info.model, info.tokenizer, export_path)
+        )
+        new_engine = await loop.run_in_executor(
+            None, lambda: LlamaEngine(export_path)
+        )
+    except Exception:
+        shutil.rmtree(export_dir, ignore_errors=True)
+        raise
+
+    old_engine = info.llama
+    old_owned = info._owned_export_dir
+    info.llama = new_engine
+    info.gguf_path = export_path
+    info._owned_export_dir = export_dir
+    info.dirty = False
+    if old_engine is not None:
+        try:
+            old_engine.close()
+        except Exception:
+            log.exception("old llama.close() failed for '%s'", info.name)
+    if old_owned is not None:
+        shutil.rmtree(old_owned, ignore_errors=True)
 
