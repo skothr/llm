@@ -39,6 +39,8 @@ async def logit_lens_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
+    mgr.ensure_pytorch(name)
+
     raw = await ws.receive_text()
     config = json.loads(raw)
     prompt = config["prompt"]
@@ -151,6 +153,72 @@ async def generate_ws(ws: WebSocket, name: str):
     connected = True
     generated_tokens = []
     stop_reason = None
+
+    if info.llama is not None and not info.dirty:
+        import numpy as np
+        try:
+            async with info.lock:
+                tokens = info.llama.tokenize(prompt)
+                step_num = 0
+                for step in info.llama.generate(
+                    tokens,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    repetition_penalty=repetition_penalty,
+                    stop_sequences=stop_sequences,
+                    emit_logits=(prob_top_k > 0),
+                ):
+                    if not connected:
+                        break
+                    generated_tokens.append(step.token_str)
+
+                    top_k_list = []
+                    if step.logits is not None:
+                        probs = np.exp(step.logits - step.logits.max())
+                        probs /= probs.sum()
+                        top_idx = np.argsort(probs)[-prob_top_k:][::-1]
+                        top_k_list = [
+                            {"token": info.llama.detokenize([int(i)]), "prob": float(probs[i])}
+                            for i in top_idx
+                        ]
+
+                    msg = {
+                        "type": "data",
+                        "step": step_num,
+                        "token": step.token_str,
+                        "token_id": step.token_id,
+                        "top_k": top_k_list,
+                        "engine": "llama.cpp",
+                    }
+                    if not await _send_json(ws, msg):
+                        connected = False
+                        break
+
+                    gen_text = "".join(generated_tokens)
+                    if stop_sequences and any(s in gen_text for s in stop_sequences):
+                        stop_reason = "stop_sequence"
+                        break
+
+                    step_num += 1
+
+            if connected:
+                stop_reason = stop_reason or "max_tokens"
+                await _send_json(ws, {
+                    "type": "complete",
+                    "generated_text": "".join(generated_tokens),
+                    "num_tokens": len(generated_tokens),
+                    "stop_reason": stop_reason,
+                    "engine": "llama.cpp",
+                })
+        except Exception as e:
+            log.exception("WS generate error via llama.cpp (session='%s')", name)
+            await _send_json(ws, {"type": "error", "message": str(e)})
+        finally:
+            try:
+                await ws.close()
+            except RuntimeError:
+                pass
+        return
 
     def _tok_display(tokenizer, tid):
         """Convert token ID to display string using raw vocab lookup."""
@@ -345,6 +413,8 @@ async def intervene_ws(ws: WebSocket, name: str):
         await _send_json(ws, {"type": "error", "message": f"Session '{name}' not found"})
         await ws.close()
         return
+
+    mgr.ensure_pytorch(name)
 
     raw = await ws.receive_text()
     config = json.loads(raw)
