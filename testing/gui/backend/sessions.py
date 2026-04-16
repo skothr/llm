@@ -22,6 +22,10 @@ class SessionInfo:
     _op_history: list = field(default_factory=list, repr=False)
     _layer_map: list = field(default_factory=list, repr=False)
     _original_config: object = field(default=None, repr=False)
+    llama: object = field(default=None, repr=False)
+    gguf_path: object = field(default=None, repr=False)
+    source_gguf_path: object = field(default=None, repr=False)
+    dirty: bool = field(default=False)
 
     @property
     def pending_ops(self) -> list:
@@ -208,6 +212,44 @@ class SessionManager:
                  name, model_id, mode, num_layers)
         return info
 
+    def register_llama(
+        self, name: str, llama_engine, tokenizer, *,
+        model_id: str, mode: str, gguf_path,
+    ) -> SessionInfo:
+        """Register a GGUF session with llama.cpp engine (no PyTorch model yet)."""
+        self.validate_name(name)
+        if name in self._sessions:
+            raise ValueError(f"Session '{name}' already exists")
+        info = SessionInfo(
+            name=name, model=None, tokenizer=tokenizer,
+            model_id=model_id, mode=mode,
+            llama=llama_engine,
+            gguf_path=gguf_path,
+            source_gguf_path=gguf_path,
+        )
+        self._sessions[name] = info
+        log.info("Registered GGUF session '%s' (model=%s, llama.cpp only)", name, model_id)
+        return info
+
+    def ensure_pytorch(self, name: str) -> None:
+        """Lazy-load the PyTorch model for a GGUF-only session."""
+        info = self.get(name)
+        if info.model is not None:
+            return
+        if info.gguf_path is None:
+            raise ValueError(f"Session '{name}' has no model and no GGUF path")
+
+        log.info("Lazy-loading PyTorch model for '%s' from %s", name, info.gguf_path)
+        from llm_surgeon.surgery import load_model
+        model, tokenizer = load_model(info.model_id, mode=info.mode)
+        model.eval()
+        model.requires_grad_(False)
+        info.model = model
+        info.tokenizer = tokenizer
+        info._layer_map = list(range(model.config.num_hidden_layers))
+        info._original_config = copy.deepcopy(model.config)
+        log.info("PyTorch model loaded for '%s'", name)
+
     def get(self, name: str) -> SessionInfo:
         if name not in self._sessions:
             raise KeyError(f"Session '{name}' not found")
@@ -218,6 +260,8 @@ class SessionManager:
 
     def device_of(self, name: str) -> str:
         info = self.get(name)
+        if info.model is None:
+            return "llama.cpp" if info.llama is not None else "none"
         return str(next(info.model.parameters()).device)
 
     def _is_dispatch_model(self, info) -> bool:
@@ -253,6 +297,8 @@ class SessionManager:
 
     def to_cpu(self, name: str) -> None:
         info = self.get(name)
+        if info.model is None:
+            return
         if next(info.model.parameters()).device.type == "cpu":
             return
         log.info("Moving session '%s' to CPU", name)
@@ -274,6 +320,8 @@ class SessionManager:
 
     def ensure_on_gpu(self, name: str) -> None:
         info = self.get(name)
+        if info.model is None:
+            return
         if next(info.model.parameters()).device.type == "cuda":
             return
         if not torch.cuda.is_available():
@@ -310,6 +358,8 @@ class SessionManager:
         info = self.get(name)
         log.info("Deleting session '%s'", name)
         del self._sessions[name]
+        if info.llama is not None:
+            info.llama.close()
         del info.model
         gc.collect()
         if torch.cuda.is_available():
