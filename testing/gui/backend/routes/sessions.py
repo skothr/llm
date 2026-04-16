@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 from typing import List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel, field_validator
 
 from ..sessions import SessionManager
@@ -581,6 +581,56 @@ async def get_op_history(name: str):
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
     return {"history": info.op_history}
+
+@router.post("/sessions/{name}/validate")
+async def validate_session(name: str, req: dict = Body(...)):
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+
+    if info.llama is None:
+        raise HTTPException(409, "Session has no llama.cpp engine (not a GGUF model)")
+    if info.model is None:
+        raise HTTPException(409, "PyTorch model not loaded yet — run logit lens first to trigger load")
+
+    prompt = req.get("prompt", "The capital of France is")
+    top_k = req.get("top_k", 10)
+
+    import numpy as np
+    import torch
+    from llm_surgeon.llama_engine import compare_logits
+
+    tokens = info.llama.tokenize(prompt)
+    native_logits = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: info.llama.logits(tokens)
+    )
+
+    mgr.ensure_pytorch(name)
+    mgr.ensure_on_gpu(name)
+    input_ids = torch.tensor([tokens], dtype=torch.long).to(
+        next(info.model.parameters()).device
+    )
+    with torch.no_grad():
+        pytorch_logits = info.model(input_ids=input_ids).logits[0, -1].float().cpu().numpy()
+    mgr.to_cpu(name)
+
+    result = compare_logits(native_logits, pytorch_logits, top_k=top_k)
+
+    def _top_k_tokens(logits, k):
+        probs = np.exp(logits - logits.max())
+        probs /= probs.sum()
+        top_idx = np.argsort(logits)[-k:][::-1]
+        return [
+            {"token": info.llama.detokenize([int(i)]), "logit": float(logits[i]), "prob": float(probs[i])}
+            for i in top_idx
+        ]
+
+    result["native_top_k"] = _top_k_tokens(native_logits, top_k)
+    result["pytorch_top_k"] = _top_k_tokens(pytorch_logits, top_k)
+
+    return result
 
 @router.post("/sessions/{name}/clone")
 async def clone_session(name: str, req: CloneRequest):
