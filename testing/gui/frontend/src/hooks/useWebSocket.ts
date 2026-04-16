@@ -31,7 +31,14 @@ export function useWebSocket() {
       };
 
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data) as WsMessage;
+        let msg: WsMessage;
+        try {
+          msg = JSON.parse(event.data) as WsMessage;
+        } catch {
+          resolvedRef.current.add(key);
+          handlers.onError(`Malformed frame from server: ${String(event.data).slice(0, 120)}`);
+          return;
+        }
         if (msg.type === "data") {
           handlers.onMessage(msg);
         } else if (msg.type === "complete") {
@@ -39,7 +46,8 @@ export function useWebSocket() {
           handlers.onComplete(msg);
         } else if (msg.type === "error") {
           resolvedRef.current.add(key);
-          handlers.onError((msg as { message: string }).message);
+          const raw = (msg as { message?: unknown }).message;
+          handlers.onError(typeof raw === "string" ? raw : "Unknown server error");
         }
       };
 

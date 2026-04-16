@@ -130,6 +130,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
   fetchSessionInfo: async (name: string) => {
     const resp = await fetch(`/api/sessions/${name}/info`);
+    if (!resp.ok) throw await apiError(resp);
     const data = await resp.json();
     set((s) => ({ sessionInfo: { ...s.sessionInfo, [name]: data } }));
   },

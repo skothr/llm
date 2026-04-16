@@ -41,7 +41,10 @@ export function SurgeryParamForm({ operation, params, onChange }: Props) {
                 type="number"
                 step={1}
                 value={Number(params[key] ?? 0)}
-                onChange={(e) => onChange({ ...params, [key]: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value);
+                  onChange({ ...params, [key]: Number.isNaN(n) ? 0 : n });
+                }}
                 style={{ width: 72 }}
               />
             </label>
@@ -54,7 +57,10 @@ export function SurgeryParamForm({ operation, params, onChange }: Props) {
                 type="number"
                 step={0.1}
                 value={Number(params[key] ?? 0)}
-                onChange={(e) => onChange({ ...params, [key]: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const n = parseFloat(e.target.value);
+                  onChange({ ...params, [key]: Number.isNaN(n) ? 0 : n });
+                }}
                 style={{ width: 72 }}
               />
             </label>
