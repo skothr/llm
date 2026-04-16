@@ -283,6 +283,21 @@ export function SessionsPanel() {
             {s.model_id} | {s.mode} | {s.num_layers}L | <span style={{ color: s.device.startsWith("cuda") ? "#4ecdc4" : "#aa8844" }}>{s.device}</span>
             {s.pending_count > 0 && <span style={{ color: "#f0ad4e" }}> | {s.pending_count} staged</span>}
             {s.applied_count > 0 && <span style={{ color: "#5cb85c" }}> | {s.applied_count} applied</span>}
+            {s.engine_llama && (
+              <span style={{ color: s.dirty ? "#f0ad4e" : "#4ecdc4", fontSize: 10, marginLeft: 4 }}>
+                llama.cpp{s.dirty ? " [stale]" : ""}
+              </span>
+            )}
+            {s.engine_pytorch && (
+              <span style={{ color: "#8888cc", fontSize: 10, marginLeft: 4 }}>
+                PyTorch{s.dirty ? " [modified]" : ""}
+              </span>
+            )}
+            {s.engine_llama && !s.engine_pytorch && (
+              <span style={{ color: "#666", fontSize: 10, marginLeft: 4 }}>
+                PyTorch [deferred]
+              </span>
+            )}
           </div>
         </div>
       ))}

@@ -6,6 +6,9 @@ export interface SessionSummary {
   pending_count: number;
   applied_count: number;
   device: string;
+  engine_llama: boolean;
+  engine_pytorch: boolean;
+  dirty: boolean;
 }
 
 export interface StagedOp {
