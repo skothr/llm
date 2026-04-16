@@ -163,6 +163,9 @@ class SessionSummary(BaseModel):
     pending_count: int
     applied_count: int
     device: str
+    engine_llama: bool = False
+    engine_pytorch: bool = False
+    dirty: bool = False
 
 class SessionInfoResponse(BaseModel):
     num_layers: int
@@ -209,20 +212,52 @@ class LoadRequest(BaseModel):
         return v
 
 def _session_summary(info) -> dict:
-    config = info.model.config
+    if info.model is not None:
+        config = info.model.config
+        num_layers = config.num_hidden_layers
+        device = str(next(info.model.parameters()).device)
+    elif info.gguf_path is not None:
+        from llm_surgeon.gguf_reader import gguf_model_meta
+        meta = gguf_model_meta(info.gguf_path)
+        num_layers = meta.get("num_layers", 0)
+        device = "llama.cpp"
+    else:
+        num_layers = 0
+        device = "none"
     return SessionSummary(
         name=info.name,
         model_id=info.model_id,
         mode=info.mode,
-        num_layers=config.num_hidden_layers,
+        num_layers=num_layers,
         pending_count=len(info.pending_ops),
         applied_count=len(info.applied_ops),
-        device=str(next(info.model.parameters()).device),
+        device=device,
+        engine_llama=info.llama is not None,
+        engine_pytorch=info.model is not None,
+        dirty=info.dirty,
     ).model_dump()
 
 def _session_info(info) -> dict:
-    config = info.model.config
-    total_params = sum(p.numel() for p in info.model.parameters())
+    if info.model is not None:
+        config = info.model.config
+        total_params = sum(p.numel() for p in info.model.parameters())
+    elif info.gguf_path is not None:
+        from llm_surgeon.gguf_reader import gguf_model_meta
+        meta = gguf_model_meta(info.gguf_path)
+        class _Meta:
+            pass
+        config = _Meta()
+        config.num_hidden_layers = meta.get("num_layers", 0)
+        config.num_attention_heads = meta.get("num_heads", 0)
+        config.num_key_value_heads = meta.get("num_kv_heads")
+        config.hidden_size = meta.get("hidden_size", 0)
+        config.intermediate_size = meta.get("intermediate_size")
+        config.vocab_size = meta.get("vocab_size")
+        config.max_position_embeddings = meta.get("max_position_embeddings")
+        config.rope_theta = meta.get("rope_theta")
+        total_params = meta.get("total_params", 0)
+    else:
+        return {}
     chat_template = None
     bos_token = None
     eos_token = None
@@ -244,7 +279,7 @@ def _session_info(info) -> dict:
         bos_token=bos_token,
         eos_token=eos_token,
         layer_map=list(info._layer_map),
-        original_num_layers=info._original_config.num_hidden_layers,
+        original_num_layers=info._original_config.num_hidden_layers if info._original_config is not None else config.num_hidden_layers,
         pending_ops=info.pending_ops,
         applied_ops=info.applied_ops,
     ).model_dump()
@@ -284,6 +319,29 @@ async def load_session(req: LoadRequest):
 
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+
+    from llm_surgeon.surgery import _is_ollama_id
+    if _is_ollama_id(req.model_id):
+        from llm_surgeon.gguf_reader import resolve_ollama_blob, _build_tokenizer, GGUFFile
+        from llm_surgeon.llama_engine import LlamaEngine
+        blob = resolve_ollama_blob(req.model_id)
+        if blob is not None:
+            try:
+                llama_eng = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: LlamaEngine(blob)
+                )
+                with GGUFFile(blob) as g:
+                    tokenizer = _build_tokenizer(g.metadata)
+                mgr.register_llama(
+                    req.name, llama_eng, tokenizer,
+                    model_id=req.model_id, mode=req.mode,
+                    gguf_path=blob,
+                )
+                return _session_summary(mgr.get(req.name))
+            except Exception as e:
+                log.exception("Failed to load GGUF model '%s' via llama.cpp", req.model_id)
+                raise HTTPException(500, f"Failed to load GGUF model: {e}")
+
     from llm_surgeon import surgery
 
     log.info("Loading model '%s' as session '%s' (mode=%s)", req.model_id, req.name, req.mode)
