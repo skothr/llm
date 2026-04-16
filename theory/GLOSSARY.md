@@ -10,6 +10,10 @@ Every technical term used in this workspace, defined concisely.
 - **Decoder-Only** — Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN layers.
 - **RNN** — Recurrent Neural Network. Processes sequences one step at a time, maintaining a hidden state. Predecessor to the Transformer.
 - **LSTM** — Long Short-Term Memory. An RNN variant with gating mechanisms to better preserve long-range dependencies.
+- **T5 (Text-to-Text Transfer Transformer)** — Google's encoder-decoder Transformer (Raffel et al., 2019) that frames every NLP task as text-to-text. Originator of several conventions reused elsewhere (e.g., SentencePiece vocab, relative positional bias).
+- **PaLM** — Google's 540B-parameter decoder-only LLM (Chowdhery et al., 2022). Uses SwiGLU, RoPE, parallel attention/FFN layers. Reference point for scaling experiments.
+- **Mistral** — Open-weights decoder-only LLM family from Mistral AI (Jiang et al., 2023). 7B variant uses sliding-window attention and grouped-query attention on top of the LLaMA-style architecture.
+- **Claude** — Anthropic's proprietary decoder-only LLM family. No public architecture paper; structural family shares the decoder-only Transformer lineage.
 
 ## Tokenization
 
@@ -47,7 +51,7 @@ Every technical term used in this workspace, defined concisely.
 - **FFN (Feed-Forward Network)** — A position-wise two-layer (or three-layer for GLU variants) fully-connected network applied independently at each sequence position. Transforms representations within each position, complementing attention which mixes across positions.
 - **ReLU** — Rectified Linear Unit: $\max(0, x)$. Original Transformer activation (2017).
 - **GELU (Gaussian Error Linear Unit)** — Smooth activation $x \cdot \Phi(x)$ where $\Phi$ is the standard normal CDF. Used by GPT-1 (2018).
-- **Swish / SiLU** — Activation function $x \cdot \sigma(x)$ where $\sigma$ is the sigmoid. Equivalent to Swish with $\beta = 1$.
+- **Swish / SiLU** — Activation function $x \cdot \sigma(\beta x)$ where $\sigma$ is the sigmoid. SiLU is the $\beta = 1$ case: $x \cdot \sigma(x)$. Unlike ReLU, it is smooth and non-monotonic around zero.
 - **GLU (Gated Linear Unit)** — Architecture where one linear projection produces content and another produces a gate controlling what passes through.
 - **SwiGLU** — GLU variant using Swish activation for the gate. Uses three weight matrices instead of two; inner dimension reduced by 2/3 to compensate. Used by LLaMA (2023).
 - **Inner Dimension ($d_{\text{ff}}$)** — The expanded hidden size inside the FFN. Typically $4 \times d_{\text{model}}$, or $\frac{2}{3} \times 4 \times d_{\text{model}}$ for SwiGLU.
