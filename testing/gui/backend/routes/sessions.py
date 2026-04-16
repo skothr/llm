@@ -511,6 +511,8 @@ async def commit_surgery(name: str):
 
     info.record_applied(applied)
     info.clear_pending()
+    if info.llama is not None:
+        info.dirty = True
 
     return {
         "applied_count": len(applied),
@@ -556,6 +558,15 @@ async def revert_surgery(name: str):
 
     info.model = model
     info._layer_map = list(range(info._original_config.num_hidden_layers))
+
+    if info.llama is not None and info.gguf_path != info.source_gguf_path:
+        from llm_surgeon.llama_engine import LlamaEngine
+        info.llama.close()
+        info.llama = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: LlamaEngine(info.source_gguf_path)
+        )
+        info.gguf_path = info.source_gguf_path
+    info.dirty = False
 
     return {
         "pending": info.pending_ops,
