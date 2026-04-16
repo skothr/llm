@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
 import type { WsMessage, ProbeOperation } from "../types/api";
+
+const num = (v: string, fallback: number): number => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
 
 // Streaming operations use WebSocket (live per-layer or per-token frames).
 // One-shot inspection ops (influence, attention, residual-norms) go via REST
@@ -29,6 +34,7 @@ export function ProbePanel() {
   const removePendingResult = useStore((s) => s.removePendingResult);
 
   const { connect, cancelAll } = useWebSocket();
+  const localPendingIdsRef = useRef<Set<string>>(new Set());
   const [topK, setTopK] = useState(10);
   const [maxTokens, setMaxTokens] = useState(64);
   const [temperature, setTemperature] = useState(0.0);
@@ -42,15 +48,18 @@ export function ProbePanel() {
     onMessage: (msg: WsMessage) => { updatePendingResult(resultId, msg); },
     onComplete: (msg: WsMessage) => {
       finalizePendingResult(resultId, msg);
+      localPendingIdsRef.current.delete(resultId);
       if (isFinalConnection) setRunning(false);
     },
     onError: (message: string) => {
       finalizePendingResult(resultId);
+      localPendingIdsRef.current.delete(resultId);
       setError(message);
       if (isFinalConnection) setRunning(false);
     },
     onDisconnect: () => {
       finalizePendingResult(resultId);
+      localPendingIdsRef.current.delete(resultId);
       setError("Connection lost");
       if (isFinalConnection) setRunning(false);
     },
@@ -80,6 +89,7 @@ export function ProbePanel() {
     if (isWs) {
       const hasB = !!targetSessionB;
 
+      localPendingIdsRef.current.add(resultId);
       setPendingResult(resultId, {
         id: resultId, operation, sessionName: targetSession, prompt, data: [], timestamp: Date.now(),
       });
@@ -87,6 +97,7 @@ export function ProbePanel() {
 
       if (hasB) {
         const idB = `${resultId}-B`;
+        localPendingIdsRef.current.add(idB);
         setPendingResult(idB, {
           id: idB, operation, sessionName: targetSessionB!, prompt, data: [], timestamp: Date.now(),
         });
@@ -173,12 +184,12 @@ export function ProbePanel() {
 
       {(operation === "logit-lens" || operation === "generate") && (
         <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
-          <label>top_k: <input type="number" value={topK} onChange={(e) => setTopK(+e.target.value)} style={{ width: 64 }} /></label>
+          <label>top_k: <input type="number" value={topK} onChange={(e) => setTopK(num(e.target.value, topK))} style={{ width: 64 }} /></label>
           {operation === "generate" && (
             <>
-              <label>max: <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(+e.target.value)} style={{ width: 64 }} /></label>
-              <label>temp: <input type="number" step="0.1" value={temperature} onChange={(e) => setTemperature(+e.target.value)} style={{ width: 64 }} /></label>
-              <label>rep: <input type="number" step="0.1" value={repPenalty} onChange={(e) => setRepPenalty(+e.target.value)} style={{ width: 64 }} /></label>
+              <label>max: <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(num(e.target.value, maxTokens))} style={{ width: 64 }} /></label>
+              <label>temp: <input type="number" step="0.1" value={temperature} onChange={(e) => setTemperature(num(e.target.value, temperature))} style={{ width: 64 }} /></label>
+              <label>rep: <input type="number" step="0.1" value={repPenalty} onChange={(e) => setRepPenalty(num(e.target.value, repPenalty))} style={{ width: 64 }} /></label>
             </>
           )}
         </div>
@@ -196,9 +207,10 @@ export function ProbePanel() {
         ) : (
           <button onClick={() => {
             cancelAll();
-            for (const id of Object.keys(pendingResults)) {
-              removePendingResult(id);
+            for (const id of localPendingIdsRef.current) {
+              if (pendingResults[id]) removePendingResult(id);
             }
+            localPendingIdsRef.current.clear();
             setRunning(false);
           }} style={{ background: "#6b2020" }}>Cancel</button>
         )}
