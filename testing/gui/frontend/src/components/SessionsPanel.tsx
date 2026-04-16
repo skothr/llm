@@ -96,6 +96,12 @@ export function SessionsPanel() {
   };
 
   useEffect(() => {
+    if (selectedSession && !sessions.some((s) => s.name === selectedSession)) {
+      setSelectedSession(null);
+    }
+  }, [sessions, selectedSession]);
+
+  useEffect(() => {
     if (!selectedOpDef) { setSurgeryParams({}); return; }
     const defaults: Record<string, unknown> = {};
     for (const [key, schema] of Object.entries(selectedOpDef.params)) {
@@ -275,7 +281,11 @@ export function SessionsPanel() {
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <strong>{s.name}</strong>
             <button
-              onClick={(e) => { e.stopPropagation(); deleteSession(s.name); }}
+              onClick={async (e) => {
+                e.stopPropagation();
+                try { await deleteSession(s.name); }
+                catch (err) { setError((err as Error).message); }
+              }}
               style={{ padding: "2px 6px", fontSize: 11 }}
             >x</button>
           </div>
