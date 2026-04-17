@@ -130,6 +130,11 @@ export function ProbePanel() {
   const [promptTokens, setPromptTokens] = useState<number | null>(null);
   const [clampNote, setClampNote] = useState("");
 
+  // Clear the clamp note once the user changes either of the inputs that
+  // caused it. Lingering until the next Run made it easy to miss that the
+  // original reason (e.g. prompt too long) was already resolved.
+  useEffect(() => { if (clampNote) setClampNote(""); }, [prompt, maxTokens]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const isWs = WS_OPS.has(operation);
 
   // Ensure we have info (including max_position_embeddings) for the current
@@ -323,9 +328,20 @@ export function ProbePanel() {
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <style>{hideSpinnerCSS}</style>
       <textarea
-        placeholder="Prompt text..."
+        placeholder="Prompt text... (Ctrl/Cmd+Enter to run)"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
+        onKeyDown={(e) => {
+          // Ctrl/Cmd+Enter runs the probe. Plain Enter still inserts a
+          // newline — prompts often span multiple lines, so we don't steal
+          // that behavior.
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            if (!isRunning && targetSession && !(backendProbed && !backendOnline)) {
+              handleRun();
+            }
+          }
+        }}
         rows={3}
       />
 

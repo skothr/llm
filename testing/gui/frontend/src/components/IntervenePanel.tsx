@@ -177,9 +177,17 @@ export function IntervenePanel() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <textarea
-        placeholder="Prompt text..."
+        placeholder="Prompt text... (Ctrl/Cmd+Enter to run)"
         value={intervenePrompt}
         onChange={(e) => setIntervenePrompt(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            if (!isRunning && interveneSession && interventionSpecs.length > 0 && !(backendProbed && !backendOnline)) {
+              handleRun();
+            }
+          }
+        }}
         rows={3}
       />
 
