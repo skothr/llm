@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
 import type { WsMessage, ProbeOperation } from "../types/api";
@@ -95,6 +95,8 @@ export function ProbePanel() {
   const targetSessionB = useStore((s) => s.targetSessionB);
   const isRunning = useStore((s) => s.isRunning);
   const sessions = useStore((s) => s.sessions);
+  const sessionInfo = useStore((s) => s.sessionInfo);
+  const fetchSessionInfo = useStore((s) => s.fetchSessionInfo);
   const setPrompt = useStore((s) => s.setPrompt);
   const setOperation = useStore((s) => s.setOperation);
   const setTargetSession = useStore((s) => s.setTargetSession);
@@ -122,8 +124,52 @@ export function ProbePanel() {
   const [repPenalty, setRepPenalty] = useState<number>(DEFAULTS.repPenalty);
   const [stopSeqs, setStopSeqs] = useState<string>(DEFAULTS.stopSeqs);
   const [error, setError] = useState("");
+  // Authoritative token count from the session's tokenizer; null until the
+  // first successful fetch (or while re-fetching). Falls back to a char/3.5
+  // estimate if the backend hasn't answered yet, so the "Context" line is
+  // never blank.
+  const [promptTokens, setPromptTokens] = useState<number | null>(null);
+  const [clampNote, setClampNote] = useState("");
 
   const isWs = WS_OPS.has(operation);
+
+  // Ensure we have info (including max_position_embeddings) for the current
+  // target session. SessionsPanel only fetches on click, so a user who picked
+  // a session from the ProbePanel dropdown without visiting SessionsPanel
+  // first would otherwise have no ctx info to display.
+  useEffect(() => {
+    if (!targetSession) return;
+    if (sessionInfo[targetSession]) return;
+    fetchSessionInfo(targetSession).catch(() => { /* backend-offline is handled elsewhere */ });
+  }, [targetSession, sessionInfo, fetchSessionInfo]);
+
+  // Debounce tokenizer hits so typing doesn't spam the backend. 250 ms
+  // means the meter lags user input by a quarter second — imperceptible
+  // given token counts change at roughly word-level granularity anyway.
+  useEffect(() => {
+    if (!targetSession || !prompt) {
+      setPromptTokens(prompt ? null : 0);
+      return;
+    }
+    const t = setTimeout(() => {
+      fetch(`/api/sessions/${targetSession}/tokenize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: prompt }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && typeof d.count === "number") setPromptTokens(d.count); })
+        .catch(() => { /* leave previous count; estimate fallback will kick in */ });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [prompt, targetSession]);
+
+  const ctxInfo = sessionInfo[targetSession];
+  const ctxWindow = ctxInfo?.max_position_embeddings ?? null;
+  // Rough char-based estimate as a fallback — good to ±20 % for English.
+  const estimatedPromptTokens = Math.ceil(prompt.length / 3.5);
+  const promptTokenCount = promptTokens ?? estimatedPromptTokens;
+  const budget = ctxWindow != null ? Math.max(0, ctxWindow - promptTokenCount) : null;
 
   // "At default" flags, used purely for UI dimming: true when the control
   // still holds its initial default value. Bright = user has touched it.
@@ -161,12 +207,12 @@ export function ProbePanel() {
     },
   });
 
-  const getWsConfig = () => {
+  const getWsConfig = (maxTokensOverride?: number) => {
     if (operation === "logit-lens") return { prompt, top_k: displayTopK };
     const seedNum = seed.trim() === "" ? null : Number(seed);
     return {
       prompt,
-      max_tokens: maxTokens,
+      max_tokens: maxTokensOverride ?? maxTokens,
       temperature,
       display_top_k: displayTopK,
       sampling_top_k: samplingTopK,
@@ -186,6 +232,20 @@ export function ProbePanel() {
   const handleRun = () => {
     if (!targetSession) return;
     setError("");
+    setClampNote("");
+
+    // Safety clamp: if the user asked for more new tokens than the context
+    // window can hold, reduce max_tokens to fit and surface a one-line note.
+    // A 4-token cushion covers any BOS/EOS bookkeeping the backend adds.
+    // React state updates are async so we also thread the clamped value
+    // directly into the WS config rather than relying on the re-render.
+    let effectiveMax = maxTokens;
+    if (ctxWindow != null && budget != null && maxTokens > budget) {
+      effectiveMax = Math.max(1, budget - 4);
+      setMaxTokens(effectiveMax);
+      setClampNote(`max capped at ${effectiveMax} to fit ${ctxWindow}-token context`);
+    }
+
     setRunning(true);
 
     const resultId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -201,14 +261,14 @@ export function ProbePanel() {
       setPendingResult(resultId, {
         id: resultId, operation, sessionName: targetSession, prompt, data: [], timestamp: Date.now(),
       });
-      connect(resultId, getWsPath(targetSession), getWsConfig(), makeWsHandlers(resultId));
+      connect(resultId, getWsPath(targetSession), getWsConfig(effectiveMax), makeWsHandlers(resultId));
 
       if (hasB) {
         const idB = `${resultId}-B`;
         setPendingResult(idB, {
           id: idB, operation, sessionName: targetSessionB!, prompt, data: [], timestamp: Date.now(),
         });
-        connect(idB, getWsPath(targetSessionB!), getWsConfig(), makeWsHandlers(idB));
+        connect(idB, getWsPath(targetSessionB!), getWsConfig(effectiveMax), makeWsHandlers(idB));
       }
     } else {
       const fetchInspect = (session: string, id: string) => {
@@ -318,6 +378,44 @@ export function ProbePanel() {
               placeholder="comma-separated, \n for newline"
               style={dim(off.stop, { ...textInputStyle, gridColumn: "2 / -1" })} />
           </div>
+
+          {ctxWindow != null && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 6,
+              fontSize: 11,
+              fontFamily: "monospace",
+              color: "#8888aa",
+              padding: "2px 0",
+            }}>
+              <span>
+                ctx {ctxWindow.toLocaleString()}
+                {" · "}prompt {promptTokens == null ? `~${estimatedPromptTokens}` : promptTokens}
+                {budget != null && <> · budget <span style={{
+                  color: maxTokens > budget ? "#ff6b6b" : budget < 32 ? "#f0ad4e" : "#8888aa",
+                }}>{budget}</span></>}
+              </span>
+              <button
+                title="Set max to the remaining budget (context window minus prompt)."
+                onClick={() => {
+                  if (budget == null) return;
+                  setMaxTokens(Math.max(1, budget - 4));
+                }}
+                disabled={budget == null || budget < 2}
+                style={{
+                  fontSize: 10, padding: "1px 6px",
+                  background: "#1a2540", border: "1px solid #2a4a7a",
+                  cursor: budget == null || budget < 2 ? "not-allowed" : "pointer",
+                }}
+              >fill</button>
+            </div>
+          )}
+
+          {clampNote && (
+            <div style={{ fontSize: 11, color: "#f0ad4e" }}>{clampNote}</div>
+          )}
 
           <div style={sectionHeaderStyle}>Sampling</div>
           <div style={paramGridStyle}>
