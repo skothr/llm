@@ -63,10 +63,21 @@ const textInputStyle: React.CSSProperties = {
   fontFamily: "monospace",
 };
 
-// When a sampler knob is at its "identity" sentinel value (top_k=0, top_p=1.0,
-// min_p=0.0, rep=1.0, empty stop) it's a no-op on the distribution and the
-// user is effectively sampling one level simpler. Dim the label + input so
-// the live knobs pop and the pass-through ones visibly fade.
+// Every parameter has a well-defined default. When a knob is at its default
+// we dim the label + input so tweaked settings visibly pop. The defaults
+// double as initial state below — single source of truth.
+const DEFAULTS = {
+  displayTopK: 10,
+  maxTokens: 64,
+  temperature: 0.0,
+  samplingTopK: 0,
+  topP: 1.0,
+  minP: 0.0,
+  seed: "",
+  repPenalty: 1.0,
+  stopSeqs: "\\n\\n",
+} as const;
+
 const offColor = "#55556a";
 const dim = (off: boolean, base: React.CSSProperties): React.CSSProperties =>
   off ? { ...base, color: offColor } : base;
@@ -101,28 +112,32 @@ export function ProbePanel() {
   // displayTopK = how many candidate tokens to stream alongside each step
   // (UI display only, e.g. the top-k popover in GenerationOutput).
   // Real sampling cutoffs live in samplingTopK / topP / minP below.
-  const [displayTopK, setDisplayTopK] = useState(10);
-  const [maxTokens, setMaxTokens] = useState(64);
-  const [temperature, setTemperature] = useState(0.0);
-  const [samplingTopK, setSamplingTopK] = useState(0);
-  const [topP, setTopP] = useState(1.0);
-  const [minP, setMinP] = useState(0.0);
-  const [seed, setSeed] = useState("");
-  const [repPenalty, setRepPenalty] = useState(1.0);
-  const [stopSeqs, setStopSeqs] = useState("\\n\\n");
+  const [displayTopK, setDisplayTopK] = useState<number>(DEFAULTS.displayTopK);
+  const [maxTokens, setMaxTokens] = useState<number>(DEFAULTS.maxTokens);
+  const [temperature, setTemperature] = useState<number>(DEFAULTS.temperature);
+  const [samplingTopK, setSamplingTopK] = useState<number>(DEFAULTS.samplingTopK);
+  const [topP, setTopP] = useState<number>(DEFAULTS.topP);
+  const [minP, setMinP] = useState<number>(DEFAULTS.minP);
+  const [seed, setSeed] = useState<string>(DEFAULTS.seed);
+  const [repPenalty, setRepPenalty] = useState<number>(DEFAULTS.repPenalty);
+  const [stopSeqs, setStopSeqs] = useState<string>(DEFAULTS.stopSeqs);
   const [error, setError] = useState("");
 
   const isWs = WS_OPS.has(operation);
 
-  // Identity-sentinel flags: true when the control would leave the
-  // distribution (or behavior) untouched. Used purely for dimming the UI —
-  // the backend receives the raw values regardless.
+  // "At default" flags, used purely for UI dimming: true when the control
+  // still holds its initial default value. Bright = user has touched it.
+  // The backend receives the raw values regardless.
   const off = {
-    top_k: samplingTopK <= 0,
-    top_p: topP >= 1.0,
-    min_p: minP <= 0.0,
-    rep: repPenalty === 1.0,
-    stop: stopSeqs.trim() === "",
+    max: maxTokens === DEFAULTS.maxTokens,
+    temp: temperature === DEFAULTS.temperature,
+    seed: seed === DEFAULTS.seed,
+    top_k: samplingTopK === DEFAULTS.samplingTopK,
+    top_p: topP === DEFAULTS.topP,
+    min_p: minP === DEFAULTS.minP,
+    rep: repPenalty === DEFAULTS.repPenalty,
+    show: displayTopK === DEFAULTS.displayTopK,
+    stop: stopSeqs === DEFAULTS.stopSeqs,
   };
 
   const makeWsHandlers = (resultId: string) => ({
@@ -277,10 +292,10 @@ export function ProbePanel() {
 
       {operation === "logit-lens" && (
         <div style={paramGridStyle}>
-          <label style={labelStyle} title="Number of candidate tokens streamed per layer (shown in the heatmap).">top_k</label>
+          <label style={dim(off.show, labelStyle)} title="Number of candidate tokens streamed per layer (shown in the heatmap).">top_k</label>
           <input className="num-input" type="number" value={displayTopK}
             onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
-            style={numInputStyle} />
+            style={dim(off.show, numInputStyle)} />
         </div>
       )}
 
@@ -288,10 +303,10 @@ export function ProbePanel() {
         <>
           <div style={sectionHeaderStyle}>Output</div>
           <div style={paramGridStyle}>
-            <label style={labelStyle} title="Maximum new tokens to generate before stopping.">max</label>
+            <label style={dim(off.max, labelStyle)} title="Maximum new tokens to generate before stopping.">max</label>
             <input className="num-input" type="number" value={maxTokens}
               onChange={(e) => setMaxTokens(num(e.target.value, maxTokens))}
-              style={numInputStyle} />
+              style={dim(off.max, numInputStyle)} />
             <label style={dim(off.rep, labelStyle)} title="Repetition penalty (1.0 = no penalty).">rep</label>
             <input className="num-input" type="number" step="0.1" value={repPenalty}
               onChange={(e) => setRepPenalty(num(e.target.value, repPenalty))}
@@ -306,15 +321,15 @@ export function ProbePanel() {
 
           <div style={sectionHeaderStyle}>Sampling</div>
           <div style={paramGridStyle}>
-            <label style={labelStyle} title="Softmax sharpness. 0 = greedy argmax, 1 = untouched, >1 = flatter distribution.">temp</label>
+            <label style={dim(off.temp, labelStyle)} title="Softmax sharpness. 0 = greedy argmax, 1 = untouched, >1 = flatter distribution.">temp</label>
             <input className="num-input" type="number" step="0.1" value={temperature}
               onChange={(e) => setTemperature(num(e.target.value, temperature))}
-              style={numInputStyle} />
-            <label style={labelStyle} title="Integer seed for reproducible sampling (temp > 0 only). Blank = random each run.">seed</label>
+              style={dim(off.temp, numInputStyle)} />
+            <label style={dim(off.seed, labelStyle)} title="Integer seed for reproducible sampling (temp > 0 only). Blank = random each run.">seed</label>
             <input type="text" value={seed}
               onChange={(e) => setSeed(e.target.value)}
               placeholder="random"
-              style={textInputStyle} />
+              style={dim(off.seed, textInputStyle)} />
 
             <label style={dim(off.top_k, labelStyle)} title="Truncate sampling to the top-K logits before softmax. 0 disables.">top_k</label>
             <input className="num-input" type="number" value={samplingTopK}
@@ -329,10 +344,10 @@ export function ProbePanel() {
             <input className="num-input" type="number" step="0.01" min="0" max="1" value={minP}
               onChange={(e) => setMinP(num(e.target.value, minP))}
               style={dim(off.min_p, numInputStyle)} />
-            <label style={labelStyle} title="How many candidate tokens to stream per step for the display popover. Does not affect sampling.">show</label>
+            <label style={dim(off.show, labelStyle)} title="How many candidate tokens to stream per step for the display popover. Does not affect sampling.">show</label>
             <input className="num-input" type="number" value={displayTopK}
               onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
-              style={numInputStyle} />
+              style={dim(off.show, numInputStyle)} />
           </div>
         </>
       )}
