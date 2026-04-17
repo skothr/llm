@@ -23,6 +23,17 @@ async function apiError(resp: Response): Promise<Error> {
   return new Error(JSON.stringify(detail));
 }
 
+async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (e) {
+    if (e instanceof TypeError) {
+      useStore.setState({ backendOnline: false });
+    }
+    throw e;
+  }
+}
+
 interface StoreState {
   activeTab: ConfigTab;
   backendOnline: boolean;
@@ -117,7 +128,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
   fetchSessions: async () => {
     try {
-      const resp = await fetch("/api/sessions");
+      const resp = await apiFetch("/api/sessions");
       if (!resp.ok) {
         set({ backendOnline: false });
         return;
@@ -137,7 +148,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   fetchSessionInfo: async (name: string) => {
-    const resp = await fetch(`/api/sessions/${name}/info`);
+    const resp = await apiFetch(`/api/sessions/${name}/info`);
     if (!resp.ok) throw await apiError(resp);
     const data = await resp.json();
     set((s) => ({ sessionInfo: { ...s.sessionInfo, [name]: data } }));
@@ -145,7 +156,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
   fetchSurgeryOps: async () => {
     try {
-      const resp = await fetch("/api/surgery/operations");
+      const resp = await apiFetch("/api/surgery/operations");
       const data = await resp.json();
       set({ surgeryOps: data });
     } catch { /* backend not ready */ }
@@ -153,14 +164,14 @@ export const useStore = create<StoreState>((set, get) => ({
 
   fetchAvailableModels: async () => {
     try {
-      const resp = await fetch("/api/models/available");
+      const resp = await apiFetch("/api/models/available");
       const data: AvailableModel[] = await resp.json();
       set({ availableModels: data });
     } catch { /* backend not ready */ }
   },
 
   deleteSession: async (name: string) => {
-    const resp = await fetch(`/api/sessions/${name}`, { method: "DELETE" });
+    const resp = await apiFetch(`/api/sessions/${name}`, { method: "DELETE" });
     if (!resp.ok) throw await apiError(resp);
     set((s) => {
       const { [name]: _removed, ...remainingInfo } = s.sessionInfo;
@@ -180,7 +191,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   applySurgery: async (name: string, operation: string, params: Record<string, unknown>) => {
-    const resp = await fetch(`/api/sessions/${name}/surgery`, {
+    const resp = await apiFetch(`/api/sessions/${name}/surgery`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ operation, params }),
@@ -191,35 +202,35 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   undoSurgery: async (name: string) => {
-    const resp = await fetch(`/api/sessions/${name}/surgery/last`, { method: "DELETE" });
+    const resp = await apiFetch(`/api/sessions/${name}/surgery/last`, { method: "DELETE" });
     if (!resp.ok) throw await apiError(resp);
     await get().fetchSessions();
     await get().fetchSessionInfo(name);
   },
 
   deleteStagedOp: async (name: string, index: number) => {
-    const resp = await fetch(`/api/sessions/${name}/surgery/${index}`, { method: "DELETE" });
+    const resp = await apiFetch(`/api/sessions/${name}/surgery/${index}`, { method: "DELETE" });
     if (!resp.ok) throw await apiError(resp);
     await get().fetchSessions();
     await get().fetchSessionInfo(name);
   },
 
   commitSurgery: async (name: string) => {
-    const resp = await fetch(`/api/sessions/${name}/surgery/commit`, { method: "POST" });
+    const resp = await apiFetch(`/api/sessions/${name}/surgery/commit`, { method: "POST" });
     if (!resp.ok) throw await apiError(resp);
     await get().fetchSessions();
     await get().fetchSessionInfo(name);
   },
 
   revertSurgery: async (name: string) => {
-    const resp = await fetch(`/api/sessions/${name}/surgery/revert`, { method: "POST" });
+    const resp = await apiFetch(`/api/sessions/${name}/surgery/revert`, { method: "POST" });
     if (!resp.ok) throw await apiError(resp);
     await get().fetchSessions();
     await get().fetchSessionInfo(name);
   },
 
   cloneSession: async (name: string, targetName: string) => {
-    const resp = await fetch(`/api/sessions/${name}/clone`, {
+    const resp = await apiFetch(`/api/sessions/${name}/clone`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target_name: targetName }),
