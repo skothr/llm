@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SurgeryOperation } from "../types/api";
 
 interface Props {
@@ -10,6 +10,11 @@ interface Props {
 export function SurgeryParamForm({ operation, params, onChange }: Props) {
   const [showJson, setShowJson] = useState(false);
   const [jsonText, setJsonText] = useState(JSON.stringify(params, null, 2));
+
+  useEffect(() => {
+    setJsonText(JSON.stringify(params, null, 2));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operation.name]);
 
   if (showJson) {
     return (
