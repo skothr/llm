@@ -1,10 +1,52 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SurgeryOperation } from "../types/api";
 
 interface Props {
   operation: SurgeryOperation;
   params: Record<string, unknown>;
   onChange: (params: Record<string, unknown>) => void;
+}
+
+function parseIntList(s: string): number[] {
+  return s.split(",")
+    .map((t) => t.trim())
+    .filter((t) => /^-?\d+$/.test(t))
+    .map((t) => parseInt(t, 10));
+}
+
+export function ArrayInput({ value, onChange, style }: {
+  value: number[];
+  onChange: (next: number[]) => void;
+  style?: React.CSSProperties;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [raw, setRaw] = useState(value.join(", "));
+
+  useEffect(() => {
+    const next = value.join(", ");
+    if (document.activeElement !== inputRef.current && next !== raw) {
+      setRaw(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <input
+      ref={inputRef}
+      value={raw}
+      onChange={(e) => {
+        setRaw(e.target.value);
+        onChange(parseIntList(e.target.value));
+      }}
+      onBlur={() => {
+        const parsed = parseIntList(raw);
+        setRaw(parsed.join(", "));
+        onChange(parsed);
+      }}
+      placeholder="0, 1, 2"
+      style={style}
+    />
+  );
 }
 
 export function SurgeryParamForm({ operation, params, onChange }: Props) {
@@ -74,13 +116,9 @@ export function SurgeryParamForm({ operation, params, onChange }: Props) {
         if (type === "array") {
           return (
             <label key={key} style={{ display: "block", fontSize: 12, marginBottom: 4 }}>
-              {key}: <input
-                value={Array.isArray(params[key]) ? (params[key] as number[]).join(", ") : ""}
-                onChange={(e) => onChange({
-                  ...params,
-                  [key]: e.target.value.split(",").map((s) => parseInt(s.trim())).filter((n) => !isNaN(n)),
-                })}
-                placeholder="0, 1, 2"
+              {key}: <ArrayInput
+                value={Array.isArray(params[key]) ? (params[key] as number[]) : []}
+                onChange={(next) => onChange({ ...params, [key]: next })}
                 style={{ width: "100%" }}
               />
             </label>
