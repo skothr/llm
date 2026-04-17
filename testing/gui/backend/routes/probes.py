@@ -509,12 +509,17 @@ async def generate_ws(ws: WebSocket, name: str):
                 log.error("WS generate: GPU error for '%s': %s", name, e)
                 await _send_json(ws, {"type": "error", "message": f"GPU error: {e}"})
                 return
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             inputs = info.tokenizer(prompt, return_tensors="pt")
             device = next(info.model.parameters()).device
             input_ids = inputs["input_ids"].to(device)
             all_token_ids = input_ids[0].tolist()
-            prev_text = info.tokenizer.decode(all_token_ids, skip_special_tokens=True)
+            # Track generated tokens separately so the per-step decode is O(k)
+            # over generated length, not O(n) over prompt+generated. A 1000-
+            # token prompt + 256 max_tokens was paying ~290k decode ops under
+            # the old all_token_ids slice; now it's ~33k.
+            prompt_token_count = len(all_token_ids)
+            prev_gen_text = ""
             past_key_values = None
 
             for step in range(max_tokens):
@@ -600,11 +605,13 @@ async def generate_ws(ws: WebSocket, name: str):
                     break
 
                 all_token_ids.append(next_id_int)
-                new_text = info.tokenizer.decode(all_token_ids, skip_special_tokens=True)
-                token_str = new_text[len(prev_text):]
+                new_gen_text = info.tokenizer.decode(
+                    all_token_ids[prompt_token_count:], skip_special_tokens=True
+                )
+                token_str = new_gen_text[len(prev_gen_text):]
                 if not token_str:
                     token_str = _tok_display(info.tokenizer, next_token[0, 0])
-                prev_text = new_text
+                prev_gen_text = new_gen_text
 
                 visible, hit, matched = _check_stop(gen_accumulated, token_str, stop_sequences)
 

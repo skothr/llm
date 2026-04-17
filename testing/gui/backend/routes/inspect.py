@@ -38,7 +38,7 @@ async def inspect_influence(name: str, req: InfluenceRequest):
     from llm_surgeon import inspect as insp
 
     try:
-        scores = await asyncio.get_event_loop().run_in_executor(
+        scores = await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: insp.block_influence(info.model, info.tokenizer, req.prompts),
         )
@@ -59,7 +59,7 @@ async def inspect_attention(name: str, req: AttentionRequest):
     from llm_surgeon import inspect as insp
 
     try:
-        entropy = await asyncio.get_event_loop().run_in_executor(
+        entropy = await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: insp.attention_entropy(info.model, info.tokenizer, req.prompt),
         )
@@ -80,7 +80,7 @@ async def inspect_residual_norms(name: str, req: ResidualNormsRequest):
     from llm_surgeon import inspect as insp
 
     try:
-        norms = await asyncio.get_event_loop().run_in_executor(
+        norms = await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: insp.residual_stream_norms(info.model, info.tokenizer, req.prompt),
         )
