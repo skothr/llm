@@ -139,6 +139,124 @@ async def logit_lens_ws(ws: WebSocket, name: str):
             pass
 
 
+@router.websocket("/sessions/{name}/compare-logit-lens")
+async def compare_logit_lens_ws(ws: WebSocket, name: str):
+    """Exact A/B logit-lens comparison. Config must include `with_session` (the
+    B-side session name). Streams one frame per aligned (original_layer, sublayer)
+    with per-position A/B top-k, per-side metrics, and pairwise KL/JS/cosine/delta.
+    """
+    await ws.accept()
+    log.info("WS compare-logit-lens connected (A='%s')", name)
+    mgr = get_manager()
+
+    try:
+        raw = await ws.receive_text()
+        config = json.loads(raw)
+    except json.JSONDecodeError as e:
+        await _send_json(ws, {"type": "error", "message": f"Invalid JSON config: {e}"})
+        await ws.close()
+        return
+    except WebSocketDisconnect:
+        return
+
+    name_b = config.get("with_session")
+    if not name_b or not isinstance(name_b, str):
+        await _send_json(ws, {"type": "error", "message": "config.with_session is required"})
+        await ws.close()
+        return
+    if name_b == name:
+        await _send_json(ws, {"type": "error", "message": "with_session must differ from the primary session"})
+        await ws.close()
+        return
+
+    prompt = config.get("prompt", "")
+    top_k = config.get("top_k", 10)
+
+    try:
+        info_a = mgr.get(name)
+        info_b = mgr.get(name_b)
+    except KeyError as e:
+        await _send_json(ws, {"type": "error", "message": f"Session not found: {e}"})
+        await ws.close()
+        return
+
+    try:
+        mgr.ensure_pytorch(name)
+        mgr.ensure_pytorch(name_b)
+    except Exception as e:
+        log.exception("WS compare-logit-lens: ensure_pytorch failed")
+        await _send_json(ws, {"type": "error", "message": f"Failed to load PyTorch model: {e}"})
+        await ws.close()
+        return
+
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+    from llm_surgeon import probe
+
+    connected = True
+    loop = asyncio.get_running_loop()
+
+    def on_layer(orig_layer, sublayer, data):
+        nonlocal connected
+        if not connected:
+            return
+        msg = {
+            "type": "data",
+            "original_layer": orig_layer,
+            "sublayer": sublayer,
+            "cells": data.get("cells", []),
+        }
+        fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
+        try:
+            ok = fut.result(timeout=10)
+        except Exception:
+            ok = False
+        if not ok:
+            connected = False
+
+    # Any dirty session needs its pytorch model to be up-to-date. ensure_pytorch
+    # already rebuilt weights from the manifest, so dirty only signals a GGUF
+    # re-export is pending — which doesn't affect logit lens (PyTorch path).
+
+    # Order locks by session name to prevent deadlock with any other handler
+    # that might also hold two session locks.
+    first, second = sorted([(name, info_a), (name_b, info_b)], key=lambda x: x[0])
+
+    try:
+        async with first[1].lock:
+            async with second[1].lock:
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: probe.compare_logit_lens(
+                        info_a.model, info_b.model, info_a.tokenizer, prompt,
+                        top_k=top_k, on_layer=on_layer,
+                        layer_map_a=list(info_a._layer_map),
+                        layer_map_b=list(info_b._layer_map),
+                    ),
+                )
+
+        if connected:
+            await _send_json(ws, {
+                "type": "complete",
+                "summary": {
+                    "prompt_tokens": result.prompt_tokens,
+                    "aligned_keys": [list(k) for k in result.aligned_keys],
+                    "num_aligned": len(result.aligned_keys),
+                },
+            })
+
+    except Exception as e:
+        log.exception("WS compare-logit-lens error")
+        await _send_json(ws, {"type": "error", "message": str(e)})
+    finally:
+        log.info("WS compare-logit-lens disconnected (A='%s', B='%s')", name, name_b)
+        try:
+            await ws.close()
+        except RuntimeError:
+            pass
+
+
 @router.websocket("/sessions/{name}/generate")
 async def generate_ws(ws: WebSocket, name: str):
     await ws.accept()

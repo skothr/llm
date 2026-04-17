@@ -62,6 +62,27 @@ class LogitLensResult:
 
 
 @dataclass
+class CompareLogitLensResult:
+    """Result of comparing two models' logit-lens outputs on the same prompt.
+
+    comparisons is a list of per-cell dicts with shape:
+        {
+          "original_layer": int,
+          "sublayer": str,
+          "position": int,
+          "top_k_a": [...],       # same shape as LogitLensResult.predictions[i]["top_k"]
+          "top_k_b": [...],
+          "metrics_a": {...},     # _cell_metrics output for side A
+          "metrics_b": {...},
+          "compare": {...},       # _pair_metrics output
+        }
+    """
+    comparisons: List[Dict]
+    prompt_tokens: List[str]
+    aligned_keys: List[Tuple[int, str]]  # (original_layer, sublayer) pairs that were compared
+
+
+@dataclass
 class HiddenStates:
     states: Dict[Tuple[int, str], torch.Tensor]
     prompt_tokens: List[str]
@@ -198,6 +219,40 @@ def _cell_metrics(pos_probs: torch.Tensor) -> Dict[str, float]:
     }
 
 
+def _pair_metrics(p_a: torch.Tensor, p_b: torch.Tensor) -> Dict[str, float]:
+    """Per-position comparison metrics between two softmax distributions.
+
+    kl_ab: KL(A||B) in nats (unbounded above).
+    js:    Jensen-Shannon divergence in nats (symmetric, 0 <= js <= log 2).
+    cosine: cosine similarity of the two full-vocab distributions in [-1, 1];
+            always non-negative in practice since both inputs are non-negative.
+    top1_delta_prob: p_a(argmax p_a) - p_b(argmax p_b). Signed.
+    top1_match: whether the two argmax tokens agree.
+    """
+    # A small floor on B (and on the mixture) avoids -inf when A has support
+    # where B vanishes. xlogy(0, 0) = 0 keeps KL(A||A) = 0 numerically.
+    b_safe = p_b.clamp(min=1e-45).log()
+    kl_ab = (torch.special.xlogy(p_a, p_a) - p_a * b_safe).sum()
+
+    m = 0.5 * (p_a + p_b)
+    m_safe = m.clamp(min=1e-45).log()
+    kl_am = (torch.special.xlogy(p_a, p_a) - p_a * m_safe).sum()
+    kl_bm = (torch.special.xlogy(p_b, p_b) - p_b * m_safe).sum()
+    js = 0.5 * (kl_am + kl_bm)
+
+    cos = F.cosine_similarity(p_a.unsqueeze(0), p_b.unsqueeze(0)).item()
+
+    top1_a = int(p_a.argmax().item())
+    top1_b = int(p_b.argmax().item())
+    return {
+        "kl_ab": kl_ab.item(),
+        "js": js.item(),
+        "cosine": cos,
+        "top1_delta_prob": (p_a[top1_a] - p_b[top1_b]).item(),
+        "top1_match": top1_a == top1_b,
+    }
+
+
 def _project_to_logits(model, hidden_state: torch.Tensor) -> torch.Tensor:
     """Apply final RMSNorm + lm_head to a hidden state tensor.
 
@@ -286,6 +341,105 @@ def logit_lens(
         predictions=predictions,
         logits=logits_dict,
         prompt_tokens=prompt_tokens,
+    )
+
+
+def compare_logit_lens(
+    model_a,
+    model_b,
+    tokenizer,
+    prompt: str,
+    top_k: int = 10,
+    on_layer: Optional[Callable[[int, str, Dict], None]] = None,
+    layer_map_a: Optional[List[int]] = None,
+    layer_map_b: Optional[List[int]] = None,
+) -> CompareLogitLensResult:
+    """Run logit lens on two models over the same prompt, compute exact per-cell
+    comparison metrics (KL, JS, cosine, top-1 delta/match) from the FULL-vocab
+    softmax distributions, and stream results per aligned (original_layer, sublayer).
+
+    Alignment is by ORIGINAL layer index. Callers with compressed models should
+    pass layer_map_a / layer_map_b where `layer_map_x[compressed_idx] == original_idx`.
+    If a map is None, the compressed index IS the original index (identity).
+
+    The tokenizer must be shared by both models; KL and JS over different vocabs
+    are ill-defined.
+    """
+    captured_a, prompt_tokens = _capture_residual_stream(
+        model_a, tokenizer, prompt, sublayers=("attn", "ffn"),
+    )
+    captured_b, _ = _capture_residual_stream(
+        model_b, tokenizer, prompt, sublayers=("attn", "ffn"),
+    )
+
+    def _map(layer_map, idx):
+        if layer_map is None:
+            return idx
+        return layer_map[idx] if 0 <= idx < len(layer_map) else idx
+
+    # Build reverse lookups: (original_layer, sublayer) -> compressed key.
+    reverse_a: Dict[Tuple[int, str], Tuple[int, str]] = {}
+    for (idx, sub) in captured_a.keys():
+        reverse_a[(_map(layer_map_a, idx), sub)] = (idx, sub)
+    reverse_b: Dict[Tuple[int, str], Tuple[int, str]] = {}
+    for (idx, sub) in captured_b.keys():
+        reverse_b[(_map(layer_map_b, idx), sub)] = (idx, sub)
+
+    # Preserve original-layer order; (attn, ffn) ordering within each layer.
+    sort_key = lambda k: (k[0], 0 if k[1] == "attn" else 1)
+    aligned_keys = sorted(set(reverse_a.keys()) & set(reverse_b.keys()), key=sort_key)
+
+    seq_len = len(prompt_tokens)
+    positions = list(range(seq_len))
+
+    comparisons: List[Dict] = []
+    for (orig_layer, sublayer) in aligned_keys:
+        hidden_a = captured_a[reverse_a[(orig_layer, sublayer)]]
+        hidden_b = captured_b[reverse_b[(orig_layer, sublayer)]]
+
+        with torch.no_grad():
+            logits_a = _project_to_logits(model_a, hidden_a)
+            logits_b = _project_to_logits(model_b, hidden_b)
+        probs_a = F.softmax(logits_a.float(), dim=-1)
+        probs_b = F.softmax(logits_b.float(), dim=-1)
+
+        cb_frames = []
+        for pos in positions:
+            pa = probs_a[pos]
+            pb = probs_b[pos]
+
+            def _topk(probs, k):
+                vals, ids = probs.topk(min(k, probs.shape[0]))
+                return [
+                    {
+                        "token": tokenizer.decode([int(tid)]),
+                        "token_id": int(tid),
+                        "prob": float(p),
+                        "rank": rank,
+                    }
+                    for rank, (tid, p) in enumerate(zip(ids.tolist(), vals.tolist()))
+                ]
+
+            cell = {
+                "original_layer": orig_layer,
+                "sublayer": sublayer,
+                "position": pos,
+                "top_k_a": _topk(pa, top_k),
+                "top_k_b": _topk(pb, top_k),
+                "metrics_a": _cell_metrics(pa),
+                "metrics_b": _cell_metrics(pb),
+                "compare": _pair_metrics(pa, pb),
+            }
+            comparisons.append(cell)
+            cb_frames.append(cell)
+
+        if on_layer is not None:
+            on_layer(orig_layer, sublayer, {"cells": cb_frames})
+
+    return CompareLogitLensResult(
+        comparisons=comparisons,
+        prompt_tokens=prompt_tokens,
+        aligned_keys=aligned_keys,
     )
 
 
