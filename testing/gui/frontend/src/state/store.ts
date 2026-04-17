@@ -657,7 +657,8 @@ export const useStore = create<StoreState>()(
         if (!r) return s;
         // Intervene results live in their own tab; probe results land
         // back in the probe panel. We always copy the prompt + session;
-        // only probe ops set the `operation` knob.
+        // probe ops also restore the operation knob + sampling params,
+        // intervene ops restore intervention specs + capture flag.
         const isIntervene = r.operation === "intervene";
         const patch: Partial<StoreState> = isIntervene
           ? {
@@ -671,10 +672,22 @@ export const useStore = create<StoreState>()(
               targetSession: r.sessionName,
               operation: r.operation as ProbeOperation,
             };
-        // runParams is an opaque Record in the type; if present we merge
-        // it into the current sampling params (partial-safe).
+
         if (r.runParams && typeof r.runParams === "object") {
-          patch.samplingParams = { ...s.samplingParams, ...(r.runParams as Partial<SamplingParams>) };
+          const rp = r.runParams as Record<string, unknown>;
+          if (isIntervene) {
+            if (Array.isArray(rp.interventionSpecs)) {
+              patch.interventionSpecs = rp.interventionSpecs as InterventionSpec[];
+            }
+            if (typeof rp.captureLogitLens === "boolean") {
+              patch.captureLogitLens = rp.captureLogitLens;
+            }
+          } else {
+            // Probe-op runParams = SamplingParams shape. Partial-safe
+            // merge so a new field we added later doesn't throw on an
+            // older persisted result.
+            patch.samplingParams = { ...s.samplingParams, ...(rp as Partial<SamplingParams>) };
+          }
         }
         return patch;
       }),

@@ -462,6 +462,90 @@ export function ProbePanel() {
     }
   };
 
+  // Fan out across every loaded session with the current prompt+params.
+  // Intentionally does NOT combine with seed/knob sweeps or A/B — those
+  // already fan out along a different axis. Seed fan-out with the
+  // all-sessions fan-out would multiply run counts combinatorially and
+  // is rarely what a researcher wants at the keystroke of a single button.
+  const handleRunAll = () => {
+    if (sessions.length === 0) return;
+    setError("");
+    setClampNote("");
+    setRunning(true);
+
+    const baseId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const runParamsSnapshot = { ...samplingParams };
+    // Keep the clamp logic modest here: each session may have a
+    // different ctx window, and re-clamping per session would need
+    // awaited fetchSessionInfo calls. Callers doing serious batch work
+    // should set max_tokens conservatively or run individually per
+    // session. Surface a note if the *current* session's window is
+    // tighter than the requested max.
+    let effectiveMax = maxTokens;
+    if (ctxWindow != null && budget != null && maxTokens > budget) {
+      effectiveMax = Math.max(1, budget - 4);
+      setMaxTokens(effectiveMax);
+      setClampNote(`max capped at ${effectiveMax} (tightest known ctx=${ctxWindow})`);
+    }
+
+    if (isWs) {
+      sessions.forEach((s, i) => {
+        const childId = `${baseId}-all-${i}`;
+        localPendingIdsRef.current.add(childId);
+        setPendingResult(childId, {
+          id: childId,
+          operation,
+          sessionName: s.name,
+          prompt,
+          data: [],
+          timestamp: Date.now(),
+          isB: false,
+          runParams: runParamsSnapshot,
+        });
+        connect(childId, getWsPath(s.name), getWsConfig(effectiveMax), makeWsHandlers(childId), s.name);
+      });
+    } else {
+      // REST path: one POST per session; aggregate errors.
+      const fetches = sessions.map(async (s, i) => {
+        const childId = `${baseId}-all-${i}`;
+        let url = "";
+        let body: unknown = {};
+        if (operation === "influence") {
+          url = `/api/sessions/${s.name}/inspect/influence`;
+          body = { prompts: [prompt] };
+        } else if (operation === "attention") {
+          url = `/api/sessions/${s.name}/inspect/attention`;
+          body = { prompt };
+        } else if (operation === "residual-norms") {
+          url = `/api/sessions/${s.name}/inspect/residual-norms`;
+          body = { prompt };
+        } else {
+          throw new Error(`Unsupported REST operation: ${operation}`);
+        }
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const text = await r.text().catch(() => r.statusText);
+          throw new Error(`${s.name}: ${r.status} ${text || r.statusText}`);
+        }
+        const data = await r.json();
+        addResult({
+          id: childId, operation, sessionName: s.name, prompt,
+          data: [{ type: "complete" as const, ...data }],
+          timestamp: Date.now(),
+          isB: false,
+          runParams: runParamsSnapshot,
+        });
+      });
+      Promise.all(fetches)
+        .then(() => setRunning(false))
+        .catch((e) => { setError((e as Error).message); setRunning(false); });
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <style>{hideSpinnerCSS}</style>
@@ -702,11 +786,21 @@ export function ProbePanel() {
 
       <div style={{ display: "flex", gap: 4 }}>
         {!isRunning ? (
-          <button
-            onClick={handleRun}
-            disabled={!targetSession || (backendProbed && !backendOnline)}
-            title={backendProbed && !backendOnline ? "Backend offline — wait for reconnect" : undefined}
-          >Run</button>
+          <>
+            <button
+              onClick={handleRun}
+              disabled={!targetSession || (backendProbed && !backendOnline)}
+              title={backendProbed && !backendOnline ? "Backend offline — wait for reconnect" : undefined}
+            >Run</button>
+            {sessions.length >= 2 && (
+              <button
+                onClick={handleRunAll}
+                disabled={backendProbed && !backendOnline}
+                title={`Fan this prompt+params out to every loaded session (${sessions.length} total). Does not combine with seed/knob sweeps or A/B — each session gets one run.`}
+                style={{ background: "#16213e", border: "1px solid #1a5276", color: "#a0c0e0" }}
+              >Run on all ({sessions.length})</button>
+            )}
+          </>
         ) : (
           <>
             {/* Stop keeps partial output; Cancel discards it. Both halt the

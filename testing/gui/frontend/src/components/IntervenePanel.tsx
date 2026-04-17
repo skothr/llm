@@ -180,6 +180,14 @@ export function IntervenePanel() {
       data: [],
       timestamp: Date.now(),
       isB: false,
+      // Snapshot the intervention config so recallResult can restore
+      // the full specs + capture flag when the user picks this result
+      // again later. Deep-copy specs because Zustand treats the array
+      // as immutable state downstream.
+      runParams: {
+        interventionSpecs: JSON.parse(JSON.stringify(interventionSpecs)),
+        captureLogitLens,
+      },
     });
 
     const clearLocal = () => localPendingIdsRef.current.delete(resultId);
