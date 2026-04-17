@@ -29,6 +29,14 @@ type ResponseLike = {
 // removes nothing — vite's listener hasn't been installed yet. We defer
 // the strip to process.nextTick so it runs once the surrounding sync
 // block (including vite's proxy.on call) has completed.
+//
+// Verified against vite 5.4.21 + http-proxy 1.18.1 (bundled). If vite
+// switches to a Promise-based configure pipeline or http-proxy changes
+// listener registration order, this defer will stop working and the
+// user-facing symptom is a flood of "[vite] http proxy error" lines
+// during the backend-offline window. If that happens, swap
+// process.nextTick for setImmediate or switch to removing the specific
+// listener by reference.
 const quietOnBackendOffline = (proxy: unknown) => {
   const p = proxy as ProxyLike;
   process.nextTick(() => {
@@ -55,6 +63,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Fail loudly if 5173 is already bound rather than silently falling
+    // through to 5174 — the backend proxy config hardcodes 5173 and
+    // shell scripts announce 5173, so a silent port bump would produce
+    // a broken-but-looks-fine dev setup.
+    strictPort: true,
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8000",
