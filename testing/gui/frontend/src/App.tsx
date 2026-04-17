@@ -61,9 +61,23 @@ export default function App() {
 
   useEffect(() => {
     if (backendOnline) return;
-    const interval = setInterval(() => { fetchSessions(); }, 5000);
+    // 500 ms keeps the banner alive for at most half a second after the
+    // backend comes up. The /api/sessions handler is cheap (tens of μs on
+    // an empty manager) so a higher poll rate is fine during development
+    // when the backend is flapping. setInterval is cleared as soon as the
+    // first success flips backendOnline true.
+    const interval = setInterval(() => { fetchSessions(); }, 500);
     return () => clearInterval(interval);
   }, [backendOnline, fetchSessions]);
+
+  useEffect(() => {
+    // On transition offline → online (including first probe after backend
+    // starts late), refresh data that may have failed silently during the
+    // down period. fetchSurgeryOps is refetched by fetchSessions itself when
+    // surgeryOps is empty; availableModels is independent so handle it here.
+    if (!backendOnline) return;
+    fetchAvailableModels();
+  }, [backendOnline, fetchAvailableModels]);
 
   return (
     <div className="app-layout">
