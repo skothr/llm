@@ -1,8 +1,15 @@
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import * as d3 from "d3";
 import { displayToken } from "../../utils/displayToken";
 import { useStore } from "../../state/store";
-import type { LogitLensData, ProbeResult } from "../../types/api";
+import { useWebSocket } from "../../hooks/useWebSocket";
+import type {
+  LogitLensData,
+  ProbeResult,
+  CompareLogitLensData,
+  CompareCell,
+  PairMetrics,
+} from "../../types/api";
 
 interface Props {
   resultA: ProbeResult;
@@ -35,15 +42,75 @@ function buildOriginalLookup(data: LogitLensData[]) {
   return { primary, duplicates };
 }
 
+type CompareMetricKey = keyof Pick<PairMetrics, "kl_ab" | "js" | "cosine" | "top1_delta_prob" | "top1_match">;
+
+interface CompareMetricDef {
+  label: string;
+  description: string;
+  kind: "sequential" | "diverging" | "binary";
+  interpolator: (t: number) => string;
+  fixedDomain?: [number, number];
+  format: (v: number | boolean) => string;
+}
+
+const LN2 = Math.log(2);
+
+const COMPARE_METRICS: Record<CompareMetricKey, CompareMetricDef> = {
+  kl_ab: {
+    label: "KL(A ‖ B)",
+    description: "Relative entropy in nats. 0 = identical; unbounded above.",
+    kind: "sequential",
+    interpolator: d3.interpolateInferno,
+    format: (v) => (typeof v === "number" ? v.toFixed(4) : String(v)),
+  },
+  js: {
+    label: "Jensen–Shannon",
+    description: "Symmetric divergence in nats. 0 = identical; max = ln 2 ≈ 0.693.",
+    kind: "sequential",
+    interpolator: d3.interpolatePlasma,
+    fixedDomain: [0, LN2],
+    format: (v) => (typeof v === "number" ? v.toFixed(4) : String(v)),
+  },
+  cosine: {
+    label: "Cosine similarity",
+    description: "Cosine between full-vocab distributions. 1 = identical direction.",
+    kind: "sequential",
+    interpolator: d3.interpolateViridis,
+    fixedDomain: [0, 1],
+    format: (v) => (typeof v === "number" ? v.toFixed(4) : String(v)),
+  },
+  top1_delta_prob: {
+    label: "Δ top-1 prob (A − B)",
+    description: "p_A(argmax A) − p_B(argmax B). Diverging.",
+    kind: "diverging",
+    interpolator: d3.interpolateRdBu,
+    fixedDomain: [-1, 1],
+    format: (v) => (typeof v === "number" ? `${(v * 100).toFixed(3)}%` : String(v)),
+  },
+  top1_match: {
+    label: "Top-1 match",
+    description: "Binary: do A and B agree on the argmax token?",
+    kind: "binary",
+    interpolator: d3.interpolateViridis,
+    fixedDomain: [0, 1],
+    format: (v) => (typeof v === "boolean" ? (v ? "match" : "mismatch") : v === 1 ? "match" : "mismatch"),
+  },
+};
+
 export function ABDiff({ resultA, resultB }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const sessionInfo = useStore((s) => s.sessionInfo);
   const [showDiff, setShowDiff] = useState(false);
+  const [compareFrames, setCompareFrames] = useState<CompareLogitLensData[]>([]);
+  const [compareMetric, setCompareMetric] = useState<CompareMetricKey>("js");
+  const [comparing, setComparing] = useState(false);
+  const [compareError, setCompareError] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
     content: string;
   } | null>(null);
+  const ws = useWebSocket();
 
   const dataA = useMemo(
     () => resultA.data.filter((m): m is LogitLensData => m.type === "data" && "predictions" in m),
@@ -53,6 +120,23 @@ export function ABDiff({ resultA, resultB }: Props) {
     () => resultB.data.filter((m): m is LogitLensData => m.type === "data" && "predictions" in m),
     [resultB.data]
   );
+
+  const compareByKey = useMemo(() => {
+    const map = new Map<string, CompareCell[]>();
+    for (const frame of compareFrames) {
+      map.set(`${frame.original_layer}.${frame.sublayer}`, frame.cells);
+    }
+    return map;
+  }, [compareFrames]);
+
+  const hasCompareData = compareFrames.length > 0;
+
+  // Any time the prompt or A/B selection changes, the existing compare data
+  // no longer matches — reset it so the user sees the stale-fallback diff.
+  useEffect(() => {
+    setCompareFrames([]);
+    setCompareError(null);
+  }, [resultA.id, resultB.id, resultA.prompt, resultB.prompt]);
 
   const alignedRows = useMemo(() => {
     const infoA = sessionInfo[resultA.sessionName];
@@ -102,6 +186,43 @@ export function ABDiff({ resultA, resultB }: Props) {
     return rows;
   }, [dataA, dataB, sessionInfo, resultA.sessionName, resultB.sessionName]);
 
+  const runCompare = useCallback(() => {
+    if (comparing) return;
+    if (resultA.prompt !== resultB.prompt) {
+      setCompareError(
+        `A and B were run on different prompts (A="${resultA.prompt.slice(0, 30)}…", B="${resultB.prompt.slice(0, 30)}…"). Exact comparison requires identical prompts.`
+      );
+      return;
+    }
+    setComparing(true);
+    setCompareError(null);
+    setCompareFrames([]);
+    setShowDiff(true);
+
+    const key = `compare-${resultA.id}-${resultB.id}`;
+    ws.connect(
+      key,
+      `/sessions/${resultA.sessionName}/compare-logit-lens`,
+      { with_session: resultB.sessionName, prompt: resultA.prompt, top_k: 10 },
+      {
+        onMessage: (msg) => {
+          const frame = msg as unknown as CompareLogitLensData;
+          if (frame.type === "data" && Array.isArray(frame.cells)) {
+            setCompareFrames((prev) => [...prev, frame]);
+          }
+        },
+        onComplete: () => {
+          setComparing(false);
+        },
+        onError: (message) => {
+          setCompareError(message || "Compare failed");
+          setComparing(false);
+        },
+        onDisconnect: () => setComparing(false),
+      }
+    );
+  }, [comparing, resultA, resultB, ws]);
+
   useEffect(() => {
     if (!svgRef.current || alignedRows.length === 0) return;
 
@@ -123,18 +244,13 @@ export function ABDiff({ resultA, resultB }: Props) {
     const panelWidth = margin.left + numPositions * cellW + margin.right;
     const gap = 40;
     const totalWidth = showDiff ? panelWidth * 3 + gap * 2 : panelWidth * 2 + gap;
-    const height = margin.top + numRows * cellH + margin.bottom;
+    const height = margin.top + numRows * cellH + margin.bottom + (showDiff ? 30 : 0);
 
     svg.attr("width", totalWidth).attr("height", height);
 
     const colorScale = d3.scaleSequential(d3.interpolateViridis).domain([0, 1]);
-    const diffScale = d3.scaleDiverging(d3.interpolateRdBu).domain([-1, 0, 1]);
 
-    function drawPanel(
-      side: "A" | "B",
-      offsetX: number,
-      label: string,
-    ) {
+    function drawPanel(side: "A" | "B", offsetX: number, label: string) {
       const g = svg.append("g").attr("transform", `translate(${offsetX + margin.left},${margin.top})`);
 
       svg.append("text")
@@ -229,6 +345,7 @@ export function ABDiff({ resultA, resultB }: Props) {
     if (showDiff) {
       const diffOffset = (panelWidth + gap) * 2;
       const g = svg.append("g").attr("transform", `translate(${diffOffset + margin.left},${margin.top})`);
+      const def = hasCompareData ? COMPARE_METRICS[compareMetric] : null;
 
       svg.append("text")
         .attr("x", diffOffset + margin.left + (numPositions * cellW) / 2)
@@ -236,7 +353,40 @@ export function ABDiff({ resultA, resultB }: Props) {
         .attr("text-anchor", "middle")
         .attr("font-size", 12)
         .attr("fill", "#a0a0c0")
-        .text("Diff (A \u2212 B)");
+        .text(hasCompareData && def ? `Diff — ${def.label}` : "Diff (top-1 delta, from top-k — run exact compare for full metrics)");
+
+      // Compute domain for the selected compare metric if we have exact data.
+      let compareDomain: [number, number] = [0, 1];
+      if (hasCompareData && def) {
+        if (def.fixedDomain) {
+          compareDomain = def.fixedDomain;
+        } else {
+          let minV = Infinity;
+          let maxV = -Infinity;
+          compareFrames.forEach((frame) => {
+            frame.cells.forEach((cell) => {
+              const raw = cell.compare[compareMetric];
+              const v = typeof raw === "boolean" ? (raw ? 1 : 0) : raw;
+              if (!Number.isFinite(v)) return;
+              if (v < minV) minV = v;
+              if (v > maxV) maxV = v;
+            });
+          });
+          if (!Number.isFinite(minV) || !Number.isFinite(maxV) || minV === maxV) {
+            compareDomain = [0, 1];
+          } else {
+            compareDomain = [minV, maxV];
+          }
+        }
+      }
+      const divergingScale =
+        def && def.kind === "diverging"
+          ? d3.scaleDiverging(def.interpolator).domain([compareDomain[0], 0, compareDomain[1]])
+          : null;
+      const sequentialScale =
+        def && def.kind !== "diverging"
+          ? d3.scaleSequential(def.interpolator).domain(compareDomain)
+          : null;
 
       alignedRows.forEach((row, rowIdx) => {
         g.append("text")
@@ -259,46 +409,180 @@ export function ABDiff({ resultA, resultB }: Props) {
           return;
         }
 
+        const compareCells = compareByKey.get(`${row.originalLayer}.${row.sublayer}`);
+
         row.dataA.predictions.forEach((predsA, posIdx) => {
           const predsB = row.dataB!.predictions[posIdx];
           if (!predsA?.[0] || !predsB?.[0]) return;
-          const diff = predsA[0].prob - predsB[0].prob;
-          const tokensDiffer = predsA[0].token !== predsB[0].token;
 
-          g.append("rect")
-            .attr("x", posIdx * cellW)
-            .attr("y", rowIdx * cellH)
-            .attr("width", cellW - 1)
-            .attr("height", cellH - 1)
-            .attr("fill", diffScale(diff))
-            .attr("opacity", Math.max(0.15, Math.abs(diff)))
-            .attr("rx", 2)
-            .attr("stroke", tokensDiffer ? "#ff6b6b" : "none")
-            .attr("stroke-width", tokensDiffer ? 1.5 : 0)
-            .style("cursor", "pointer")
-            .on("mouseenter", (event) => {
-              setTooltip({
-                x: event.pageX + 10,
-                y: event.pageY - 10,
-                content: `${row.label} pos ${posIdx}\nA: ${predsA[0].token} (${(predsA[0].prob * 100).toFixed(3)}%)\nB: ${predsB[0].token} (${(predsB[0].prob * 100).toFixed(3)}%)\n\u0394: ${(diff * 100).toFixed(3)}%`,
-              });
-            })
-            .on("mouseleave", () => setTooltip(null));
+          if (hasCompareData && compareCells && def) {
+            const cell = compareCells[posIdx];
+            if (!cell) return;
+            const raw = cell.compare[compareMetric];
+            const v = typeof raw === "boolean" ? (raw ? 1 : 0) : raw;
+
+            let fill = "#333";
+            if (Number.isFinite(v)) {
+              if (def.kind === "binary") {
+                fill = raw ? "#2d7f4a" : "#a83232";
+              } else if (divergingScale) {
+                fill = divergingScale(v);
+              } else if (sequentialScale) {
+                fill = sequentialScale(v);
+              }
+            }
+
+            g.append("rect")
+              .attr("x", posIdx * cellW)
+              .attr("y", rowIdx * cellH)
+              .attr("width", cellW - 1)
+              .attr("height", cellH - 1)
+              .attr("fill", fill)
+              .attr("rx", 2)
+              .attr("stroke", !cell.compare.top1_match ? "#ff6b6b" : "none")
+              .attr("stroke-width", !cell.compare.top1_match ? 1.5 : 0)
+              .style("cursor", "pointer")
+              .on("mouseenter", (event) => {
+                const c = cell.compare;
+                setTooltip({
+                  x: event.pageX + 10,
+                  y: event.pageY - 10,
+                  content: [
+                    `${row.label} pos ${posIdx}`,
+                    `A top-1: ${cell.top_k_a[0]?.token ?? "?"} (${((cell.top_k_a[0]?.prob ?? 0) * 100).toFixed(3)}%)`,
+                    `B top-1: ${cell.top_k_b[0]?.token ?? "?"} (${((cell.top_k_b[0]?.prob ?? 0) * 100).toFixed(3)}%)`,
+                    "",
+                    `KL(A‖B) = ${c.kl_ab.toFixed(5)} nats`,
+                    `JS       = ${c.js.toFixed(5)} nats`,
+                    `cosine   = ${c.cosine.toFixed(5)}`,
+                    `Δ p₁     = ${(c.top1_delta_prob * 100).toFixed(3)}%`,
+                    `top-1    = ${c.top1_match ? "match" : "MISMATCH"}`,
+                  ].join("\n"),
+                });
+              })
+              .on("mouseleave", () => setTooltip(null));
+          } else {
+            const diff = predsA[0].prob - predsB[0].prob;
+            const tokensDiffer = predsA[0].token !== predsB[0].token;
+            const diffScale = d3.scaleDiverging(d3.interpolateRdBu).domain([-1, 0, 1]);
+
+            g.append("rect")
+              .attr("x", posIdx * cellW)
+              .attr("y", rowIdx * cellH)
+              .attr("width", cellW - 1)
+              .attr("height", cellH - 1)
+              .attr("fill", diffScale(diff))
+              .attr("opacity", Math.max(0.15, Math.abs(diff)))
+              .attr("rx", 2)
+              .attr("stroke", tokensDiffer ? "#ff6b6b" : "none")
+              .attr("stroke-width", tokensDiffer ? 1.5 : 0)
+              .style("cursor", "pointer")
+              .on("mouseenter", (event) => {
+                setTooltip({
+                  x: event.pageX + 10,
+                  y: event.pageY - 10,
+                  content: `${row.label} pos ${posIdx}\nA: ${predsA[0].token} (${(predsA[0].prob * 100).toFixed(3)}%)\nB: ${predsB[0].token} (${(predsB[0].prob * 100).toFixed(3)}%)\n\u0394: ${(diff * 100).toFixed(3)}%`,
+                });
+              })
+              .on("mouseleave", () => setTooltip(null));
+          }
         });
       });
+
+      // Color-scale legend for the compare panel.
+      if (hasCompareData && def) {
+        const legendY = numRows * cellH + 12;
+        const legendX = 0;
+        const legendW = Math.min(200, numPositions * cellW);
+        const legendH = 8;
+        const gradId = `grad-${compareMetric}-${resultA.id}-${resultB.id}`;
+        const defs = svg.append("defs");
+        const grad = defs.append("linearGradient").attr("id", gradId).attr("x1", "0%").attr("x2", "100%");
+        const stops = 16;
+        for (let i = 0; i <= stops; i++) {
+          const t = i / stops;
+          grad.append("stop").attr("offset", `${t * 100}%`).attr("stop-color", def.interpolator(t));
+        }
+        g.append("rect")
+          .attr("x", legendX)
+          .attr("y", legendY)
+          .attr("width", legendW)
+          .attr("height", legendH)
+          .attr("fill", `url(#${gradId})`)
+          .attr("rx", 1);
+        g.append("text")
+          .attr("x", legendX)
+          .attr("y", legendY + legendH + 10)
+          .attr("font-size", 9)
+          .attr("fill", "#888")
+          .text(def.format(compareDomain[0]));
+        g.append("text")
+          .attr("x", legendX + legendW)
+          .attr("y", legendY + legendH + 10)
+          .attr("text-anchor", "end")
+          .attr("font-size", 9)
+          .attr("fill", "#888")
+          .text(def.format(compareDomain[1]));
+      }
     }
 
-  }, [alignedRows, showDiff, resultA.sessionName, resultB.sessionName, resultA.data]);
+  }, [alignedRows, showDiff, resultA.sessionName, resultB.sessionName, resultA.data, resultA.id, resultB.id, hasCompareData, compareByKey, compareMetric, compareFrames]);
 
   return (
     <div style={{ position: "relative" }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-        <h3 style={{ fontSize: 13, color: "#a0a0c0" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+        <h3 style={{ fontSize: 13, color: "#a0a0c0", margin: 0 }}>
           A/B: {resultA.sessionName} vs {resultB.sessionName}
         </h3>
         <button onClick={() => setShowDiff(!showDiff)} style={{ fontSize: 11 }}>
           {showDiff ? "Hide Diff" : "Show Diff"}
         </button>
+        <button
+          onClick={runCompare}
+          disabled={comparing}
+          style={{
+            fontSize: 11,
+            background: hasCompareData ? "#1a5276" : "#2d3a4a",
+            color: "#e0e0f0",
+            border: "1px solid #1a5276",
+            borderRadius: 3,
+            padding: "2px 8px",
+            cursor: comparing ? "wait" : "pointer",
+          }}
+          title="Streams per-cell KL/JS/cosine/Δ top-1 from full-vocab distributions on the backend."
+        >
+          {comparing ? "Comparing…" : hasCompareData ? "Re-run exact compare" : "Run exact compare"}
+        </button>
+        {hasCompareData && (
+          <label style={{ fontSize: 12, color: "#8888aa", display: "flex", alignItems: "center", gap: 6 }}>
+            Metric:
+            <select
+              value={compareMetric}
+              onChange={(e) => setCompareMetric(e.target.value as CompareMetricKey)}
+              style={{
+                background: "#0f1626",
+                color: "#e0e0f0",
+                border: "1px solid #1a5276",
+                borderRadius: 3,
+                padding: "2px 6px",
+                fontSize: 12,
+              }}
+              title={COMPARE_METRICS[compareMetric].description}
+            >
+              {(Object.keys(COMPARE_METRICS) as CompareMetricKey[]).map((k) => (
+                <option key={k} value={k}>{COMPARE_METRICS[k].label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        {comparing && compareFrames.length > 0 && (
+          <span style={{ fontSize: 11, color: "#88aacc" }}>
+            Streaming: {compareFrames.length} layer(s)
+          </span>
+        )}
+        {compareError && (
+          <span style={{ fontSize: 11, color: "#ff9090" }}>{compareError}</span>
+        )}
       </div>
       <div style={{ overflowX: "auto" }}>
         <svg ref={svgRef} />
