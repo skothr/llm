@@ -441,6 +441,32 @@ async def list_available_models():
     # cache — skipping run_in_executor would save ~0.3 ms per call.
     return await asyncio.get_event_loop().run_in_executor(None, _collect_available_models)
 
+
+class TokenizeRequest(BaseModel):
+    text: str
+
+
+@router.post("/sessions/{name}/tokenize")
+async def tokenize_prompt(name: str, req: TokenizeRequest):
+    """Return an accurate token count for ``req.text`` under this session's
+    tokenizer. Used by the frontend to show "budget left in context window"
+    and to clamp max_tokens before submit. Prefers the HF tokenizer when
+    available (works without loading the model onto GPU); falls back to the
+    llama.cpp engine if that's the only tokenizer this session has."""
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    if info.tokenizer is not None:
+        # encode() returns list[int] — unambiguous across fast/slow tokenizers.
+        count = len(info.tokenizer.encode(req.text, add_special_tokens=True))
+    elif info.llama is not None:
+        count = len(info.llama.tokenize(req.text))
+    else:
+        raise HTTPException(500, "Session has no tokenizer loaded")
+    return {"count": count}
+
 def _has_safetensors_cached(model_id: str) -> bool:
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
