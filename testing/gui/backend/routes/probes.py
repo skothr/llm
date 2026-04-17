@@ -68,7 +68,7 @@ async def logit_lens_ws(ws: WebSocket, name: str):
 
     from llm_surgeon import probe
 
-    collected_layers = []
+    loop = asyncio.get_running_loop()
 
     def on_layer(layer_idx, sublayer, data):
         nonlocal connected
@@ -96,22 +96,23 @@ async def logit_lens_ws(ws: WebSocket, name: str):
             "sublayer": sublayer,
             "predictions": serializable_preds,
         }
-        collected_layers.append(msg)
+        fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
+        try:
+            ok = fut.result(timeout=10)
+        except Exception:
+            ok = False
+        if not ok:
+            connected = False
 
     try:
         async with info.lock:
-            result = await asyncio.get_event_loop().run_in_executor(
+            result = await loop.run_in_executor(
                 None,
                 lambda: probe.logit_lens(
                     info.model, info.tokenizer, prompt,
                     top_k=top_k, on_layer=on_layer,
                 ),
             )
-
-        for msg in collected_layers:
-            if not await _send_json(ws, msg):
-                connected = False
-                break
 
         if connected:
             summary = {
@@ -496,14 +497,14 @@ async def intervene_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
-    collected = []
     connected = True
+    loop = asyncio.get_running_loop()
 
     def on_layer(layer_idx, sublayer, data):
         nonlocal connected
         if not connected:
             return
-        msg = {
+        msg: dict = {
             "type": "data",
             "layer": layer_idx,
             "sublayer": sublayer,
@@ -523,11 +524,17 @@ async def intervene_ws(ws: WebSocket, name: str):
                 else:
                     preds.append([{"token": str(pos_pred), "prob": 0.0}])
             msg["predictions"] = preds
-        collected.append(msg)
+        fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
+        try:
+            ok = fut.result(timeout=10)
+        except Exception:
+            ok = False
+        if not ok:
+            connected = False
 
     try:
         async with info.lock:
-            result = await asyncio.get_event_loop().run_in_executor(
+            result = await loop.run_in_executor(
                 None,
                 lambda: intervene(
                     info.model, info.tokenizer, prompt,
@@ -536,11 +543,6 @@ async def intervene_ws(ws: WebSocket, name: str):
                     on_layer=on_layer,
                 ),
             )
-
-        for msg in collected:
-            if not await _send_json(ws, msg):
-                connected = False
-                break
 
         if connected:
             applied = result.interventions_applied or []
