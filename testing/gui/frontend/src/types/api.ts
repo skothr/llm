@@ -52,6 +52,32 @@ export interface CellMetrics {
   top1_margin: number;
 }
 
+export interface PairMetrics {
+  kl_ab: number;
+  js: number;
+  cosine: number;
+  top1_delta_prob: number;
+  top1_match: boolean;
+}
+
+export interface CompareCell {
+  original_layer: number;
+  sublayer: string;
+  position: number;
+  top_k_a: Array<{ token: string; prob: number }>;
+  top_k_b: Array<{ token: string; prob: number }>;
+  metrics_a: CellMetrics;
+  metrics_b: CellMetrics;
+  compare: PairMetrics;
+}
+
+export interface CompareLogitLensData {
+  type: "data";
+  original_layer: number;
+  sublayer: string;
+  cells: CompareCell[];
+}
+
 export interface LogitLensData {
   type: "data";
   layer: number;
@@ -87,7 +113,7 @@ export interface WsError {
   message: string;
 }
 
-export type WsMessage = LogitLensData | GenerateData | InterveneData | WsComplete | WsError;
+export type WsMessage = LogitLensData | GenerateData | InterveneData | CompareLogitLensData | WsComplete | WsError;
 
 export interface InterventionSpec {
   layer: number;
