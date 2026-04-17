@@ -8,6 +8,47 @@ const num = (v: string, fallback: number): number => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+// Shared styles for the param grids below. A 4-column grid
+// (label | input | label | input) packs two name/value pairs per row,
+// which fits the sidebar width without forcing inputs to wrap and keeps
+// all labels in two vertical lanes — much easier to scan than the prior
+// flex-wrap soup that let labels and inputs interleave unpredictably.
+const paramGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "auto 1fr auto 1fr",
+  gap: "4px 8px",
+  alignItems: "center",
+  fontSize: 12,
+};
+
+const sectionHeaderStyle: React.CSSProperties = {
+  fontSize: 10,
+  color: "#8888aa",
+  textTransform: "uppercase",
+  letterSpacing: 1,
+  marginTop: 4,
+  marginBottom: -2,
+};
+
+const labelStyle: React.CSSProperties = {
+  fontFamily: "monospace",
+  color: "#a0a0c0",
+  justifySelf: "end",
+};
+
+const numInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  textAlign: "right",
+  fontFamily: "monospace",
+};
+
+const textInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  fontFamily: "monospace",
+};
+
 // Streaming operations use WebSocket (live per-layer or per-token frames).
 // One-shot inspection ops (influence, attention, residual-norms) go via REST
 // because the backend returns a single complete result — a WS would buy
@@ -200,39 +241,66 @@ export function ProbePanel() {
         </select>
       </div>
 
-      {(operation === "logit-lens" || operation === "generate") && (
-        <div style={{ display: "flex", gap: 8, fontSize: 12, flexWrap: "wrap" }}>
-          <label title="Number of candidate tokens streamed alongside each step (display only).">
-            display_top_k: <input type="number" value={displayTopK} onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))} style={{ width: 56 }} />
-          </label>
-          {operation === "generate" && (
-            <>
-              <label>max: <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(num(e.target.value, maxTokens))} style={{ width: 56 }} /></label>
-              <label>temp: <input type="number" step="0.1" value={temperature} onChange={(e) => setTemperature(num(e.target.value, temperature))} style={{ width: 56 }} /></label>
-              <label title="Truncate sampling to the top-K logits before softmax. 0 disables.">
-                top_k: <input type="number" value={samplingTopK} onChange={(e) => setSamplingTopK(num(e.target.value, samplingTopK))} style={{ width: 56 }} />
-              </label>
-              <label title="Nucleus sampling cumulative prob cutoff. 1.0 disables.">
-                top_p: <input type="number" step="0.05" min="0" max="1" value={topP} onChange={(e) => setTopP(num(e.target.value, topP))} style={{ width: 56 }} />
-              </label>
-              <label title="Drop tokens whose prob < min_p × max(prob). 0 disables.">
-                min_p: <input type="number" step="0.01" min="0" max="1" value={minP} onChange={(e) => setMinP(num(e.target.value, minP))} style={{ width: 56 }} />
-              </label>
-              <label title="Integer seed for reproducible sampling (temp > 0 only). Blank = random.">
-                seed: <input type="text" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="random" style={{ width: 72 }} />
-              </label>
-              <label>rep: <input type="number" step="0.1" value={repPenalty} onChange={(e) => setRepPenalty(num(e.target.value, repPenalty))} style={{ width: 56 }} /></label>
-            </>
-          )}
+      {operation === "logit-lens" && (
+        <div style={paramGridStyle}>
+          <label style={labelStyle} title="Number of candidate tokens streamed per layer (shown in the heatmap).">top_k</label>
+          <input type="number" value={displayTopK}
+            onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
+            style={numInputStyle} />
         </div>
       )}
 
       {operation === "generate" && (
-        <div style={{ fontSize: 12 }}>
-          <label title="Comma-separated stop strings. When any substring matches, generation halts; the matched text is not included in the output (same as <eos>).">
-            stop: <input value={stopSeqs} onChange={(e) => setStopSeqs(e.target.value)} placeholder="comma-separated, use \n for newline" style={{ width: "100%" }} />
-          </label>
-        </div>
+        <>
+          <div style={sectionHeaderStyle}>Output</div>
+          <div style={paramGridStyle}>
+            <label style={labelStyle} title="Maximum new tokens to generate before stopping.">max</label>
+            <input type="number" value={maxTokens}
+              onChange={(e) => setMaxTokens(num(e.target.value, maxTokens))}
+              style={numInputStyle} />
+            <label style={labelStyle} title="Repetition penalty (1.0 = no penalty).">rep</label>
+            <input type="number" step="0.1" value={repPenalty}
+              onChange={(e) => setRepPenalty(num(e.target.value, repPenalty))}
+              style={numInputStyle} />
+
+            <label style={labelStyle} title="Comma-separated stop strings. When any substring matches, generation halts and the matched text is truncated from the output (same as <eos>).">stop</label>
+            <input type="text" value={stopSeqs}
+              onChange={(e) => setStopSeqs(e.target.value)}
+              placeholder="comma-separated, \n for newline"
+              style={{ ...textInputStyle, gridColumn: "2 / -1" }} />
+          </div>
+
+          <div style={sectionHeaderStyle}>Sampling</div>
+          <div style={paramGridStyle}>
+            <label style={labelStyle} title="Softmax sharpness. 0 = greedy argmax, 1 = untouched, >1 = flatter distribution.">temp</label>
+            <input type="number" step="0.1" value={temperature}
+              onChange={(e) => setTemperature(num(e.target.value, temperature))}
+              style={numInputStyle} />
+            <label style={labelStyle} title="Integer seed for reproducible sampling (temp > 0 only). Blank = random each run.">seed</label>
+            <input type="text" value={seed}
+              onChange={(e) => setSeed(e.target.value)}
+              placeholder="random"
+              style={textInputStyle} />
+
+            <label style={labelStyle} title="Truncate sampling to the top-K logits before softmax. 0 disables.">top_k</label>
+            <input type="number" value={samplingTopK}
+              onChange={(e) => setSamplingTopK(num(e.target.value, samplingTopK))}
+              style={numInputStyle} />
+            <label style={labelStyle} title="Nucleus sampling: keep smallest set of tokens whose cumulative prob ≥ top_p. 1.0 disables.">top_p</label>
+            <input type="number" step="0.05" min="0" max="1" value={topP}
+              onChange={(e) => setTopP(num(e.target.value, topP))}
+              style={numInputStyle} />
+
+            <label style={labelStyle} title="Drop tokens whose prob < min_p × max(prob). Relative-floor filter robust to long tails. 0 disables.">min_p</label>
+            <input type="number" step="0.01" min="0" max="1" value={minP}
+              onChange={(e) => setMinP(num(e.target.value, minP))}
+              style={numInputStyle} />
+            <label style={labelStyle} title="How many candidate tokens to stream per step for the display popover. Does not affect sampling.">show</label>
+            <input type="number" value={displayTopK}
+              onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
+              style={numInputStyle} />
+          </div>
+        </>
       )}
 
       <div style={{ display: "flex", gap: 4 }}>
