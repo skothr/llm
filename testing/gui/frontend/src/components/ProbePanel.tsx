@@ -271,7 +271,7 @@ export function ProbePanel() {
         connect(idB, getWsPath(targetSessionB!), getWsConfig(effectiveMax), makeWsHandlers(idB));
       }
     } else {
-      const fetchInspect = (session: string, id: string) => {
+      const fetchInspect = async (session: string, id: string) => {
         let url = "";
         let body: unknown = {};
         if (operation === "influence") {
@@ -284,27 +284,23 @@ export function ProbePanel() {
           url = `/api/sessions/${session}/inspect/residual-norms`;
           body = { prompt };
         } else {
-          return Promise.reject(new Error(`Unsupported REST operation: ${operation}`));
+          throw new Error(`Unsupported REST operation: ${operation}`);
         }
-        return fetch(url, {
+        const r = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
-        })
-          .then(async (r) => {
-            if (!r.ok) {
-              const text = await r.text().catch(() => r.statusText);
-              throw new Error(`${r.status} ${text || r.statusText}`);
-            }
-            return r.json();
-          })
-          .then((data) => {
-            addResult({
-              id, operation, sessionName: session, prompt,
-              data: [{ type: "complete" as const, ...data }],
-              timestamp: Date.now(),
-            });
-          });
+        });
+        if (!r.ok) {
+          const text = await r.text().catch(() => r.statusText);
+          throw new Error(`${r.status} ${text || r.statusText}`);
+        }
+        const data = await r.json();
+        addResult({
+          id, operation, sessionName: session, prompt,
+          data: [{ type: "complete" as const, ...data }],
+          timestamp: Date.now(),
+        });
       };
 
       const fetches = [fetchInspect(targetSession, resultId)];
