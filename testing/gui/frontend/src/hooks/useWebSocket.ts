@@ -52,6 +52,7 @@ export function useWebSocket() {
       };
 
       ws.onerror = () => {
+        if (resolvedRef.current.has(key)) return;
         resolvedRef.current.add(key);
         handlers.onError("WebSocket connection error");
       };
