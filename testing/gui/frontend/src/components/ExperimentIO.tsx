@@ -13,9 +13,14 @@ import {
 export function ExperimentIO() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [banner, setBanner] = useState<{ tone: "ok" | "warn" | "err"; text: string } | null>(null);
+  const [pinnedOnly, setPinnedOnly] = useState(false);
 
   const handleExport = () => {
     const s = useStore.getState();
+    // Pinned-only narrows the results slice for sharing curated findings
+    // without leaking exploratory dead-ends. Non-result fields (prompt,
+    // params, library) still export in full — those are always reusable.
+    const results = pinnedOnly ? s.results.filter((r) => r.pinned) : s.results;
     const file = buildExperimentFile({
       activeTab: s.activeTab,
       prompt: s.prompt,
@@ -28,8 +33,8 @@ export function ExperimentIO() {
       intervenePrompt: s.intervenePrompt,
       interveneSession: s.interveneSession,
       promptLibrary: s.promptLibrary,
-      results: s.results,
-      activeResultId: s.activeResultId,
+      results,
+      activeResultId: s.activeResultId && results.some((r) => r.id === s.activeResultId) ? s.activeResultId : null,
       sessions: s.sessions,
     });
     // Timestamped filename + first 24 chars of the prompt as a human hint.
@@ -38,8 +43,12 @@ export function ExperimentIO() {
       .replace(/^_+|_+$/g, "")
       .slice(0, 24) || "experiment";
     const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    downloadJSON(`${promptSlug}_${ts}.json`, file);
-    setBanner({ tone: "ok", text: `Exported ${s.results.length} result(s), ${s.promptLibrary.length} saved prompt(s).` });
+    const suffix = pinnedOnly ? "_pinned" : "";
+    downloadJSON(`${promptSlug}${suffix}_${ts}.json`, file);
+    setBanner({
+      tone: "ok",
+      text: `Exported ${results.length} result(s)${pinnedOnly ? " (pinned only)" : ""}, ${s.promptLibrary.length} saved prompt(s).`,
+    });
   };
 
   const handleImportClick = () => fileInputRef.current?.click();
@@ -99,12 +108,14 @@ export function ExperimentIO() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "2px 8px 6px 8px" }}>
-      <div style={{ display: "flex", gap: 4 }}>
+      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
         <button
           onClick={handleExport}
-          title="Download the current prompt, params, library, and results as a single JSON file."
+          title={pinnedOnly
+            ? "Download pinned results only, plus current prompt/params/library."
+            : "Download the current prompt, params, library, and all results as one JSON file."}
           style={{ flex: 1, fontSize: 11, padding: "2px 6px" }}
-        >export</button>
+        >export{pinnedOnly ? " \u2605" : ""}</button>
         <button
           onClick={handleImportClick}
           title="Load a previously-exported experiment. Overwrites current prompt/params/results; sessions untouched."
@@ -118,6 +129,18 @@ export function ExperimentIO() {
           style={{ display: "none" }}
         />
       </div>
+      <label
+        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#667", cursor: "pointer" }}
+        title="Limit export to pinned (starred) results only. Prompt, params, and library always export in full."
+      >
+        <input
+          type="checkbox"
+          checked={pinnedOnly}
+          onChange={(e) => setPinnedOnly(e.target.checked)}
+          style={{ margin: 0 }}
+        />
+        pinned only
+      </label>
       {banner && (
         <div
           onClick={() => setBanner(null)}
