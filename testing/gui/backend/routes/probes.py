@@ -104,6 +104,12 @@ async def logit_lens_ws(ws: WebSocket, name: str):
         if not ok:
             connected = False
 
+    # Hint to the client that we may be waiting on a re-export in another
+    # handler. Racy (dirty may flip before we acquire the lock) but harmless:
+    # worst case is a spurious status message.
+    if info.dirty:
+        await _send_json(ws, {"type": "status", "message": "Waiting for model export..."})
+
     try:
         async with info.lock:
             result = await loop.run_in_executor(
@@ -531,6 +537,9 @@ async def intervene_ws(ws: WebSocket, name: str):
             ok = False
         if not ok:
             connected = False
+
+    if info.dirty:
+        await _send_json(ws, {"type": "status", "message": "Waiting for model export..."})
 
     try:
         async with info.lock:
