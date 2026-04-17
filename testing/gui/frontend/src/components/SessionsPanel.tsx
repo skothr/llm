@@ -282,7 +282,6 @@ export function SessionsPanel() {
                 {selectedModel.total_bytes != null && selectedModel.total_bytes !== selectedModel.file_size_bytes && (
                   <span>{selectedModel.file_size_bytes != null ? " " : ""}({fmtSize(selectedModel.total_bytes)} weights)</span>
                 )}
-                {selectedModel.safetensors && <span> | safetensors</span>}
                 {bpw != null && <span> | {bpw} bpw</span>}
                 {params != null && (
                   <span>

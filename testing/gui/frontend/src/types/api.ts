@@ -135,7 +135,6 @@ export type ResultOperation = ProbeOperation | "intervene";
 export interface AvailableModel {
   model_id: string;
   source: "huggingface" | "ollama";
-  safetensors: boolean;
   architecture?: string;
   model_name?: string;
   dtype?: string;
