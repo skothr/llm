@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { useStopCancel } from "../hooks/useStopCancel";
+import { num } from "../utils/num";
 import type { WsMessage, ProbeOperation } from "../types/api";
-
-const num = (v: string, fallback: number): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-};
 
 // Shared styles for the param grids below. A 4-column grid
 // (label | input | label | input) packs two name/value pairs per row,
@@ -105,7 +102,6 @@ export function ProbePanel() {
   const setTargetSessionB = useStore((s) => s.setTargetSessionB);
   const setRunning = useStore((s) => s.setRunning);
   const addResult = useStore((s) => s.addResult);
-  const pendingResults = useStore((s) => s.pendingResults);
   const setPendingResult = useStore((s) => s.setPendingResult);
   const updatePendingResult = useStore((s) => s.updatePendingResult);
   const finalizePendingResult = useStore((s) => s.finalizePendingResult);
@@ -113,6 +109,7 @@ export function ProbePanel() {
 
   const { connect, cancelAll } = useWebSocket();
   const localPendingIdsRef = useRef<Set<string>>(new Set());
+  const { makeHandler } = useStopCancel(localPendingIdsRef);
   // displayTopK = how many candidate tokens to stream alongside each step
   // (UI display only, e.g. the top-k popover in GenerationOutput).
   // Real sampling cutoffs live in samplingTopK / topP / minP below.
@@ -148,22 +145,26 @@ export function ProbePanel() {
   // Debounce tokenizer hits so typing doesn't spam the backend. 250 ms
   // means the meter lags user input by a quarter second — imperceptible
   // given token counts change at roughly word-level granularity anyway.
+  // AbortController cancels the previous request so fast typing can't
+  // resolve stale counts out of order over the current one.
   useEffect(() => {
     if (!targetSession || !prompt) {
       setPromptTokens(prompt ? null : 0);
       return;
     }
+    const ac = new AbortController();
     const t = setTimeout(() => {
       fetch(`/api/sessions/${targetSession}/tokenize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: prompt }),
+        signal: ac.signal,
       })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => { if (d && typeof d.count === "number") setPromptTokens(d.count); })
-        .catch(() => { /* leave previous count; estimate fallback will kick in */ });
+        .catch(() => { /* abort / offline — leave prior count; estimate fills in */ });
     }, 250);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); ac.abort(); };
   }, [prompt, targetSession]);
 
   const ctxInfo = sessionInfo[targetSession];
@@ -263,14 +264,14 @@ export function ProbePanel() {
       setPendingResult(resultId, {
         id: resultId, operation, sessionName: targetSession, prompt, data: [], timestamp: Date.now(), isB: false,
       });
-      connect(resultId, getWsPath(targetSession), getWsConfig(effectiveMax), makeWsHandlers(resultId));
+      connect(resultId, getWsPath(targetSession), getWsConfig(effectiveMax), makeWsHandlers(resultId), targetSession);
 
       if (hasB) {
         const idB = `${resultId}-B`;
         setPendingResult(idB, {
           id: idB, operation, sessionName: targetSessionB!, prompt, data: [], timestamp: Date.now(), isB: true,
         });
-        connect(idB, getWsPath(targetSessionB!), getWsConfig(effectiveMax), makeWsHandlers(idB));
+        connect(idB, getWsPath(targetSessionB!), getWsConfig(effectiveMax), makeWsHandlers(idB), targetSessionB!);
       }
     } else {
       const fetchInspect = async (session: string, isB: boolean) => {
@@ -459,28 +460,14 @@ export function ProbePanel() {
           >Run</button>
         ) : (
           <>
-            {/* Stop: halt generation but keep whatever the model has streamed
-                so far — finalize each pending result into the results list
-                instead of throwing it away. Useful when an early token
-                sequence is already what you wanted. */}
-            <button onClick={() => {
-              cancelAll();
-              for (const id of localPendingIdsRef.current) {
-                if (pendingResults[id]) finalizePendingResult(id);
-              }
-              localPendingIdsRef.current.clear();
-              setRunning(false);
-            }} style={{ background: "#6b5020" }} title="Halt generation; keep what's been streamed so far.">Stop</button>
-            {/* Cancel: halt AND discard. For when the partial output is
-                garbage and you just want a clean slate. */}
-            <button onClick={() => {
-              cancelAll();
-              for (const id of localPendingIdsRef.current) {
-                if (pendingResults[id]) removePendingResult(id);
-              }
-              localPendingIdsRef.current.clear();
-              setRunning(false);
-            }} style={{ background: "#6b2020" }} title="Halt generation and discard the partial output.">Cancel</button>
+            {/* Stop keeps partial output; Cancel discards it. Both halt the
+                stream and flip isRunning false via useStopCancel. */}
+            <button onClick={makeHandler("stop", cancelAll)}
+                    style={{ background: "#6b5020" }}
+                    title="Halt generation; keep what's been streamed so far.">Stop</button>
+            <button onClick={makeHandler("cancel", cancelAll)}
+                    style={{ background: "#6b2020" }}
+                    title="Halt generation and discard the partial output.">Cancel</button>
           </>
         )}
       </div>

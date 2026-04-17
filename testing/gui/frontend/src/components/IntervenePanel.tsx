@@ -1,13 +1,10 @@
 import { useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { useStopCancel } from "../hooks/useStopCancel";
+import { num } from "../utils/num";
 import { ArrayInput } from "./SurgeryParamForm";
 import type { InterventionSpec, WsMessage } from "../types/api";
-
-const num = (v: string, fallback: number): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-};
 
 type OpParam = { key: string; type: string; default?: number | string; step?: number };
 
@@ -131,7 +128,6 @@ export function IntervenePanel() {
   const setIntervenePrompt = useStore((s) => s.setIntervenePrompt);
   const setInterveneSession = useStore((s) => s.setInterveneSession);
   const setRunning = useStore((s) => s.setRunning);
-  const pendingResults = useStore((s) => s.pendingResults);
   const setPendingResult = useStore((s) => s.setPendingResult);
   const updatePendingResult = useStore((s) => s.updatePendingResult);
   const finalizePendingResult = useStore((s) => s.finalizePendingResult);
@@ -139,6 +135,7 @@ export function IntervenePanel() {
 
   const { connect, cancelAll } = useWebSocket();
   const localPendingIdsRef = useRef<Set<string>>(new Set());
+  const { makeHandler } = useStopCancel(localPendingIdsRef);
   const [error, setError] = useState("");
 
   const handleRun = () => {
@@ -174,7 +171,7 @@ export function IntervenePanel() {
       onComplete: (msg: WsMessage) => { finalizePendingResult(resultId, msg); clearLocal(); setRunning(false); },
       onError: (message: string) => { removePendingResult(resultId); clearLocal(); setError(message); setRunning(false); },
       onDisconnect: () => { removePendingResult(resultId); clearLocal(); setError("Connection lost"); setRunning(false); },
-    });
+    }, interveneSession);
   };
 
   return (
@@ -213,22 +210,12 @@ export function IntervenePanel() {
           >Run</button>
         ) : (
           <>
-            <button onClick={() => {
-              cancelAll();
-              for (const id of localPendingIdsRef.current) {
-                if (pendingResults[id]) finalizePendingResult(id);
-              }
-              localPendingIdsRef.current.clear();
-              setRunning(false);
-            }} style={{ background: "#6b5020" }} title="Halt the run; keep what's been streamed so far.">Stop</button>
-            <button onClick={() => {
-              cancelAll();
-              for (const id of localPendingIdsRef.current) {
-                if (pendingResults[id]) removePendingResult(id);
-              }
-              localPendingIdsRef.current.clear();
-              setRunning(false);
-            }} style={{ background: "#6b2020" }} title="Halt the run and discard the partial output.">Cancel</button>
+            <button onClick={makeHandler("stop", cancelAll)}
+                    style={{ background: "#6b5020" }}
+                    title="Halt the run; keep what's been streamed so far.">Stop</button>
+            <button onClick={makeHandler("cancel", cancelAll)}
+                    style={{ background: "#6b2020" }}
+                    title="Halt the run and discard the partial output.">Cancel</button>
           </>
         )}
       </div>
