@@ -76,6 +76,29 @@ const dim = (off: boolean, base: React.CSSProperties): React.CSSProperties =>
 // nothing but a handshake cost. Keep in sync with backend route types.
 const WS_OPS = new Set<ProbeOperation>(["logit-lens", "generate"]);
 
+// Sensible default ranges per sweep axis. Used when the user flips axis
+// away from seed and the range is still at the 0..1 seed-mode default.
+type SweepAxis = "seed" | "temperature" | "top_p" | "top_k" | "min_p";
+const AXIS_DEFAULTS: Record<Exclude<SweepAxis, "seed">, { from: number; to: number; step: number; label: string; backendKey: string; format: (v: number) => string }> = {
+  temperature: { from: 0.1, to: 1.5, step: 0.1, label: "temp",  backendKey: "temperature", format: (v) => v.toFixed(2) },
+  top_p:       { from: 0.3, to: 1.0, step: 0.05, label: "top_p", backendKey: "top_p",       format: (v) => v.toFixed(2) },
+  top_k:       { from: 1,   to: 100, step: 1,   label: "top_k", backendKey: "sampling_top_k", format: (v) => `${Math.round(v)}` },
+  min_p:       { from: 0.0, to: 0.3, step: 0.02, label: "min_p", backendKey: "min_p",       format: (v) => v.toFixed(2) },
+};
+
+// Produce N evenly-spaced values from [from, to] inclusive. For integer
+// axes (top_k) we round; for others we keep full precision.
+function linspace(from: number, to: number, n: number, integer = false): number[] {
+  if (n <= 1) return [from];
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const v = from + (to - from) * t;
+    out.push(integer ? Math.round(v) : v);
+  }
+  return out;
+}
+
 export function ProbePanel() {
   const prompt = useStore((s) => s.prompt);
   const operation = useStore((s) => s.operation);
@@ -109,7 +132,7 @@ export function ProbePanel() {
   const resetSamplingParams = useStore((s) => s.resetSamplingParams);
   const {
     displayTopK, maxTokens, temperature, samplingTopK, topP, minP, seed,
-    repPenalty, stopSeqs, numSeeds,
+    repPenalty, stopSeqs, numSeeds, sweepAxis, sweepFrom, sweepTo,
   } = samplingParams;
   const setDisplayTopK = (v: number) => setSamplingParams({ displayTopK: v });
   const setMaxTokens = (v: number) => setSamplingParams({ maxTokens: v });
@@ -121,6 +144,18 @@ export function ProbePanel() {
   const setRepPenalty = (v: number) => setSamplingParams({ repPenalty: v });
   const setStopSeqs = (v: string) => setSamplingParams({ stopSeqs: v });
   const setNumSeeds = (v: number) => setSamplingParams({ numSeeds: Math.max(1, Math.min(32, v)) });
+  const setSweepAxis = (a: typeof sweepAxis) => {
+    // When switching to a knob sweep and the range is still at the
+    // generic 0..1, adopt that axis's sensible defaults.
+    if (a !== "seed" && sweepFrom === 0 && sweepTo === 1) {
+      const defaults = AXIS_DEFAULTS[a];
+      setSamplingParams({ sweepAxis: a, sweepFrom: defaults.from, sweepTo: defaults.to });
+    } else {
+      setSamplingParams({ sweepAxis: a });
+    }
+  };
+  const setSweepFrom = (v: number) => setSamplingParams({ sweepFrom: v });
+  const setSweepTo = (v: number) => setSamplingParams({ sweepTo: v });
   const [error, setError] = useState("");
   // Authoritative token count from the session's tokenizer; null until the
   // first successful fetch (or while re-fetching). Falls back to a char/3.5
@@ -259,9 +294,9 @@ export function ProbePanel() {
     const resultId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     if (isWs) {
-      // Seed fan-out: N>1 generate runs on the same session with distinct
-      // seeds. Mutually exclusive with A/B — UI disables numSeeds when B
-      // is selected, so this branch can assume !targetSessionB.
+      // Fan-out: N>1 generate runs on the same session. Mutually exclusive
+      // with A/B — UI disables numSeeds when B is selected, so this branch
+      // can assume !targetSessionB.
       const fanoutN = operation === "generate" && numSeeds > 1 && !targetSessionB ? numSeeds : 0;
 
       if (fanoutN > 0) {
@@ -269,15 +304,37 @@ export function ProbePanel() {
         const seedTrimmed = seed.trim();
         const seedBase = seedTrimmed === "" ? null : Number(seedTrimmed);
         const hasBaseSeed = seedBase !== null && Number.isFinite(seedBase);
+
+        // Pre-compute the per-variant overrides. For seed axis we generate
+        // seeds; for knob sweeps we linspace the range and all runs share
+        // one seed (fixed by the user or one random).
+        const isKnobSweep = sweepAxis !== "seed";
+        const axisDef = isKnobSweep ? AXIS_DEFAULTS[sweepAxis] : null;
+        const sharedSeed = isKnobSweep
+          ? (hasBaseSeed ? (seedBase as number) : Math.floor(Math.random() * 2_147_483_647))
+          : null;
+        const sweepValues = isKnobSweep && axisDef
+          ? linspace(sweepFrom, sweepTo, fanoutN, sweepAxis === "top_k")
+          : null;
+
         for (let i = 0; i < fanoutN; i++) {
           const childId = `${batchId}-s${i}`;
-          // With a user-specified base seed, use seed+i so the batch is
-          // reproducible. Without one, draw N independent random seeds so
-          // temp=0 still produces identical runs (correct) while temp>0
-          // produces useful variance.
-          const childSeed = hasBaseSeed
-            ? (seedBase as number) + i
-            : Math.floor(Math.random() * 2_147_483_647);
+          let childSeed: number;
+          let overrides: Record<string, unknown> = {};
+          let sweepLabel = "";
+
+          if (isKnobSweep && axisDef && sweepValues) {
+            childSeed = sharedSeed!;
+            overrides = { [axisDef.backendKey]: sweepValues[i] };
+            sweepLabel = `${axisDef.label}=${axisDef.format(sweepValues[i])}`;
+          } else {
+            // Seed sweep — current behavior preserved.
+            childSeed = hasBaseSeed
+              ? (seedBase as number) + i
+              : Math.floor(Math.random() * 2_147_483_647);
+            sweepLabel = `seed=${childSeed}`;
+          }
+
           localPendingIdsRef.current.add(childId);
           setPendingResult(childId, {
             id: childId,
@@ -291,9 +348,10 @@ export function ProbePanel() {
             batchIndex: i,
             batchSize: fanoutN,
             seed: childSeed,
+            sweepLabel,
           });
           const cfgBase = getWsConfig(effectiveMax) as Record<string, unknown>;
-          const cfg = { ...cfgBase, seed: childSeed };
+          const cfg = { ...cfgBase, seed: childSeed, ...overrides };
           connect(childId, getWsPath(targetSession), cfg, makeWsHandlers(childId), targetSession);
         }
         return;
@@ -523,13 +581,43 @@ export function ProbePanel() {
             <label
               style={dim(off.n || !!targetSessionB, labelStyle)}
               title={targetSessionB
-                ? "Seed fan-out is disabled while Session B is selected (A/B and fan-out are exclusive)."
-                : "Fan out one Run into N generations, each with a distinct seed. If the seed field is set, uses seed, seed+1, ..., seed+N-1 for reproducibility."}
+                ? "Fan-out is disabled while Session B is selected (A/B and fan-out are exclusive)."
+                : "Fan out one Run into N variants. Axis below controls what varies across the N runs."}
             >N</label>
             <input className="num-input" type="number" min="1" max="32" value={numSeeds}
               onChange={(e) => setNumSeeds(num(e.target.value, numSeeds))}
               disabled={!!targetSessionB}
               style={dim(off.n || !!targetSessionB, numInputStyle)} />
+
+            <label
+              style={dim(numSeeds < 2 || !!targetSessionB, labelStyle)}
+              title="Which knob varies across the N fan-out runs. 'seed' draws independent seeds (explores sampling noise); the others linspace the selected knob from → to (explores sensitivity to one parameter)."
+            >sweep</label>
+            <select
+              value={sweepAxis}
+              onChange={(e) => setSweepAxis(e.target.value as SweepAxis)}
+              disabled={numSeeds < 2 || !!targetSessionB}
+              style={{ gridColumn: "2 / -1", fontSize: 11, padding: "1px 4px", background: "#0f1626", color: "#e0e0f0", border: "1px solid #1a2540", borderRadius: 3 }}
+            >
+              <option value="seed">seed (sampling noise)</option>
+              <option value="temperature">temperature</option>
+              <option value="top_p">top_p (nucleus)</option>
+              <option value="top_k">top_k</option>
+              <option value="min_p">min_p</option>
+            </select>
+
+            {sweepAxis !== "seed" && numSeeds >= 2 && !targetSessionB && (
+              <>
+                <label style={labelStyle} title="Starting value for the sweep axis (inclusive).">from</label>
+                <input className="num-input" type="number" step={AXIS_DEFAULTS[sweepAxis].step} value={sweepFrom}
+                  onChange={(e) => setSweepFrom(num(e.target.value, sweepFrom))}
+                  style={numInputStyle} />
+                <label style={labelStyle} title="Ending value for the sweep axis (inclusive). N runs evenly spaced.">to</label>
+                <input className="num-input" type="number" step={AXIS_DEFAULTS[sweepAxis].step} value={sweepTo}
+                  onChange={(e) => setSweepTo(num(e.target.value, sweepTo))}
+                  style={numInputStyle} />
+              </>
+            )}
           </div>
         </>
       )}

@@ -170,14 +170,19 @@ export interface ProbeResult {
   // VisualizationArea can locate the pair, but classification (A vs B)
   // reads this flag rather than string-sniffing the id.
   isB?: boolean;
-  // Seed fan-out grouping. All N runs in a single "run with N seeds" batch
-  // share batchId; batchIndex is 0..N-1; seed is the per-run numeric seed.
-  // batchSize is duplicated on every member so a single result is enough
-  // to know the full batch size without consulting the others.
+  // Seed fan-out / parameter-sweep grouping. All N runs in a single batch
+  // share batchId; batchIndex is 0..N-1. batchSize is duplicated on every
+  // member so a single result is enough to know the full batch size
+  // without consulting the others.
+  //
+  // `seed` is the per-run numeric seed when axis=seed. `sweepLabel` is
+  // the human-readable variant label across *any* sweep axis (e.g.
+  // "temp=0.3", "top_p=0.85"), used by panels to label each column.
   batchId?: string;
   batchIndex?: number;
   batchSize?: number;
   seed?: number;
+  sweepLabel?: string;
 
   // Researcher annotations. `pinned` results survive Clear All and are
   // always kept in the persisted result slice regardless of the 50-cap.

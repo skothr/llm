@@ -220,7 +220,11 @@ function GenerationPanel({
     return rows;
   };
 
-  const seedLabel = result.seed != null ? `seed ${result.seed}` : null;
+  // Prefer the explicit sweepLabel (set by the ProbePanel fan-out flow
+  // for any axis) over a bare seed number. Falls back to the seed so
+  // older persisted results — written before sweepLabel existed — still
+  // render something meaningful.
+  const seedLabel = result.sweepLabel ?? (result.seed != null ? `seed ${result.seed}` : null);
   // In batch mode we narrow each column so 4+ panels still fit. Keep the
   // wider default for the 1- or 2-panel A/B layouts so long prompts don't
   // wrap awkwardly.

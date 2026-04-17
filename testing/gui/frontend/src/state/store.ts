@@ -48,9 +48,17 @@ export interface SamplingParams {
   repPenalty: number;
   stopSeqs: string;
   // Seed fan-out: number of parallel runs per Run click. 1 = normal single
-  // run. N>1 triggers N WS connections each with a distinct random seed,
-  // grouped by a shared batchId on the resulting ProbeResults.
+  // run. N>1 triggers N WS connections grouped by a shared batchId.
   numSeeds: number;
+  // Which knob varies across a fan-out batch.
+  //   seed      → N different random seeds (original behavior)
+  //   temperature / top_p / top_k / min_p → linspace over the axis;
+  //                  all runs share the same seed for fair comparison.
+  sweepAxis: "seed" | "temperature" | "top_p" | "top_k" | "min_p";
+  // Inclusive range used when sweepAxis ≠ seed. Values are drawn linearly
+  // from [sweepFrom, sweepTo] in numSeeds steps.
+  sweepFrom: number;
+  sweepTo: number;
 }
 
 export const SAMPLING_DEFAULTS: SamplingParams = {
@@ -64,6 +72,9 @@ export const SAMPLING_DEFAULTS: SamplingParams = {
   repPenalty: 1.0,
   stopSeqs: "\\n\\n",
   numSeeds: 1,
+  sweepAxis: "seed",
+  sweepFrom: 0.0,
+  sweepTo: 1.0,
 };
 
 export interface NamedPrompt {
