@@ -6,6 +6,7 @@ import { AttentionEntropy } from "./visualizations/AttentionEntropy";
 import { ResidualNorms } from "./visualizations/ResidualNorms";
 import { ResultMetaEditor } from "./ResultMetaEditor";
 import { ResultFilterBar, makeResultPredicate } from "./ResultFilterBar";
+import { BulkActionBar } from "./BulkActionBar";
 import type { ProbeResult } from "../types/api";
 
 function InterveneSummary({ result }: { result: ProbeResult }) {
@@ -52,6 +53,9 @@ export function VisualizationArea() {
   const clearResults = useStore((s) => s.clearResults);
   const deleteResult = useStore((s) => s.deleteResult);
   const recallResult = useStore((s) => s.recallResult);
+  const selectedResultIds = useStore((s) => s.selectedResultIds);
+  const toggleResultSelection = useStore((s) => s.toggleResultSelection);
+  const selectResultRange = useStore((s) => s.selectResultRange);
   const filterTags = useStore((s) => s.filterTags);
   const filterPinnedOnly = useStore((s) => s.filterPinnedOnly);
   const filterQuery = useStore((s) => s.filterQuery);
@@ -111,29 +115,55 @@ export function VisualizationArea() {
       </div>
 
       <ResultFilterBar />
+      <BulkActionBar />
 
       {headResults.length > 1 && (
         <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-          {visibleHeadResults.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setActiveResult(r.id)}
-              style={{
-                fontSize: 11, padding: "2px 8px",
-                background: r.id === activeResultId ? "#1a5276" : "#0d1b2a",
-                border: r.pinned ? "1px solid #c08020" : undefined,
-              }}
-              title={r.notes || undefined}
-            >
-              {r.pinned && <span style={{ color: "#ffc040", marginRight: 3 }}>{"\u2605"}</span>}
-              {r.operation} | {r.sessionName}
-              {all.find((b) => b.isB && b.id === `${r.id}-B`) ? " (A/B)" : ""}
-              {r.id in pendingResults ? " ..." : ""}
-              {r.tags && r.tags.length > 0 && (
-                <span style={{ color: "#88a0c0", marginLeft: 4 }}>#{r.tags[0]}{r.tags.length > 1 ? `+${r.tags.length - 1}` : ""}</span>
-              )}
-            </button>
-          ))}
+          {visibleHeadResults.map((r) => {
+            const isSelected = selectedResultIds.includes(r.id);
+            return (
+              <button
+                key={r.id}
+                onClick={(e) => {
+                  if (e.shiftKey) {
+                    e.preventDefault();
+                    selectResultRange(r.id, visibleHeadResults.map((x) => x.id));
+                    return;
+                  }
+                  if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    toggleResultSelection(r.id);
+                    return;
+                  }
+                  setActiveResult(r.id);
+                }}
+                style={{
+                  fontSize: 11,
+                  background: isSelected
+                    ? "#2a5e96"
+                    : r.id === activeResultId ? "#1a5276" : "#0d1b2a",
+                  border: isSelected
+                    ? "2px solid #6ba6d4"
+                    : r.pinned ? "1px solid #c08020" : undefined,
+                  // Normalize padding so the 2px-border selected state
+                  // doesn't shift surrounding tabs by 1px.
+                  padding: isSelected ? "1px 7px" : "2px 8px",
+                }}
+                title={[
+                  r.notes,
+                  isSelected ? "(Selected — Ctrl/Cmd+click to deselect)" : "Ctrl/Cmd+click to multi-select; Shift+click for range",
+                ].filter(Boolean).join("\n")}
+              >
+                {r.pinned && <span style={{ color: "#ffc040", marginRight: 3 }}>{"\u2605"}</span>}
+                {r.operation} | {r.sessionName}
+                {all.find((b) => b.isB && b.id === `${r.id}-B`) ? " (A/B)" : ""}
+                {r.id in pendingResults ? " ..." : ""}
+                {r.tags && r.tags.length > 0 && (
+                  <span style={{ color: "#88a0c0", marginLeft: 4 }}>#{r.tags[0]}{r.tags.length > 1 ? `+${r.tags.length - 1}` : ""}</span>
+                )}
+              </button>
+            );
+          })}
           {visibleHeadResults.length < headResults.length && (
             <span style={{ fontSize: 10, color: "#667" }}>
               ({headResults.length - visibleHeadResults.length} hidden by filter)

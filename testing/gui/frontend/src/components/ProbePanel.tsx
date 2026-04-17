@@ -133,6 +133,7 @@ export function ProbePanel() {
   const {
     displayTopK, maxTokens, temperature, samplingTopK, topP, minP, seed,
     repPenalty, stopSeqs, numSeeds, sweepAxis, sweepFrom, sweepTo,
+    sweepAxis2, sweepFrom2, sweepTo2, numSeeds2,
   } = samplingParams;
   const setDisplayTopK = (v: number) => setSamplingParams({ displayTopK: v });
   const setMaxTokens = (v: number) => setSamplingParams({ maxTokens: v });
@@ -156,6 +157,19 @@ export function ProbePanel() {
   };
   const setSweepFrom = (v: number) => setSamplingParams({ sweepFrom: v });
   const setSweepTo = (v: number) => setSamplingParams({ sweepTo: v });
+  const setSweepAxis2 = (a: typeof sweepAxis2) => {
+    // Bumping into a new secondary axis adopts that axis's default range
+    // the first time. Picking "none" collapses the grid back to 1D.
+    if (a !== "none" && sweepFrom2 === 0 && sweepTo2 === 1) {
+      const d = AXIS_DEFAULTS[a];
+      setSamplingParams({ sweepAxis2: a, sweepFrom2: d.from, sweepTo2: d.to });
+    } else {
+      setSamplingParams({ sweepAxis2: a });
+    }
+  };
+  const setSweepFrom2 = (v: number) => setSamplingParams({ sweepFrom2: v });
+  const setSweepTo2 = (v: number) => setSamplingParams({ sweepTo2: v });
+  const setNumSeeds2 = (v: number) => setSamplingParams({ numSeeds2: Math.max(1, Math.min(8, v)) });
   const [error, setError] = useState("");
   // Authoritative token count from the session's tokenizer; null until the
   // first successful fetch (or while re-fetching). Falls back to a char/3.5
@@ -296,66 +310,85 @@ export function ProbePanel() {
     if (isWs) {
       // Fan-out: N>1 generate runs on the same session. Mutually exclusive
       // with A/B — UI disables numSeeds when B is selected, so this branch
-      // can assume !targetSessionB.
-      const fanoutN = operation === "generate" && numSeeds > 1 && !targetSessionB ? numSeeds : 0;
+      // can assume !targetSessionB. Optional 2nd axis produces N×M grid.
+      const has2D = sweepAxis2 !== "none" && numSeeds2 > 1;
+      const rows = operation === "generate" && numSeeds > 1 && !targetSessionB ? numSeeds : 0;
+      const cols = has2D ? numSeeds2 : 1;
+      const total = rows * cols;
 
-      if (fanoutN > 0) {
+      if (rows > 0) {
         const batchId = resultId;
         const seedTrimmed = seed.trim();
         const seedBase = seedTrimmed === "" ? null : Number(seedTrimmed);
         const hasBaseSeed = seedBase !== null && Number.isFinite(seedBase);
 
-        // Pre-compute the per-variant overrides. For seed axis we generate
-        // seeds; for knob sweeps we linspace the range and all runs share
-        // one seed (fixed by the user or one random).
+        // Primary axis knob spec.
         const isKnobSweep = sweepAxis !== "seed";
         const axisDef = isKnobSweep ? AXIS_DEFAULTS[sweepAxis] : null;
-        const sharedSeed = isKnobSweep
+        const primaryValues = isKnobSweep && axisDef
+          ? linspace(sweepFrom, sweepTo, rows, sweepAxis === "top_k")
+          : null;
+
+        // Secondary axis (always a knob when present).
+        const axis2Def = has2D ? AXIS_DEFAULTS[sweepAxis2 as Exclude<typeof sweepAxis2, "none">] : null;
+        const secondaryValues = axis2Def
+          ? linspace(sweepFrom2, sweepTo2, cols, sweepAxis2 === "top_k")
+          : null;
+
+        // Shared seed across the grid when a knob axis is active so
+        // sampling noise isn't confounded with the knob(s).
+        const sharedSeed = isKnobSweep || has2D
           ? (hasBaseSeed ? (seedBase as number) : Math.floor(Math.random() * 2_147_483_647))
           : null;
-        const sweepValues = isKnobSweep && axisDef
-          ? linspace(sweepFrom, sweepTo, fanoutN, sweepAxis === "top_k")
-          : null;
 
-        for (let i = 0; i < fanoutN; i++) {
-          const childId = `${batchId}-s${i}`;
-          let childSeed: number;
-          let overrides: Record<string, unknown> = {};
-          let sweepLabel = "";
+        for (let i = 0; i < rows; i++) {
+          for (let j = 0; j < cols; j++) {
+            const linearIdx = i * cols + j;
+            const childId = cols > 1 ? `${batchId}-g${i}-${j}` : `${batchId}-s${i}`;
+            let childSeed: number;
+            const overrides: Record<string, unknown> = {};
+            const labelParts: string[] = [];
 
-          if (isKnobSweep && axisDef && sweepValues) {
-            childSeed = sharedSeed!;
-            overrides = { [axisDef.backendKey]: sweepValues[i] };
-            sweepLabel = `${axisDef.label}=${axisDef.format(sweepValues[i])}`;
-          } else {
-            // Seed sweep — current behavior preserved.
-            childSeed = hasBaseSeed
-              ? (seedBase as number) + i
-              : Math.floor(Math.random() * 2_147_483_647);
-            sweepLabel = `seed=${childSeed}`;
+            if (isKnobSweep && axisDef && primaryValues) {
+              overrides[axisDef.backendKey] = primaryValues[i];
+              labelParts.push(`${axisDef.label}=${axisDef.format(primaryValues[i])}`);
+              childSeed = sharedSeed!;
+            } else {
+              // Seed sweep on primary axis.
+              childSeed = hasBaseSeed
+                ? (seedBase as number) + i
+                : (cols === 1 ? Math.floor(Math.random() * 2_147_483_647) : sharedSeed!);
+              labelParts.push(`seed=${childSeed}`);
+            }
+
+            if (axis2Def && secondaryValues) {
+              overrides[axis2Def.backendKey] = secondaryValues[j];
+              labelParts.push(`${axis2Def.label}=${axis2Def.format(secondaryValues[j])}`);
+            }
+
+            localPendingIdsRef.current.add(childId);
+            setPendingResult(childId, {
+              id: childId,
+              operation,
+              sessionName: targetSession,
+              prompt,
+              data: [],
+              timestamp: Date.now(),
+              isB: false,
+              batchId,
+              batchIndex: linearIdx,
+              batchSize: total,
+              seed: childSeed,
+              sweepLabel: labelParts.join(", "),
+              runParams: { ...samplingParams },
+              // Only set gridCols for 2D grids so 1D fan-out keeps its
+              // existing horizontal-scroll layout.
+              ...(cols > 1 ? { gridCols: cols } : {}),
+            });
+            const cfgBase = getWsConfig(effectiveMax) as Record<string, unknown>;
+            const cfg = { ...cfgBase, seed: childSeed, ...overrides };
+            connect(childId, getWsPath(targetSession), cfg, makeWsHandlers(childId), targetSession);
           }
-
-          localPendingIdsRef.current.add(childId);
-          setPendingResult(childId, {
-            id: childId,
-            operation,
-            sessionName: targetSession,
-            prompt,
-            data: [],
-            timestamp: Date.now(),
-            isB: false,
-            batchId,
-            batchIndex: i,
-            batchSize: fanoutN,
-            seed: childSeed,
-            sweepLabel,
-            // Snapshot params at run time so a future recall restores the
-            // exact knob set used to produce this output.
-            runParams: { ...samplingParams },
-          });
-          const cfgBase = getWsConfig(effectiveMax) as Record<string, unknown>;
-          const cfg = { ...cfgBase, seed: childSeed, ...overrides };
-          connect(childId, getWsPath(targetSession), cfg, makeWsHandlers(childId), targetSession);
         }
         return;
       }
@@ -623,6 +656,44 @@ export function ProbePanel() {
                 <input className="num-input" type="number" step={AXIS_DEFAULTS[sweepAxis].step} value={sweepTo}
                   onChange={(e) => setSweepTo(num(e.target.value, sweepTo))}
                   style={numInputStyle} />
+              </>
+            )}
+
+            {/* Secondary axis — turns the fan-out into an N×M grid. */}
+            {numSeeds >= 2 && !targetSessionB && (
+              <>
+                <label
+                  style={dim(sweepAxis2 === "none", labelStyle)}
+                  title="Optional secondary axis for a 2D parameter grid. When set, total runs = N × M. Keep M small (≤4) — run count multiplies."
+                >axis{"\u00b2"}</label>
+                <select
+                  value={sweepAxis2}
+                  onChange={(e) => setSweepAxis2(e.target.value as typeof sweepAxis2)}
+                  style={{ gridColumn: "2 / -1", fontSize: 11, padding: "1px 4px", background: "#0f1626", color: "#e0e0f0", border: "1px solid #1a2540", borderRadius: 3 }}
+                >
+                  <option value="none">none (1D sweep)</option>
+                  <option value="temperature" disabled={sweepAxis === "temperature"}>temperature</option>
+                  <option value="top_p" disabled={sweepAxis === "top_p"}>top_p</option>
+                  <option value="top_k" disabled={sweepAxis === "top_k"}>top_k</option>
+                  <option value="min_p" disabled={sweepAxis === "min_p"}>min_p</option>
+                </select>
+
+                {sweepAxis2 !== "none" && (
+                  <>
+                    <label style={labelStyle} title="Number of points along the secondary axis (capped at 8 — N × M multiplies).">M</label>
+                    <input className="num-input" type="number" min="2" max="8" value={numSeeds2}
+                      onChange={(e) => setNumSeeds2(num(e.target.value, numSeeds2))}
+                      style={numInputStyle} />
+                    <label style={labelStyle} title="Secondary axis range: total runs = N × M with the grand total shown in the button.">from{"\u00b2"}</label>
+                    <input className="num-input" type="number" step={AXIS_DEFAULTS[sweepAxis2].step} value={sweepFrom2}
+                      onChange={(e) => setSweepFrom2(num(e.target.value, sweepFrom2))}
+                      style={numInputStyle} />
+                    <label style={labelStyle}>to{"\u00b2"}</label>
+                    <input className="num-input" type="number" step={AXIS_DEFAULTS[sweepAxis2].step} value={sweepTo2}
+                      onChange={(e) => setSweepTo2(num(e.target.value, sweepTo2))}
+                      style={numInputStyle} />
+                  </>
+                )}
               </>
             )}
           </div>

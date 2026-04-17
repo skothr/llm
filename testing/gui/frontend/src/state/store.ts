@@ -59,6 +59,16 @@ export interface SamplingParams {
   // from [sweepFrom, sweepTo] in numSeeds steps.
   sweepFrom: number;
   sweepTo: number;
+
+  // Optional secondary sweep axis for a 2D grid. When `sweepAxis2 !=
+  // "none"`, a run fires N × numSeeds2 variants — outer loop over the
+  // primary axis, inner loop over the secondary. "seed" is intentionally
+  // omitted here; seed randomness as a secondary axis is better modeled
+  // by bumping numSeeds on the primary.
+  sweepAxis2: "none" | "temperature" | "top_p" | "top_k" | "min_p";
+  sweepFrom2: number;
+  sweepTo2: number;
+  numSeeds2: number;
 }
 
 export const SAMPLING_DEFAULTS: SamplingParams = {
@@ -75,6 +85,10 @@ export const SAMPLING_DEFAULTS: SamplingParams = {
   sweepAxis: "seed",
   sweepFrom: 0.0,
   sweepTo: 1.0,
+  sweepAxis2: "none",
+  sweepFrom2: 0.0,
+  sweepTo2: 1.0,
+  numSeeds2: 1,
 };
 
 export interface NamedPrompt {
@@ -135,6 +149,13 @@ interface StoreState {
   // more confusing than useful.
   lastDeleted: { result: ProbeResult; index: number; deletedAt: number } | null;
 
+  // Multi-select for result tabs. Runtime-only. lastSelectedResultId
+  // anchors shift-click range selection. When nothing is in selection,
+  // the regular activeResultId-driven single-result flow continues to
+  // work unchanged.
+  selectedResultIds: string[];
+  lastSelectedResultId: string | null;
+
   interventionSpecs: InterventionSpec[];
   captureLogitLens: boolean;
   intervenePrompt: string;
@@ -192,6 +213,13 @@ interface StoreState {
   // the probe panel and switch to the probe tab. Doesn't auto-run — the
   // user reviews and hits Run themselves.
   recallResult: (id: string) => void;
+
+  // Multi-select actions for batch operations.
+  toggleResultSelection: (id: string) => void;
+  selectResultRange: (toId: string, orderedIds: string[]) => void;
+  clearResultSelection: () => void;
+  bulkUpdateSelected: (patch: { pinned?: boolean; addTag?: string }) => void;
+  bulkDeleteSelected: () => void;
 
   addIntervention: () => void;
   removeIntervention: (index: number) => void;
@@ -263,6 +291,9 @@ export const useStore = create<StoreState>()(
       baselineSession: null,
 
       lastDeleted: null,
+
+      selectedResultIds: [],
+      lastSelectedResultId: null,
 
       interventionSpecs: [],
       captureLogitLens: false,
@@ -544,6 +575,81 @@ export const useStore = create<StoreState>()(
       }),
 
       clearUndoDelete: () => set({ lastDeleted: null }),
+
+      toggleResultSelection: (id) => set((s) => {
+        const next = s.selectedResultIds.includes(id)
+          ? s.selectedResultIds.filter((x) => x !== id)
+          : [...s.selectedResultIds, id];
+        return { selectedResultIds: next, lastSelectedResultId: id };
+      }),
+
+      selectResultRange: (toId, orderedIds) => set((s) => {
+        // Anchor at the last-selected (or just this one if nothing selected).
+        const anchor = s.lastSelectedResultId ?? toId;
+        const aIdx = orderedIds.indexOf(anchor);
+        const bIdx = orderedIds.indexOf(toId);
+        if (aIdx < 0 || bIdx < 0) {
+          return { selectedResultIds: [toId], lastSelectedResultId: toId };
+        }
+        const [lo, hi] = aIdx <= bIdx ? [aIdx, bIdx] : [bIdx, aIdx];
+        const range = orderedIds.slice(lo, hi + 1);
+        // Union with prior selection so shift-click extends rather than
+        // replaces — matches file-manager conventions.
+        const set = new Set([...s.selectedResultIds, ...range]);
+        return { selectedResultIds: [...set], lastSelectedResultId: toId };
+      }),
+
+      clearResultSelection: () => set({ selectedResultIds: [], lastSelectedResultId: null }),
+
+      bulkUpdateSelected: (patch) => set((s) => {
+        if (s.selectedResultIds.length === 0) return s;
+        const ids = new Set(s.selectedResultIds);
+        const applyPatch = (r: ProbeResult): ProbeResult => {
+          if (!ids.has(r.id)) return r;
+          const next: ProbeResult = { ...r };
+          if (patch.pinned !== undefined) next.pinned = patch.pinned;
+          if (patch.addTag) {
+            const existing = next.tags ?? [];
+            if (!existing.includes(patch.addTag)) next.tags = [...existing, patch.addTag];
+          }
+          return next;
+        };
+        const pending: Record<string, ProbeResult> = {};
+        for (const [id, r] of Object.entries(s.pendingResults)) pending[id] = applyPatch(r);
+        return {
+          pendingResults: pending,
+          results: s.results.map(applyPatch),
+        };
+      }),
+
+      bulkDeleteSelected: () => set((s) => {
+        if (s.selectedResultIds.length === 0) return s;
+        const ids = new Set(s.selectedResultIds);
+        // Delete one-at-a-time from results[], capturing the last one
+        // deleted as the undo shadow (one-step undo matches existing
+        // single-delete behavior).
+        let lastShadow: StoreState["lastDeleted"] = s.lastDeleted;
+        const remaining: ProbeResult[] = [];
+        s.results.forEach((r, idx) => {
+          if (ids.has(r.id)) {
+            lastShadow = { result: r, index: idx, deletedAt: Date.now() };
+            return;
+          }
+          remaining.push(r);
+        });
+        const remainingPending: Record<string, ProbeResult> = {};
+        for (const [id, r] of Object.entries(s.pendingResults)) {
+          if (!ids.has(id)) remainingPending[id] = r;
+        }
+        return {
+          results: remaining,
+          pendingResults: remainingPending,
+          activeResultId: s.activeResultId && ids.has(s.activeResultId) ? null : s.activeResultId,
+          selectedResultIds: [],
+          lastSelectedResultId: null,
+          lastDeleted: lastShadow,
+        };
+      }),
 
       recallResult: (id) => set((s) => {
         const all = [...Object.values(s.pendingResults), ...s.results];
