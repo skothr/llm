@@ -76,6 +76,13 @@ export interface CompareLogitLensData {
   original_layer: number;
   sublayer: string;
   cells: CompareCell[];
+  hidden_state_a?: EncodedHiddenStateMsg;
+  hidden_state_b?: EncodedHiddenStateMsg;
+}
+
+export interface EncodedHiddenStateMsg {
+  shape: [number, number];
+  b64: string;
 }
 
 export interface LogitLensData {
@@ -85,6 +92,7 @@ export interface LogitLensData {
   sublayer: string;
   predictions: Array<Array<{ token: string; prob: number }>>;
   metrics?: Array<CellMetrics>;
+  hidden_state?: EncodedHiddenStateMsg;
 }
 
 export interface GenerateData {

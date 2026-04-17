@@ -3,6 +3,8 @@ import * as d3 from "d3";
 import { displayToken } from "../../utils/displayToken";
 import { useStore } from "../../state/store";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { sliceHiddenStatePosition } from "../../utils/hiddenState";
+import { HiddenStateHeatmap } from "./HiddenStateHeatmap";
 import type {
   LogitLensData,
   ProbeResult,
@@ -14,6 +16,19 @@ import type {
 interface Props {
   resultA: ProbeResult;
   resultB: ProbeResult;
+}
+
+type PinnedSource =
+  | { kind: "A"; msg: LogitLensData }
+  | { kind: "B"; msg: LogitLensData }
+  | { kind: "compare"; frame: CompareLogitLensData; cell: CompareCell };
+
+interface Pinned {
+  source: PinnedSource;
+  rowLabel: string;
+  posIdx: number;
+  x: number;
+  y: number;
 }
 
 interface AlignedRow {
@@ -110,7 +125,19 @@ export function ABDiff({ resultA, resultB }: Props) {
     y: number;
     content: string;
   } | null>(null);
+  const [pinned, setPinned] = useState<Pinned | null>(null);
   const ws = useWebSocket();
+
+  const infoA = sessionInfo[resultA.sessionName];
+  const infoB = sessionInfo[resultB.sessionName];
+
+  const unpin = useCallback(() => setPinned(null), []);
+  useEffect(() => {
+    if (!pinned) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") unpin(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pinned, unpin]);
 
   const dataA = useMemo(
     () => resultA.data.filter((m): m is LogitLensData => m.type === "data" && "predictions" in m),
@@ -125,6 +152,14 @@ export function ABDiff({ resultA, resultB }: Props) {
     const map = new Map<string, CompareCell[]>();
     for (const frame of compareFrames) {
       map.set(`${frame.original_layer}.${frame.sublayer}`, frame.cells);
+    }
+    return map;
+  }, [compareFrames]);
+
+  const compareFrameByKey = useMemo(() => {
+    const map = new Map<string, CompareLogitLensData>();
+    for (const frame of compareFrames) {
+      map.set(`${frame.original_layer}.${frame.sublayer}`, frame);
     }
     return map;
   }, [compareFrames]);
@@ -308,6 +343,16 @@ export function ABDiff({ resultA, resultB }: Props) {
             .attr("fill", colorScale(topPred.prob))
             .attr("rx", 2)
             .style("cursor", "pointer")
+            .on("click", (event) => {
+              setPinned({
+                source: { kind: side, msg },
+                rowLabel: row.label,
+                posIdx,
+                x: event.pageX + 10,
+                y: event.pageY + 10,
+              });
+              setTooltip(null);
+            })
             .on("mouseenter", (event) => {
               const top = posPreds.slice(0, 5);
               const show = top.map((p) => displayToken(p.token));
@@ -432,6 +477,7 @@ export function ABDiff({ resultA, resultB }: Props) {
               }
             }
 
+            const frame = compareFrameByKey.get(`${row.originalLayer}.${row.sublayer}`);
             g.append("rect")
               .attr("x", posIdx * cellW)
               .attr("y", rowIdx * cellH)
@@ -442,6 +488,17 @@ export function ABDiff({ resultA, resultB }: Props) {
               .attr("stroke", !cell.compare.top1_match ? "#ff6b6b" : "none")
               .attr("stroke-width", !cell.compare.top1_match ? 1.5 : 0)
               .style("cursor", "pointer")
+              .on("click", (event) => {
+                if (!frame) return;
+                setPinned({
+                  source: { kind: "compare", frame, cell },
+                  rowLabel: row.label,
+                  posIdx,
+                  x: event.pageX + 10,
+                  y: event.pageY + 10,
+                });
+                setTooltip(null);
+              })
               .on("mouseenter", (event) => {
                 const c = cell.compare;
                 setTooltip({
@@ -526,7 +583,7 @@ export function ABDiff({ resultA, resultB }: Props) {
       }
     }
 
-  }, [alignedRows, showDiff, resultA.sessionName, resultB.sessionName, resultA.data, resultA.id, resultB.id, hasCompareData, compareByKey, compareMetric, compareFrames]);
+  }, [alignedRows, showDiff, resultA.sessionName, resultB.sessionName, resultA.data, resultA.id, resultB.id, hasCompareData, compareByKey, compareFrameByKey, compareMetric, compareFrames]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -587,7 +644,7 @@ export function ABDiff({ resultA, resultB }: Props) {
       <div style={{ overflowX: "auto" }}>
         <svg ref={svgRef} />
       </div>
-      {tooltip && (
+      {tooltip && !pinned && (
         <div
           style={{
             position: "fixed",
@@ -605,6 +662,133 @@ export function ABDiff({ resultA, resultB }: Props) {
           }}
         >
           {tooltip.content}
+        </div>
+      )}
+      {pinned && (
+        <PinnedCardAB
+          pinned={pinned}
+          numHeadsA={infoA?.num_heads ?? 0}
+          hiddenSizeA={infoA?.hidden_size ?? 0}
+          numHeadsB={infoB?.num_heads ?? 0}
+          hiddenSizeB={infoB?.hidden_size ?? 0}
+          onClose={unpin}
+        />
+      )}
+    </div>
+  );
+}
+
+interface PinnedCardABProps {
+  pinned: Pinned;
+  numHeadsA: number;
+  hiddenSizeA: number;
+  numHeadsB: number;
+  hiddenSizeB: number;
+  onClose: () => void;
+}
+
+function PinnedCardAB({
+  pinned, numHeadsA, hiddenSizeA, numHeadsB, hiddenSizeB, onClose,
+}: PinnedCardABProps) {
+  const { source, rowLabel, posIdx, x, y } = pinned;
+
+  const { vecA, vecB, headsA, dimA, headsB, dimB, title, subtitle } = useMemo(() => {
+    let vecA: Float32Array | null = null;
+    let vecB: Float32Array | null = null;
+    let title = "";
+    let subtitle = "";
+
+    if (source.kind === "A") {
+      title = `A · ${rowLabel} pos ${posIdx}`;
+      if (source.msg.hidden_state) {
+        try { vecA = sliceHiddenStatePosition(source.msg.hidden_state, posIdx); } catch { /* ignore */ }
+      }
+    } else if (source.kind === "B") {
+      title = `B · ${rowLabel} pos ${posIdx}`;
+      if (source.msg.hidden_state) {
+        try { vecB = sliceHiddenStatePosition(source.msg.hidden_state, posIdx); } catch { /* ignore */ }
+      }
+    } else {
+      title = `A/B · ${rowLabel} pos ${posIdx}`;
+      const c = source.cell.compare;
+      subtitle = `KL=${c.kl_ab.toFixed(5)}  JS=${c.js.toFixed(5)}  cos=${c.cosine.toFixed(5)}  Δp₁=${(c.top1_delta_prob * 100).toFixed(3)}%  ${c.top1_match ? "match" : "MISMATCH"}`;
+      if (source.frame.hidden_state_a) {
+        try { vecA = sliceHiddenStatePosition(source.frame.hidden_state_a, posIdx); } catch { /* ignore */ }
+      }
+      if (source.frame.hidden_state_b) {
+        try { vecB = sliceHiddenStatePosition(source.frame.hidden_state_b, posIdx); } catch { /* ignore */ }
+      }
+    }
+
+    const headsA = numHeadsA;
+    const headsB = numHeadsB;
+    const dimA = headsA > 0 && hiddenSizeA > 0 ? Math.floor(hiddenSizeA / headsA) : 0;
+    const dimB = headsB > 0 && hiddenSizeB > 0 ? Math.floor(hiddenSizeB / headsB) : 0;
+    return { vecA, vecB, headsA, dimA, headsB, dimB, title, subtitle };
+  }, [source, rowLabel, posIdx, numHeadsA, hiddenSizeA, numHeadsB, hiddenSizeB]);
+
+  const canA = vecA !== null && headsA > 0 && dimA > 0 && vecA.length === headsA * dimA;
+  const canB = vecB !== null && headsB > 0 && dimB > 0 && vecB.length === headsB * dimB;
+
+  // Shared symmetric max so A and B heatmaps are directly comparable.
+  const symmetricMax = useMemo(() => {
+    let m = 0;
+    if (canA && vecA) for (let i = 0; i < vecA.length; i++) { const a = Math.abs(vecA[i]); if (a > m) m = a; }
+    if (canB && vecB) for (let i = 0; i < vecB.length; i++) { const a = Math.abs(vecB[i]); if (a > m) m = a; }
+    return m;
+  }, [vecA, vecB, canA, canB]);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        left: x,
+        top: y,
+        background: "#0f1626",
+        border: "1px solid #1a5276",
+        borderRadius: 4,
+        padding: "10px 12px",
+        fontFamily: "monospace",
+        fontSize: 12,
+        color: "#e0e0f0",
+        zIndex: 200,
+        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+        maxWidth: 720,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 6 }}>
+        <strong style={{ color: "#a0a0c0" }}>{title}</strong>
+        <button onClick={onClose} style={{
+          background: "transparent", border: "none", color: "#888", cursor: "pointer",
+          fontSize: 14, padding: 0, lineHeight: 1,
+        }}>×</button>
+      </div>
+      {subtitle && (
+        <div style={{ fontSize: 11, color: "#a0a0c0", marginBottom: 8 }}>{subtitle}</div>
+      )}
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        {canA && vecA && (
+          <HiddenStateHeatmap
+            data={vecA}
+            numHeads={headsA}
+            headDim={dimA}
+            label={`A · ${headsA}×${dimA}`}
+            symmetricMax={source.kind === "compare" && symmetricMax > 0 ? symmetricMax : undefined}
+          />
+        )}
+        {canB && vecB && (
+          <HiddenStateHeatmap
+            data={vecB}
+            numHeads={headsB}
+            headDim={dimB}
+            label={`B · ${headsB}×${dimB}`}
+            symmetricMax={source.kind === "compare" && symmetricMax > 0 ? symmetricMax : undefined}
+          />
+        )}
+      </div>
+      {!canA && !canB && (
+        <div style={{ fontSize: 10, color: "#888", marginTop: 6 }}>
+          No hidden state available for this frame.
         </div>
       )}
     </div>
