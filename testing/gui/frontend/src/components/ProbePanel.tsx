@@ -454,14 +454,30 @@ export function ProbePanel() {
         {!isRunning ? (
           <button onClick={handleRun} disabled={!targetSession}>Run</button>
         ) : (
-          <button onClick={() => {
-            cancelAll();
-            for (const id of localPendingIdsRef.current) {
-              if (pendingResults[id]) removePendingResult(id);
-            }
-            localPendingIdsRef.current.clear();
-            setRunning(false);
-          }} style={{ background: "#6b2020" }}>Cancel</button>
+          <>
+            {/* Stop: halt generation but keep whatever the model has streamed
+                so far — finalize each pending result into the results list
+                instead of throwing it away. Useful when an early token
+                sequence is already what you wanted. */}
+            <button onClick={() => {
+              cancelAll();
+              for (const id of localPendingIdsRef.current) {
+                if (pendingResults[id]) finalizePendingResult(id);
+              }
+              localPendingIdsRef.current.clear();
+              setRunning(false);
+            }} style={{ background: "#6b5020" }} title="Halt generation; keep what's been streamed so far.">Stop</button>
+            {/* Cancel: halt AND discard. For when the partial output is
+                garbage and you just want a clean slate. */}
+            <button onClick={() => {
+              cancelAll();
+              for (const id of localPendingIdsRef.current) {
+                if (pendingResults[id]) removePendingResult(id);
+              }
+              localPendingIdsRef.current.clear();
+              setRunning(false);
+            }} style={{ background: "#6b2020" }} title="Halt generation and discard the partial output.">Cancel</button>
+          </>
         )}
       </div>
 

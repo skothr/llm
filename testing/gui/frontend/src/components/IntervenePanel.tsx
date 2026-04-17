@@ -201,14 +201,24 @@ export function IntervenePanel() {
         {!isRunning ? (
           <button onClick={handleRun} disabled={!interveneSession || interventionSpecs.length === 0}>Run</button>
         ) : (
-          <button onClick={() => {
-            cancelAll();
-            for (const id of localPendingIdsRef.current) {
-              if (pendingResults[id]) removePendingResult(id);
-            }
-            localPendingIdsRef.current.clear();
-            setRunning(false);
-          }} style={{ background: "#6b2020" }}>Cancel</button>
+          <>
+            <button onClick={() => {
+              cancelAll();
+              for (const id of localPendingIdsRef.current) {
+                if (pendingResults[id]) finalizePendingResult(id);
+              }
+              localPendingIdsRef.current.clear();
+              setRunning(false);
+            }} style={{ background: "#6b5020" }} title="Halt the run; keep what's been streamed so far.">Stop</button>
+            <button onClick={() => {
+              cancelAll();
+              for (const id of localPendingIdsRef.current) {
+                if (pendingResults[id]) removePendingResult(id);
+              }
+              localPendingIdsRef.current.clear();
+              setRunning(false);
+            }} style={{ background: "#6b2020" }} title="Halt the run and discard the partial output.">Cancel</button>
+          </>
         )}
       </div>
 
