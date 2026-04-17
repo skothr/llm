@@ -5,7 +5,14 @@ import { useStopCancel } from "../hooks/useStopCancel";
 import { num } from "../utils/num";
 import { ArrayInput } from "./SurgeryParamForm";
 import { PromptLibraryBar } from "./PromptLibraryBar";
-import type { InterventionSpec, WsMessage } from "../types/api";
+import { previewIntervention } from "../utils/interventionPreview";
+import type { InterventionSpec, SessionInfo, WsMessage } from "../types/api";
+
+const INTERVENTION_SEVERITY_COLOR: Record<"info" | "warn" | "danger", { bg: string; border: string; text: string }> = {
+  info:   { bg: "#0d2236", border: "#1a5276", text: "#8bb5d8" },
+  warn:   { bg: "#2a1f0d", border: "#c08020", text: "#ffc040" },
+  danger: { bg: "#2a0d0d", border: "#c04040", text: "#ff8080" },
+};
 
 type OpParam = { key: string; type: string; default?: number | string; step?: number };
 
@@ -30,15 +37,20 @@ function defaultParamsForOp(opName: string): Record<string, unknown> {
 }
 
 function InterventionCard({
-  spec, index, sessions, onUpdate, onRemove,
+  spec, index, sessions, sessionInfo, onUpdate, onRemove,
 }: {
   spec: InterventionSpec;
   index: number;
   sessions: { name: string }[];
+  // Info for the target session the intervention will run against.
+  // Used by previewIntervention to scale percentages by hidden_size.
+  sessionInfo: SessionInfo | null;
   onUpdate: (index: number, spec: InterventionSpec) => void;
   onRemove: (index: number) => void;
 }) {
   const opDef = INTERVENTION_OPS.find((o) => o.name === spec.op) || INTERVENTION_OPS[0];
+  const preview = previewIntervention(spec, sessionInfo);
+  const sev = INTERVENTION_SEVERITY_COLOR[preview.severity];
 
   const updateParam = (key: string, value: unknown) => {
     onUpdate(index, { ...spec, params: { ...spec.params, [key]: value } });
@@ -58,6 +70,18 @@ function InterventionCard({
           {INTERVENTION_OPS.map((o) => <option key={o.name} value={o.name}>{o.name}</option>)}
         </select>
         <button onClick={() => onRemove(index)} style={{ padding: "2px 6px", fontSize: 11 }}>x</button>
+      </div>
+
+      <div
+        title={preview.summary}
+        style={{
+          fontSize: 10, fontFamily: "monospace",
+          padding: "1px 6px", borderRadius: 3, marginBottom: 4,
+          background: sev.bg, border: `1px solid ${sev.border}`, color: sev.text,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}
+      >
+        {preview.summary}
       </div>
 
       {opDef.params.map((p) => {
@@ -115,6 +139,7 @@ function InterventionCard({
 
 export function IntervenePanel() {
   const sessions = useStore((s) => s.sessions);
+  const sessionInfoMap = useStore((s) => s.sessionInfo);
   const backendOnline = useStore((s) => s.backendOnline);
   const backendProbed = useStore((s) => s.backendProbed);
   const interventionSpecs = useStore((s) => s.interventionSpecs);
@@ -200,7 +225,15 @@ export function IntervenePanel() {
 
       <div style={{ maxHeight: 300, overflowY: "auto" }}>
         {interventionSpecs.map((spec, i) => (
-          <InterventionCard key={i} spec={spec} index={i} sessions={sessions} onUpdate={updateIntervention} onRemove={removeIntervention} />
+          <InterventionCard
+            key={i}
+            spec={spec}
+            index={i}
+            sessions={sessions}
+            sessionInfo={interveneSession ? (sessionInfoMap[interveneSession] ?? null) : null}
+            onUpdate={updateIntervention}
+            onRemove={removeIntervention}
+          />
         ))}
       </div>
 

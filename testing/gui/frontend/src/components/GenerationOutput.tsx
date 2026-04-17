@@ -104,6 +104,9 @@ export function GenerationOutput() {
   // Compute agreement once per render so all panels share a single map.
   // Only meaningful when there are >=2 siblings in the batch.
   const agreement = batchMode && panels.length >= 2 ? agreementPerStep(panels) : null;
+  // 2D grid rendering uses gridCols from any panel (they're all the same
+  // in a valid batch). Fall back to row layout if absent.
+  const gridCols = batchMode ? (panels.find((p) => p.gridCols)?.gridCols ?? 0) : 0;
 
   return (
     <div>
@@ -138,13 +141,25 @@ export function GenerationOutput() {
           </span>
         )}
       </div>
-      <div style={{ display: "flex", gap: 16, overflowX: batchMode ? "auto" : "visible" }}>
+      <div
+        style={gridCols > 1
+          ? {
+              display: "grid",
+              gridTemplateColumns: `repeat(${gridCols}, minmax(200px, 1fr))`,
+              gap: 8,
+              overflowX: "auto",
+              overflowY: "auto",
+              maxHeight: "100%",
+            }
+          : { display: "flex", gap: 16, overflowX: batchMode ? "auto" : "visible" }
+        }
+      >
         {panels.map((r) => (
           <GenerationPanel
             key={r.id}
             result={r}
             isPending={r.id in pendingResults}
-            narrow={batchMode && panels.length > 2}
+            narrow={gridCols > 1 || (batchMode && panels.length > 2)}
             agreement={agreement}
             batchSize={panels.length}
           />

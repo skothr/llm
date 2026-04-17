@@ -183,6 +183,10 @@ export interface ProbeResult {
   batchSize?: number;
   seed?: number;
   sweepLabel?: string;
+  // For 2D parameter grids, `gridCols` is set on every sibling so the
+  // output panel can render them as a rows×cols grid instead of a long
+  // scrolling row. Absent on 1D batches (renders as row, existing).
+  gridCols?: number;
 
   // Researcher annotations. `pinned` results survive Clear All and are
   // always kept in the persisted result slice regardless of the 50-cap.
