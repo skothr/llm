@@ -4,7 +4,7 @@ import { displayToken } from "../../utils/displayToken";
 import { useStore } from "../../state/store";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { sliceHiddenStatePosition } from "../../utils/hiddenState";
-import { HiddenStateHeatmap } from "./HiddenStateHeatmap";
+import { HiddenStateBarStrip } from "./HiddenStateBarStrip";
 import type {
   LogitLensData,
   ProbeResult,
@@ -127,9 +127,6 @@ export function ABDiff({ resultA, resultB }: Props) {
   } | null>(null);
   const [pinned, setPinned] = useState<Pinned | null>(null);
   const ws = useWebSocket();
-
-  const infoA = sessionInfo[resultA.sessionName];
-  const infoB = sessionInfo[resultB.sessionName];
 
   const unpin = useCallback(() => setPinned(null), []);
   useEffect(() => {
@@ -665,14 +662,7 @@ export function ABDiff({ resultA, resultB }: Props) {
         </div>
       )}
       {pinned && (
-        <PinnedCardAB
-          pinned={pinned}
-          numHeadsA={infoA?.num_heads ?? 0}
-          hiddenSizeA={infoA?.hidden_size ?? 0}
-          numHeadsB={infoB?.num_heads ?? 0}
-          hiddenSizeB={infoB?.hidden_size ?? 0}
-          onClose={unpin}
-        />
+        <PinnedCardAB pinned={pinned} onClose={unpin} />
       )}
     </div>
   );
@@ -680,19 +670,13 @@ export function ABDiff({ resultA, resultB }: Props) {
 
 interface PinnedCardABProps {
   pinned: Pinned;
-  numHeadsA: number;
-  hiddenSizeA: number;
-  numHeadsB: number;
-  hiddenSizeB: number;
   onClose: () => void;
 }
 
-function PinnedCardAB({
-  pinned, numHeadsA, hiddenSizeA, numHeadsB, hiddenSizeB, onClose,
-}: PinnedCardABProps) {
+function PinnedCardAB({ pinned, onClose }: PinnedCardABProps) {
   const { source, rowLabel, posIdx, x, y } = pinned;
 
-  const { vecA, vecB, headsA, dimA, headsB, dimB, title, subtitle } = useMemo(() => {
+  const { vecA, vecB, title, subtitle } = useMemo(() => {
     let vecA: Float32Array | null = null;
     let vecB: Float32Array | null = null;
     let title = "";
@@ -720,23 +704,19 @@ function PinnedCardAB({
       }
     }
 
-    const headsA = numHeadsA;
-    const headsB = numHeadsB;
-    const dimA = headsA > 0 && hiddenSizeA > 0 ? Math.floor(hiddenSizeA / headsA) : 0;
-    const dimB = headsB > 0 && hiddenSizeB > 0 ? Math.floor(hiddenSizeB / headsB) : 0;
-    return { vecA, vecB, headsA, dimA, headsB, dimB, title, subtitle };
-  }, [source, rowLabel, posIdx, numHeadsA, hiddenSizeA, numHeadsB, hiddenSizeB]);
+    return { vecA, vecB, title, subtitle };
+  }, [source, rowLabel, posIdx]);
 
-  const canA = vecA !== null && headsA > 0 && dimA > 0 && vecA.length === headsA * dimA;
-  const canB = vecB !== null && headsB > 0 && dimB > 0 && vecB.length === headsB * dimB;
-
-  // Shared symmetric max so A and B heatmaps are directly comparable.
+  // Shared symmetric max makes A and B bars directly comparable in magnitude
+  // — important when diagnosing whether one side has amplified or dampened.
   const symmetricMax = useMemo(() => {
     let m = 0;
-    if (canA && vecA) for (let i = 0; i < vecA.length; i++) { const a = Math.abs(vecA[i]); if (a > m) m = a; }
-    if (canB && vecB) for (let i = 0; i < vecB.length; i++) { const a = Math.abs(vecB[i]); if (a > m) m = a; }
+    if (vecA) for (let i = 0; i < vecA.length; i++) { const a = Math.abs(vecA[i]); if (a > m) m = a; }
+    if (vecB) for (let i = 0; i < vecB.length; i++) { const a = Math.abs(vecB[i]); if (a > m) m = a; }
     return m;
-  }, [vecA, vecB, canA, canB]);
+  }, [vecA, vecB]);
+
+  const sharedMax = source.kind === "compare" && symmetricMax > 0 ? symmetricMax : undefined;
 
   return (
     <div
@@ -766,27 +746,11 @@ function PinnedCardAB({
       {subtitle && (
         <div style={{ fontSize: 11, color: "#a0a0c0", marginBottom: 8 }}>{subtitle}</div>
       )}
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-        {canA && vecA && (
-          <HiddenStateHeatmap
-            data={vecA}
-            numHeads={headsA}
-            headDim={dimA}
-            label={`A · ${headsA}×${dimA}`}
-            symmetricMax={source.kind === "compare" && symmetricMax > 0 ? symmetricMax : undefined}
-          />
-        )}
-        {canB && vecB && (
-          <HiddenStateHeatmap
-            data={vecB}
-            numHeads={headsB}
-            headDim={dimB}
-            label={`B · ${headsB}×${dimB}`}
-            symmetricMax={source.kind === "compare" && symmetricMax > 0 ? symmetricMax : undefined}
-          />
-        )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {vecA && <HiddenStateBarStrip data={vecA} label="A" symmetricMax={sharedMax} />}
+        {vecB && <HiddenStateBarStrip data={vecB} label="B" symmetricMax={sharedMax} />}
       </div>
-      {!canA && !canB && (
+      {!vecA && !vecB && (
         <div style={{ fontSize: 10, color: "#888", marginTop: 6 }}>
           No hidden state available for this frame.
         </div>
