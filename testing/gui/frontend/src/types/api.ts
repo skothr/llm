@@ -46,12 +46,19 @@ export interface SurgeryRequest {
   params: Record<string, unknown>;
 }
 
+export interface CellMetrics {
+  entropy: number;
+  top1_prob: number;
+  top1_margin: number;
+}
+
 export interface LogitLensData {
   type: "data";
   layer: number;
   original_layer?: number;
   sublayer: string;
   predictions: Array<Array<{ token: string; prob: number }>>;
+  metrics?: Array<CellMetrics>;
 }
 
 export interface GenerateData {

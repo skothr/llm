@@ -197,7 +197,7 @@ export function ABDiff({ resultA, resultB }: Props) {
               const show = top.map((p) => displayToken(p.token));
               const maxLen = Math.max(...show.map((s) => s.length));
               const lines = top
-                .map((p, i) => `${show[i].padEnd(maxLen)}  ${(p.prob * 100).toFixed(1).padStart(5)}%`)
+                .map((p, i) => `${show[i].padEnd(maxLen)}  ${(p.prob * 100).toFixed(3).padStart(7)}%`)
                 .join("\n");
               setTooltip({
                 x: event.pageX + 10,
@@ -280,7 +280,7 @@ export function ABDiff({ resultA, resultB }: Props) {
               setTooltip({
                 x: event.pageX + 10,
                 y: event.pageY - 10,
-                content: `${row.label} pos ${posIdx}\nA: ${predsA[0].token} (${(predsA[0].prob * 100).toFixed(1)}%)\nB: ${predsB[0].token} (${(predsB[0].prob * 100).toFixed(1)}%)\n\u0394: ${(diff * 100).toFixed(1)}%`,
+                content: `${row.label} pos ${posIdx}\nA: ${predsA[0].token} (${(predsA[0].prob * 100).toFixed(3)}%)\nB: ${predsB[0].token} (${(predsB[0].prob * 100).toFixed(3)}%)\n\u0394: ${(diff * 100).toFixed(3)}%`,
               });
             })
             .on("mouseleave", () => setTooltip(null));

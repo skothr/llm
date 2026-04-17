@@ -1,11 +1,48 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { displayToken } from "../../utils/displayToken";
-import type { LogitLensData, ProbeResult } from "../../types/api";
+import type { LogitLensData, ProbeResult, CellMetrics } from "../../types/api";
 
 interface Props {
   result: ProbeResult;
 }
+
+type MetricKey = "top1_prob" | "entropy" | "top1_margin";
+
+interface MetricDef {
+  label: string;
+  shortLabel: string;
+  unit: string;
+  interpolator: (t: number) => string;
+  fixedDomain?: [number, number];
+  format: (v: number) => string;
+}
+
+const METRICS: Record<MetricKey, MetricDef> = {
+  top1_prob: {
+    label: "Top-1 probability",
+    shortLabel: "p₁",
+    unit: "",
+    interpolator: d3.interpolateViridis,
+    fixedDomain: [0, 1],
+    format: (v) => `${(v * 100).toFixed(1)}%`,
+  },
+  entropy: {
+    label: "Entropy (nats)",
+    shortLabel: "H",
+    unit: "nats",
+    interpolator: d3.interpolateInferno,
+    format: (v) => v.toFixed(2),
+  },
+  top1_margin: {
+    label: "Top-1 margin (p₁ − p₂)",
+    shortLabel: "Δ₁₂",
+    unit: "",
+    interpolator: d3.interpolateCividis,
+    fixedDomain: [0, 1],
+    format: (v) => `${(v * 100).toFixed(1)}%`,
+  },
+};
 
 export function LogitLensHeatmap({ result }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -14,10 +51,16 @@ export function LogitLensHeatmap({ result }: Props) {
     y: number;
     content: string;
   } | null>(null);
+  const [metric, setMetric] = useState<MetricKey>("top1_prob");
 
   const dataMessages = useMemo(
     () => result.data.filter((m): m is LogitLensData => m.type === "data" && "predictions" in m),
     [result.data]
+  );
+
+  const metricsAvailable = useMemo(
+    () => dataMessages.some((m) => Array.isArray(m.metrics) && m.metrics.length > 0),
+    [dataMessages]
   );
 
   useEffect(() => {
@@ -44,7 +87,42 @@ export function LogitLensHeatmap({ result }: Props) {
 
     svg.attr("width", width).attr("height", height);
 
-    const colorScale = d3.scaleSequential(d3.interpolateViridis).domain([0, 1]);
+    const def = METRICS[metric];
+
+    const getCellValue = (msg: LogitLensData, posIdx: number): number | null => {
+      const m: CellMetrics | undefined = msg.metrics?.[posIdx];
+      if (m && typeof m[metric] === "number") return m[metric];
+      // Fallback for the pre-metrics stream (old backends or cached results).
+      if (metric === "top1_prob") {
+        const topPred = msg.predictions[posIdx]?.[0];
+        return topPred ? topPred.prob : null;
+      }
+      return null;
+    };
+
+    let domain: [number, number];
+    if (def.fixedDomain) {
+      domain = def.fixedDomain;
+    } else {
+      let minV = Infinity;
+      let maxV = -Infinity;
+      dataMessages.forEach((msg) => {
+        for (let i = 0; i < numPositions; i++) {
+          const v = getCellValue(msg, i);
+          if (v === null) continue;
+          if (v < minV) minV = v;
+          if (v > maxV) maxV = v;
+        }
+      });
+      if (!Number.isFinite(minV) || !Number.isFinite(maxV) || minV === maxV) {
+        domain = [0, 1];
+      } else {
+        domain = [minV, maxV];
+      }
+    }
+
+    const colorScale = d3.scaleSequential(def.interpolator).domain(domain);
+    const normalize = (v: number) => (v - domain[0]) / (domain[1] - domain[0] || 1);
 
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -77,25 +155,37 @@ export function LogitLensHeatmap({ result }: Props) {
         const topPred = posPreds[0];
         if (!topPred) return;
 
+        const cellV = getCellValue(msg, posIdx);
+        const fill = cellV !== null ? colorScale(cellV) : "#333";
+        const brightness = cellV !== null ? normalize(cellV) : 0;
+
         g.append("rect")
           .attr("x", posIdx * cellW)
           .attr("y", rowIdx * cellH)
           .attr("width", cellW - 1)
           .attr("height", cellH - 1)
-          .attr("fill", colorScale(topPred.prob))
+          .attr("fill", fill)
           .attr("rx", 2)
           .style("cursor", "pointer")
           .on("mouseenter", (event) => {
             const top = posPreds.slice(0, 5);
             const show = top.map((p) => displayToken(p.token));
             const maxLen = Math.max(...show.map((s) => s.length));
-            const lines = top
-              .map((p, i) => `${show[i].padEnd(maxLen)}  ${(p.prob * 100).toFixed(1).padStart(5)}%`)
+            const topkLines = top
+              .map((p, i) => `${show[i].padEnd(maxLen)}  ${(p.prob * 100).toFixed(3).padStart(7)}%`)
               .join("\n");
+            const cellMetrics: CellMetrics | undefined = msg.metrics?.[posIdx];
+            const metricLines = cellMetrics
+              ? [
+                  `p₁    = ${(cellMetrics.top1_prob * 100).toFixed(3)}%`,
+                  `Δ₁₂   = ${(cellMetrics.top1_margin * 100).toFixed(3)}%`,
+                  `H     = ${cellMetrics.entropy.toFixed(3)} nats`,
+                ].join("\n") + "\n\n"
+              : "";
             setTooltip({
               x: event.pageX + 10,
               y: event.pageY - 10,
-              content: `L${msg.layer}.${msg.sublayer} pos ${posIdx}\n${lines}`,
+              content: `L${msg.layer}.${msg.sublayer} pos ${posIdx}\n${metricLines}${topkLines}`,
             });
           })
           .on("mouseleave", () => setTooltip(null));
@@ -106,7 +196,7 @@ export function LogitLensHeatmap({ result }: Props) {
           .attr("text-anchor", "middle")
           .attr("dominant-baseline", "middle")
           .attr("font-size", 9)
-          .attr("fill", topPred.prob > 0.5 ? "#000" : "#fff")
+          .attr("fill", brightness > 0.5 ? "#000" : "#fff")
           .style("pointer-events", "none")
           .text(() => { const d = displayToken(topPred.token); return d.length > 6 ? d.slice(0, 5) + "\u2026" : d; });
       });
@@ -137,13 +227,79 @@ export function LogitLensHeatmap({ result }: Props) {
       .attr("fill", "#666")
       .text((d) => `${d}`);
 
-  }, [dataMessages, result.data]);
+    // Color-scale legend: a thin gradient strip with min/max labels.
+    const legendY = numRows * cellH + 22;
+    const legendX = 0;
+    const legendW = Math.min(200, numPositions * cellW);
+    const legendH = 8;
+    const gradId = `gradient-${metric}-${result.id}`;
+    const defs = svg.append("defs");
+    const grad = defs.append("linearGradient").attr("id", gradId).attr("x1", "0%").attr("x2", "100%");
+    const stops = 16;
+    for (let i = 0; i <= stops; i++) {
+      const t = i / stops;
+      grad.append("stop")
+        .attr("offset", `${t * 100}%`)
+        .attr("stop-color", def.interpolator(t));
+    }
+    g.append("rect")
+      .attr("x", legendX)
+      .attr("y", legendY)
+      .attr("width", legendW)
+      .attr("height", legendH)
+      .attr("fill", `url(#${gradId})`)
+      .attr("rx", 1);
+    g.append("text")
+      .attr("x", legendX)
+      .attr("y", legendY + legendH + 10)
+      .attr("font-size", 9)
+      .attr("fill", "#888")
+      .text(def.format(domain[0]));
+    g.append("text")
+      .attr("x", legendX + legendW)
+      .attr("y", legendY + legendH + 10)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("fill", "#888")
+      .text(def.format(domain[1]));
+    g.append("text")
+      .attr("x", legendX + legendW / 2)
+      .attr("y", legendY - 2)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 9)
+      .attr("fill", "#aaa")
+      .text(def.label);
+
+  }, [dataMessages, result.data, result.id, metric]);
 
   return (
     <div style={{ position: "relative" }}>
-      <h3 style={{ fontSize: 13, color: "#a0a0c0", marginBottom: 8 }}>
-        Logit Lens - {result.sessionName} - "{result.prompt.slice(0, 40)}"
-      </h3>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+        <h3 style={{ fontSize: 13, color: "#a0a0c0", margin: 0 }}>
+          Logit Lens - {result.sessionName} - "{result.prompt.slice(0, 40)}"
+        </h3>
+        {metricsAvailable && (
+          <label style={{ fontSize: 12, color: "#8888aa", display: "flex", alignItems: "center", gap: 6 }}>
+            Metric:
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value as MetricKey)}
+              style={{
+                background: "#0f1626",
+                color: "#e0e0f0",
+                border: "1px solid #1a5276",
+                borderRadius: 3,
+                padding: "2px 6px",
+                fontSize: 12,
+              }}
+            >
+              {(Object.keys(METRICS) as MetricKey[]).map((k) => (
+                <option key={k} value={k}>{METRICS[k].label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
       <div style={{ overflowX: "auto" }}>
         <svg ref={svgRef} />
       </div>

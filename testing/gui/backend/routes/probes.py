@@ -95,6 +95,7 @@ async def logit_lens_ws(ws: WebSocket, name: str):
             "original_layer": info._layer_map[layer_idx] if layer_idx < len(info._layer_map) else layer_idx,
             "sublayer": sublayer,
             "predictions": serializable_preds,
+            "metrics": data.get("metrics", []),
         }
         fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
         try:
