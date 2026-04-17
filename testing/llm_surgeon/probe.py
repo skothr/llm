@@ -183,6 +183,21 @@ def extract_hidden_states(
     return HiddenStates(states=captured, prompt_tokens=prompt_tokens)
 
 
+def _cell_metrics(pos_probs: torch.Tensor) -> Dict[str, float]:
+    """Per-position scalar metrics from a full-vocab softmax distribution.
+
+    entropy is in nats. top1_margin is p(top1) - p(top2), always >= 0.
+    """
+    # xlogy handles p=0 cleanly (0*log(0) := 0), unlike a bare p*p.log().
+    entropy = -torch.special.xlogy(pos_probs, pos_probs).sum().item()
+    top2 = pos_probs.topk(2).values
+    return {
+        "entropy": entropy,
+        "top1_prob": top2[0].item(),
+        "top1_margin": (top2[0] - top2[1]).item(),
+    }
+
+
 def _project_to_logits(model, hidden_state: torch.Tensor) -> torch.Tensor:
     """Apply final RMSNorm + lm_head to a hidden state tensor.
 
@@ -234,8 +249,10 @@ def logit_lens(
         probs = F.softmax(layer_logits.float(), dim=-1)
 
         cb_top_k_per_position = []
+        cb_metrics_per_position = []
         for pos in resolved_positions:
             pos_probs = probs[pos]
+            metrics = _cell_metrics(pos_probs)
             topk_probs, topk_ids = pos_probs.topk(min(top_k, pos_probs.shape[0]))
             top_k_list = []
             for rank, (tid, tp) in enumerate(zip(topk_ids.tolist(), topk_probs.tolist())):
@@ -251,14 +268,17 @@ def logit_lens(
                 "sublayer": sublayer,
                 "position": pos,
                 "top_k": top_k_list,
+                "metrics": metrics,
             })
             cb_top_k_per_position.append(top_k_list)
+            cb_metrics_per_position.append(metrics)
 
         if on_layer is not None:
             cb_logits = layer_logits.cpu() if full_logits else None
             on_layer(layer_idx, sublayer, {
                 "hidden_state": hidden,
                 "top_k": cb_top_k_per_position,
+                "metrics": cb_metrics_per_position,
                 "logits": cb_logits,
             })
 
@@ -476,6 +496,7 @@ def intervene(
             probs = F.softmax(layer_logits.float(), dim=-1)
             for pos in all_positions:
                 pos_probs = probs[pos]
+                metrics = _cell_metrics(pos_probs)
                 topk_probs, topk_ids = pos_probs.topk(min(top_k, pos_probs.shape[0]))
                 top_k_list = []
                 for rank, (tid, tp) in enumerate(zip(topk_ids.tolist(), topk_probs.tolist())):
@@ -490,6 +511,7 @@ def intervene(
                     "sublayer": sublayer,
                     "position": pos,
                     "top_k": top_k_list,
+                    "metrics": metrics,
                 })
         logit_lens_result = LogitLensResult(
             predictions=predictions,
