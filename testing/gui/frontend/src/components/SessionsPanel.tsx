@@ -276,7 +276,10 @@ export function SessionsPanel() {
             borderRadius: 4,
             cursor: "pointer",
           }}
-          onClick={() => { setSelectedSession(s.name); fetchSessionInfo(s.name); }}
+          onClick={() => {
+            setSelectedSession(s.name);
+            fetchSessionInfo(s.name).catch((err) => setError((err as Error).message));
+          }}
         >
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <strong>{s.name}</strong>
