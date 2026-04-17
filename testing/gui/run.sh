@@ -20,6 +20,37 @@ done
 # than hanging in a probe loop that can never succeed.
 command -v curl >/dev/null 2>&1 || { echo "run.sh: curl is required but not installed" >&2; exit 1; }
 
+# Preflight: refuse to start if either port is already bound. Without this,
+# uvicorn's bind error + vite falling through to 5174 would produce a
+# broken-looking stack that's hard to diagnose at a glance.
+check_port_free() {
+  local port=$1 label=$2
+  # A successful HTTP GET to /api/sessions means *our* backend is already
+  # running — treat that as "already up" and not a conflict.
+  if [[ "$port" == "8000" ]] && curl -sf -o /dev/null --max-time 1 "http://127.0.0.1:${port}/api/sessions" 2>/dev/null; then
+    echo "run.sh: backend already running on ${port}; reusing it" >&2
+    return 2
+  fi
+  # Any TCP accept on the port means something else owns it.
+  if exec 3<>/dev/tcp/127.0.0.1/"$port" 2>/dev/null; then
+    exec 3<&-; exec 3>&-
+    echo "run.sh: port ${port} (${label}) is already in use" >&2
+    echo "  run: lsof -i :${port}   to find the owner" >&2
+    return 1
+  fi
+  return 0
+}
+check_port_free 5173 frontend || exit 1
+# Port 8000: if our backend already answers, skip starting a new one; if
+# some other process owns the port, bail out.
+BACKEND_ALREADY_UP=0
+check_port_free 8000 backend
+case $? in
+  0) ;;                          # port free, will start backend
+  1) exit 1 ;;                   # port held by something else
+  2) BACKEND_ALREADY_UP=1 ;;     # our backend is already up
+esac
+
 cd "$PROJECT_ROOT"
 
 # Signal propagation: we run each child in its own process group via `setsid`,
@@ -41,14 +72,18 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-echo "Starting backend (LOG_LEVEL=$LOG_LEVEL)..."
 # shellcheck disable=SC1091
 source testing/.venv/bin/activate
-setsid env LOG_LEVEL="$LOG_LEVEL" PYTHONPATH="$PROJECT_ROOT/testing" uvicorn gui.backend.app:app \
-  --host 127.0.0.1 --port 8000 --reload \
-  --reload-dir testing/gui/backend \
-  --log-level "$UVICORN_LOG_LEVEL" &
-BACKEND_PID=$!
+if [[ "$BACKEND_ALREADY_UP" -eq 1 ]]; then
+  echo "Skipping backend start (reusing running instance on :8000)"
+else
+  echo "Starting backend (LOG_LEVEL=$LOG_LEVEL)..."
+  setsid env LOG_LEVEL="$LOG_LEVEL" PYTHONPATH="$PROJECT_ROOT/testing" uvicorn gui.backend.app:app \
+    --host 127.0.0.1 --port 8000 --reload \
+    --reload-dir testing/gui/backend \
+    --log-level "$UVICORN_LOG_LEVEL" &
+  BACKEND_PID=$!
+fi
 
 # Wait for the backend to accept HTTP requests BEFORE starting vite.
 # Rationale: if the browser's first fetch() hits ECONNREFUSED, Chrome's
@@ -63,7 +98,7 @@ BACKEND_PID=$!
 READY=0
 echo -n "Waiting for backend to accept requests"
 for i in $(seq 1 60); do
-  if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+  if [[ -n "$BACKEND_PID" ]] && ! kill -0 "$BACKEND_PID" 2>/dev/null; then
     echo ""
     echo "Backend exited before becoming ready" >&2
     exit 1
