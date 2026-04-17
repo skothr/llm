@@ -200,6 +200,20 @@ class CloneRequest(BaseModel):
             raise ValueError("Must be alphanumeric, hyphens, underscores, periods, or tildes, 1-64 chars")
         return v
 
+_MODEL_ID_RE = re.compile(
+    r"^[a-zA-Z0-9][a-zA-Z0-9._-]*(?:/[a-zA-Z0-9][a-zA-Z0-9._-]*)?(?::[a-zA-Z0-9._-]+)?$"
+)
+
+
+def _validate_model_id(v: str) -> str:
+    if not isinstance(v, str) or not _MODEL_ID_RE.match(v):
+        raise ValueError(
+            "model_id must be 'org/name', 'name:tag', or 'org/name:tag' with "
+            "alphanumerics, '.', '_', '-' only"
+        )
+    return v
+
+
 class LoadRequest(BaseModel):
     name: str
     model_id: str
@@ -211,6 +225,11 @@ class LoadRequest(BaseModel):
         if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._~\-]{0,63}$", v):
             raise ValueError("Must be alphanumeric, hyphens, underscores, periods, or tildes, 1-64 chars")
         return v
+
+    @field_validator("model_id")
+    @classmethod
+    def validate_model_id(cls, v):
+        return _validate_model_id(v)
 
 def _session_summary(info) -> dict:
     if info.model is not None:
@@ -402,6 +421,11 @@ def _has_safetensors_cached(model_id: str) -> bool:
 
 class ConvertRequest(BaseModel):
     model_id: str
+
+    @field_validator("model_id")
+    @classmethod
+    def validate_model_id(cls, v):
+        return _validate_model_id(v)
 
 @router.post("/models/convert-safetensors")
 async def convert_model_safetensors(req: ConvertRequest):
