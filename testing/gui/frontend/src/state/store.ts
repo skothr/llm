@@ -104,6 +104,13 @@ interface StoreState {
   activeResultId: string | null;
   pendingResults: Record<string, ProbeResult>;
 
+  // Filter state — runtime only (not persisted). An empty selectedTags set
+  // means "don't filter by tag"; pinnedOnly narrows to favorites; query
+  // substring-matches prompt + sessionName + notes.
+  filterTags: string[];
+  filterPinnedOnly: boolean;
+  filterQuery: string;
+
   interventionSpecs: InterventionSpec[];
   captureLogitLens: boolean;
   intervenePrompt: string;
@@ -141,6 +148,16 @@ interface StoreState {
   updatePendingResult: (id: string, msg: WsMessage) => void;
   finalizePendingResult: (id: string, extraData?: WsMessage) => void;
   removePendingResult: (id: string) => void;
+
+  // Result annotation actions.
+  updateResultMeta: (id: string, patch: { pinned?: boolean; tags?: string[]; notes?: string }) => void;
+  deleteResult: (id: string) => void;
+
+  // Filter actions.
+  toggleFilterTag: (tag: string) => void;
+  setFilterPinnedOnly: (v: boolean) => void;
+  setFilterQuery: (q: string) => void;
+  clearFilters: () => void;
 
   addIntervention: () => void;
   removeIntervention: (index: number) => void;
@@ -204,6 +221,10 @@ export const useStore = create<StoreState>()(
       results: [],
       activeResultId: null,
       pendingResults: {},
+
+      filterTags: [],
+      filterPinnedOnly: false,
+      filterQuery: "",
 
       interventionSpecs: [],
       captureLogitLens: false,
@@ -365,7 +386,18 @@ export const useStore = create<StoreState>()(
         results: [result, ...s.results.filter((r) => r.id !== result.id)],
         activeResultId: result.operation !== "generate" && !result.isB ? result.id : s.activeResultId,
       })),
-      clearResults: () => set({ results: [], activeResultId: null }),
+      clearResults: () => set((s) => {
+        // Pinned results are the researcher's labeled favorites; Clear All
+        // preserves them so one accidental click doesn't wipe annotated
+        // work. Reset activeResultId only if it pointed at something we
+        // just removed.
+        const kept = s.results.filter((r) => r.pinned);
+        const keptIds = new Set(kept.map((r) => r.id));
+        return {
+          results: kept,
+          activeResultId: s.activeResultId && keptIds.has(s.activeResultId) ? s.activeResultId : null,
+        };
+      }),
       setActiveResult: (id) => set({ activeResultId: id }),
 
       setPendingResult: (id, result) => set((s) => ({
@@ -401,6 +433,43 @@ export const useStore = create<StoreState>()(
         return { pendingResults: remaining };
       }),
 
+      updateResultMeta: (id, patch) => set((s) => {
+        // Meta can apply either while a result is still pending (so pin
+        // survives the pending→finalized handoff) or after it's landed in
+        // `results`. Check both; no-op if id is unknown.
+        if (s.pendingResults[id]) {
+          return {
+            pendingResults: {
+              ...s.pendingResults,
+              [id]: { ...s.pendingResults[id], ...patch },
+            },
+          };
+        }
+        const idx = s.results.findIndex((r) => r.id === id);
+        if (idx < 0) return s;
+        const next = [...s.results];
+        next[idx] = { ...next[idx], ...patch };
+        return { results: next };
+      }),
+
+      deleteResult: (id) => set((s) => {
+        const { [id]: _, ...remainingPending } = s.pendingResults;
+        return {
+          pendingResults: remainingPending,
+          results: s.results.filter((r) => r.id !== id),
+          activeResultId: s.activeResultId === id ? null : s.activeResultId,
+        };
+      }),
+
+      toggleFilterTag: (tag) => set((s) => ({
+        filterTags: s.filterTags.includes(tag)
+          ? s.filterTags.filter((t) => t !== tag)
+          : [...s.filterTags, tag],
+      })),
+      setFilterPinnedOnly: (v) => set({ filterPinnedOnly: v }),
+      setFilterQuery: (q) => set({ filterQuery: q }),
+      clearFilters: () => set({ filterTags: [], filterPinnedOnly: false, filterQuery: "" }),
+
       addIntervention: () => set((s) => ({
         interventionSpecs: [...s.interventionSpecs, { layer: 0, sublayer: "ffn", op: "scale", params: { factor: 1.0 } }],
       })),
@@ -432,7 +501,17 @@ export const useStore = create<StoreState>()(
         targetSessionB: s.targetSessionB,
         samplingParams: s.samplingParams,
         promptLibrary: s.promptLibrary,
-        results: s.results.slice(0, PERSIST_RESULT_CAP).map(stripHeavyBlobs),
+        // Pinned results always persist; unpinned follow the recent-N cap.
+        // Merged ordering matches the in-memory list so tab order is stable.
+        results: (() => {
+          const keepIds = new Set<string>();
+          let unpinnedBudget = PERSIST_RESULT_CAP;
+          for (const r of s.results) {
+            if (r.pinned) { keepIds.add(r.id); continue; }
+            if (unpinnedBudget > 0) { keepIds.add(r.id); unpinnedBudget--; }
+          }
+          return s.results.filter((r) => keepIds.has(r.id)).map(stripHeavyBlobs);
+        })(),
         activeResultId: s.activeResultId,
         interventionSpecs: s.interventionSpecs,
         captureLogitLens: s.captureLogitLens,

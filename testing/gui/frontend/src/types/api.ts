@@ -178,6 +178,13 @@ export interface ProbeResult {
   batchIndex?: number;
   batchSize?: number;
   seed?: number;
+
+  // Researcher annotations. `pinned` results survive Clear All and are
+  // always kept in the persisted result slice regardless of the 50-cap.
+  // `tags` drive the filter bar's chip list. `notes` is free text.
+  pinned?: boolean;
+  tags?: string[];
+  notes?: string;
 }
 
 export interface InfluenceResult {

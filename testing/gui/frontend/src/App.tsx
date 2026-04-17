@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useStore } from "./state/store";
 import { TabBar } from "./components/TabBar";
 import { ExperimentIO } from "./components/ExperimentIO";
@@ -7,6 +7,8 @@ import { ProbePanel } from "./components/ProbePanel";
 import { IntervenePanel } from "./components/IntervenePanel";
 import { VisualizationArea } from "./components/VisualizationArea";
 import { GenerationOutput } from "./components/GenerationOutput";
+import { CheatSheet } from "./components/CheatSheet";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 function useResize(initial: number, direction: "horizontal" | "vertical", min: number, max: number) {
   const [size, setSize] = useState(initial);
@@ -50,6 +52,10 @@ export default function App() {
 
   const { size: panelWidth, onMouseDown: onHResize } = useResize(320, "horizontal", 200, 600);
   const { size: outputHeight, onMouseDown: onVResize } = useResize(280, "vertical", 60, 600);
+
+  const [cheatSheetOpen, setCheatSheetOpen] = useState(false);
+  const toggleCheatSheet = useCallback(() => setCheatSheetOpen((v) => !v), []);
+  useKeyboardShortcuts({ onToggleCheatSheet: toggleCheatSheet });
 
   useEffect(() => {
     // All three initial fetches run concurrently. Model discovery is the
@@ -109,6 +115,17 @@ export default function App() {
           <GenerationOutput />
         </div>
       </main>
+      <CheatSheet open={cheatSheetOpen} onClose={() => setCheatSheetOpen(false)} />
+      <button
+        onClick={toggleCheatSheet}
+        title="Keyboard shortcuts (?)"
+        style={{
+          position: "fixed", right: 8, bottom: 8, zIndex: 400,
+          width: 24, height: 24, padding: 0, fontSize: 13,
+          background: "#0f1626", border: "1px solid #1a2540",
+          color: "#8888aa", borderRadius: 12, cursor: "pointer",
+        }}
+      >?</button>
     </div>
   );
 }

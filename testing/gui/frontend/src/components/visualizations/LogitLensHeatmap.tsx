@@ -4,6 +4,7 @@ import { displayToken } from "../../utils/displayToken";
 import { sliceHiddenStatePosition } from "../../utils/hiddenState";
 import { HiddenStateBarStrip } from "./HiddenStateBarStrip";
 import { DimVsLayerHeatmap } from "./DimVsLayerHeatmap";
+import { HiddenStatePCA } from "./HiddenStatePCA";
 import { ExportButtons } from "../ExportButtons";
 import type { LogitLensData, ProbeResult, CellMetrics } from "../../types/api";
 
@@ -18,7 +19,7 @@ interface PinnedCell {
   y: number;
 }
 
-type MetricKey = "top1_prob" | "entropy" | "top1_margin";
+type MetricKey = "top1_prob" | "entropy" | "top1_margin" | "custom";
 
 interface MetricDef {
   label: string;
@@ -53,7 +54,44 @@ const METRICS: Record<MetricKey, MetricDef> = {
     fixedDomain: [0, 1],
     format: (v) => `${(v * 100).toFixed(1)}%`,
   },
+  custom: {
+    label: "Custom expression",
+    shortLabel: "ƒ",
+    unit: "",
+    interpolator: d3.interpolatePlasma,
+    format: (v) => v.toFixed(3),
+  },
 };
+
+// Compile a user-supplied expression into a function of the cell vars.
+// Returns [fn, null] on success, [null, errMsg] on parse error.
+//
+// Security note: this uses Function(), which is equivalent to eval() in a
+// fresh scope. The GUI is a local-only research tool with no
+// multi-tenant exposure — the user is the operator, so arbitrary code
+// they type into an input is no different from arbitrary code they
+// could run in the browser console. We explicitly do NOT use the
+// expression on data from untrusted sources.
+type CellFn = (p1: number, margin: number, entropy: number, layer: number, pos: number) => number;
+function compileCellExpr(expr: string): [CellFn | null, string | null] {
+  const trimmed = expr.trim();
+  if (!trimmed) return [null, "empty expression"];
+  try {
+    const fn = new Function(
+      "p1", "margin", "entropy", "layer", "pos",
+      `"use strict"; return (${trimmed});`,
+    ) as CellFn;
+    // Smoke-test with benign inputs so syntactically-valid-but-undefined
+    // (e.g. `foo.bar`) fail now rather than once per cell.
+    const probe = fn(0.5, 0.3, 1.0, 0, 0);
+    if (typeof probe !== "number" || !Number.isFinite(probe)) {
+      return [null, "expression must return a finite number"];
+    }
+    return [fn, null];
+  } catch (e) {
+    return [null, (e as Error).message];
+  }
+}
 
 export function LogitLensHeatmap({ result }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -64,6 +102,9 @@ export function LogitLensHeatmap({ result }: Props) {
   } | null>(null);
   const [pinned, setPinned] = useState<PinnedCell | null>(null);
   const [metric, setMetric] = useState<MetricKey>("top1_prob");
+  const [exprDraft, setExprDraft] = useState("entropy - top1_margin");
+  const [customExpr, setCustomExpr] = useState("");
+  const [compiledFn, compileError] = useMemo(() => compileCellExpr(customExpr), [customExpr]);
 
   const unpin = useCallback(() => setPinned(null), []);
   useEffect(() => {
@@ -111,7 +152,18 @@ export function LogitLensHeatmap({ result }: Props) {
 
     const getCellValue = (msg: LogitLensData, posIdx: number): number | null => {
       const m: CellMetrics | undefined = msg.metrics?.[posIdx];
-      if (m && typeof m[metric] === "number") return m[metric];
+      if (metric === "custom") {
+        if (!compiledFn || !m) return null;
+        try {
+          const v = compiledFn(m.top1_prob, m.top1_margin, m.entropy, msg.layer, posIdx);
+          return Number.isFinite(v) ? v : null;
+        } catch {
+          // Runtime errors per-cell (e.g. divide-by-zero producing NaN)
+          // shouldn't kill the whole heatmap — just skip the cell.
+          return null;
+        }
+      }
+      if (m && typeof m[metric as Exclude<MetricKey, "custom">] === "number") return m[metric as Exclude<MetricKey, "custom">];
       // Fallback for the pre-metrics stream (old backends or cached results).
       if (metric === "top1_prob") {
         const topPred = msg.predictions[posIdx]?.[0];
@@ -294,7 +346,7 @@ export function LogitLensHeatmap({ result }: Props) {
       .attr("fill", "#aaa")
       .text(def.label);
 
-  }, [dataMessages, result.data, result.id, metric]);
+  }, [dataMessages, result.data, result.id, metric, compiledFn]);
 
   const csvRows = useCallback((): (string | number)[][] => {
     // Flat cell-per-row table: every (layer, position) pair with its
@@ -348,6 +400,37 @@ export function LogitLensHeatmap({ result }: Props) {
             </select>
           </label>
         )}
+        {metric === "custom" && (
+          <label
+            style={{ fontSize: 11, color: "#8888aa", display: "flex", alignItems: "center", gap: 4 }}
+            title="Variables in scope: p1 (top-1 prob), margin (p1 - p2), entropy (nats), layer (int), pos (int). Press Enter to apply."
+          >
+            expr
+            <input
+              value={exprDraft}
+              onChange={(e) => setExprDraft(e.target.value)}
+              onBlur={() => setCustomExpr(exprDraft)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { setCustomExpr(exprDraft); e.preventDefault(); }
+              }}
+              placeholder="entropy - margin"
+              style={{
+                fontSize: 11, padding: "2px 6px", width: 220,
+                background: "#0f1626", color: "#e0e0f0",
+                border: `1px solid ${compileError ? "#c06060" : "#1a2540"}`,
+                borderRadius: 3, fontFamily: "monospace",
+              }}
+            />
+            {compileError && (
+              <span style={{ color: "#c06060", fontSize: 10 }} title={compileError}>
+                {"\u2717"} expr
+              </span>
+            )}
+            {!compileError && customExpr && (
+              <span style={{ color: "#6bc06b", fontSize: 10 }}>{"\u2713"}</span>
+            )}
+          </label>
+        )}
         <div style={{ marginLeft: "auto" }}>
           <ExportButtons
             filenameBase={`logitlens_${result.sessionName}`}
@@ -389,6 +472,7 @@ export function LogitLensHeatmap({ result }: Props) {
         <PinnedCard pinned={pinned} onClose={unpin} />
       )}
       <DimVsLayerHeatmap result={result} />
+      <HiddenStatePCA result={result} />
     </div>
   );
 }
