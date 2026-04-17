@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { cancelSessionSockets } from "../hooks/useWebSocket";
 import type {
   SessionSummary,
   SessionInfo,
@@ -178,6 +179,11 @@ export const useStore = create<StoreState>((set, get) => ({
   deleteSession: async (name: string) => {
     const resp = await apiFetch(`/api/sessions/${name}`, { method: "DELETE" });
     if (!resp.ok) throw await apiError(resp);
+    // Close any live WebSockets tied to this session *before* we forget the
+    // pending results — otherwise the socket keeps streaming frames into a
+    // pending entry that no longer exists, and only closes when the backend
+    // eventually drops it.
+    cancelSessionSockets(name);
     set((s) => {
       const { [name]: _removed, ...remainingInfo } = s.sessionInfo;
       const filteredPending: Record<string, ProbeResult> = {};

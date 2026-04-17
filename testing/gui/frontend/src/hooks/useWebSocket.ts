@@ -8,13 +8,40 @@ interface WsHandlers {
   onDisconnect?: () => void;
 }
 
+// Module-level registry of live sockets so callers outside any single hook
+// instance (notably the store's deleteSession) can close sockets owned by a
+// session that's about to disappear. Without this, a delete followed by a
+// still-streaming generate leaks the socket until the backend drops it.
+type RegEntry = { sessionName: string; ws: WebSocket };
+const _registry: Map<string, RegEntry> = new Map();
+
+/**
+ * Close every live WebSocket associated with `sessionName`.
+ * Called by the store when the session is deleted.
+ */
+export function cancelSessionSockets(sessionName: string): void {
+  for (const [key, entry] of _registry) {
+    if (entry.sessionName !== sessionName) continue;
+    try {
+      if (entry.ws.readyState !== WebSocket.CLOSED) entry.ws.close();
+    } catch { /* already closing */ }
+    _registry.delete(key);
+  }
+}
+
 export function useWebSocket() {
   const connectionsRef = useRef<Map<string, WebSocket>>(new Map());
   const resolvedRef = useRef<Set<string>>(new Set());
   const cancelledRef = useRef<Set<string>>(new Set());
 
   const connect = useCallback(
-    (key: string, path: string, config: Record<string, unknown>, handlers: WsHandlers) => {
+    (
+      key: string,
+      path: string,
+      config: Record<string, unknown>,
+      handlers: WsHandlers,
+      sessionName: string,
+    ) => {
       const existing = connectionsRef.current.get(key);
       if (existing && existing.readyState !== WebSocket.CLOSED) {
         existing.close();
@@ -25,6 +52,7 @@ export function useWebSocket() {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(`${protocol}//${window.location.host}${path}`);
       connectionsRef.current.set(key, ws);
+      _registry.set(key, { sessionName, ws });
 
       ws.onopen = () => {
         ws.send(JSON.stringify(config));
@@ -60,6 +88,7 @@ export function useWebSocket() {
       ws.onclose = () => {
         if (connectionsRef.current.get(key) !== ws) return;
         connectionsRef.current.delete(key);
+        _registry.delete(key);
         if (!resolvedRef.current.has(key) && !cancelledRef.current.has(key)) {
           handlers.onDisconnect?.();
         }
@@ -79,16 +108,18 @@ export function useWebSocket() {
       ws.close();
     }
     connectionsRef.current.delete(key);
+    _registry.delete(key);
   }, []);
 
   const cancelAll = useCallback(() => {
     connectionsRef.current.forEach((_, key) => {
       cancelledRef.current.add(key);
     });
-    connectionsRef.current.forEach((ws) => {
+    connectionsRef.current.forEach((ws, key) => {
       if (ws.readyState !== WebSocket.CLOSED) {
         ws.close();
       }
+      _registry.delete(key);
     });
     connectionsRef.current.clear();
   }, []);
@@ -99,6 +130,7 @@ export function useWebSocket() {
       cancelledRef.current.add(key);
       ws.close();
       connectionsRef.current.delete(key);
+      _registry.delete(key);
     }
   }, []);
 

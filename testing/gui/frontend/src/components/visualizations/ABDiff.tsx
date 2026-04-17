@@ -251,7 +251,8 @@ export function ABDiff({ resultA, resultB }: Props) {
           setComparing(false);
         },
         onDisconnect: () => setComparing(false),
-      }
+      },
+      resultA.sessionName,
     );
   }, [comparing, resultA, resultB, ws]);
 
