@@ -302,9 +302,17 @@ async def get_session_info(name: str):
 async def delete_session(name: str):
     mgr = get_manager()
     try:
-        mgr.delete(name)
+        info = mgr.get(name)
     except KeyError:
         raise HTTPException(404, f"Session '{name}' not found")
+    # Hold info.lock so any in-flight WS handler (generate/logit-lens/intervene)
+    # finishes before we tear down info.model. Without this, `del info.model`
+    # would race with a concurrent forward pass and crash the WS handler.
+    async with info.lock:
+        try:
+            mgr.delete(name)
+        except KeyError:
+            raise HTTPException(404, f"Session '{name}' not found")
     # Drop any cached hidden states keyed to this session so memory is freed
     # and a later session with the same name doesn't read stale tensors.
     from .probes import _hs_cache
