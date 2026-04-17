@@ -21,12 +21,50 @@ def _encode_hidden_state(tensor: torch.Tensor) -> dict:
 
 from ..sessions import SessionManager
 from ..hidden_state_cache import HiddenStateCache
+from llm_surgeon.llama_engine import _sample as _numpy_sample
 
 log = logging.getLogger("gui.backend.routes.probes")
 
 _hs_cache = HiddenStateCache(max_bytes=500_000_000)
 
 router = APIRouter(tags=["probes"])
+
+
+def _check_stop(
+    accumulated: str,
+    new_chunk: str,
+    stops: list[str],
+) -> tuple[str, bool, str]:
+    """Decide what portion of ``new_chunk`` to stream given stop sequences.
+
+    Mirrors EOS semantics: the stop sequence itself never appears in the
+    returned visible text, so stops are lossless markers rather than tokens
+    that leak into output.
+
+    Returns ``(visible, stop_hit, matched)``:
+      * ``visible``: substring of new_chunk to emit (empty if the stop starts
+        inside already-accumulated text, e.g. when a multi-token stop only
+        completes now).
+      * ``stop_hit``: True if any stop matched in accumulated+new_chunk.
+      * ``matched``: the stop string that fired (earliest wins).
+    """
+    if not stops:
+        return (new_chunk, False, "")
+    combined = accumulated + new_chunk
+    earliest = -1
+    matched = ""
+    for s in stops:
+        idx = combined.find(s)
+        if idx < 0:
+            continue
+        if earliest < 0 or idx < earliest:
+            earliest = idx
+            matched = s
+    if earliest < 0:
+        return (new_chunk, False, "")
+    start = len(accumulated)
+    visible = combined[start:earliest] if earliest > start else ""
+    return (visible, True, matched)
 
 def get_manager() -> SessionManager:
     from ..app import manager
@@ -317,9 +355,18 @@ async def generate_ws(ws: WebSocket, name: str):
     prompt = config.get("prompt", "")
     max_tokens = config.get("max_tokens", 256)
     temperature = config.get("temperature", 1.0)
-    prob_top_k = config.get("prob_top_k", 10)
+    # display_top_k: how many token probs to stream per step (UI/display only).
+    # prob_top_k kept as a legacy alias so older clients keep working.
+    display_top_k = int(config.get("display_top_k", config.get("prob_top_k", 10)))
+    # sampling_top_k, top_p, min_p: actual sampler cutoffs. Applied in
+    # temperature>0 branch only (greedy ignores them).
+    sampling_top_k = int(config.get("sampling_top_k", 0))
+    top_p = float(config.get("top_p", 1.0))
+    min_p = float(config.get("min_p", 0.0))
+    seed_cfg = config.get("seed")
+    seed = int(seed_cfg) if seed_cfg is not None else None
     repetition_penalty = max(0.01, float(config.get("repetition_penalty", 1.0)))
-    stop_sequences = config.get("stop_sequences", [])
+    stop_sequences = [s for s in config.get("stop_sequences", []) if s]
 
     connected = True
     generated_tokens = []
@@ -349,56 +396,79 @@ async def generate_ws(ws: WebSocket, name: str):
         try:
             tokens = engine.tokenize(prompt)
             step_num = 0
+            accumulated = ""
+            matched_stop = ""
+            # We pass stop_sequences=None to the engine and own truncation here
+            # so both engines share identical stop-at-match semantics.
             for step in engine.generate(
                 tokens,
                 max_tokens=max_tokens,
                 temperature=temperature,
+                top_k=sampling_top_k,
+                top_p=top_p,
+                min_p=min_p,
                 repetition_penalty=repetition_penalty,
-                stop_sequences=stop_sequences,
-                emit_logits=(prob_top_k > 0),
+                stop_sequences=None,
+                emit_logits=(display_top_k > 0),
+                seed=seed,
             ):
                 if not connected:
                     break
-                generated_tokens.append(step.token_str)
+
+                visible, hit, matched = _check_stop(accumulated, step.token_str, stop_sequences)
 
                 top_k_list = []
-                if step.logits is not None:
+                if step.logits is not None and display_top_k > 0:
                     probs = np.exp(step.logits - step.logits.max())
                     probs /= probs.sum()
-                    top_idx = np.argsort(probs)[-prob_top_k:][::-1]
+                    top_idx = np.argsort(probs)[-display_top_k:][::-1]
                     top_k_list = [
                         {"token": engine.detokenize([int(i)]), "prob": float(probs[i])}
                         for i in top_idx
                     ]
 
-                msg = {
-                    "type": "data",
-                    "step": step_num,
-                    "token": step.token_str,
-                    "token_id": step.token_id,
-                    "top_k": top_k_list,
-                    "engine": "llama.cpp",
-                }
-                if not await _send_json(ws, msg):
-                    connected = False
-                    break
+                if visible:
+                    generated_tokens.append(visible)
+                    accumulated += visible
+                    msg = {
+                        "type": "data",
+                        "step": step_num,
+                        "token": visible,
+                        "token_id": step.token_id,
+                        "top_k": top_k_list,
+                        "engine": "llama.cpp",
+                    }
+                    if not await _send_json(ws, msg):
+                        connected = False
+                        break
+                    step_num += 1
 
-                gen_text = "".join(generated_tokens)
-                if stop_sequences and any(s in gen_text for s in stop_sequences):
+                if hit:
+                    matched_stop = matched
+                    await _send_json(ws, {
+                        "type": "data",
+                        "step": step_num,
+                        "token": "<stop>",
+                        "token_id": step.token_id,
+                        "top_k": top_k_list,
+                        "engine": "llama.cpp",
+                        "stop_match": matched,
+                    })
                     stop_reason = "stop_sequence"
                     break
 
-                step_num += 1
-
             if connected:
                 stop_reason = stop_reason or "max_tokens"
-                await _send_json(ws, {
+                complete_msg: dict = {
                     "type": "complete",
-                    "generated_text": "".join(generated_tokens),
+                    "generated_text": accumulated,
                     "num_tokens": len(generated_tokens),
                     "stop_reason": stop_reason,
                     "engine": "llama.cpp",
-                })
+                }
+                if matched_stop:
+                    complete_msg["stop_match"] = matched_stop
+                await _send_json(ws, complete_msg)
         except Exception as e:
             log.exception("WS generate error via llama.cpp (session='%s')", name)
             await _send_json(ws, {"type": "error", "message": str(e)})
@@ -423,6 +493,11 @@ async def generate_ws(ws: WebSocket, name: str):
         return tok.replace("\u2581", " ")
 
     try:
+        import numpy as np
+        rng = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+        matched_stop = ""
+        gen_accumulated = ""
+
         async with info.lock:
             loop = asyncio.get_event_loop()
             inputs = info.tokenizer(prompt, return_tensors="pt")
@@ -458,71 +533,103 @@ async def generate_ws(ws: WebSocket, name: str):
                         else:
                             logits[0, token_id] *= repetition_penalty
 
+                # Scaled logits feed both display (post-temp softmax) and the
+                # sampler; llama.cpp applies temperature before any filters, so
+                # matching its order here keeps the two engines comparable.
                 if temperature > 0:
-                    logits = logits / temperature
-
-                probs = torch.softmax(logits, dim=-1)
-                top_probs, top_indices = torch.topk(probs[0], min(prob_top_k, probs.shape[-1]))
+                    scaled = logits / temperature
+                else:
+                    scaled = logits
+                probs_disp = torch.softmax(scaled, dim=-1)
+                display_k = min(display_top_k, probs_disp.shape[-1]) if display_top_k > 0 else 0
+                if display_k > 0:
+                    top_probs, top_indices = torch.topk(probs_disp[0], display_k)
+                else:
+                    top_probs = torch.empty(0, device=probs_disp.device)
+                    top_indices = torch.empty(0, dtype=torch.long, device=probs_disp.device)
 
                 if temperature == 0:
-                    next_token = top_indices[0:1].unsqueeze(0)
+                    next_id_int = int(torch.argmax(logits[0]).item())
                 else:
-                    next_token = torch.multinomial(probs, 1)
-
-                if next_token[0, 0] == info.tokenizer.eos_token_id:
-                    top_k_list = [
-                        {"token": _tok_display(info.tokenizer, top_indices[i]), "prob": float(top_probs[i])}
-                        for i in range(len(top_indices))
-                    ]
-                    msg = {
-                        "type": "data",
-                        "step": step,
-                        "token": "<eos>",
-                        "token_id": int(next_token[0, 0]),
-                        "top_k": top_k_list,
-                    }
-                    await _send_json(ws, msg)
-                    stop_reason = "eos"
-                    break
-
-                all_token_ids.append(int(next_token[0, 0]))
-                new_text = info.tokenizer.decode(all_token_ids, skip_special_tokens=True)
-                token_str = new_text[len(prev_text):]
-                if not token_str:
-                    token_str = _tok_display(info.tokenizer, next_token[0, 0])
-                prev_text = new_text
-                generated_tokens.append(token_str)
+                    # Route sampling through the shared numpy helper so top_k /
+                    # top_p / min_p behave identically across the llama.cpp and
+                    # PyTorch backends. Cost is tiny: one vocab-sized CPU copy.
+                    logits_np = logits[0].detach().to(dtype=torch.float32, device="cpu").numpy()
+                    next_id_int = _numpy_sample(
+                        logits_np,
+                        temperature=temperature,
+                        top_k=sampling_top_k,
+                        top_p=top_p,
+                        min_p=min_p,
+                        rng=rng,
+                    )
+                next_token = torch.tensor([[next_id_int]], device=logits.device, dtype=torch.long)
 
                 top_k_list = [
                     {"token": _tok_display(info.tokenizer, top_indices[i]), "prob": float(top_probs[i])}
                     for i in range(len(top_indices))
                 ]
 
-                msg = {
-                    "type": "data",
-                    "step": step,
-                    "token": token_str,
-                    "token_id": int(next_token[0, 0]),
-                    "top_k": top_k_list,
-                }
-                if not await _send_json(ws, msg):
-                    connected = False
+                if next_id_int == info.tokenizer.eos_token_id:
+                    msg = {
+                        "type": "data",
+                        "step": step,
+                        "token": "<eos>",
+                        "token_id": next_id_int,
+                        "top_k": top_k_list,
+                    }
+                    await _send_json(ws, msg)
+                    stop_reason = "eos"
+                    break
+
+                all_token_ids.append(next_id_int)
+                new_text = info.tokenizer.decode(all_token_ids, skip_special_tokens=True)
+                token_str = new_text[len(prev_text):]
+                if not token_str:
+                    token_str = _tok_display(info.tokenizer, next_token[0, 0])
+                prev_text = new_text
+
+                visible, hit, matched = _check_stop(gen_accumulated, token_str, stop_sequences)
+
+                if visible:
+                    generated_tokens.append(visible)
+                    gen_accumulated += visible
+                    msg = {
+                        "type": "data",
+                        "step": step,
+                        "token": visible,
+                        "token_id": next_id_int,
+                        "top_k": top_k_list,
+                    }
+                    if not await _send_json(ws, msg):
+                        connected = False
+                        break
+
+                if hit:
+                    matched_stop = matched
+                    await _send_json(ws, {
+                        "type": "data",
+                        "step": step,
+                        "token": "<stop>",
+                        "token_id": next_id_int,
+                        "top_k": top_k_list,
+                        "stop_match": matched,
+                    })
+                    stop_reason = "stop_sequence"
                     break
 
                 input_ids = next_token
 
-                gen_text = "".join(generated_tokens)
-                if stop_sequences and any(s in gen_text for s in stop_sequences):
-                    stop_reason = "stop_sequence"
-                    break
-
         if connected:
-            await _send_json(ws, {
+            complete_msg: dict = {
                 "type": "complete",
-                "generated_text": "".join(generated_tokens),
+                "generated_text": gen_accumulated,
                 "num_tokens": len(generated_tokens),
                 "stop_reason": stop_reason or "max_tokens",
-            })
+            }
+            if matched_stop:
+                complete_msg["stop_match"] = matched_stop
+            await _send_json(ws, complete_msg)
 
     except Exception as e:
         log.exception("WS generate error (session='%s')", name)

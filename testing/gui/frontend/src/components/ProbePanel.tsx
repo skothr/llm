@@ -35,9 +35,16 @@ export function ProbePanel() {
 
   const { connect, cancelAll } = useWebSocket();
   const localPendingIdsRef = useRef<Set<string>>(new Set());
-  const [topK, setTopK] = useState(10);
+  // displayTopK = how many candidate tokens to stream alongside each step
+  // (UI display only, e.g. the top-k popover in GenerationOutput).
+  // Real sampling cutoffs live in samplingTopK / topP / minP below.
+  const [displayTopK, setDisplayTopK] = useState(10);
   const [maxTokens, setMaxTokens] = useState(64);
   const [temperature, setTemperature] = useState(0.0);
+  const [samplingTopK, setSamplingTopK] = useState(0);
+  const [topP, setTopP] = useState(1.0);
+  const [minP, setMinP] = useState(0.0);
+  const [seed, setSeed] = useState("");
   const [repPenalty, setRepPenalty] = useState(1.0);
   const [stopSeqs, setStopSeqs] = useState("\\n\\n");
   const [error, setError] = useState("");
@@ -66,9 +73,17 @@ export function ProbePanel() {
   });
 
   const getWsConfig = () => {
-    if (operation === "logit-lens") return { prompt, top_k: topK };
+    if (operation === "logit-lens") return { prompt, top_k: displayTopK };
+    const seedNum = seed.trim() === "" ? null : Number(seed);
     return {
-      prompt, max_tokens: maxTokens, temperature, prob_top_k: topK,
+      prompt,
+      max_tokens: maxTokens,
+      temperature,
+      display_top_k: displayTopK,
+      sampling_top_k: samplingTopK,
+      top_p: topP,
+      min_p: minP,
+      seed: Number.isFinite(seedNum) ? seedNum : null,
       repetition_penalty: repPenalty,
       stop_sequences: stopSeqs.split(",").map((s) => s.replace(/\\n/g, "\n").trim()).filter(Boolean),
     };
@@ -186,13 +201,27 @@ export function ProbePanel() {
       </div>
 
       {(operation === "logit-lens" || operation === "generate") && (
-        <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
-          <label>top_k: <input type="number" value={topK} onChange={(e) => setTopK(num(e.target.value, topK))} style={{ width: 64 }} /></label>
+        <div style={{ display: "flex", gap: 8, fontSize: 12, flexWrap: "wrap" }}>
+          <label title="Number of candidate tokens streamed alongside each step (display only).">
+            display_top_k: <input type="number" value={displayTopK} onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))} style={{ width: 56 }} />
+          </label>
           {operation === "generate" && (
             <>
-              <label>max: <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(num(e.target.value, maxTokens))} style={{ width: 64 }} /></label>
-              <label>temp: <input type="number" step="0.1" value={temperature} onChange={(e) => setTemperature(num(e.target.value, temperature))} style={{ width: 64 }} /></label>
-              <label>rep: <input type="number" step="0.1" value={repPenalty} onChange={(e) => setRepPenalty(num(e.target.value, repPenalty))} style={{ width: 64 }} /></label>
+              <label>max: <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(num(e.target.value, maxTokens))} style={{ width: 56 }} /></label>
+              <label>temp: <input type="number" step="0.1" value={temperature} onChange={(e) => setTemperature(num(e.target.value, temperature))} style={{ width: 56 }} /></label>
+              <label title="Truncate sampling to the top-K logits before softmax. 0 disables.">
+                top_k: <input type="number" value={samplingTopK} onChange={(e) => setSamplingTopK(num(e.target.value, samplingTopK))} style={{ width: 56 }} />
+              </label>
+              <label title="Nucleus sampling cumulative prob cutoff. 1.0 disables.">
+                top_p: <input type="number" step="0.05" min="0" max="1" value={topP} onChange={(e) => setTopP(num(e.target.value, topP))} style={{ width: 56 }} />
+              </label>
+              <label title="Drop tokens whose prob < min_p × max(prob). 0 disables.">
+                min_p: <input type="number" step="0.01" min="0" max="1" value={minP} onChange={(e) => setMinP(num(e.target.value, minP))} style={{ width: 56 }} />
+              </label>
+              <label title="Integer seed for reproducible sampling (temp > 0 only). Blank = random.">
+                seed: <input type="text" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="random" style={{ width: 72 }} />
+              </label>
+              <label>rep: <input type="number" step="0.1" value={repPenalty} onChange={(e) => setRepPenalty(num(e.target.value, repPenalty))} style={{ width: 56 }} /></label>
             </>
           )}
         </div>
@@ -200,7 +229,9 @@ export function ProbePanel() {
 
       {operation === "generate" && (
         <div style={{ fontSize: 12 }}>
-          <label>stop: <input value={stopSeqs} onChange={(e) => setStopSeqs(e.target.value)} placeholder="comma-separated, use \n for newline" style={{ width: "100%" }} /></label>
+          <label title="Comma-separated stop strings. When any substring matches, generation halts; the matched text is not included in the output (same as <eos>).">
+            stop: <input value={stopSeqs} onChange={(e) => setStopSeqs(e.target.value)} placeholder="comma-separated, use \n for newline" style={{ width: "100%" }} />
+          </label>
         </div>
       )}
 

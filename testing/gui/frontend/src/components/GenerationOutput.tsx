@@ -85,6 +85,7 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
               padding: "0 1px",
               background: tooltip?.step === tok.step ? "#1a5276" : "transparent",
               ...(tok.token === "<eos>" ? { color: "#4a6a4a", fontSize: 11, padding: "1px 3px", border: "1px solid #3a5a3a" } : {}),
+              ...(tok.token === "<stop>" ? { color: "#aa6a4a", fontSize: 11, padding: "1px 3px", border: "1px solid #5a3a3a" } : {}),
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -102,7 +103,7 @@ function GenerationPanel({ result, isPending }: { result: ProbeResult; isPending
               }
             }}
           >
-            {tok.token === "<eos>" ? "eos" : tok.token}
+            {tok.token === "<eos>" ? "eos" : tok.token === "<stop>" ? "stop" : tok.token}
           </span>
         ))}
         {isPending && <span className="cursor-blink" style={{ color: "#4ecdc4" }}>|</span>}
