@@ -41,6 +41,11 @@ const numInputStyle: React.CSSProperties = {
   minWidth: 0,
   textAlign: "right",
   fontFamily: "monospace",
+  // Leave room for the native spinner arrows on the right edge so the
+  // typed value doesn't collide with them. 18 px clears Chrome's default
+  // spinner chrome; browsers without spinners just get slightly more
+  // trailing whitespace, which is harmless.
+  paddingRight: 18,
 };
 
 const textInputStyle: React.CSSProperties = {
