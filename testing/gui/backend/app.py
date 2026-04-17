@@ -15,10 +15,27 @@ manager = SessionManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("LLM Surgeon GUI backend starting")
-    yield
-    log.info("Shutting down — cleaning up %d session(s)", len(manager._sessions))
-    for name in list(manager._sessions.keys()):
-        manager.delete(name)
+    # Pre-warm the model-discovery cache in the background so the first
+    # /api/models/available hit (typically from the frontend's initial load)
+    # doesn't pay the ~1-second cold GGUF-header parse cost.
+    import asyncio
+    from .routes.sessions import _collect_available_models
+
+    async def _warm():
+        try:
+            await asyncio.get_event_loop().run_in_executor(None, _collect_available_models)
+            log.info("Model cache pre-warmed")
+        except Exception:
+            log.exception("Model cache pre-warm failed")
+
+    warm_task = asyncio.create_task(_warm())
+    try:
+        yield
+    finally:
+        warm_task.cancel()
+        log.info("Shutting down — cleaning up %d session(s)", len(manager._sessions))
+        for name in list(manager._sessions.keys()):
+            manager.delete(name)
 
 app = FastAPI(title="LLM Surgeon GUI", lifespan=lifespan)
 
