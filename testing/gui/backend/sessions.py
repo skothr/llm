@@ -7,16 +7,20 @@ import tempfile
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, TYPE_CHECKING
 import torch
+
+if TYPE_CHECKING:
+    from llm_surgeon.llama_engine import LlamaEngine
+    from .manifest import SurgeryManifest
 
 log = logging.getLogger("gui.backend.sessions")
 
 @dataclass
 class SessionInfo:
     name: str
-    model: object
-    tokenizer: object
+    model: Any
+    tokenizer: Any
     model_id: str
     mode: str
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -24,10 +28,10 @@ class SessionInfo:
     _applied_ops: list = field(default_factory=list, repr=False)
     _op_history: list = field(default_factory=list, repr=False)
     _layer_map: list = field(default_factory=list, repr=False)
-    _original_config: object = field(default=None, repr=False)
-    llama: object = field(default=None, repr=False)
-    gguf_path: object = field(default=None, repr=False)
-    source_gguf_path: object = field(default=None, repr=False)
+    _original_config: Any = field(default=None, repr=False)
+    llama: Optional["LlamaEngine"] = field(default=None, repr=False)
+    gguf_path: Optional[Path] = field(default=None, repr=False)
+    source_gguf_path: Optional[Path] = field(default=None, repr=False)
     # Temp dir we created via re-export; we own cleanup of this one only
     # (source_gguf_path is user-supplied and left alone).
     _owned_export_dir: Optional[Path] = field(default=None, repr=False)
@@ -276,7 +280,7 @@ class SessionManager:
     @staticmethod
     def _is_bnb_model(info) -> bool:
         try:
-            import bitsandbytes as bnb
+            import bitsandbytes as bnb  # pyright: ignore[reportMissingImports]
             return any(isinstance(p, bnb.nn.Params4bit) or isinstance(p, bnb.nn.Int8Params)
                        for p in info.model.parameters())
         except ImportError:
@@ -284,7 +288,7 @@ class SessionManager:
 
     @staticmethod
     def _move_bnb_params(model, device: str) -> None:
-        import bitsandbytes as bnb
+        import bitsandbytes as bnb  # pyright: ignore[reportMissingImports]
         for param in model.parameters():
             if isinstance(param, bnb.nn.Params4bit):
                 param.data = param.data.to(device)
