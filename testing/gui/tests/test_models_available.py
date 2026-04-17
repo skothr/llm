@@ -167,7 +167,6 @@ async def test_ollama_models(mock_ollama, tmp_path, monkeypatch):
     assert "tinyllama:latest" in model_ids
     assert "dolphin-llama3:8b-256k" in model_ids
     assert all(m["source"] == "ollama" for m in data)
-    assert all(m["safetensors"] is False for m in data)
 
 @pytest.mark.asyncio
 async def test_ollama_metadata(mock_ollama, tmp_path, monkeypatch):

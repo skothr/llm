@@ -5,7 +5,7 @@ from transformers import LlamaConfig, LlamaForCausalLM
 from gui.backend.sessions import (
     SessionManager, translate_to_current, validate_original_indices,
 )
-from gui.backend.routes.sessions import LoadRequest, ConvertRequest
+from gui.backend.routes.sessions import LoadRequest
 from llm_surgeon.surgery import _is_ollama_id
 
 def _make_model(n: int) -> LlamaForCausalLM:
@@ -408,8 +408,6 @@ class TestModelIdValidation:
         # otherwise return True and open a path-traversal window downstream.
         with pytest.raises(ValidationError):
             LoadRequest(model_id="..:tag", name="s1")
-        with pytest.raises(ValidationError):
-            ConvertRequest(model_id="..:tag")
 
     def test_rejects_slash_prefix_and_dotdot(self):
         for bad in ("../evil", "/abs/path", "..", "foo/..", "foo:../bar",
@@ -428,8 +426,4 @@ class TestModelIdValidation:
     def test_accepts_bare_name(self):
         req = LoadRequest(model_id="tinyllama", name="s1")
         assert req.model_id == "tinyllama"
-
-    def test_convert_request_accepts_legit_ids(self):
-        assert ConvertRequest(model_id="openlm-research/open_llama_3b").model_id
-        assert ConvertRequest(model_id="tinyllama:latest").model_id
 
