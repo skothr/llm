@@ -1,5 +1,4 @@
 import torch
-import pytest
 from gui.backend.hidden_state_cache import HiddenStateCache
 
 class TestHiddenStateCache:

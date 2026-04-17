@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 import pytest
-import torch
 from transformers import LlamaConfig, LlamaForCausalLM, PreTrainedTokenizerFast
 from tokenizers import Tokenizer, models, pre_tokenizers
 from tempfile import TemporaryDirectory
