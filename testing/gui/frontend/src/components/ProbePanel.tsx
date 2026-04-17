@@ -63,6 +63,14 @@ const textInputStyle: React.CSSProperties = {
   fontFamily: "monospace",
 };
 
+// When a sampler knob is at its "identity" sentinel value (top_k=0, top_p=1.0,
+// min_p=0.0, rep=1.0, empty stop) it's a no-op on the distribution and the
+// user is effectively sampling one level simpler. Dim the label + input so
+// the live knobs pop and the pass-through ones visibly fade.
+const offColor = "#55556a";
+const dim = (off: boolean, base: React.CSSProperties): React.CSSProperties =>
+  off ? { ...base, color: offColor } : base;
+
 // Streaming operations use WebSocket (live per-layer or per-token frames).
 // One-shot inspection ops (influence, attention, residual-norms) go via REST
 // because the backend returns a single complete result — a WS would buy
@@ -105,6 +113,17 @@ export function ProbePanel() {
   const [error, setError] = useState("");
 
   const isWs = WS_OPS.has(operation);
+
+  // Identity-sentinel flags: true when the control would leave the
+  // distribution (or behavior) untouched. Used purely for dimming the UI —
+  // the backend receives the raw values regardless.
+  const off = {
+    top_k: samplingTopK <= 0,
+    top_p: topP >= 1.0,
+    min_p: minP <= 0.0,
+    rep: repPenalty === 1.0,
+    stop: stopSeqs.trim() === "",
+  };
 
   const makeWsHandlers = (resultId: string) => ({
     onMessage: (msg: WsMessage) => { updatePendingResult(resultId, msg); },
@@ -273,16 +292,16 @@ export function ProbePanel() {
             <input className="num-input" type="number" value={maxTokens}
               onChange={(e) => setMaxTokens(num(e.target.value, maxTokens))}
               style={numInputStyle} />
-            <label style={labelStyle} title="Repetition penalty (1.0 = no penalty).">rep</label>
+            <label style={dim(off.rep, labelStyle)} title="Repetition penalty (1.0 = no penalty).">rep</label>
             <input className="num-input" type="number" step="0.1" value={repPenalty}
               onChange={(e) => setRepPenalty(num(e.target.value, repPenalty))}
-              style={numInputStyle} />
+              style={dim(off.rep, numInputStyle)} />
 
-            <label style={labelStyle} title="Comma-separated stop strings. When any substring matches, generation halts and the matched text is truncated from the output (same as <eos>).">stop</label>
+            <label style={dim(off.stop, labelStyle)} title="Comma-separated stop strings. When any substring matches, generation halts and the matched text is truncated from the output (same as <eos>).">stop</label>
             <input type="text" value={stopSeqs}
               onChange={(e) => setStopSeqs(e.target.value)}
               placeholder="comma-separated, \n for newline"
-              style={{ ...textInputStyle, gridColumn: "2 / -1" }} />
+              style={dim(off.stop, { ...textInputStyle, gridColumn: "2 / -1" })} />
           </div>
 
           <div style={sectionHeaderStyle}>Sampling</div>
@@ -297,19 +316,19 @@ export function ProbePanel() {
               placeholder="random"
               style={textInputStyle} />
 
-            <label style={labelStyle} title="Truncate sampling to the top-K logits before softmax. 0 disables.">top_k</label>
+            <label style={dim(off.top_k, labelStyle)} title="Truncate sampling to the top-K logits before softmax. 0 disables.">top_k</label>
             <input className="num-input" type="number" value={samplingTopK}
               onChange={(e) => setSamplingTopK(num(e.target.value, samplingTopK))}
-              style={numInputStyle} />
-            <label style={labelStyle} title="Nucleus sampling: keep smallest set of tokens whose cumulative prob ≥ top_p. 1.0 disables.">top_p</label>
+              style={dim(off.top_k, numInputStyle)} />
+            <label style={dim(off.top_p, labelStyle)} title="Nucleus sampling: keep smallest set of tokens whose cumulative prob ≥ top_p. 1.0 disables.">top_p</label>
             <input className="num-input" type="number" step="0.05" min="0" max="1" value={topP}
               onChange={(e) => setTopP(num(e.target.value, topP))}
-              style={numInputStyle} />
+              style={dim(off.top_p, numInputStyle)} />
 
-            <label style={labelStyle} title="Drop tokens whose prob < min_p × max(prob). Relative-floor filter robust to long tails. 0 disables.">min_p</label>
+            <label style={dim(off.min_p, labelStyle)} title="Drop tokens whose prob < min_p × max(prob). Relative-floor filter robust to long tails. 0 disables.">min_p</label>
             <input className="num-input" type="number" step="0.01" min="0" max="1" value={minP}
               onChange={(e) => setMinP(num(e.target.value, minP))}
-              style={numInputStyle} />
+              style={dim(off.min_p, numInputStyle)} />
             <label style={labelStyle} title="How many candidate tokens to stream per step for the display popover. Does not affect sampling.">show</label>
             <input className="num-input" type="number" value={displayTopK}
               onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
