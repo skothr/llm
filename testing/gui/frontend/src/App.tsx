@@ -43,6 +43,7 @@ function useResize(initial: number, direction: "horizontal" | "vertical", min: n
 export default function App() {
   const fetchSessions = useStore((s) => s.fetchSessions);
   const fetchSurgeryOps = useStore((s) => s.fetchSurgeryOps);
+  const fetchAvailableModels = useStore((s) => s.fetchAvailableModels);
   const activeTab = useStore((s) => s.activeTab);
   const backendOnline = useStore((s) => s.backendOnline);
 
@@ -50,9 +51,13 @@ export default function App() {
   const { size: outputHeight, onMouseDown: onVResize } = useResize(280, "vertical", 60, 600);
 
   useEffect(() => {
+    // All three initial fetches run concurrently. Model discovery is the
+    // slowest (first-hit GGUF parsing), so starting it here — rather than
+    // waiting for SessionsPanel to mount — removes visible dropdown lag.
     fetchSessions();
     fetchSurgeryOps();
-  }, [fetchSessions, fetchSurgeryOps]);
+    fetchAvailableModels();
+  }, [fetchSessions, fetchSurgeryOps, fetchAvailableModels]);
 
   useEffect(() => {
     if (backendOnline) return;

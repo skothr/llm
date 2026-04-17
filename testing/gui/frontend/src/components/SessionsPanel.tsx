@@ -12,6 +12,7 @@ export function SessionsPanel() {
   const loadingModelId = useStore((s) => s.loadingModelId);
   const availableModels = useStore((s) => s.availableModels);
   const backendOnline = useStore((s) => s.backendOnline);
+  const backendProbed = useStore((s) => s.backendProbed);
   const fetchSessions = useStore((s) => s.fetchSessions);
   const fetchSessionInfo = useStore((s) => s.fetchSessionInfo);
   const fetchAvailableModels = useStore((s) => s.fetchAvailableModels);
@@ -33,7 +34,10 @@ export function SessionsPanel() {
   const [surgeryOp, setSurgeryOp] = useState("");
   const [surgeryParams, setSurgeryParams] = useState<Record<string, unknown>>({});
 
-  useEffect(() => { fetchAvailableModels(); }, [fetchAvailableModels]);
+  // Initial /api/models/available fetch is kicked off by App.tsx in parallel
+  // with session discovery, so this panel does not need an on-mount effect.
+  // fetchAvailableModels() is still called after a successful model load (see
+  // handleLoad below) to surface newly imported weights.
 
   const selectedModel: AvailableModel | null =
     availableModels.find((m) =>
@@ -161,7 +165,7 @@ export function SessionsPanel() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {!backendOnline && (
+      {backendProbed && !backendOnline && (
         <div style={{ padding: 8, background: "#4a2020", borderRadius: 4, fontSize: 12 }}>
           Backend offline — start with <code>./gui/run.sh</code>
         </div>

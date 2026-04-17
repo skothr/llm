@@ -102,6 +102,33 @@ def _read_ollama_config(models_dir: Path, manifest: dict) -> dict | None:
         return None
 
 
+# GGUF header parsing for an Ollama blob is ~120 ms per model on a warm disk
+# cache and the blobs are content-addressed (sha256), so metadata can be
+# memoized per blob path forever. Invalidating on (size, mtime_ns) is belt-
+# and-braces: in practice digest-addressed blobs never mutate.
+_gguf_meta_cache: dict[tuple[str, int, int], dict] = {}
+
+
+def _gguf_meta_cached(blob_path: Path) -> dict:
+    try:
+        st = blob_path.stat()
+    except OSError:
+        return {}
+    key = (str(blob_path), st.st_size, st.st_mtime_ns)
+    cached = _gguf_meta_cache.get(key)
+    if cached is not None:
+        return cached
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+        from llm_surgeon.gguf_reader import gguf_model_meta
+        meta = gguf_model_meta(blob_path) or {}
+    except Exception:
+        meta = {}
+    _gguf_meta_cache[key] = meta
+    return meta
+
+
 def _ollama_model_meta(models_dir: Path, model_id: str) -> dict:
     meta: dict = {"model_id": model_id, "source": "ollama", "safetensors": False}
     manifest = _read_ollama_manifest(models_dir, model_id)
@@ -119,16 +146,10 @@ def _ollama_model_meta(models_dir: Path, model_id: str) -> dict:
             break
 
     if blob_path:
-        try:
-            import sys
-            sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-            from llm_surgeon.gguf_reader import gguf_model_meta
-            gguf_meta = gguf_model_meta(blob_path)
-            for k, v in gguf_meta.items():
-                if v is not None:
-                    meta[k] = v
-        except Exception:
-            pass
+        gguf_meta = _gguf_meta_cached(blob_path)
+        for k, v in gguf_meta.items():
+            if v is not None:
+                meta[k] = v
 
     cfg = _read_ollama_config(models_dir, manifest)
     if cfg:
@@ -406,12 +427,19 @@ SURGERY_OPS = [
 async def surgery_operations():
     return SURGERY_OPS
 
-@router.get("/models/available")
-async def list_available_models():
+def _collect_available_models() -> list[dict]:
     hf = [_hf_model_meta(m) for m in _scan_model_cache(MODELS_CACHE)]
     ollama = [_ollama_model_meta(OLLAMA_MODELS_DIR, m)
               for m in _scan_ollama_models(OLLAMA_MODELS_DIR)]
     return hf + ollama
+
+
+@router.get("/models/available")
+async def list_available_models():
+    # Scan does sync I/O (stat + GGUF header reads on cold cache); keep the
+    # event loop responsive by moving it off the main thread. Cheap on warm
+    # cache — skipping run_in_executor would save ~0.3 ms per call.
+    return await asyncio.get_event_loop().run_in_executor(None, _collect_available_models)
 
 def _has_safetensors_cached(model_id: str) -> bool:
     import sys

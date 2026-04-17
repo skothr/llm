@@ -37,6 +37,10 @@ async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<R
 interface StoreState {
   activeTab: ConfigTab;
   backendOnline: boolean;
+  // False until the first /api/sessions probe has completed (success or
+  // failure). Used to suppress the "Backend offline" banner on initial page
+  // load so we don't flash it while the probe is still in flight.
+  backendProbed: boolean;
 
   sessions: SessionSummary[];
   sessionInfo: Record<string, SessionInfo>;
@@ -100,6 +104,7 @@ interface StoreState {
 export const useStore = create<StoreState>((set, get) => ({
   activeTab: "sessions",
   backendOnline: false,
+  backendProbed: false,
 
   sessions: [],
   sessionInfo: {},
@@ -130,20 +135,20 @@ export const useStore = create<StoreState>((set, get) => ({
     try {
       const resp = await apiFetch("/api/sessions");
       if (!resp.ok) {
-        set({ backendOnline: false });
+        set({ backendOnline: false, backendProbed: true });
         return;
       }
       const data = await resp.json();
       if (!Array.isArray(data)) {
-        set({ backendOnline: false });
+        set({ backendOnline: false, backendProbed: true });
         return;
       }
-      set({ sessions: data, backendOnline: true });
+      set({ sessions: data, backendOnline: true, backendProbed: true });
       if (get().surgeryOps.length === 0) {
         get().fetchSurgeryOps();
       }
     } catch {
-      set({ backendOnline: false });
+      set({ backendOnline: false, backendProbed: true });
     }
   },
 
