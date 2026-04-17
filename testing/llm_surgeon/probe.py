@@ -228,6 +228,7 @@ def logit_lens(
             layer_logits = _project_to_logits(model, hidden)
 
         if full_logits:
+            assert logits_dict is not None
             logits_dict[(layer_idx, sublayer)] = layer_logits.cpu()
 
         probs = F.softmax(layer_logits.float(), dim=-1)
