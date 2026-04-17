@@ -4,6 +4,7 @@ import { displayToken } from "../../utils/displayToken";
 import { sliceHiddenStatePosition } from "../../utils/hiddenState";
 import { HiddenStateBarStrip } from "./HiddenStateBarStrip";
 import { DimVsLayerHeatmap } from "./DimVsLayerHeatmap";
+import { ExportButtons } from "../ExportButtons";
 import type { LogitLensData, ProbeResult, CellMetrics } from "../../types/api";
 
 interface Props {
@@ -295,6 +296,31 @@ export function LogitLensHeatmap({ result }: Props) {
 
   }, [dataMessages, result.data, result.id, metric]);
 
+  const csvRows = useCallback((): (string | number)[][] => {
+    // Flat cell-per-row table: every (layer, position) pair with its
+    // metrics plus the top-1 token + prob. Top-k>1 would make CSV ragged,
+    // so use the JSON export for that.
+    const header = ["layer", "original_layer", "sublayer", "position", "top1_token", "top1_prob", "entropy", "top1_margin"];
+    const rows: (string | number)[][] = [header];
+    for (const msg of dataMessages) {
+      for (let pos = 0; pos < msg.predictions.length; pos++) {
+        const cell = msg.metrics?.[pos];
+        const top = msg.predictions[pos]?.[0];
+        rows.push([
+          msg.layer,
+          msg.original_layer ?? msg.layer,
+          msg.sublayer,
+          pos,
+          top?.token ?? "",
+          top?.prob ?? "",
+          cell?.entropy ?? "",
+          cell?.top1_margin ?? "",
+        ]);
+      }
+    }
+    return rows;
+  }, [dataMessages]);
+
   return (
     <div style={{ position: "relative" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
@@ -322,6 +348,19 @@ export function LogitLensHeatmap({ result }: Props) {
             </select>
           </label>
         )}
+        <div style={{ marginLeft: "auto" }}>
+          <ExportButtons
+            filenameBase={`logitlens_${result.sessionName}`}
+            getSVG={() => svgRef.current}
+            getCSVRows={csvRows}
+            getJSON={() => ({
+              sessionName: result.sessionName,
+              prompt: result.prompt,
+              timestamp: result.timestamp,
+              data: result.data,
+            })}
+          />
+        </div>
       </div>
       <div style={{ overflowX: "auto" }}>
         <svg ref={svgRef} />

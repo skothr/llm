@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import * as d3 from "d3";
+import { ExportButtons } from "../ExportButtons";
 import type { ProbeResult } from "../../types/api";
 
 interface Props {
@@ -72,11 +73,26 @@ export function LayerInfluence({ result }: Props) {
     return <p style={{ color: "#666" }}>No influence data</p>;
   }
 
+  const scores = completeMsg.scores;
+  const csvRows = (): (string | number)[][] => {
+    const rows = Object.entries(scores)
+      .map(([layer, score]) => [parseInt(layer), score] as (string | number)[])
+      .sort((a, b) => (a[0] as number) - (b[0] as number));
+    return [["layer", "score"], ...rows];
+  };
+
   return (
     <div>
-      <h3 style={{ fontSize: 13, color: "#a0a0c0", marginBottom: 8 }}>
-        Layer Influence - {result.sessionName}
-      </h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <h3 style={{ fontSize: 13, color: "#a0a0c0", margin: 0 }}>
+          Layer Influence - {result.sessionName}
+        </h3>
+        <ExportButtons
+          filenameBase={`layer-influence_${result.sessionName}`}
+          getSVG={() => svgRef.current}
+          getCSVRows={csvRows}
+        />
+      </div>
       <svg ref={svgRef} />
     </div>
   );

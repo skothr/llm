@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
+import { ExportButtons } from "../ExportButtons";
 import type { ProbeResult } from "../../types/api";
 
 interface Props {
@@ -80,9 +81,32 @@ export function AttentionEntropy({ result }: Props) {
 
   if (!completeMsg?.entropy) return <p style={{ color: "#666" }}>No attention entropy data</p>;
 
+  const entropy = completeMsg.entropy;
+  const csvRows = (): (string | number)[][] => {
+    // "layer,head,mean,pos0,pos1,..." wide format. Researchers importing into
+    // pandas get a flat DataFrame; long format is a one-liner melt downstream.
+    const entries = Object.entries(entropy).map(([key, values]) => {
+      const [l, h] = key.split("_").map(Number);
+      const mean = values.reduce((a, b) => a + b, 0) / (values.length || 1);
+      return { layer: l, head: h, mean, values };
+    }).sort((a, b) => a.layer - b.layer || a.head - b.head);
+    const numPos = entries[0]?.values.length ?? 0;
+    const header = ["layer", "head", "mean_entropy", ...Array.from({ length: numPos }, (_, i) => `pos${i}`)];
+    const rows: (string | number)[][] = [header];
+    for (const e of entries) rows.push([e.layer, e.head, e.mean, ...e.values]);
+    return rows;
+  };
+
   return (
     <div style={{ position: "relative" }}>
-      <h3 style={{ fontSize: 13, color: "#a0a0c0", marginBottom: 8 }}>Attention Entropy - {result.sessionName}</h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <h3 style={{ fontSize: 13, color: "#a0a0c0", margin: 0 }}>Attention Entropy - {result.sessionName}</h3>
+        <ExportButtons
+          filenameBase={`attention-entropy_${result.sessionName}`}
+          getSVG={() => svgRef.current}
+          getCSVRows={csvRows}
+        />
+      </div>
       <div style={{ overflowX: "auto" }}><svg ref={svgRef} /></div>
       {tooltip && (
         <div style={{ position: "fixed", left: tooltip.x, top: tooltip.y, background: "#16213e", border: "1px solid #1a5276", borderRadius: 4, padding: "6px 10px", fontFamily: "monospace", fontSize: 12, whiteSpace: "pre", pointerEvents: "none", zIndex: 100 }}>

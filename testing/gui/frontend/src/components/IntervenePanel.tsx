@@ -4,6 +4,7 @@ import { useWebSocket } from "../hooks/useWebSocket";
 import { useStopCancel } from "../hooks/useStopCancel";
 import { num } from "../utils/num";
 import { ArrayInput } from "./SurgeryParamForm";
+import { PromptLibraryBar } from "./PromptLibraryBar";
 import type { InterventionSpec, WsMessage } from "../types/api";
 
 type OpParam = { key: string; type: string; default?: number | string; step?: number };
@@ -176,6 +177,7 @@ export function IntervenePanel() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <PromptLibraryBar value={intervenePrompt} onLoad={setIntervenePrompt} />
       <textarea
         placeholder="Prompt text... (Ctrl/Cmd+Enter to run)"
         value={intervenePrompt}
