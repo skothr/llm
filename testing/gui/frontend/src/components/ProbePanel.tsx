@@ -36,16 +36,25 @@ const labelStyle: React.CSSProperties = {
   justifySelf: "end",
 };
 
+// Native number-input spinner arrows track the padding-box edge, so adding
+// paddingRight would pull the spinners leftward instead of pushing the
+// value rightward — exactly the collision we're trying to avoid. Hide the
+// browser chrome entirely; keyboard ↑/↓ still step values when the input
+// is focused, so we only lose the click target, which was tiny anyway.
+const hideSpinnerCSS = `
+  .num-input::-webkit-inner-spin-button,
+  .num-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .num-input { -moz-appearance: textfield; }
+`;
+
 const numInputStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
   textAlign: "right",
   fontFamily: "monospace",
-  // Leave room for the native spinner arrows on the right edge so the
-  // typed value doesn't collide with them. 18 px clears Chrome's default
-  // spinner chrome; browsers without spinners just get slightly more
-  // trailing whitespace, which is harmless.
-  paddingRight: 18,
 };
 
 const textInputStyle: React.CSSProperties = {
@@ -217,6 +226,7 @@ export function ProbePanel() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <style>{hideSpinnerCSS}</style>
       <textarea
         placeholder="Prompt text..."
         value={prompt}
@@ -249,7 +259,7 @@ export function ProbePanel() {
       {operation === "logit-lens" && (
         <div style={paramGridStyle}>
           <label style={labelStyle} title="Number of candidate tokens streamed per layer (shown in the heatmap).">top_k</label>
-          <input type="number" value={displayTopK}
+          <input className="num-input" type="number" value={displayTopK}
             onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
             style={numInputStyle} />
         </div>
@@ -260,11 +270,11 @@ export function ProbePanel() {
           <div style={sectionHeaderStyle}>Output</div>
           <div style={paramGridStyle}>
             <label style={labelStyle} title="Maximum new tokens to generate before stopping.">max</label>
-            <input type="number" value={maxTokens}
+            <input className="num-input" type="number" value={maxTokens}
               onChange={(e) => setMaxTokens(num(e.target.value, maxTokens))}
               style={numInputStyle} />
             <label style={labelStyle} title="Repetition penalty (1.0 = no penalty).">rep</label>
-            <input type="number" step="0.1" value={repPenalty}
+            <input className="num-input" type="number" step="0.1" value={repPenalty}
               onChange={(e) => setRepPenalty(num(e.target.value, repPenalty))}
               style={numInputStyle} />
 
@@ -278,7 +288,7 @@ export function ProbePanel() {
           <div style={sectionHeaderStyle}>Sampling</div>
           <div style={paramGridStyle}>
             <label style={labelStyle} title="Softmax sharpness. 0 = greedy argmax, 1 = untouched, >1 = flatter distribution.">temp</label>
-            <input type="number" step="0.1" value={temperature}
+            <input className="num-input" type="number" step="0.1" value={temperature}
               onChange={(e) => setTemperature(num(e.target.value, temperature))}
               style={numInputStyle} />
             <label style={labelStyle} title="Integer seed for reproducible sampling (temp > 0 only). Blank = random each run.">seed</label>
@@ -288,20 +298,20 @@ export function ProbePanel() {
               style={textInputStyle} />
 
             <label style={labelStyle} title="Truncate sampling to the top-K logits before softmax. 0 disables.">top_k</label>
-            <input type="number" value={samplingTopK}
+            <input className="num-input" type="number" value={samplingTopK}
               onChange={(e) => setSamplingTopK(num(e.target.value, samplingTopK))}
               style={numInputStyle} />
             <label style={labelStyle} title="Nucleus sampling: keep smallest set of tokens whose cumulative prob ≥ top_p. 1.0 disables.">top_p</label>
-            <input type="number" step="0.05" min="0" max="1" value={topP}
+            <input className="num-input" type="number" step="0.05" min="0" max="1" value={topP}
               onChange={(e) => setTopP(num(e.target.value, topP))}
               style={numInputStyle} />
 
             <label style={labelStyle} title="Drop tokens whose prob < min_p × max(prob). Relative-floor filter robust to long tails. 0 disables.">min_p</label>
-            <input type="number" step="0.01" min="0" max="1" value={minP}
+            <input className="num-input" type="number" step="0.01" min="0" max="1" value={minP}
               onChange={(e) => setMinP(num(e.target.value, minP))}
               style={numInputStyle} />
             <label style={labelStyle} title="How many candidate tokens to stream per step for the display popover. Does not affect sampling.">show</label>
-            <input type="number" value={displayTopK}
+            <input className="num-input" type="number" value={displayTopK}
               onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
               style={numInputStyle} />
           </div>
