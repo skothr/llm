@@ -138,7 +138,7 @@ def _gguf_meta_cached(blob_path: Path) -> dict:
 
 
 def _ollama_model_meta(models_dir: Path, model_id: str) -> dict:
-    meta: dict = {"model_id": model_id, "source": "ollama", "safetensors": False}
+    meta: dict = {"model_id": model_id, "source": "ollama"}
     manifest = _read_ollama_manifest(models_dir, model_id)
     if not manifest:
         return meta
