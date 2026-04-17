@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { ArrayInput } from "./SurgeryParamForm";
 import type { InterventionSpec, WsMessage } from "../types/api";
 
 const num = (v: string, fallback: number): number => {
@@ -72,10 +73,9 @@ function InterventionCard({
         if (p.type === "int[]") {
           return (
             <label key={p.key} style={{ display: "block", fontSize: 12, marginBottom: 2 }}>
-              {p.key}: <input
-                value={Array.isArray(spec.params[p.key]) ? (spec.params[p.key] as number[]).join(", ") : ""}
-                onChange={(e) => updateParam(p.key, e.target.value.split(",").map((s) => parseInt(s.trim())).filter((n) => !isNaN(n)))}
-                placeholder="0, 1, 2"
+              {p.key}: <ArrayInput
+                value={Array.isArray(spec.params[p.key]) ? (spec.params[p.key] as number[]) : []}
+                onChange={(next) => updateParam(p.key, next)}
                 style={{ width: 120 }}
               />
             </label>
