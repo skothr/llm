@@ -82,8 +82,9 @@ function InterventionCard({
           );
         }
         if (p.type === "source") {
-          const source = (spec.params[p.key] || { session: "", prompt: "", layer: 0, sublayer: "ffn", position: 0 }) as {
-            session: string; prompt: string; layer: number; sublayer: string; position: number;
+          const source: { session: string; prompt: string; layer: number; sublayer: string; position: number } = {
+            session: "", prompt: "", layer: 0, sublayer: "ffn", position: 0,
+            ...((spec.params[p.key] as object | undefined) ?? {}),
           };
           const updateSource = (field: string, value: unknown) => updateParam(p.key, { ...source, [field]: value });
           return (
