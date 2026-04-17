@@ -2,7 +2,39 @@ import { useState, useEffect } from "react";
 import { useStore } from "../state/store";
 import { ModelCombobox } from "./ModelCombobox";
 import { SurgeryParamForm } from "./SurgeryParamForm";
-import type { SessionSummary, SurgeryOperation, StagedOp, AvailableModel } from "../types/api";
+import { previewStagedOp, formatParams as fmtParamCount } from "../utils/surgeryPreview";
+import type { SessionSummary, SurgeryOperation, StagedOp, AvailableModel, SessionInfo } from "../types/api";
+
+const SEVERITY_COLOR: Record<"info" | "warn" | "danger", { bg: string; border: string; text: string }> = {
+  info:   { bg: "#0d2236", border: "#1a5276", text: "#8bb5d8" },
+  warn:   { bg: "#2a1f0d", border: "#c08020", text: "#ffc040" },
+  danger: { bg: "#2a0d0d", border: "#c04040", text: "#ff8080" },
+};
+
+function OpPreviewChip({ op, info }: { op: StagedOp; info: SessionInfo }) {
+  const prev = previewStagedOp(op, info);
+  const color = SEVERITY_COLOR[prev.severity];
+  const parts: string[] = [prev.summary];
+  if (prev.paramsAffected != null && prev.paramsAffected > 0) {
+    parts.push(`~${fmtParamCount(prev.paramsAffected)} params`);
+  }
+  if (prev.paramsAffected != null && info.total_params > 0) {
+    const pct = (prev.paramsAffected / info.total_params) * 100;
+    if (pct >= 0.1) parts.push(`${pct.toFixed(pct < 1 ? 2 : 1)}% of total`);
+  }
+  return (
+    <span
+      style={{
+        fontSize: 10, fontFamily: "monospace",
+        padding: "1px 6px", borderRadius: 3,
+        background: color.bg, border: `1px solid ${color.border}`, color: color.text,
+      }}
+      title={parts.join(" · ")}
+    >
+      {parts.join(" · ")}
+    </span>
+  );
+}
 
 export function SessionsPanel() {
   const sessions = useStore((s) => s.sessions);
@@ -379,6 +411,15 @@ export function SessionsPanel() {
             {selectedOpDef && (
               <SurgeryParamForm operation={selectedOpDef} params={surgeryParams} onChange={setSurgeryParams} />
             )}
+            {selectedOpDef && sessionInfo[selectedSession] && (
+              <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 10, color: "#667" }}>preview:</span>
+                <OpPreviewChip
+                  op={{ operation: surgeryOp, params: surgeryParams }}
+                  info={sessionInfo[selectedSession]}
+                />
+              </div>
+            )}
             <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
               <button onClick={() => handleSurgery(selectedSession)} disabled={!surgeryOp}>Stage</button>
             </div>
@@ -396,11 +437,14 @@ export function SessionsPanel() {
                       Pending ({info.pending_ops.length})
                     </div>
                     {info.pending_ops.map((op: StagedOp, i: number) => (
-                      <div key={i} style={{ fontSize: 11, color: "#ccccdd", padding: "2px 0", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: i < info.pending_ops.length - 1 ? "1px solid #ffffff0a" : "none" }}>
-                        <span>
-                          <span style={{ color: "#88aacc" }}>{i + 1}.</span>{" "}
-                          <span style={{ color: "#ddd" }}>{op.operation}</span>{" "}
-                          <span style={{ color: "#888" }}>{formatParams(op.params)}</span>
+                      <div key={i} style={{ fontSize: 11, color: "#ccccdd", padding: "2px 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, borderBottom: i < info.pending_ops.length - 1 ? "1px solid #ffffff0a" : "none" }}>
+                        <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
+                          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <span style={{ color: "#88aacc" }}>{i + 1}.</span>{" "}
+                            <span style={{ color: "#ddd" }}>{op.operation}</span>{" "}
+                            <span style={{ color: "#888" }}>{formatParams(op.params)}</span>
+                          </span>
+                          <OpPreviewChip op={op} info={info} />
                         </span>
                         <button
                           style={{ padding: "1px 5px", fontSize: 10, background: "#4a2020", border: "1px solid #ff6b6b44", cursor: "pointer" }}
