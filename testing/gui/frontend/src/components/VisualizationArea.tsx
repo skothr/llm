@@ -7,6 +7,7 @@ import { ResidualNorms } from "./visualizations/ResidualNorms";
 import { ResultMetaEditor } from "./ResultMetaEditor";
 import { ResultFilterBar, makeResultPredicate } from "./ResultFilterBar";
 import { BulkActionBar } from "./BulkActionBar";
+import { timeAgo, useTimeAgoTick } from "../utils/timeAgo";
 import type { ProbeResult } from "../types/api";
 
 function InterveneSummary({ result }: { result: ProbeResult }) {
@@ -60,8 +61,14 @@ export function VisualizationArea() {
   const filterPinnedOnly = useStore((s) => s.filterPinnedOnly);
   const filterQuery = useStore((s) => s.filterQuery);
 
+  const now = useTimeAgoTick();
+
   const all = [...Object.values(pendingResults), ...results];
   const vizResults = all.filter((r) => r.operation !== "generate");
+  // Count every in-flight run, including generate runs — surfaced in the
+  // header so users can tell a probe/intervene panel is busy even when
+  // they're looking at the viz area.
+  const pendingCount = Object.keys(pendingResults).length;
   // Filter predicate is applied to non-B, non-pending results only. Pending
   // results always surface regardless of filters (a running probe should
   // never hide behind a stale filter). B-side results ride along with
@@ -90,6 +97,14 @@ export function VisualizationArea() {
           <h2 style={{ margin: 0 }}>
             Visualization
             {isPending && <span style={{ color: "#4ecdc4", fontSize: 11, marginLeft: 8 }}>streaming...</span>}
+            {pendingCount > 0 && (
+              <span
+                style={{ color: "#4ecdc4", fontSize: 11, marginLeft: 8, fontFamily: "monospace" }}
+                title={`${pendingCount} run(s) currently in flight across all panels`}
+              >
+                {"\u25CB"} {pendingCount} running
+              </span>
+            )}
           </h2>
           {activeResult && <ResultMetaEditor result={activeResult} />}
         </div>
@@ -157,7 +172,9 @@ export function VisualizationArea() {
                 {r.pinned && <span style={{ color: "#ffc040", marginRight: 3 }}>{"\u2605"}</span>}
                 {r.operation} | {r.sessionName}
                 {all.find((b) => b.isB && b.id === `${r.id}-B`) ? " (A/B)" : ""}
-                {r.id in pendingResults ? " ..." : ""}
+                {r.id in pendingResults ? " ..." : (
+                  <span style={{ color: "#667", marginLeft: 4, fontSize: 10 }}>{timeAgo(r.timestamp, now)}</span>
+                )}
                 {r.tags && r.tags.length > 0 && (
                   <span style={{ color: "#88a0c0", marginLeft: 4 }}>#{r.tags[0]}{r.tags.length > 1 ? `+${r.tags.length - 1}` : ""}</span>
                 )}
