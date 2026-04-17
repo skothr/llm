@@ -10,8 +10,8 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
-# Dedicated executor for filesystem scans (model discovery, safetensors
-# conversion). The default asyncio executor is shared with generate,
+# Dedicated executor for filesystem scans (model discovery, GGUF header
+# parsing). The default asyncio executor is shared with generate,
 # logit-lens, and compare handlers; a cold GGUF scan could otherwise block
 # inference paths for a second or two while it parses headers.
 _scan_executor: ThreadPoolExecutor = ThreadPoolExecutor(
@@ -56,8 +56,7 @@ def _hf_file_size(model_id: str) -> int | None:
 
 
 def _hf_model_meta(model_id: str) -> dict:
-    meta: dict = {"model_id": model_id, "source": "huggingface",
-                  "safetensors": _has_safetensors_cached(model_id)}
+    meta: dict = {"model_id": model_id, "source": "huggingface"}
     cfg = _read_hf_config(model_id)
     if cfg:
         meta["architecture"] = cfg.get("model_type")
@@ -494,36 +493,6 @@ async def tokenize_prompt(name: str, req: TokenizeRequest):
         raise HTTPException(500, "Session has no tokenizer loaded")
     return {"count": count}
 
-def _has_safetensors_cached(model_id: str) -> bool:
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-    from llm_surgeon.surgery import _has_safetensors
-    return _has_safetensors(model_id, str(MODELS_CACHE))
-
-class ConvertRequest(BaseModel):
-    model_id: str
-
-    @field_validator("model_id")
-    @classmethod
-    def validate_model_id(cls, v):
-        return _validate_model_id(v)
-
-@router.post("/models/convert-safetensors")
-async def convert_model_safetensors(req: ConvertRequest):
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-    from llm_surgeon.surgery import convert_to_safetensors
-
-    try:
-        result = await asyncio.get_running_loop().run_in_executor(
-            _scan_executor,
-            lambda: convert_to_safetensors(req.model_id, str(MODELS_CACHE)),
-        )
-    except Exception as e:
-        log.exception("Safetensors conversion failed for '%s'", req.model_id)
-        raise HTTPException(500, str(e))
-    return result
-
 VALID_OPS = {op["name"] for op in SURGERY_OPS}
 
 @router.post("/sessions/{name}/surgery")
@@ -660,7 +629,7 @@ async def revert_surgery(name: str):
     import sys, gc
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import surgery
-    from llm_surgeon.surgery import _snapshot_dir
+    from llm_surgeon.surgery import _is_cached
     import shutil
     import torch as _torch
 
@@ -672,7 +641,7 @@ async def revert_surgery(name: str):
         # state that can't be recovered.
         loop = asyncio.get_running_loop()
         try:
-            if _snapshot_dir(info.model_id):
+            if _is_cached(info.model_id):
                 new_model, _ = await loop.run_in_executor(
                     None,
                     lambda: surgery.load_model(info.model_id, mode=info.mode),
@@ -847,8 +816,8 @@ async def clone_session(name: str, req: CloneRequest):
 
     loop = asyncio.get_running_loop()
     try:
-        from llm_surgeon.surgery import _snapshot_dir
-        if _snapshot_dir(info.model_id):
+        from llm_surgeon.surgery import _is_cached
+        if _is_cached(info.model_id):
             await mgr.to_cpu_safe(name)
             from llm_surgeon import surgery
             cloned_model, _ = await loop.run_in_executor(
