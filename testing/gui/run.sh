@@ -7,11 +7,43 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
 UVICORN_LOG_LEVEL="info"
 
+usage() {
+  cat <<USAGE
+Usage: run.sh [--debug] [--help]
+
+Starts the LLM Surgeon GUI: FastAPI backend on :8000 + vite dev server on :5173.
+
+Options:
+  --debug      Enable DEBUG log level for backend and uvicorn.
+  -h, --help   Show this help.
+
+Environment:
+  LOG_LEVEL    Backend log level (default: INFO). Overridden by --debug.
+
+Behavior:
+  * Preflights ports 5173 and 8000 before starting.
+  * If :8000 already answers on /api/sessions, reuses that backend instead
+    of trying to bind a new one.
+  * Waits for backend HTTP readiness before launching vite; this prevents
+    Chrome's ECONNREFUSED socket-pool throttle on initial page load.
+  * Propagates SIGINT/SIGTERM to the full child process group so
+    uvicorn --reload's workers don't get orphaned on Ctrl+C.
+USAGE
+}
+
 for arg in "$@"; do
     case "$arg" in
         --debug)
             LOG_LEVEL="DEBUG"
             UVICORN_LOG_LEVEL="debug"
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "run.sh: unknown argument '$arg' (try --help)" >&2
+            exit 2
             ;;
     esac
 done

@@ -61,13 +61,21 @@ export default function App() {
 
   useEffect(() => {
     if (backendOnline) return;
-    // 500 ms keeps the banner alive for at most half a second after the
-    // backend comes up. The /api/sessions handler is cheap (tens of μs on
-    // an empty manager) so a higher poll rate is fine during development
-    // when the backend is flapping. setInterval is cleared as soon as the
-    // first success flips backendOnline true.
-    const interval = setInterval(() => { fetchSessions(); }, 500);
-    return () => clearInterval(interval);
+    // Exponential backoff: 500 ms, then 1 s, 2 s, 4 s, capped at 10 s. A
+    // brief restart closes in the first couple of polls; a longer outage
+    // stops re-rendering every half second. The effect re-runs when
+    // backendOnline flips true and the timeout is cleared via cleanup.
+    let cancelled = false;
+    let delay = 500;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = () => {
+      if (cancelled) return;
+      fetchSessions();
+      delay = Math.min(delay * 2, 10_000);
+      timer = setTimeout(poll, delay);
+    };
+    timer = setTimeout(poll, delay);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [backendOnline, fetchSessions]);
 
   useEffect(() => {
