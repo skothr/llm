@@ -1,10 +1,9 @@
 import pytest
-import torch
 from unittest.mock import patch
 from pydantic import ValidationError
 from transformers import LlamaConfig, LlamaForCausalLM
 from gui.backend.sessions import (
-    SessionManager, SessionInfo, translate_to_current, validate_original_indices,
+    SessionManager, translate_to_current, validate_original_indices,
 )
 from gui.backend.routes.sessions import LoadRequest, ConvertRequest
 from llm_surgeon.surgery import _is_ollama_id
