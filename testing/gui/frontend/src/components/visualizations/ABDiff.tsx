@@ -202,7 +202,7 @@ export function ABDiff({ resultA, resultB }: Props) {
     const key = `compare-${resultA.id}-${resultB.id}`;
     ws.connect(
       key,
-      `/sessions/${resultA.sessionName}/compare-logit-lens`,
+      `/ws/sessions/${resultA.sessionName}/compare-logit-lens`,
       { with_session: resultB.sessionName, prompt: resultA.prompt, top_k: 10 },
       {
         onMessage: (msg) => {
