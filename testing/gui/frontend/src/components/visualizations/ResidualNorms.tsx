@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import * as d3 from "d3";
+import { ExportButtons } from "../ExportButtons";
 import type { ProbeResult } from "../../types/api";
 
 interface Props {
@@ -57,9 +58,22 @@ export function ResidualNorms({ result }: Props) {
 
   if (!completeMsg?.norms) return <p style={{ color: "#666" }}>No residual norm data</p>;
 
+  const norms = completeMsg.norms;
+  const csvRows = (): (string | number)[][] => [
+    ["layer", "l2_norm"],
+    ...norms.map((n, i) => [i, n] as (string | number)[]),
+  ];
+
   return (
     <div>
-      <h3 style={{ fontSize: 13, color: "#a0a0c0", marginBottom: 8 }}>Residual Stream Norms - {result.sessionName}</h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <h3 style={{ fontSize: 13, color: "#a0a0c0", margin: 0 }}>Residual Stream Norms - {result.sessionName}</h3>
+        <ExportButtons
+          filenameBase={`residual-norms_${result.sessionName}`}
+          getSVG={() => svgRef.current}
+          getCSVRows={csvRows}
+        />
+      </div>
       <svg ref={svgRef} />
     </div>
   );

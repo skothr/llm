@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useStore } from "../state/store";
+import { useStore, SAMPLING_DEFAULTS } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useStopCancel } from "../hooks/useStopCancel";
 import { num } from "../utils/num";
+import { PromptLibraryBar } from "./PromptLibraryBar";
 import type { WsMessage, ProbeOperation } from "../types/api";
 
 // Shared styles for the param grids below. A 4-column grid
@@ -60,20 +61,10 @@ const textInputStyle: React.CSSProperties = {
   fontFamily: "monospace",
 };
 
-// Every parameter has a well-defined default. When a knob is at its default
-// we dim the label + input so tweaked settings visibly pop. The defaults
-// double as initial state below — single source of truth.
-const DEFAULTS = {
-  displayTopK: 10,
-  maxTokens: 64,
-  temperature: 0.0,
-  samplingTopK: 0,
-  topP: 1.0,
-  minP: 0.0,
-  seed: "",
-  repPenalty: 1.0,
-  stopSeqs: "\\n\\n",
-} as const;
+// Knob defaults live in the store (SAMPLING_DEFAULTS) so persistence and
+// reset actions share one source of truth. When a knob is at its default we
+// dim the label + input so tweaked settings visibly pop.
+const DEFAULTS = SAMPLING_DEFAULTS;
 
 const offColor = "#55556a";
 const dim = (off: boolean, base: React.CSSProperties): React.CSSProperties =>
@@ -110,18 +101,26 @@ export function ProbePanel() {
   const { connect, cancelAll } = useWebSocket();
   const localPendingIdsRef = useRef<Set<string>>(new Set());
   const { makeHandler } = useStopCancel(localPendingIdsRef);
-  // displayTopK = how many candidate tokens to stream alongside each step
-  // (UI display only, e.g. the top-k popover in GenerationOutput).
-  // Real sampling cutoffs live in samplingTopK / topP / minP below.
-  const [displayTopK, setDisplayTopK] = useState<number>(DEFAULTS.displayTopK);
-  const [maxTokens, setMaxTokens] = useState<number>(DEFAULTS.maxTokens);
-  const [temperature, setTemperature] = useState<number>(DEFAULTS.temperature);
-  const [samplingTopK, setSamplingTopK] = useState<number>(DEFAULTS.samplingTopK);
-  const [topP, setTopP] = useState<number>(DEFAULTS.topP);
-  const [minP, setMinP] = useState<number>(DEFAULTS.minP);
-  const [seed, setSeed] = useState<string>(DEFAULTS.seed);
-  const [repPenalty, setRepPenalty] = useState<number>(DEFAULTS.repPenalty);
-  const [stopSeqs, setStopSeqs] = useState<string>(DEFAULTS.stopSeqs);
+  // Sampling params live in the persisted store so they survive reloads and
+  // can be shared with the seed fan-out flow. Destructured here into locals
+  // so the render body reads like the old useState version.
+  const samplingParams = useStore((s) => s.samplingParams);
+  const setSamplingParams = useStore((s) => s.setSamplingParams);
+  const resetSamplingParams = useStore((s) => s.resetSamplingParams);
+  const {
+    displayTopK, maxTokens, temperature, samplingTopK, topP, minP, seed,
+    repPenalty, stopSeqs, numSeeds,
+  } = samplingParams;
+  const setDisplayTopK = (v: number) => setSamplingParams({ displayTopK: v });
+  const setMaxTokens = (v: number) => setSamplingParams({ maxTokens: v });
+  const setTemperature = (v: number) => setSamplingParams({ temperature: v });
+  const setSamplingTopK = (v: number) => setSamplingParams({ samplingTopK: v });
+  const setTopP = (v: number) => setSamplingParams({ topP: v });
+  const setMinP = (v: number) => setSamplingParams({ minP: v });
+  const setSeed = (v: string) => setSamplingParams({ seed: v });
+  const setRepPenalty = (v: number) => setSamplingParams({ repPenalty: v });
+  const setStopSeqs = (v: string) => setSamplingParams({ stopSeqs: v });
+  const setNumSeeds = (v: number) => setSamplingParams({ numSeeds: Math.max(1, Math.min(32, v)) });
   const [error, setError] = useState("");
   // Authoritative token count from the session's tokenizer; null until the
   // first successful fetch (or while re-fetching). Falls back to a char/3.5
@@ -192,6 +191,7 @@ export function ProbePanel() {
     rep: repPenalty === DEFAULTS.repPenalty,
     show: displayTopK === DEFAULTS.displayTopK,
     stop: stopSeqs === DEFAULTS.stopSeqs,
+    n: numSeeds === DEFAULTS.numSeeds,
   };
 
   const makeWsHandlers = (resultId: string) => ({
@@ -259,6 +259,46 @@ export function ProbePanel() {
     const resultId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     if (isWs) {
+      // Seed fan-out: N>1 generate runs on the same session with distinct
+      // seeds. Mutually exclusive with A/B — UI disables numSeeds when B
+      // is selected, so this branch can assume !targetSessionB.
+      const fanoutN = operation === "generate" && numSeeds > 1 && !targetSessionB ? numSeeds : 0;
+
+      if (fanoutN > 0) {
+        const batchId = resultId;
+        const seedTrimmed = seed.trim();
+        const seedBase = seedTrimmed === "" ? null : Number(seedTrimmed);
+        const hasBaseSeed = seedBase !== null && Number.isFinite(seedBase);
+        for (let i = 0; i < fanoutN; i++) {
+          const childId = `${batchId}-s${i}`;
+          // With a user-specified base seed, use seed+i so the batch is
+          // reproducible. Without one, draw N independent random seeds so
+          // temp=0 still produces identical runs (correct) while temp>0
+          // produces useful variance.
+          const childSeed = hasBaseSeed
+            ? (seedBase as number) + i
+            : Math.floor(Math.random() * 2_147_483_647);
+          localPendingIdsRef.current.add(childId);
+          setPendingResult(childId, {
+            id: childId,
+            operation,
+            sessionName: targetSession,
+            prompt,
+            data: [],
+            timestamp: Date.now(),
+            isB: false,
+            batchId,
+            batchIndex: i,
+            batchSize: fanoutN,
+            seed: childSeed,
+          });
+          const cfgBase = getWsConfig(effectiveMax) as Record<string, unknown>;
+          const cfg = { ...cfgBase, seed: childSeed };
+          connect(childId, getWsPath(targetSession), cfg, makeWsHandlers(childId), targetSession);
+        }
+        return;
+      }
+
       const hasB = !!targetSessionB;
 
       localPendingIdsRef.current.add(resultId);
@@ -327,6 +367,7 @@ export function ProbePanel() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <style>{hideSpinnerCSS}</style>
+      <PromptLibraryBar value={prompt} onLoad={setPrompt} />
       <textarea
         placeholder="Prompt text... (Ctrl/Cmd+Enter to run)"
         value={prompt}
@@ -434,7 +475,22 @@ export function ProbePanel() {
             <div style={{ fontSize: 11, color: "#f0ad4e" }}>{clampNote}</div>
           )}
 
-          <div style={sectionHeaderStyle}>Sampling</div>
+          <div style={{ ...sectionHeaderStyle, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span>Sampling</span>
+            {/* Subtle reset — only visible when at least one knob has been
+                touched, to keep the panel uncluttered in its common state. */}
+            {Object.values(off).some((v) => !v) && (
+              <button
+                onClick={resetSamplingParams}
+                title="Restore all sampling defaults"
+                style={{
+                  fontSize: 9, padding: "0 4px", background: "transparent",
+                  border: "1px solid #2a2a3a", color: "#6666aa", cursor: "pointer",
+                  textTransform: "none", letterSpacing: 0,
+                }}
+              >reset</button>
+            )}
+          </div>
           <div style={paramGridStyle}>
             <label style={dim(off.temp, labelStyle)} title="Softmax sharpness. 0 = greedy argmax, 1 = untouched, >1 = flatter distribution.">temp</label>
             <input className="num-input" type="number" step="0.1" value={temperature}
@@ -463,6 +519,17 @@ export function ProbePanel() {
             <input className="num-input" type="number" value={displayTopK}
               onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
               style={dim(off.show, numInputStyle)} />
+
+            <label
+              style={dim(off.n || !!targetSessionB, labelStyle)}
+              title={targetSessionB
+                ? "Seed fan-out is disabled while Session B is selected (A/B and fan-out are exclusive)."
+                : "Fan out one Run into N generations, each with a distinct seed. If the seed field is set, uses seed, seed+1, ..., seed+N-1 for reproducibility."}
+            >N</label>
+            <input className="num-input" type="number" min="1" max="32" value={numSeeds}
+              onChange={(e) => setNumSeeds(num(e.target.value, numSeeds))}
+              disabled={!!targetSessionB}
+              style={dim(off.n || !!targetSessionB, numInputStyle)} />
           </div>
         </>
       )}

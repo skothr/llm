@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "./state/store";
 import { TabBar } from "./components/TabBar";
+import { ExperimentIO } from "./components/ExperimentIO";
 import { SessionsPanel } from "./components/SessionsPanel";
 import { ProbePanel } from "./components/ProbePanel";
 import { IntervenePanel } from "./components/IntervenePanel";
@@ -91,6 +92,7 @@ export default function App() {
     <div className="app-layout">
       <aside className="config-panel" style={{ width: panelWidth }}>
         <TabBar />
+        <ExperimentIO />
         <div className="config-content">
           <div style={{ display: activeTab === "sessions" ? "contents" : "none" }}><SessionsPanel /></div>
           <div style={{ display: activeTab === "probe" ? "contents" : "none" }}><ProbePanel /></div>

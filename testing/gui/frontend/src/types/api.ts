@@ -170,6 +170,14 @@ export interface ProbeResult {
   // VisualizationArea can locate the pair, but classification (A vs B)
   // reads this flag rather than string-sniffing the id.
   isB?: boolean;
+  // Seed fan-out grouping. All N runs in a single "run with N seeds" batch
+  // share batchId; batchIndex is 0..N-1; seed is the per-run numeric seed.
+  // batchSize is duplicated on every member so a single result is enough
+  // to know the full batch size without consulting the others.
+  batchId?: string;
+  batchIndex?: number;
+  batchSize?: number;
+  seed?: number;
 }
 
 export interface InfluenceResult {
