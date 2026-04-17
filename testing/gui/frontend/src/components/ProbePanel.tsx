@@ -44,24 +44,24 @@ export function ProbePanel() {
 
   const isWs = WS_OPS.has(operation);
 
-  const makeWsHandlers = (resultId: string, isFinalConnection: boolean) => ({
+  const makeWsHandlers = (resultId: string) => ({
     onMessage: (msg: WsMessage) => { updatePendingResult(resultId, msg); },
     onComplete: (msg: WsMessage) => {
       finalizePendingResult(resultId, msg);
       localPendingIdsRef.current.delete(resultId);
-      if (isFinalConnection) setRunning(false);
+      if (localPendingIdsRef.current.size === 0) setRunning(false);
     },
     onError: (message: string) => {
-      finalizePendingResult(resultId);
+      removePendingResult(resultId);
       localPendingIdsRef.current.delete(resultId);
       setError(message);
-      if (isFinalConnection) setRunning(false);
+      if (localPendingIdsRef.current.size === 0) setRunning(false);
     },
     onDisconnect: () => {
-      finalizePendingResult(resultId);
+      removePendingResult(resultId);
       localPendingIdsRef.current.delete(resultId);
       setError("Connection lost");
-      if (isFinalConnection) setRunning(false);
+      if (localPendingIdsRef.current.size === 0) setRunning(false);
     },
   });
 
@@ -90,18 +90,21 @@ export function ProbePanel() {
       const hasB = !!targetSessionB;
 
       localPendingIdsRef.current.add(resultId);
+      if (hasB) {
+        localPendingIdsRef.current.add(`${resultId}-B`);
+      }
+
       setPendingResult(resultId, {
         id: resultId, operation, sessionName: targetSession, prompt, data: [], timestamp: Date.now(),
       });
-      connect(resultId, getWsPath(targetSession), getWsConfig(), makeWsHandlers(resultId, !hasB));
+      connect(resultId, getWsPath(targetSession), getWsConfig(), makeWsHandlers(resultId));
 
       if (hasB) {
         const idB = `${resultId}-B`;
-        localPendingIdsRef.current.add(idB);
         setPendingResult(idB, {
           id: idB, operation, sessionName: targetSessionB!, prompt, data: [], timestamp: Date.now(),
         });
-        connect(idB, getWsPath(targetSessionB!), getWsConfig(), makeWsHandlers(idB, true));
+        connect(idB, getWsPath(targetSessionB!), getWsConfig(), makeWsHandlers(idB));
       }
     } else {
       const fetchInspect = (session: string, id: string) => {
