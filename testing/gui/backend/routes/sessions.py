@@ -4,10 +4,19 @@ import logging
 import os
 import re
 import types
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
+
+# Dedicated executor for filesystem scans (model discovery, safetensors
+# conversion). The default asyncio executor is shared with generate,
+# logit-lens, and compare handlers; a cold GGUF scan could otherwise block
+# inference paths for a second or two while it parses headers.
+_scan_executor: ThreadPoolExecutor = ThreadPoolExecutor(
+    max_workers=2, thread_name_prefix="gui-scan"
+)
 
 from ..sessions import SessionManager
 
@@ -379,7 +388,7 @@ async def load_session(req: LoadRequest):
         blob = resolve_ollama_blob(req.model_id)
         if blob is not None:
             try:
-                llama_eng = await asyncio.get_event_loop().run_in_executor(
+                llama_eng = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: LlamaEngine(blob)
                 )
                 with GGUFFile(blob) as g:
@@ -398,7 +407,7 @@ async def load_session(req: LoadRequest):
 
     log.info("Loading model '%s' as session '%s' (mode=%s)", req.model_id, req.name, req.mode)
     try:
-        model, tokenizer = await asyncio.get_event_loop().run_in_executor(
+        model, tokenizer = await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: surgery.load_model(req.model_id, mode=req.mode),
         )
@@ -436,11 +445,13 @@ def _collect_available_models() -> list[dict]:
 
 @router.get("/models/available")
 async def list_available_models():
-    # Scan does sync I/O (stat + GGUF header reads on cold cache); keep the
-    # event loop responsive by moving it off the main thread. Cheap on warm
-    # cache — skipping run_in_executor would save ~0.3 ms per call.
-    return await asyncio.get_event_loop().run_in_executor(None, _collect_available_models)
+    # Scan does sync I/O (stat + GGUF header reads on cold cache); run on
+    # the dedicated scan executor so a cold first-hit can't block generate
+    # or logit-lens handlers sharing the default executor.
+    return await asyncio.get_running_loop().run_in_executor(_scan_executor, _collect_available_models)
 
+
+_TOKENIZE_MAX_CHARS = 200_000  # ~50k tokens at 4 chars/token — ample for any prompt, rejects DoS
 
 class TokenizeRequest(BaseModel):
     text: str
@@ -452,7 +463,17 @@ async def tokenize_prompt(name: str, req: TokenizeRequest):
     tokenizer. Used by the frontend to show "budget left in context window"
     and to clamp max_tokens before submit. Prefers the HF tokenizer when
     available (works without loading the model onto GPU); falls back to the
-    llama.cpp engine if that's the only tokenizer this session has."""
+    llama.cpp engine if that's the only tokenizer this session has.
+
+    The tokenize call runs in a worker thread so a huge prompt can't pin the
+    event loop: fast HF tokenizers are CPU-bound C++ and don't release the
+    GIL cooperatively.
+    """
+    if len(req.text) > _TOKENIZE_MAX_CHARS:
+        raise HTTPException(
+            413,
+            f"text too long ({len(req.text)} chars); limit is {_TOKENIZE_MAX_CHARS}",
+        )
     mgr = get_manager()
     try:
         info = mgr.get(name)
@@ -460,9 +481,15 @@ async def tokenize_prompt(name: str, req: TokenizeRequest):
         raise HTTPException(404, f"Session '{name}' not found")
     if info.tokenizer is not None:
         # encode() returns list[int] — unambiguous across fast/slow tokenizers.
-        count = len(info.tokenizer.encode(req.text, add_special_tokens=True))
+        tok = info.tokenizer
+        count = await asyncio.get_running_loop().run_in_executor(
+            None, lambda: len(tok.encode(req.text, add_special_tokens=True))
+        )
     elif info.llama is not None:
-        count = len(info.llama.tokenize(req.text))
+        llama = info.llama
+        count = await asyncio.get_running_loop().run_in_executor(
+            None, lambda: len(llama.tokenize(req.text))
+        )
     else:
         raise HTTPException(500, "Session has no tokenizer loaded")
     return {"count": count}
@@ -488,11 +515,11 @@ async def convert_model_safetensors(req: ConvertRequest):
     from llm_surgeon.surgery import convert_to_safetensors
 
     try:
-        result = await asyncio.get_event_loop().run_in_executor(
-            None,
+        result = await asyncio.get_running_loop().run_in_executor(
+            _scan_executor,
             lambda: convert_to_safetensors(req.model_id, str(MODELS_CACHE)),
         )
-    except (ValueError, Exception) as e:
+    except Exception as e:
         log.exception("Safetensors conversion failed for '%s'", req.model_id)
         raise HTTPException(500, str(e))
     return result
@@ -586,7 +613,7 @@ async def commit_surgery(name: str):
         # leaves pending_ops/applied_ops/layer_map/model all mutually consistent.
         # The user can fix the offending op and retry commit on whatever remains.
         applied_count = 0
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         while info._pending_ops:
             op = info._pending_ops[0]
             op_name = op["operation"]
@@ -643,7 +670,7 @@ async def revert_surgery(name: str):
         # Build the replacement model BEFORE mutating op lists, so a load
         # failure doesn't leave pending/applied/history in a half-reverted
         # state that can't be recovered.
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if _snapshot_dir(info.model_id):
                 new_model, _ = await loop.run_in_executor(
@@ -687,7 +714,7 @@ async def revert_surgery(name: str):
             assert info.source_gguf_path is not None
             src = info.source_gguf_path
             try:
-                info.llama = await asyncio.get_event_loop().run_in_executor(
+                info.llama = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: LlamaEngine(src)
                 )
             except Exception as e:
@@ -757,12 +784,12 @@ async def validate_session(name: str, req: ValidateRequest):
 
         engine = info.llama
         tokens = engine.tokenize(req.prompt)
-        native_logits = await asyncio.get_event_loop().run_in_executor(
+        native_logits = await asyncio.get_running_loop().run_in_executor(
             None, lambda: engine.logits(tokens)
         )
 
         was_on_gpu = mgr.is_on_gpu(name)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         # Safe wrappers serialize GPU moves across sessions so validate
         # doesn't race with a concurrent generate handler.
         await mgr.ensure_on_gpu_safe(name)
@@ -818,7 +845,7 @@ async def clone_session(name: str, req: CloneRequest):
     except StopIteration:
         was_on_gpu = False
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     try:
         from llm_surgeon.surgery import _snapshot_dir
         if _snapshot_dir(info.model_id):

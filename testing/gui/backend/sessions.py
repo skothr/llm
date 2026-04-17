@@ -454,7 +454,7 @@ async def ensure_fresh_gguf(info: "SessionInfo") -> None:
 
     export_dir = Path(tempfile.mkdtemp(prefix="llm_surgeon_"))
     export_path = export_dir / "modified.gguf"
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     try:
         await loop.run_in_executor(
             None, lambda: export_hf_to_gguf(info.model, info.tokenizer, export_path)

@@ -19,11 +19,11 @@ async def lifespan(app: FastAPI):
     # /api/models/available hit (typically from the frontend's initial load)
     # doesn't pay the ~1-second cold GGUF-header parse cost.
     import asyncio
-    from .routes.sessions import _collect_available_models
+    from .routes.sessions import _collect_available_models, _scan_executor
 
     async def _warm():
         try:
-            await asyncio.get_event_loop().run_in_executor(None, _collect_available_models)
+            await asyncio.get_running_loop().run_in_executor(_scan_executor, _collect_available_models)
             log.info("Model cache pre-warmed")
         except Exception:
             log.exception("Model cache pre-warm failed")
@@ -35,7 +35,27 @@ async def lifespan(app: FastAPI):
         warm_task.cancel()
         log.info("Shutting down — cleaning up %d session(s)", len(manager._sessions))
         for name in list(manager._sessions.keys()):
-            manager.delete(name)
+            # Best-effort acquire info.lock before tearing down: if a WS
+            # handler is mid-forward we don't want to rip the model out from
+            # under the running CUDA kernels. A short timeout keeps shutdown
+            # bounded — worst case we proceed anyway and the handler fails
+            # with a torn-down model error, which is fine at shutdown.
+            info = manager._sessions[name]
+            try:
+                await asyncio.wait_for(info.lock.acquire(), timeout=2.0)
+                try:
+                    manager.delete(name)
+                finally:
+                    try:
+                        info.lock.release()
+                    except RuntimeError:
+                        # delete() already removed the session; the lock
+                        # may be gone or re-ownership is moot here.
+                        pass
+            except asyncio.TimeoutError:
+                log.warning("Shutdown: '%s' still busy after 2s — forcing delete", name)
+                manager.delete(name)
+        _scan_executor.shutdown(wait=False, cancel_futures=True)
 
 app = FastAPI(title="LLM Surgeon GUI", lifespan=lifespan)
 
@@ -80,7 +100,15 @@ async def log_requests(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:8000"],
+    # Allow both the frontend origins vite can bind to. Browsers treat
+    # localhost and 127.0.0.1 as distinct origins, so a user who browses
+    # to 127.0.0.1:5173 would otherwise fail CORS on any direct fetch to
+    # 127.0.0.1:8000 (proxy routes are fine either way).
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
