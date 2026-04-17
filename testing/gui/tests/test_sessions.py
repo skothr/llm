@@ -183,6 +183,53 @@ class TestSessionManager:
             mgr.delete("s1")
             mock_gc.assert_called_once()
 
+    def test_ensure_on_gpu_skips_busy_peer(self, tiny_model, tiny_tokenizer):
+        # Simulate no-free-memory + a single busy peer: ensure_on_gpu must not
+        # evict the busy peer and must raise a RuntimeError instead of crashing.
+        import asyncio
+        mgr = SessionManager()
+        mgr.register("busy", tiny_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="fp16")
+        other_model = _make_model(2)
+        mgr.register("want", other_model, tiny_tokenizer,
+                      model_id="test/tiny", mode="fp16")
+
+        busy = mgr.get("busy")
+        want = mgr.get("want")
+
+        class _CudaDev:
+            type = "cuda"
+        class _CpuDev:
+            type = "cpu"
+        class _CudaParam:
+            device = _CudaDev()
+            def nelement(self): return 10**9
+            def element_size(self): return 4
+        class _CpuParam:
+            device = _CpuDev()
+            def nelement(self): return 10**9
+            def element_size(self): return 4
+
+        busy.model.parameters = lambda: iter([_CudaParam()])  # type: ignore[method-assign]
+        want.model.parameters = lambda: iter([_CpuParam()])  # type: ignore[method-assign]
+
+        class _FakeProps:
+            total_memory = 10**12 + 100
+
+        with patch("gui.backend.sessions.torch.cuda.is_available", return_value=True), \
+             patch("gui.backend.sessions.torch.cuda.memory_allocated", return_value=10**12), \
+             patch("gui.backend.sessions.torch.cuda.get_device_properties", return_value=_FakeProps()), \
+             patch.object(mgr, "to_cpu") as mock_to_cpu, \
+             patch("gui.backend.sessions.SessionManager._is_bnb_model", return_value=False):
+
+            async def _hold():
+                async with busy.lock:
+                    with pytest.raises(RuntimeError, match="busy"):
+                        mgr.ensure_on_gpu("want")
+
+            asyncio.run(_hold())
+            mock_to_cpu.assert_not_called()
+
 
 class TestTranslateToCurrentIndex:
     def test_remove_layers_identity(self):
