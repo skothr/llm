@@ -187,6 +187,7 @@ function GenerationPanel({
   batchSize?: number;
 }) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; step: number; content: string } | null>(null);
+  const recallResult = useStore((s) => s.recallResult);
 
   useEffect(() => {
     if (!tooltip) return;
@@ -241,6 +242,13 @@ function GenerationPanel({
           {isPending && <span style={{ color: "#4ecdc4", marginLeft: 4 }}>generating...</span>}
         </div>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          {!isPending && (
+            <button
+              onClick={() => recallResult(result.id)}
+              title={`Load this seed's prompt/session/params into the probe panel${result.runParams ? "" : " (runParams not captured — will only restore prompt + session)"}`}
+              style={{ fontSize: 10, padding: "1px 6px", background: "#0d2236", border: "1px solid #1a5276", color: "#a0c0e0", cursor: "pointer", borderRadius: 2 }}
+            >{"\u21BA"}</button>
+          )}
           <button
             onClick={() => exportText(result, tokens)}
             title="Download the prompt+generation as a plain .txt file"

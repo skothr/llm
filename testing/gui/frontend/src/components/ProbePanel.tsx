@@ -349,6 +349,9 @@ export function ProbePanel() {
             batchSize: fanoutN,
             seed: childSeed,
             sweepLabel,
+            // Snapshot params at run time so a future recall restores the
+            // exact knob set used to produce this output.
+            runParams: { ...samplingParams },
           });
           const cfgBase = getWsConfig(effectiveMax) as Record<string, unknown>;
           const cfg = { ...cfgBase, seed: childSeed, ...overrides };
@@ -364,8 +367,10 @@ export function ProbePanel() {
         localPendingIdsRef.current.add(`${resultId}-B`);
       }
 
+      const runParamsSnapshot = { ...samplingParams };
       setPendingResult(resultId, {
         id: resultId, operation, sessionName: targetSession, prompt, data: [], timestamp: Date.now(), isB: false,
+        runParams: runParamsSnapshot,
       });
       connect(resultId, getWsPath(targetSession), getWsConfig(effectiveMax), makeWsHandlers(resultId), targetSession);
 
@@ -373,6 +378,7 @@ export function ProbePanel() {
         const idB = `${resultId}-B`;
         setPendingResult(idB, {
           id: idB, operation, sessionName: targetSessionB!, prompt, data: [], timestamp: Date.now(), isB: true,
+          runParams: runParamsSnapshot,
         });
         connect(idB, getWsPath(targetSessionB!), getWsConfig(effectiveMax), makeWsHandlers(idB), targetSessionB!);
       }
@@ -408,6 +414,7 @@ export function ProbePanel() {
           data: [{ type: "complete" as const, ...data }],
           timestamp: Date.now(),
           isB,
+          runParams: { ...samplingParams },
         });
       };
 

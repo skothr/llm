@@ -188,6 +188,11 @@ interface StoreState {
   undoDelete: () => void;
   clearUndoDelete: () => void;
 
+  // Load a finalized result's prompt/operation/session/params back into
+  // the probe panel and switch to the probe tab. Doesn't auto-run — the
+  // user reviews and hits Run themselves.
+  recallResult: (id: string) => void;
+
   addIntervention: () => void;
   removeIntervention: (index: number) => void;
   updateIntervention: (index: number, spec: InterventionSpec) => void;
@@ -539,6 +544,34 @@ export const useStore = create<StoreState>()(
       }),
 
       clearUndoDelete: () => set({ lastDeleted: null }),
+
+      recallResult: (id) => set((s) => {
+        const all = [...Object.values(s.pendingResults), ...s.results];
+        const r = all.find((x) => x.id === id);
+        if (!r) return s;
+        // Intervene results live in their own tab; probe results land
+        // back in the probe panel. We always copy the prompt + session;
+        // only probe ops set the `operation` knob.
+        const isIntervene = r.operation === "intervene";
+        const patch: Partial<StoreState> = isIntervene
+          ? {
+              activeTab: "intervene",
+              intervenePrompt: r.prompt,
+              interveneSession: r.sessionName,
+            }
+          : {
+              activeTab: "probe",
+              prompt: r.prompt,
+              targetSession: r.sessionName,
+              operation: r.operation as ProbeOperation,
+            };
+        // runParams is an opaque Record in the type; if present we merge
+        // it into the current sampling params (partial-safe).
+        if (r.runParams && typeof r.runParams === "object") {
+          patch.samplingParams = { ...s.samplingParams, ...(r.runParams as Partial<SamplingParams>) };
+        }
+        return patch;
+      }),
 
       addIntervention: () => set((s) => ({
         interventionSpecs: [...s.interventionSpecs, { layer: 0, sublayer: "ffn", op: "scale", params: { factor: 1.0 } }],
