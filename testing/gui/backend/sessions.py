@@ -197,6 +197,30 @@ def validate_original_indices(operation: str, params: dict, num_original_layers:
 class SessionManager:
     def __init__(self):
         self._sessions: Dict[str, SessionInfo] = {}
+        # Serializes GPU move operations (ensure_on_gpu / to_cpu / register).
+        # Without this, two handlers racing ensure_on_gpu can both decide to
+        # evict the same peer, or both try to move onto GPU without accounting
+        # for each other's incoming weights. The lock is held only during the
+        # move itself (brief), never during generation.
+        self._gpu_lock: asyncio.Lock = asyncio.Lock()
+
+    async def ensure_on_gpu_safe(self, name: str) -> None:
+        """Coroutine-safe GPU move. Serializes with any other move in flight.
+
+        The caller should already hold ``info.lock`` for ``name``; that
+        prevents a peer handler's ensure_on_gpu from evicting us between
+        the move and the first forward pass (``ensure_on_gpu`` skips peers
+        whose lock is held).
+        """
+        loop = asyncio.get_running_loop()
+        async with self._gpu_lock:
+            await loop.run_in_executor(None, lambda: self.ensure_on_gpu(name))
+
+    async def to_cpu_safe(self, name: str) -> None:
+        """Coroutine-safe CPU move, serialized against GPU moves."""
+        loop = asyncio.get_running_loop()
+        async with self._gpu_lock:
+            await loop.run_in_executor(None, lambda: self.to_cpu(name))
 
     def validate_name(self, name: str) -> None:
         if not _NAME_RE.match(name):

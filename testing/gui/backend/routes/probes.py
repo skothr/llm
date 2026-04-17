@@ -333,14 +333,6 @@ async def generate_ws(ws: WebSocket, name: str):
         return
 
     was_on_gpu_before = mgr.is_on_gpu(name)
-    try:
-        # ensure_on_gpu moves tensors (sync torch); offload to keep the loop hot.
-        await asyncio.get_event_loop().run_in_executor(None, lambda: mgr.ensure_on_gpu(name))
-    except Exception as e:
-        log.error("WS generate: GPU error for '%s': %s", name, e)
-        await _send_json(ws, {"type": "error", "message": f"GPU error: {e}"})
-        await ws.close()
-        return
 
     try:
         raw = await ws.receive_text()
@@ -419,7 +411,15 @@ async def generate_ws(ws: WebSocket, name: str):
 
                 top_k_list = []
                 if step.logits is not None and display_top_k > 0:
-                    probs = np.exp(step.logits - step.logits.max())
+                    # Match the PyTorch branch: apply temperature before softmax
+                    # so the displayed probabilities agree across engines for
+                    # A/B compare. At temperature == 0 the column collapses to a
+                    # one-hot argmax — we skip the scaling to avoid inf.
+                    if temperature > 0:
+                        scaled = step.logits / temperature
+                    else:
+                        scaled = step.logits
+                    probs = np.exp(scaled - scaled.max())
                     probs /= probs.sum()
                     top_idx = np.argsort(probs)[-display_top_k:][::-1]
                     top_k_list = [
@@ -499,6 +499,16 @@ async def generate_ws(ws: WebSocket, name: str):
         gen_accumulated = ""
 
         async with info.lock:
+            # ensure_on_gpu must happen inside info.lock so a peer handler
+            # cannot evict us between the move and our first forward pass.
+            # The manager's gpu lock (inside ensure_on_gpu_safe) additionally
+            # serializes concurrent GPU moves from other handlers.
+            try:
+                await mgr.ensure_on_gpu_safe(name)
+            except Exception as e:
+                log.error("WS generate: GPU error for '%s': %s", name, e)
+                await _send_json(ws, {"type": "error", "message": f"GPU error: {e}"})
+                return
             loop = asyncio.get_event_loop()
             inputs = info.tokenizer(prompt, return_tensors="pt")
             device = next(info.model.parameters()).device
@@ -518,7 +528,14 @@ async def generate_ws(ws: WebSocket, name: str):
                     outputs = await loop.run_in_executor(None, _forward)
                     logits = outputs.logits[:, -1, :]
                     past_key_values = outputs.past_key_values
-                except torch.OutOfMemoryError:  # pyright: ignore[reportAttributeAccessIssue]
+                except (torch.OutOfMemoryError, RuntimeError) as e:
+                    # torch.OutOfMemoryError catches the common CUDA path. Some
+                    # backends (MPS, older CPU allocators, XPU) surface OOM as
+                    # a plain RuntimeError with "out of memory" in the message
+                    # — promote those to the same handler so the user sees a
+                    # graceful partial output rather than a 500.
+                    if isinstance(e, RuntimeError) and "out of memory" not in str(e).lower():
+                        raise
                     log.warning("OOM during generate on '%s' at step %d — returning partial output", name, step)
                     past_key_values = None
                     if torch.cuda.is_available():
@@ -640,7 +657,7 @@ async def generate_ws(ws: WebSocket, name: str):
                  name, len(generated_tokens), stop_reason or "disconnect")
         if not was_on_gpu_before:
             try:
-                await asyncio.get_event_loop().run_in_executor(None, lambda: mgr.to_cpu(name))
+                await mgr.to_cpu_safe(name)
             except Exception:
                 pass
         if torch.cuda.is_available():

@@ -763,8 +763,9 @@ async def validate_session(name: str, req: ValidateRequest):
 
         was_on_gpu = mgr.is_on_gpu(name)
         loop = asyncio.get_event_loop()
-        # ensure_on_gpu moves tensors to device — synchronous torch, offload.
-        await loop.run_in_executor(None, lambda: mgr.ensure_on_gpu(name))
+        # Safe wrappers serialize GPU moves across sessions so validate
+        # doesn't race with a concurrent generate handler.
+        await mgr.ensure_on_gpu_safe(name)
         try:
             def _pytorch_forward():
                 input_ids = torch.tensor([tokens], dtype=torch.long).to(
@@ -776,7 +777,7 @@ async def validate_session(name: str, req: ValidateRequest):
         finally:
             if not was_on_gpu:
                 try:
-                    await loop.run_in_executor(None, lambda: mgr.to_cpu(name))
+                    await mgr.to_cpu_safe(name)
                 except Exception:
                     log.exception("validate: to_cpu failed for '%s'", name)
 
@@ -821,7 +822,7 @@ async def clone_session(name: str, req: CloneRequest):
     try:
         from llm_surgeon.surgery import _snapshot_dir
         if _snapshot_dir(info.model_id):
-            await loop.run_in_executor(None, lambda: mgr.to_cpu(name))
+            await mgr.to_cpu_safe(name)
             from llm_surgeon import surgery
             cloned_model, _ = await loop.run_in_executor(
                 None,
@@ -840,7 +841,7 @@ async def clone_session(name: str, req: CloneRequest):
     finally:
         if was_on_gpu:
             try:
-                await loop.run_in_executor(None, lambda: mgr.ensure_on_gpu(name))
+                await mgr.ensure_on_gpu_safe(name)
             except Exception:
                 log.exception("Clone: failed to restore '%s' to GPU", name)
 
