@@ -33,6 +33,17 @@ class TestHiddenStateCache:
         assert cache.get("s1", "h1") is None
         assert cache.get("s2", "h2") is not None
 
+    def test_put_stores_cpu_copy(self):
+        # put() must detach+cpu() so cached entries don't pin GPU memory
+        # after the source session is evicted.
+        cache = HiddenStateCache(max_bytes=100_000_000)
+        t = torch.randn(10, 32, requires_grad=True)
+        cache.put("s1", "h1", {"k": t})
+        cached = cache.get("s1", "h1")
+        assert cached is not None
+        assert cached["k"].device.type == "cpu"
+        assert not cached["k"].requires_grad
+
     def test_lru_ordering(self):
         # (5,32) float32 = 640 bytes each. Cap at 1400 so two fit, third evicts oldest.
         cache = HiddenStateCache(max_bytes=1400)
