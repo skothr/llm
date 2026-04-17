@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import types
 from pathlib import Path
 from typing import List
 from fastapi import APIRouter, HTTPException
@@ -244,17 +245,16 @@ def _session_info(info) -> dict:
     elif info.gguf_path is not None:
         from llm_surgeon.gguf_reader import gguf_model_meta
         meta = gguf_model_meta(info.gguf_path)
-        class _Meta:
-            pass
-        config = _Meta()
-        config.num_hidden_layers = meta.get("num_layers", 0)
-        config.num_attention_heads = meta.get("num_heads", 0)
-        config.num_key_value_heads = meta.get("num_kv_heads")
-        config.hidden_size = meta.get("hidden_size", 0)
-        config.intermediate_size = meta.get("intermediate_size")
-        config.vocab_size = meta.get("vocab_size")
-        config.max_position_embeddings = meta.get("max_position_embeddings")
-        config.rope_theta = meta.get("rope_theta")
+        config = types.SimpleNamespace(
+            num_hidden_layers=meta.get("num_layers", 0),
+            num_attention_heads=meta.get("num_heads", 0),
+            num_key_value_heads=meta.get("num_kv_heads"),
+            hidden_size=meta.get("hidden_size", 0),
+            intermediate_size=meta.get("intermediate_size"),
+            vocab_size=meta.get("vocab_size"),
+            max_position_embeddings=meta.get("max_position_embeddings"),
+            rope_theta=meta.get("rope_theta"),
+        )
         total_params = meta.get("total_params", 0)
     else:
         return {}
@@ -606,9 +606,11 @@ async def revert_surgery(name: str):
             from llm_surgeon.llama_engine import LlamaEngine
             old_engine = info.llama
             old_owned = info._owned_export_dir
+            assert info.source_gguf_path is not None
+            src = info.source_gguf_path
             try:
                 info.llama = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: LlamaEngine(info.source_gguf_path)
+                    None, lambda: LlamaEngine(src)
                 )
             except Exception as e:
                 log.exception("Revert: reopening source GGUF failed for '%s'", name)

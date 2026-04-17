@@ -2,7 +2,6 @@ import json
 import asyncio
 import hashlib
 import logging
-from pathlib import Path
 import torch
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -295,7 +294,7 @@ async def generate_ws(ws: WebSocket, name: str):
                     outputs = await loop.run_in_executor(None, _forward)
                     logits = outputs.logits[:, -1, :]
                     past_key_values = outputs.past_key_values
-                except torch.OutOfMemoryError:
+                except torch.OutOfMemoryError:  # pyright: ignore[reportAttributeAccessIssue]
                     log.warning("OOM during generate on '%s' at step %d — returning partial output", name, step)
                     past_key_values = None
                     if torch.cuda.is_available():
