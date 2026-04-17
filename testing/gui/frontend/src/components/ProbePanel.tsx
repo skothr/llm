@@ -91,6 +91,8 @@ const WS_OPS = new Set<ProbeOperation>(["logit-lens", "generate"]);
 export function ProbePanel() {
   const prompt = useStore((s) => s.prompt);
   const operation = useStore((s) => s.operation);
+  const backendOnline = useStore((s) => s.backendOnline);
+  const backendProbed = useStore((s) => s.backendProbed);
   const targetSession = useStore((s) => s.targetSession);
   const targetSessionB = useStore((s) => s.targetSessionB);
   const isRunning = useStore((s) => s.isRunning);
@@ -259,19 +261,20 @@ export function ProbePanel() {
       }
 
       setPendingResult(resultId, {
-        id: resultId, operation, sessionName: targetSession, prompt, data: [], timestamp: Date.now(),
+        id: resultId, operation, sessionName: targetSession, prompt, data: [], timestamp: Date.now(), isB: false,
       });
       connect(resultId, getWsPath(targetSession), getWsConfig(effectiveMax), makeWsHandlers(resultId));
 
       if (hasB) {
         const idB = `${resultId}-B`;
         setPendingResult(idB, {
-          id: idB, operation, sessionName: targetSessionB!, prompt, data: [], timestamp: Date.now(),
+          id: idB, operation, sessionName: targetSessionB!, prompt, data: [], timestamp: Date.now(), isB: true,
         });
         connect(idB, getWsPath(targetSessionB!), getWsConfig(effectiveMax), makeWsHandlers(idB));
       }
     } else {
-      const fetchInspect = async (session: string, id: string) => {
+      const fetchInspect = async (session: string, isB: boolean) => {
+        const id = isB ? `${resultId}-B` : resultId;
         let url = "";
         let body: unknown = {};
         if (operation === "influence") {
@@ -300,12 +303,13 @@ export function ProbePanel() {
           id, operation, sessionName: session, prompt,
           data: [{ type: "complete" as const, ...data }],
           timestamp: Date.now(),
+          isB,
         });
       };
 
-      const fetches = [fetchInspect(targetSession, resultId)];
+      const fetches = [fetchInspect(targetSession, false)];
       if (targetSessionB) {
-        fetches.push(fetchInspect(targetSessionB, `${resultId}-B`));
+        fetches.push(fetchInspect(targetSessionB, true));
       }
 
       Promise.all(fetches)
@@ -448,7 +452,11 @@ export function ProbePanel() {
 
       <div style={{ display: "flex", gap: 4 }}>
         {!isRunning ? (
-          <button onClick={handleRun} disabled={!targetSession}>Run</button>
+          <button
+            onClick={handleRun}
+            disabled={!targetSession || (backendProbed && !backendOnline)}
+            title={backendProbed && !backendOnline ? "Backend offline — wait for reconnect" : undefined}
+          >Run</button>
         ) : (
           <>
             {/* Stop: halt generation but keep whatever the model has streamed

@@ -166,6 +166,10 @@ export interface ProbeResult {
   prompt: string;
   data: WsMessage[];
   timestamp: number;
+  // Explicit A/B flag. The `${A.id}-B` id-suffix convention still holds so
+  // VisualizationArea can locate the pair, but classification (A vs B)
+  // reads this flag rather than string-sniffing the id.
+  isB?: boolean;
 }
 
 export interface InfluenceResult {
