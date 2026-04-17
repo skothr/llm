@@ -8,6 +8,7 @@ import { IntervenePanel } from "./components/IntervenePanel";
 import { VisualizationArea } from "./components/VisualizationArea";
 import { GenerationOutput } from "./components/GenerationOutput";
 import { CheatSheet } from "./components/CheatSheet";
+import { UndoToast } from "./components/UndoToast";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 function useResize(initial: number, direction: "horizontal" | "vertical", min: number, max: number) {
@@ -115,6 +116,7 @@ export default function App() {
           <GenerationOutput />
         </div>
       </main>
+      <UndoToast />
       <CheatSheet open={cheatSheetOpen} onClose={() => setCheatSheetOpen(false)} />
       <button
         onClick={toggleCheatSheet}

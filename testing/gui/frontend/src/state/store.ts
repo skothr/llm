@@ -111,6 +111,19 @@ interface StoreState {
   filterPinnedOnly: boolean;
   filterQuery: string;
 
+  // User-declared baseline session name. Used as the default "B side" for
+  // compare flows — CompareSelector offers a one-click "vs baseline"
+  // whenever one is set. Persisted so it survives reloads; auto-cleared if
+  // the baseline session is deleted.
+  baselineSession: string | null;
+
+  // Single-slot undo buffer for result deletion. Captures the full result
+  // + its prior index so Undo restores to the same position. Overwritten
+  // by subsequent deletes (one-step undo only — matches most editor conventions).
+  // Runtime-only, not persisted: undo across a full page refresh would be
+  // more confusing than useful.
+  lastDeleted: { result: ProbeResult; index: number; deletedAt: number } | null;
+
   interventionSpecs: InterventionSpec[];
   captureLogitLens: boolean;
   intervenePrompt: string;
@@ -158,6 +171,11 @@ interface StoreState {
   setFilterPinnedOnly: (v: boolean) => void;
   setFilterQuery: (q: string) => void;
   clearFilters: () => void;
+
+  setBaselineSession: (name: string | null) => void;
+
+  undoDelete: () => void;
+  clearUndoDelete: () => void;
 
   addIntervention: () => void;
   removeIntervention: (index: number) => void;
@@ -226,6 +244,10 @@ export const useStore = create<StoreState>()(
       filterPinnedOnly: false,
       filterQuery: "",
 
+      baselineSession: null,
+
+      lastDeleted: null,
+
       interventionSpecs: [],
       captureLogitLens: false,
       intervenePrompt: "",
@@ -245,7 +267,14 @@ export const useStore = create<StoreState>()(
             set({ backendOnline: false, backendProbed: true });
             return;
           }
-          set({ sessions: data, backendOnline: true, backendProbed: true });
+          // Auto-clear a stale baseline if the backend no longer has that
+          // session (restart, manual backend-side deletion, etc).
+          const st = get();
+          if (st.baselineSession && !data.some((x: SessionSummary) => x.name === st.baselineSession)) {
+            set({ sessions: data, backendOnline: true, backendProbed: true, baselineSession: null });
+          } else {
+            set({ sessions: data, backendOnline: true, backendProbed: true });
+          }
           if (get().surgeryOps.length === 0) {
             get().fetchSurgeryOps();
           }
@@ -297,6 +326,7 @@ export const useStore = create<StoreState>()(
             targetSession: s.targetSession === name ? "" : s.targetSession,
             targetSessionB: s.targetSessionB === name ? null : s.targetSessionB,
             interveneSession: s.interveneSession === name ? "" : s.interveneSession,
+            baselineSession: s.baselineSession === name ? null : s.baselineSession,
           };
         });
         await get().fetchSessions();
@@ -454,10 +484,20 @@ export const useStore = create<StoreState>()(
 
       deleteResult: (id) => set((s) => {
         const { [id]: _, ...remainingPending } = s.pendingResults;
+        const idx = s.results.findIndex((r) => r.id === id);
+        const snapshot = idx >= 0 ? s.results[idx] : null;
         return {
           pendingResults: remainingPending,
-          results: s.results.filter((r) => r.id !== id),
+          results: idx >= 0
+            ? [...s.results.slice(0, idx), ...s.results.slice(idx + 1)]
+            : s.results,
           activeResultId: s.activeResultId === id ? null : s.activeResultId,
+          // Pending-only deletions don't populate undo — the result has no
+          // finalized content yet, restoring a half-streamed pending entry
+          // would tangle with the WebSocket state machine.
+          lastDeleted: snapshot
+            ? { result: snapshot, index: idx, deletedAt: Date.now() }
+            : s.lastDeleted,
         };
       }),
 
@@ -469,6 +509,25 @@ export const useStore = create<StoreState>()(
       setFilterPinnedOnly: (v) => set({ filterPinnedOnly: v }),
       setFilterQuery: (q) => set({ filterQuery: q }),
       clearFilters: () => set({ filterTags: [], filterPinnedOnly: false, filterQuery: "" }),
+
+      setBaselineSession: (name) => set({ baselineSession: name }),
+
+      undoDelete: () => set((s) => {
+        if (!s.lastDeleted) return s;
+        const { result, index } = s.lastDeleted;
+        // Insert at the original index; clamp if the list got shorter due
+        // to other operations between delete and undo.
+        const cap = s.results.length;
+        const where = Math.min(Math.max(0, index), cap);
+        const next = [...s.results.slice(0, where), result, ...s.results.slice(where)];
+        return {
+          results: next,
+          lastDeleted: null,
+          activeResultId: result.id,
+        };
+      }),
+
+      clearUndoDelete: () => set({ lastDeleted: null }),
 
       addIntervention: () => set((s) => ({
         interventionSpecs: [...s.interventionSpecs, { layer: 0, sublayer: "ffn", op: "scale", params: { factor: 1.0 } }],
@@ -517,6 +576,7 @@ export const useStore = create<StoreState>()(
         captureLogitLens: s.captureLogitLens,
         intervenePrompt: s.intervenePrompt,
         interveneSession: s.interveneSession,
+        baselineSession: s.baselineSession,
       }),
     },
   ),

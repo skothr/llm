@@ -22,6 +22,8 @@ export function SessionsPanel() {
   const revertSurgery = useStore((s) => s.revertSurgery);
   const deleteStagedOp = useStore((s) => s.deleteStagedOp);
   const cloneSession = useStore((s) => s.cloneSession);
+  const baselineSession = useStore((s) => s.baselineSession);
+  const setBaselineSession = useStore((s) => s.setBaselineSession);
 
   const [loadModelId, setLoadModelId] = useState("");
   const [loadModelSource, setLoadModelSource] = useState<AvailableModel["source"] | null>(null);
@@ -292,16 +294,43 @@ export function SessionsPanel() {
             fetchSessionInfo(s.name).catch((err) => setError((err as Error).message));
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <strong>{s.name}</strong>
-            <button
-              onClick={async (e) => {
-                e.stopPropagation();
-                try { await deleteSession(s.name); }
-                catch (err) { setError((err as Error).message); }
-              }}
-              style={{ padding: "2px 6px", fontSize: 11 }}
-            >x</button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 4 }}>
+            <strong>
+              {baselineSession === s.name && (
+                <span
+                  title="Baseline session — compare views auto-offer this session as a default B-side."
+                  style={{ color: "#e0c040", marginRight: 4, fontSize: 11 }}
+                >{"\u25C6"}</span>
+              )}
+              {s.name}
+            </strong>
+            <div style={{ display: "flex", gap: 2 }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Toggle: clicking baseline on the already-baseline session unsets it.
+                  setBaselineSession(baselineSession === s.name ? null : s.name);
+                }}
+                title={baselineSession === s.name
+                  ? "Unset as baseline"
+                  : "Mark as baseline (compare views will default to comparing against this session)"}
+                style={{
+                  padding: "2px 5px", fontSize: 10,
+                  background: baselineSession === s.name ? "#3a2a10" : "#0d1b2a",
+                  border: `1px solid ${baselineSession === s.name ? "#c08020" : "#1a2540"}`,
+                  color: baselineSession === s.name ? "#ffc040" : "#667",
+                  cursor: "pointer", borderRadius: 3,
+                }}
+              >{baselineSession === s.name ? "\u25C6" : "\u25C7"}</button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try { await deleteSession(s.name); }
+                  catch (err) { setError((err as Error).message); }
+                }}
+                style={{ padding: "2px 6px", fontSize: 11 }}
+              >x</button>
+            </div>
           </div>
           <div style={{ fontSize: 11, color: "#8888aa" }}>
             {s.model_id} | {s.mode} | {s.num_layers}L | <span style={{ color: s.device.startsWith("cuda") ? "#4ecdc4" : "#aa8844" }}>{s.device}</span>

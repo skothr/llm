@@ -17,6 +17,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { keys: "p", description: "Pin or unpin the active result" },
   { keys: "t", description: "Focus the result filter" },
   { keys: "Delete", description: "Delete the active result (confirms first)" },
+  { keys: "Ctrl/Cmd + Z", description: "Undo the last result deletion" },
   { keys: "?", description: "Toggle this cheat sheet" },
   { keys: "Esc", description: "Close cheat sheet or pinned overlays" },
 ];
@@ -51,6 +52,19 @@ export function useKeyboardShortcuts({ onToggleCheatSheet }: HookOptions): void 
       // Escape: close any overlay via its own listener. We don't duplicate
       // that here; individual consumers (cheat sheet, pinned cells) own
       // their own Esc handling so we don't compete for the event.
+
+      // Undo fires even while typing in a field — users expect Ctrl+Z to
+      // restore a just-deleted result regardless of where the focus is,
+      // and text fields handle their own undo via the browser already
+      // (distinct undo stacks, no conflict).
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
+        const st = useStore.getState();
+        if (st.lastDeleted) {
+          e.preventDefault();
+          st.undoDelete();
+          return;
+        }
+      }
 
       if (isEditableTarget(e.target)) return;
 

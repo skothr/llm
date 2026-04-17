@@ -11,6 +11,41 @@ function batchTokens(result: ProbeResult): string[] {
     .map((m) => m.token);
 }
 
+// Per-step, per-token occurrence counts across a batch. Used for
+// divergence coloring: if at step 7 four seeds produced " the" and one
+// produced " a", the counts are { " the": 4, " a": 1 } — the majority
+// tokens get amber and the outlier gets red.
+type AgreementMap = Map<number, Map<string, number>>;
+
+function agreementPerStep(panels: ProbeResult[]): AgreementMap {
+  const byStep: AgreementMap = new Map();
+  for (const r of panels) {
+    const tokens = r.data.filter(
+      (m): m is GenerateData => m.type === "data" && "token" in m && "step" in m,
+    );
+    for (const t of tokens) {
+      let m = byStep.get(t.step);
+      if (!m) { m = new Map(); byStep.set(t.step, m); }
+      m.set(t.token, (m.get(t.token) ?? 0) + 1);
+    }
+  }
+  return byStep;
+}
+
+// Agreement tier for (step, token) given a batch of size N. We always
+// compare against N (not the count of seeds that reached this step) so
+// a token that appears in 3 of 5 seeds reads as "minority" even if
+// two other seeds simply haven't arrived there yet — this is what the
+// user wants while watching a stream.
+type AgreementTier = "all" | "majority" | "minority" | "unique";
+
+function agreementTier(count: number, total: number): AgreementTier {
+  if (count >= total) return "all";
+  if (count >= Math.ceil(total / 2)) return "majority";
+  if (count <= 1) return "unique";
+  return "minority";
+}
+
 function batchStats(panels: ProbeResult[]): { uniqueCompletions: number; firstDivergence: number | null } {
   const seqs = panels.map(batchTokens);
   const completedSeqs = seqs.filter((s) => s.length > 0);
@@ -66,10 +101,13 @@ export function GenerationOutput() {
   }
 
   const stats = batchMode ? batchStats(panels) : null;
+  // Compute agreement once per render so all panels share a single map.
+  // Only meaningful when there are >=2 siblings in the batch.
+  const agreement = batchMode && panels.length >= 2 ? agreementPerStep(panels) : null;
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <h2 style={{ margin: 0 }}>Generation Output</h2>
         {batchMode && stats && (
           <span style={{ fontSize: 11, color: "#8888aa", fontFamily: "monospace" }}>
@@ -88,6 +126,17 @@ export function GenerationOutput() {
             )}
           </span>
         )}
+        {agreement && (
+          <span
+            style={{ fontSize: 10, color: "#667", fontFamily: "monospace" }}
+            title="Tokens in each panel are colored by how many seeds produced that same token at that step."
+          >
+            <span style={{ color: "#6bc06b" }}>{"\u25A0"}</span> all agree{"  "}
+            <span style={{ color: "#e0c060" }}>{"\u25A0"}</span> majority{"  "}
+            <span style={{ color: "#d08060" }}>{"\u25A0"}</span> minority{"  "}
+            <span style={{ color: "#c06060" }}>{"\u25A0"}</span> unique
+          </span>
+        )}
       </div>
       <div style={{ display: "flex", gap: 16, overflowX: batchMode ? "auto" : "visible" }}>
         {panels.map((r) => (
@@ -96,6 +145,8 @@ export function GenerationOutput() {
             result={r}
             isPending={r.id in pendingResults}
             narrow={batchMode && panels.length > 2}
+            agreement={agreement}
+            batchSize={panels.length}
           />
         ))}
       </div>
@@ -119,7 +170,22 @@ function exportText(result: ProbeResult, tokens: GenerateData[]): void {
   downloadText(`generation_${result.sessionName}_${ts}.txt`, body);
 }
 
-function GenerationPanel({ result, isPending, narrow = false }: { result: ProbeResult; isPending: boolean; narrow?: boolean }) {
+const TIER_COLOR: Record<AgreementTier, string> = {
+  all: "#6bc06b",       // green — full consensus
+  majority: "#e0c060",  // amber — majority consensus
+  minority: "#d08060",  // dim red — some siblings agree
+  unique: "#c06060",    // red — this seed stands alone
+};
+
+function GenerationPanel({
+  result, isPending, narrow = false, agreement = null, batchSize = 0,
+}: {
+  result: ProbeResult;
+  isPending: boolean;
+  narrow?: boolean;
+  agreement?: AgreementMap | null;
+  batchSize?: number;
+}) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; step: number; content: string } | null>(null);
 
   useEffect(() => {
@@ -184,36 +250,54 @@ function GenerationPanel({ result, isPending, narrow = false }: { result: ProbeR
       </div>
       <div style={{ fontFamily: "monospace", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", overflowY: "auto", maxHeight: 200 }}>
         <span style={{ color: "#6688aa" }}>{result.prompt}</span>
-        {tokens.map((tok) => (
-          <span
-            key={tok.step}
-            style={{
-              cursor: "pointer",
-              borderRadius: 2,
-              padding: "0 1px",
-              background: tooltip?.step === tok.step ? "#1a5276" : "transparent",
-              ...(tok.token === "<eos>" ? { color: "#4a6a4a", fontSize: 11, padding: "1px 3px", border: "1px solid #3a5a3a" } : {}),
-              ...(tok.token === "<stop>" ? { color: "#aa6a4a", fontSize: 11, padding: "1px 3px", border: "1px solid #5a3a3a" } : {}),
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (tooltip?.step === tok.step) {
-                setTooltip(null);
-              } else {
-                const content = `step ${tok.step}\n${formatTopK(tok.top_k)}`;
-                const estW = 220, estH = 14 * (tok.top_k.length + 1) + 20;
-                let x = e.clientX + 10;
-                let y = e.clientY - 10;
-                if (x + estW > window.innerWidth) x = e.clientX - estW - 10;
-                if (y + estH > window.innerHeight) y = window.innerHeight - estH - 10;
-                if (y < 10) y = 10;
-                setTooltip({ x, y, step: tok.step, content });
-              }
-            }}
-          >
-            {tok.token === "<eos>" ? "eos" : tok.token === "<stop>" ? "stop" : tok.token}
-          </span>
-        ))}
+        {tokens.map((tok) => {
+          // Agreement tint is applied as text color when we have a batch.
+          // Special control tokens keep their existing visual style so
+          // they stay visually distinct from normal content.
+          let tint: string | undefined;
+          let tintTitle: string | undefined;
+          if (agreement && batchSize >= 2 && tok.token !== "<eos>" && tok.token !== "<stop>") {
+            const stepMap = agreement.get(tok.step);
+            const count = stepMap?.get(tok.token) ?? 0;
+            if (count > 0) {
+              const tier = agreementTier(count, batchSize);
+              tint = TIER_COLOR[tier];
+              tintTitle = `step ${tok.step}: ${count}/${batchSize} seeds produced this token (${tier})`;
+            }
+          }
+          return (
+            <span
+              key={tok.step}
+              title={tintTitle}
+              style={{
+                cursor: "pointer",
+                borderRadius: 2,
+                padding: "0 1px",
+                background: tooltip?.step === tok.step ? "#1a5276" : "transparent",
+                ...(tint ? { color: tint } : {}),
+                ...(tok.token === "<eos>" ? { color: "#4a6a4a", fontSize: 11, padding: "1px 3px", border: "1px solid #3a5a3a" } : {}),
+                ...(tok.token === "<stop>" ? { color: "#aa6a4a", fontSize: 11, padding: "1px 3px", border: "1px solid #5a3a3a" } : {}),
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (tooltip?.step === tok.step) {
+                  setTooltip(null);
+                } else {
+                  const content = `step ${tok.step}\n${formatTopK(tok.top_k)}`;
+                  const estW = 220, estH = 14 * (tok.top_k.length + 1) + 20;
+                  let x = e.clientX + 10;
+                  let y = e.clientY - 10;
+                  if (x + estW > window.innerWidth) x = e.clientX - estW - 10;
+                  if (y + estH > window.innerHeight) y = window.innerHeight - estH - 10;
+                  if (y < 10) y = 10;
+                  setTooltip({ x, y, step: tok.step, content });
+                }
+              }}
+            >
+              {tok.token === "<eos>" ? "eos" : tok.token === "<stop>" ? "stop" : tok.token}
+            </span>
+          );
+        })}
         {isPending && <span className="cursor-blink" style={{ color: "#4ecdc4" }}>|</span>}
       </div>
       {tooltip && (
