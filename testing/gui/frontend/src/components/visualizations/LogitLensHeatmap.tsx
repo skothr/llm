@@ -2,8 +2,8 @@ import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import * as d3 from "d3";
 import { displayToken } from "../../utils/displayToken";
 import { sliceHiddenStatePosition } from "../../utils/hiddenState";
-import { useStore } from "../../state/store";
-import { HiddenStateHeatmap } from "./HiddenStateHeatmap";
+import { HiddenStateBarStrip } from "./HiddenStateBarStrip";
+import { DimVsLayerHeatmap } from "./DimVsLayerHeatmap";
 import type { LogitLensData, ProbeResult, CellMetrics } from "../../types/api";
 
 interface Props {
@@ -63,8 +63,6 @@ export function LogitLensHeatmap({ result }: Props) {
   } | null>(null);
   const [pinned, setPinned] = useState<PinnedCell | null>(null);
   const [metric, setMetric] = useState<MetricKey>("top1_prob");
-  const sessionInfo = useStore((s) => s.sessionInfo);
-  const info = sessionInfo[result.sessionName];
 
   const unpin = useCallback(() => setPinned(null), []);
   useEffect(() => {
@@ -349,25 +347,19 @@ export function LogitLensHeatmap({ result }: Props) {
         </div>
       )}
       {pinned && (
-        <PinnedCard
-          pinned={pinned}
-          numHeads={info?.num_heads ?? 0}
-          hiddenSize={info?.hidden_size ?? 0}
-          onClose={unpin}
-        />
+        <PinnedCard pinned={pinned} onClose={unpin} />
       )}
+      <DimVsLayerHeatmap result={result} />
     </div>
   );
 }
 
 interface PinnedCardProps {
   pinned: PinnedCell;
-  numHeads: number;
-  hiddenSize: number;
   onClose: () => void;
 }
 
-function PinnedCard({ pinned, numHeads, hiddenSize, onClose }: PinnedCardProps) {
+function PinnedCard({ pinned, onClose }: PinnedCardProps) {
   const { msg, posIdx, x, y } = pinned;
   const cellMetrics: CellMetrics | undefined = msg.metrics?.[posIdx];
   const top = msg.predictions[posIdx]?.slice(0, 5) ?? [];
@@ -380,9 +372,6 @@ function PinnedCard({ pinned, numHeads, hiddenSize, onClose }: PinnedCardProps) 
       return null;
     }
   }, [msg.hidden_state, posIdx]);
-
-  const headDim = numHeads > 0 && hiddenSize > 0 ? Math.floor(hiddenSize / numHeads) : 0;
-  const canRenderHeatmap = hiddenVec !== null && numHeads > 0 && headDim > 0 && hiddenVec.length === numHeads * headDim;
 
   return (
     <div
@@ -419,20 +408,18 @@ function PinnedCard({ pinned, numHeads, hiddenSize, onClose }: PinnedCardProps) 
       <div style={{ fontSize: 11, color: "#8888aa", marginBottom: 6, whiteSpace: "pre" }}>
         {top.map((p) => `${displayToken(p.token).padEnd(8)} ${(p.prob * 100).toFixed(3).padStart(7)}%`).join("\n")}
       </div>
-      {canRenderHeatmap && hiddenVec && (
+      {hiddenVec && (
         <div style={{ marginTop: 8 }}>
-          <HiddenStateHeatmap
+          <HiddenStateBarStrip
             data={hiddenVec}
-            numHeads={numHeads}
-            headDim={headDim}
-            label={`Hidden state (${numHeads} heads × ${headDim} dim, ·RdBu centered at 0)`}
+            label={`Hidden state (${hiddenVec.length} dims, red=+, blue=−)`}
           />
         </div>
       )}
-      {!canRenderHeatmap && (
+      {!hiddenVec && (
         <div style={{ fontSize: 10, color: "#888", marginTop: 6 }}>
           {msg.hidden_state
-            ? `Cannot render: numHeads=${numHeads}, hidden_size=${hiddenSize}, shape=${msg.hidden_state.shape.join("×")}`
+            ? `Cannot decode hidden state: shape=${msg.hidden_state.shape.join("×")}`
             : "No hidden state streamed for this frame."}
         </div>
       )}
