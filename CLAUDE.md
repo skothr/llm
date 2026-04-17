@@ -74,6 +74,11 @@ testing/.venv/bin/python -m pytest testing/tests/ -v
 - Venv: `testing/.venv/` — system python does NOT have torch/pytest
 - `llm_surgeon` installed editable: `pip install -e .`
 
+### Primary dev models
+- `TinyLlama/TinyLlama-1.1B-Chat-v1.0` (22 layers, 2048 hidden, 1.1B params) — **default** for examples, fixtures, and fast test iteration.
+- `openlm-research/open_llama_3b_v2` (26 layers, 3200 hidden, 3B params) — for slightly-larger-scale sanity checks.
+- Models live under `testing/.cache/models/` in the HuggingFace `models--{org}--{name}` layout.
+
 ## GUI frontend — verification tiers
 
 Three progressively-stronger checks for frontend changes. Run from
@@ -148,6 +153,56 @@ The suite intentionally does **not** cover:
 For WebSocket-dependent flows, boot the full stack with `./gui/run.sh` and
 test by hand until a mock-WS server is added.
 
+
+# Type Checking
+
+Zero errors, warnings, AND informations after every edit — for both pyright (Python) and tsc (TypeScript). The CLI is authoritative, not the IDE's `★` hints. `pyproject.toml [tool.pyright]` enables `reportUnusedImport/Variable/Function/Class/Expression = "warning"`; treat those as must-fix.
+
+## Tools
+
+```bash
+# Pyright — either works, both resolve to the same binary + config
+.venv/bin/python -m pyright <paths>          # venv-scoped
+~/.local/bin/pyright <paths>                 # pipx-scoped (matches LSP)
+
+# TypeScript
+cd testing/gui/frontend && ./node_modules/.bin/tsc --noEmit
+
+# Parity sanity check (CLI vs LSP)
+diff <(~/.local/bin/pyright path/to/file.py) <(.venv/bin/python -m pyright path/to/file.py)
+```
+
+Avoid `/snap/bin/pyright` — can't run under the sandbox. If upgrading pyright, upgrade both the pipx and venv copies to avoid drift.
+
+## Fix patterns
+
+- **Real typing bug** → fix the source. Prefer upstream type tightening so narrowing cascades (e.g., `SessionInfo.model: object` → `Any`; `info.llama: object` → `Optional[LlamaEngine]`).
+- **Ad-hoc dynamic class** (`class _Meta: pass; cfg = _Meta(); cfg.x = ...`) → replace with `types.SimpleNamespace(x=..., ...)` — stdlib, typed as dynamic.
+- **Stub lag, code is runtime-correct** → `# pyright: ignore[reportXxx]`, rule-scoped, narrow as possible. Prefer over bare `# type: ignore`.
+- **Test helper for `Optional[X]` guarded by `@pytest.mark.skipif`** → extract a helper like `_tinyllama_blob() -> Path` that asserts and returns the narrowed type.
+- **Never** disable rules in `pyproject.toml` to quiet diagnostics — it hides real bugs elsewhere.
+
+## Known stub lag in this repo
+
+- Fully unstubbed packages: `llama_cpp`, `gguf`, `bitsandbytes`.
+- Torch stubs lag runtime for: `torch.OutOfMemoryError`, `with torch.device(...)`, `load_state_dict(assign=...)`.
+
+## Unused symbols — underscore-prefix behavior
+
+**Honored** (rename to `_name` suppresses the warning):
+- Local assignments, tuple unpacking (`_first, second, _ = triple`), `for _idx, val in enumerate(...)`, function parameters.
+
+**NOT honored** (rename to `_name` does NOT suppress — delete the symbol, or add to `__all__` for `__init__.py` re-exports):
+- `reportUnusedImport`, `reportUnusedClass`, `reportUnusedFunction`.
+
+IDE `★` dead-code hints flag *every* unused name regardless of prefix — that's a separate always-on channel, not tied to the `reportUnusedXxx` rules. When `<new-diagnostics>` shows only `★` items, verify against the CLI before editing — those are frequently IDE-only noise.
+
+## TypeScript language-service hints
+
+`tsc --noEmit` doesn't surface these; the language server does. They're real actionable refactors, not noise:
+- `80006` — function may be converted to async (use it)
+- `80001` — CommonJS import can be ES6
+- `7044` — parameter type could be inferred
 
 # Research Observations
 
