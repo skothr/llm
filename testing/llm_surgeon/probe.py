@@ -405,6 +405,7 @@ def intervene(
                 modified = False
                 if (idx, "attn") in intervention_map:
                     state = intervention_map[(idx, "attn")](state, idx)
+                    state = state.to(dtype=attn_out.dtype, device=attn_out.device)
                     modified = True
 
                 if captured_states is not None:
@@ -434,6 +435,7 @@ def intervene(
                 modified = False
                 if (idx, "ffn") in intervention_map:
                     state = intervention_map[(idx, "ffn")](state, idx)
+                    state = state.to(dtype=hidden.dtype, device=hidden.device)
                     modified = True
 
                 if captured_states is not None:
