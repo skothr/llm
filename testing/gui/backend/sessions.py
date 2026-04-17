@@ -350,6 +350,8 @@ class SessionManager:
         log.debug("GPU check for '%s': need %.0fMB, free %.0fMB",
                   name, model_bytes / 1e6, free / 1e6)
         if free < model_bytes * 1.3:
+            skipped_busy: list[str] = []
+            evicted_any = False
             for other_name, other in self._sessions.items():
                 if other_name == name or other.model is None:
                     continue
@@ -359,11 +361,22 @@ class SessionManager:
                     continue
                 if other_device.type != "cuda":
                     continue
+                # Skip peers whose lock is held — evicting mid-forward would
+                # reassign param.data under running CUDA kernels.
+                if other.lock.locked():
+                    skipped_busy.append(other_name)
+                    continue
                 log.info("Evicting '%s' to CPU to make room for '%s'", other_name, name)
                 self.to_cpu(other_name)
+                evicted_any = True
                 free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
                 if free >= model_bytes * 1.3:
                     break
+            if free < model_bytes * 1.3 and not evicted_any and skipped_busy:
+                raise RuntimeError(
+                    f"All other GPU sessions are busy ({skipped_busy}); "
+                    f"cannot free GPU space for '{name}'"
+                )
         try:
             if self._is_bnb_model(info):
                 self._move_bnb_params(info.model, "cuda:0")
