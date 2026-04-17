@@ -18,6 +18,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { keys: "t", description: "Focus the result filter" },
   { keys: "Delete", description: "Delete the active result (confirms first)" },
   { keys: "Ctrl/Cmd + Z", description: "Undo the last result deletion" },
+  { keys: "Ctrl/Cmd + S", description: "Save the current prompt to the library" },
   { keys: "?", description: "Toggle this cheat sheet" },
   { keys: "Esc", description: "Close cheat sheet or pinned overlays" },
 ];
@@ -64,6 +65,24 @@ export function useKeyboardShortcuts({ onToggleCheatSheet }: HookOptions): void 
           st.undoDelete();
           return;
         }
+      }
+
+      // Ctrl/Cmd+S: save the current tab's prompt to the library. Always
+      // preempts the browser's "Save Page" dialog — a full-page save from
+      // a dev server is never what the user wants. Prompts for a name via
+      // window.prompt so the shortcut stays self-contained.
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "s" || e.key === "S")) {
+        e.preventDefault();
+        const st = useStore.getState();
+        const text = st.activeTab === "intervene" ? st.intervenePrompt : st.prompt;
+        if (!text.trim()) return;
+        // Suggest the first library entry with the same text as a name —
+        // an update-under-familiar-name happens most when prompts evolve
+        // slightly between sessions.
+        const existing = st.promptLibrary.find((p) => p.text === text);
+        const name = window.prompt("Save prompt as:", existing?.name ?? "");
+        if (name && name.trim()) st.savePrompt(name.trim(), text);
+        return;
       }
 
       if (isEditableTarget(e.target)) return;

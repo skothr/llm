@@ -190,6 +190,13 @@ export interface ProbeResult {
   pinned?: boolean;
   tags?: string[];
   notes?: string;
+
+  // Snapshot of the sampling knobs as they were at the moment this result
+  // was launched. Populated by ProbePanel. Used by the "↺ recall" button
+  // to load the exact configuration back into the probe panel for
+  // reproduction. Untyped here (passed through as an opaque record) to
+  // avoid a circular import with state/store.
+  runParams?: Record<string, unknown>;
 }
 
 export interface InfluenceResult {

@@ -51,6 +51,7 @@ export function VisualizationArea() {
   const setActiveResult = useStore((s) => s.setActiveResult);
   const clearResults = useStore((s) => s.clearResults);
   const deleteResult = useStore((s) => s.deleteResult);
+  const recallResult = useStore((s) => s.recallResult);
   const filterTags = useStore((s) => s.filterTags);
   const filterPinnedOnly = useStore((s) => s.filterPinnedOnly);
   const filterQuery = useStore((s) => s.filterQuery);
@@ -92,11 +93,18 @@ export function VisualizationArea() {
           <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
             <button onClick={clearResults} style={{ fontSize: 11 }} title="Remove all non-pinned results">Clear All</button>
             {activeResult && !isPending && (
-              <button
-                onClick={() => deleteResult(activeResult.id)}
-                style={{ fontSize: 10, padding: "1px 6px", background: "#3a1a1a", color: "#e0a0a0" }}
-                title="Delete just this result"
-              >del</button>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button
+                  onClick={() => recallResult(activeResult.id)}
+                  style={{ fontSize: 10, padding: "1px 6px", background: "#0d2236", color: "#a0c0e0", border: "1px solid #1a5276" }}
+                  title="Load this result's prompt + session + sampling params into the probe panel (doesn't auto-run)"
+                >{"\u21BA"} recall</button>
+                <button
+                  onClick={() => deleteResult(activeResult.id)}
+                  style={{ fontSize: 10, padding: "1px 6px", background: "#3a1a1a", color: "#e0a0a0" }}
+                  title="Delete just this result"
+                >del</button>
+              </div>
             )}
           </div>
         )}
