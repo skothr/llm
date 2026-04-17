@@ -340,7 +340,13 @@ export const useStore = create<StoreState>()(
       fetchSurgeryOps: async () => {
         try {
           const resp = await apiFetch("/api/surgery/operations");
+          if (!resp.ok) return;
           const data = await resp.json();
+          // Guard: when the vite dev proxy intercepts a backend-offline
+          // connection it returns JSON `{"detail": "backend offline"}`.
+          // Without this check we'd store that object as surgeryOps and
+          // every downstream .map() would crash.
+          if (!Array.isArray(data)) return;
           set({ surgeryOps: data });
         } catch { /* backend not ready */ }
       },
@@ -348,8 +354,10 @@ export const useStore = create<StoreState>()(
       fetchAvailableModels: async () => {
         try {
           const resp = await apiFetch("/api/models/available");
-          const data: AvailableModel[] = await resp.json();
-          set({ availableModels: data });
+          if (!resp.ok) return;
+          const data = await resp.json();
+          if (!Array.isArray(data)) return;
+          set({ availableModels: data as AvailableModel[] });
         } catch { /* backend not ready */ }
       },
 
