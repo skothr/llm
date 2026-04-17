@@ -508,6 +508,7 @@ async def commit_surgery(name: str):
         # leaves pending_ops/applied_ops/layer_map/model all mutually consistent.
         # The user can fix the offending op and retry commit on whatever remains.
         applied_count = 0
+        loop = asyncio.get_event_loop()
         while info._pending_ops:
             op = info._pending_ops[0]
             op_name = op["operation"]
@@ -517,7 +518,12 @@ async def commit_surgery(name: str):
             translated = translate_to_current(op_name, params, info._layer_map)
             log.info("Committing op on '%s': %s(%s) [original: %s]", name, op_name, translated, params)
             try:
-                op_map[op_name](info.model, translated)
+                # Surgery ops are synchronous torch — offload to the default
+                # executor so we don't stall the event loop while holding the lock.
+                op_fn = op_map[op_name]
+                await loop.run_in_executor(
+                    None, lambda f=op_fn, t=translated: f(info.model, t)
+                )
             except (IndexError, ValueError) as e:
                 log.warning("Commit failed on '%s' at op %s: %s", name, op_name, e)
                 raise HTTPException(422, f"Operation '{op_name}' failed: {e}")
@@ -559,19 +565,29 @@ async def revert_surgery(name: str):
         # Build the replacement model BEFORE mutating op lists, so a load
         # failure doesn't leave pending/applied/history in a half-reverted
         # state that can't be recovered.
+        loop = asyncio.get_event_loop()
         try:
             if _snapshot_dir(info.model_id):
-                new_model, _ = await asyncio.get_event_loop().run_in_executor(
+                new_model, _ = await loop.run_in_executor(
                     None,
                     lambda: surgery.load_model(info.model_id, mode=info.mode),
                 )
             else:
                 from transformers import AutoModelForCausalLM
-                new_model = AutoModelForCausalLM.from_config(info._original_config)
-            new_model.eval()
-            new_model.requires_grad_(False)
-            if not hasattr(new_model, "hf_device_map"):
-                new_model = new_model.cpu()
+                new_model = await loop.run_in_executor(
+                    None,
+                    lambda: AutoModelForCausalLM.from_config(info._original_config),
+                )
+
+            def _finalize_new_model(m):
+                m.eval()
+                m.requires_grad_(False)
+                if not hasattr(m, "hf_device_map"):
+                    m = m.cpu()
+                return m
+            new_model = await loop.run_in_executor(
+                None, lambda: _finalize_new_model(new_model)
+            )
         except Exception as e:
             log.exception("Revert failed for session '%s'", name)
             raise HTTPException(500, f"Revert failed: {e}")
@@ -666,17 +682,21 @@ async def validate_session(name: str, req: ValidateRequest):
         )
 
         was_on_gpu = mgr.is_on_gpu(name)
-        mgr.ensure_on_gpu(name)
+        loop = asyncio.get_event_loop()
+        # ensure_on_gpu moves tensors to device — synchronous torch, offload.
+        await loop.run_in_executor(None, lambda: mgr.ensure_on_gpu(name))
         try:
-            input_ids = torch.tensor([tokens], dtype=torch.long).to(
-                next(info.model.parameters()).device
-            )
-            with torch.no_grad():
-                pytorch_logits = info.model(input_ids=input_ids).logits[0, -1].float().cpu().numpy()
+            def _pytorch_forward():
+                input_ids = torch.tensor([tokens], dtype=torch.long).to(
+                    next(info.model.parameters()).device
+                )
+                with torch.no_grad():
+                    return info.model(input_ids=input_ids).logits[0, -1].float().cpu().numpy()
+            pytorch_logits = await loop.run_in_executor(None, _pytorch_forward)
         finally:
             if not was_on_gpu:
                 try:
-                    mgr.to_cpu(name)
+                    await loop.run_in_executor(None, lambda: mgr.to_cpu(name))
                 except Exception:
                     log.exception("validate: to_cpu failed for '%s'", name)
 
@@ -717,26 +737,30 @@ async def clone_session(name: str, req: CloneRequest):
     except StopIteration:
         was_on_gpu = False
 
+    loop = asyncio.get_event_loop()
     try:
         from llm_surgeon.surgery import _snapshot_dir
         if _snapshot_dir(info.model_id):
-            mgr.to_cpu(name)
+            await loop.run_in_executor(None, lambda: mgr.to_cpu(name))
             from llm_surgeon import surgery
-            cloned_model, _ = await asyncio.get_event_loop().run_in_executor(
+            cloned_model, _ = await loop.run_in_executor(
                 None,
                 lambda: surgery.load_model(info.model_id, mode=info.mode),
             )
         else:
-            cloned_model = copy.deepcopy(info.model)
-            cloned_model.eval()
+            def _deepcopy_and_eval():
+                m = copy.deepcopy(info.model)
+                m.eval()
+                return m
+            cloned_model = await loop.run_in_executor(None, _deepcopy_and_eval)
         if not hasattr(cloned_model, "hf_device_map"):
-            cloned_model = cloned_model.cpu()
+            cloned_model = await loop.run_in_executor(None, lambda: cloned_model.cpu())
     except Exception as e:
         raise HTTPException(500, f"Clone failed: {e}")
     finally:
         if was_on_gpu:
             try:
-                mgr.ensure_on_gpu(name)
+                await loop.run_in_executor(None, lambda: mgr.ensure_on_gpu(name))
             except Exception:
                 log.exception("Clone: failed to restore '%s' to GPU", name)
 

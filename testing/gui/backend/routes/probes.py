@@ -148,7 +148,8 @@ async def generate_ws(ws: WebSocket, name: str):
 
     was_on_gpu_before = mgr.is_on_gpu(name)
     try:
-        mgr.ensure_on_gpu(name)
+        # ensure_on_gpu moves tensors (sync torch); offload to keep the loop hot.
+        await asyncio.get_event_loop().run_in_executor(None, lambda: mgr.ensure_on_gpu(name))
     except Exception as e:
         log.error("WS generate: GPU error for '%s': %s", name, e)
         await _send_json(ws, {"type": "error", "message": f"GPU error: {e}"})
@@ -275,6 +276,7 @@ async def generate_ws(ws: WebSocket, name: str):
 
     try:
         async with info.lock:
+            loop = asyncio.get_event_loop()
             inputs = info.tokenizer(prompt, return_tensors="pt")
             device = next(info.model.parameters()).device
             input_ids = inputs["input_ids"].to(device)
@@ -287,14 +289,12 @@ async def generate_ws(ws: WebSocket, name: str):
                     break
 
                 try:
-                    with torch.no_grad():
-                        outputs = info.model(
-                            input_ids,
-                            past_key_values=past_key_values,
-                            use_cache=True,
-                        )
-                        logits = outputs.logits[:, -1, :]
-                        past_key_values = outputs.past_key_values
+                    def _forward(ids=input_ids, pkv=past_key_values):
+                        with torch.no_grad():
+                            return info.model(ids, past_key_values=pkv, use_cache=True)
+                    outputs = await loop.run_in_executor(None, _forward)
+                    logits = outputs.logits[:, -1, :]
+                    past_key_values = outputs.past_key_values
                 except torch.OutOfMemoryError:
                     log.warning("OOM during generate on '%s' at step %d — returning partial output", name, step)
                     past_key_values = None
@@ -385,7 +385,7 @@ async def generate_ws(ws: WebSocket, name: str):
                  name, len(generated_tokens), stop_reason or "disconnect")
         if not was_on_gpu_before:
             try:
-                mgr.to_cpu(name)
+                await asyncio.get_event_loop().run_in_executor(None, lambda: mgr.to_cpu(name))
             except Exception:
                 pass
         if torch.cuda.is_available():
