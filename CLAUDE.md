@@ -23,11 +23,8 @@ This is a workspace for robust experimental LLM research using open source model
 `lib/` — External libraries
   - `llama.cpp` — llama.cpp source (built with GPU enabled)
 `research/` — Research scripts, experimental findings, anomalies, hypotheses
-  - `observations/` — Research observation log: experimental findings, anomalies, hypotheses
+  - `observations/` — see `# Research Observations` below for format
 
-
-# THEORY
-LLM theory — high-level explanations, visualizations, and math related to LLM theory.
 
 # Build Commands
 ```bash
@@ -38,7 +35,7 @@ make -C theory all
 xdg-open theory/visuals/llm-architecture-diagram.html
 ```
 
-# Architecture
+# Theory Document
 
 ## Core Document
 `theory/build/llm-core-architecture/llm-core-architecture.tex` — LaTeX document covering Transformer architecture from original encoder-decoder through modern decoder-only (LLaMA). 10 sections: Transformer overview, Tokenization, Embeddings, Positional Encoding, Attention, FFN, Normalization/Residuals, Decoder-Only Shift, Output Head, Full Forward Pass.
@@ -90,9 +87,8 @@ three every time.
 # Tier 1 — Type check (~1s). Catches prop/type regressions.
 ./node_modules/.bin/tsc --noEmit
 
-# Tier 2 — Production build (~2s). Adds bundler-level checks (module
-# resolution, JSX transform, CSS imports). The sandbox blocks node's
-# crypto at build time, so this needs dangerouslyDisableSandbox.
+# Tier 2 — Production build (~2s). Adds bundler-level checks: module
+# resolution, JSX transform, CSS imports.
 ./node_modules/.bin/vite build
 
 # Tier 3 — Playwright smoke suite (~7s headless).
@@ -106,14 +102,7 @@ fetches assuming response-JSON was an array; see commit 5524e39).
 
 ### Smoke-suite structure
 
-```
-testing/gui/frontend/
-  playwright.config.ts         # auto-boots vite via webServer block
-  tests/e2e/
-    smoke.spec.ts              # 9 tests covering mount + store flows
-    fixtures/sample.json       # 3-result experiment file, imported by tests
-    tsconfig.json              # scopes @types/node to the tests only
-```
+Suite under `testing/gui/frontend/tests/e2e/`: `smoke.spec.ts` (9 tests), `fixtures/sample.json` (imported by tests), `tsconfig.json` (scopes `@types/node` to tests only). `playwright.config.ts` at frontend root auto-boots vite via its `webServer` block.
 
 Config notes:
 - `reuseExistingServer: true` — piggybacks on `npm run dev` if already open.
