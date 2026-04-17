@@ -33,12 +33,23 @@ async def log_requests(request: Request, call_next):
         if request.url.query:
             log.debug("  query: %s", request.url.query)
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            body_bytes = await request.body()
-            if body_bytes:
-                ct = request.headers.get("content-type", "")
-                preview = body_bytes[:MAX_BODY_LOG].decode("utf-8", errors="replace")
-                truncated = " [truncated]" if len(body_bytes) > MAX_BODY_LOG else ""
-                log.debug("  body (%s, %d bytes%s): %s", ct, len(body_bytes), truncated, preview)
+            # Skip reading the body when it is large — await request.body() buffers
+            # the entire stream, so logging a 50MB upload would cost 50MB of RAM
+            # per request even though we only preview the first 2KB.
+            ct = request.headers.get("content-type", "")
+            cl_header = request.headers.get("content-length")
+            try:
+                cl = int(cl_header) if cl_header is not None else -1
+            except ValueError:
+                cl = -1
+            if cl > MAX_BODY_LOG:
+                log.debug("  body (%s, %d bytes) [not logged: exceeds preview cap]", ct, cl)
+            else:
+                body_bytes = await request.body()
+                if body_bytes:
+                    preview = body_bytes[:MAX_BODY_LOG].decode("utf-8", errors="replace")
+                    truncated = " [truncated]" if len(body_bytes) > MAX_BODY_LOG else ""
+                    log.debug("  body (%s, %d bytes%s): %s", ct, len(body_bytes), truncated, preview)
 
     try:
         response = await call_next(request)
