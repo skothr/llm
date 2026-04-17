@@ -434,7 +434,11 @@ def compare_logit_lens(
             cb_frames.append(cell)
 
         if on_layer is not None:
-            on_layer(orig_layer, sublayer, {"cells": cb_frames})
+            on_layer(orig_layer, sublayer, {
+                "cells": cb_frames,
+                "hidden_state_a": hidden_a,
+                "hidden_state_b": hidden_b,
+            })
 
     return CompareLogitLensResult(
         comparisons=comparisons,

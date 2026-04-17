@@ -1,9 +1,23 @@
+import base64
 import json
 import asyncio
 import hashlib
 import logging
 import torch
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+
+def _encode_hidden_state(tensor: torch.Tensor) -> dict:
+    """Serialize a (seq_len, hidden_size) tensor as base64-encoded float32 bytes.
+
+    Used to ship hidden states to the frontend for click-to-pin heatmap rendering.
+    Base64 float32 keeps the payload ~4/3 × raw bytes vs ~15× for JSON float arrays.
+    """
+    arr = tensor.detach().to(dtype=torch.float32, device="cpu").contiguous().numpy()
+    return {
+        "shape": list(arr.shape),
+        "b64": base64.b64encode(arr.tobytes()).decode("ascii"),
+    }
 
 from ..sessions import SessionManager
 from ..hidden_state_cache import HiddenStateCache
@@ -97,6 +111,9 @@ async def logit_lens_ws(ws: WebSocket, name: str):
             "predictions": serializable_preds,
             "metrics": data.get("metrics", []),
         }
+        hs = data.get("hidden_state")
+        if isinstance(hs, torch.Tensor):
+            msg["hidden_state"] = _encode_hidden_state(hs)
         fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
         try:
             ok = fut.result(timeout=10)
@@ -207,6 +224,12 @@ async def compare_logit_lens_ws(ws: WebSocket, name: str):
             "sublayer": sublayer,
             "cells": data.get("cells", []),
         }
+        hs_a = data.get("hidden_state_a")
+        hs_b = data.get("hidden_state_b")
+        if isinstance(hs_a, torch.Tensor):
+            msg["hidden_state_a"] = _encode_hidden_state(hs_a)
+        if isinstance(hs_b, torch.Tensor):
+            msg["hidden_state_b"] = _encode_hidden_state(hs_b)
         fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
         try:
             ok = fut.result(timeout=10)

@@ -1,10 +1,20 @@
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import * as d3 from "d3";
 import { displayToken } from "../../utils/displayToken";
+import { sliceHiddenStatePosition } from "../../utils/hiddenState";
+import { useStore } from "../../state/store";
+import { HiddenStateHeatmap } from "./HiddenStateHeatmap";
 import type { LogitLensData, ProbeResult, CellMetrics } from "../../types/api";
 
 interface Props {
   result: ProbeResult;
+}
+
+interface PinnedCell {
+  msg: LogitLensData;
+  posIdx: number;
+  x: number;
+  y: number;
 }
 
 type MetricKey = "top1_prob" | "entropy" | "top1_margin";
@@ -51,7 +61,18 @@ export function LogitLensHeatmap({ result }: Props) {
     y: number;
     content: string;
   } | null>(null);
+  const [pinned, setPinned] = useState<PinnedCell | null>(null);
   const [metric, setMetric] = useState<MetricKey>("top1_prob");
+  const sessionInfo = useStore((s) => s.sessionInfo);
+  const info = sessionInfo[result.sessionName];
+
+  const unpin = useCallback(() => setPinned(null), []);
+  useEffect(() => {
+    if (!pinned) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") unpin(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pinned, unpin]);
 
   const dataMessages = useMemo(
     () => result.data.filter((m): m is LogitLensData => m.type === "data" && "predictions" in m),
@@ -167,6 +188,10 @@ export function LogitLensHeatmap({ result }: Props) {
           .attr("fill", fill)
           .attr("rx", 2)
           .style("cursor", "pointer")
+          .on("click", (event) => {
+            setPinned({ msg, posIdx, x: event.pageX + 10, y: event.pageY + 10 });
+            setTooltip(null);
+          })
           .on("mouseenter", (event) => {
             const top = posPreds.slice(0, 5);
             const show = top.map((p) => displayToken(p.token));
@@ -303,7 +328,7 @@ export function LogitLensHeatmap({ result }: Props) {
       <div style={{ overflowX: "auto" }}>
         <svg ref={svgRef} />
       </div>
-      {tooltip && (
+      {tooltip && !pinned && (
         <div
           style={{
             position: "fixed",
@@ -321,6 +346,94 @@ export function LogitLensHeatmap({ result }: Props) {
           }}
         >
           {tooltip.content}
+        </div>
+      )}
+      {pinned && (
+        <PinnedCard
+          pinned={pinned}
+          numHeads={info?.num_heads ?? 0}
+          hiddenSize={info?.hidden_size ?? 0}
+          onClose={unpin}
+        />
+      )}
+    </div>
+  );
+}
+
+interface PinnedCardProps {
+  pinned: PinnedCell;
+  numHeads: number;
+  hiddenSize: number;
+  onClose: () => void;
+}
+
+function PinnedCard({ pinned, numHeads, hiddenSize, onClose }: PinnedCardProps) {
+  const { msg, posIdx, x, y } = pinned;
+  const cellMetrics: CellMetrics | undefined = msg.metrics?.[posIdx];
+  const top = msg.predictions[posIdx]?.slice(0, 5) ?? [];
+
+  const hiddenVec = useMemo(() => {
+    if (!msg.hidden_state) return null;
+    try {
+      return sliceHiddenStatePosition(msg.hidden_state, posIdx);
+    } catch {
+      return null;
+    }
+  }, [msg.hidden_state, posIdx]);
+
+  const headDim = numHeads > 0 && hiddenSize > 0 ? Math.floor(hiddenSize / numHeads) : 0;
+  const canRenderHeatmap = hiddenVec !== null && numHeads > 0 && headDim > 0 && hiddenVec.length === numHeads * headDim;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        left: x,
+        top: y,
+        background: "#0f1626",
+        border: "1px solid #1a5276",
+        borderRadius: 4,
+        padding: "10px 12px",
+        fontFamily: "monospace",
+        fontSize: 12,
+        color: "#e0e0f0",
+        zIndex: 200,
+        boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+        maxWidth: 520,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 6 }}>
+        <strong style={{ color: "#a0a0c0" }}>
+          L{msg.layer}.{msg.sublayer} pos {posIdx}
+        </strong>
+        <button onClick={onClose} style={{
+          background: "transparent", border: "none", color: "#888", cursor: "pointer",
+          fontSize: 14, padding: 0, lineHeight: 1,
+        }}>×</button>
+      </div>
+      {cellMetrics && (
+        <div style={{ fontSize: 11, color: "#a0a0c0", marginBottom: 6, whiteSpace: "pre" }}>
+          {`p₁ = ${(cellMetrics.top1_prob * 100).toFixed(3)}%   Δ₁₂ = ${(cellMetrics.top1_margin * 100).toFixed(3)}%   H = ${cellMetrics.entropy.toFixed(3)} nats`}
+        </div>
+      )}
+      <div style={{ fontSize: 11, color: "#8888aa", marginBottom: 6, whiteSpace: "pre" }}>
+        {top.map((p) => `${displayToken(p.token).padEnd(8)} ${(p.prob * 100).toFixed(3).padStart(7)}%`).join("\n")}
+      </div>
+      {canRenderHeatmap && hiddenVec && (
+        <div style={{ marginTop: 8 }}>
+          <HiddenStateHeatmap
+            data={hiddenVec}
+            numHeads={numHeads}
+            headDim={headDim}
+            label={`Hidden state (${numHeads} heads × ${headDim} dim, ·RdBu centered at 0)`}
+          />
+        </div>
+      )}
+      {!canRenderHeatmap && (
+        <div style={{ fontSize: 10, color: "#888", marginTop: 6 }}>
+          {msg.hidden_state
+            ? `Cannot render: numHeads=${numHeads}, hidden_size=${hiddenSize}, shape=${msg.hidden_state.shape.join("×")}`
+            : "No hidden state streamed for this frame."}
         </div>
       )}
     </div>
