@@ -23,6 +23,7 @@ export function SessionsPanel() {
   const cloneSession = useStore((s) => s.cloneSession);
 
   const [loadModelId, setLoadModelId] = useState("");
+  const [loadModelSource, setLoadModelSource] = useState<AvailableModel["source"] | null>(null);
   const [loadName, setLoadName] = useState("");
   const [loadMode, setLoadMode] = useState("auto");
   const [error, setError] = useState("");
@@ -35,7 +36,9 @@ export function SessionsPanel() {
   useEffect(() => { fetchAvailableModels(); }, [fetchAvailableModels]);
 
   const selectedModel: AvailableModel | null =
-    availableModels.find((m) => m.model_id === loadModelId) ?? null;
+    availableModels.find((m) =>
+      m.model_id === loadModelId && (loadModelSource == null || m.source === loadModelSource)
+    ) ?? null;
 
   const selectedOpDef = surgeryOps.find((op) => op.name === surgeryOp) || null;
 
@@ -134,6 +137,7 @@ export function SessionsPanel() {
       await fetchSessions();
       await fetchAvailableModels();
       setLoadModelId("");
+      setLoadModelSource(null);
       setLoadName("");
     } catch (e) {
       setError((e as Error).message);
@@ -164,7 +168,10 @@ export function SessionsPanel() {
       )}
 
       <div>
-        <ModelCombobox value={loadModelId} onChange={setLoadModelId} />
+        <ModelCombobox
+          value={loadModelId}
+          onChange={(id, source) => { setLoadModelId(id); setLoadModelSource(source); }}
+        />
         <input
           placeholder="Session name (slug)"
           value={loadName}

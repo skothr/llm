@@ -12,7 +12,7 @@ export function ModelCombobox({
   onChange,
 }: {
   value: string;
-  onChange: (modelId: string) => void;
+  onChange: (modelId: string, source: AvailableModel["source"] | null) => void;
 }) {
   const availableModels = useStore((s) => s.availableModels);
   const [isOpen, setIsOpen] = useState(false);
@@ -30,7 +30,7 @@ export function ModelCombobox({
         value={displayValue}
         onChange={(e) => {
           setFilter(e.target.value);
-          onChange(e.target.value);
+          onChange(e.target.value, null);
           setIsOpen(true);
         }}
         onFocus={() => { setFilter(""); setIsOpen(true); }}
@@ -57,7 +57,7 @@ export function ModelCombobox({
                 key={`${m.source}:${m.model_id}`}
                 style={{ padding: "4px 8px", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}
                 onMouseDown={() => {
-                  onChange(m.model_id);
+                  onChange(m.model_id, m.source);
                   setFilter("");
                   setIsOpen(false);
                 }}
