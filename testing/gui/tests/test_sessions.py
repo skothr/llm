@@ -1,10 +1,13 @@
 import pytest
 import torch
 from unittest.mock import patch
+from pydantic import ValidationError
 from transformers import LlamaConfig, LlamaForCausalLM
 from gui.backend.sessions import (
     SessionManager, SessionInfo, translate_to_current, validate_original_indices,
 )
+from gui.backend.routes.sessions import LoadRequest, ConvertRequest
+from llm_surgeon.surgery import _is_ollama_id
 
 def _make_model(n: int) -> LlamaForCausalLM:
     config = LlamaConfig(
@@ -394,4 +397,40 @@ class TestStagingValidation:
         info.stage_op("remove_layers", {"layer_indices": [5]})
         with pytest.raises(ValueError, match="staged for removal"):
             info.stage_op("zero_mlp", {"layer": 5})
+
+
+class TestModelIdValidation:
+    def test_ollama_id_detected(self):
+        assert _is_ollama_id("valid:tag")
+        assert _is_ollama_id("tinyllama:latest")
+
+    def test_traversal_rejected_before_reaching_resolver(self):
+        # The pydantic validator must fire first — _is_ollama_id("..:tag") would
+        # otherwise return True and open a path-traversal window downstream.
+        with pytest.raises(ValidationError):
+            LoadRequest(model_id="..:tag", name="s1")
+        with pytest.raises(ValidationError):
+            ConvertRequest(model_id="..:tag")
+
+    def test_rejects_slash_prefix_and_dotdot(self):
+        for bad in ("../evil", "/abs/path", "..", "foo/..", "foo:../bar",
+                    "foo/../bar", "foo\x00bar"):
+            with pytest.raises(ValidationError):
+                LoadRequest(model_id=bad, name="s1")
+
+    def test_accepts_legit_ollama_id(self):
+        req = LoadRequest(model_id="tinyllama:latest", name="s1")
+        assert req.model_id == "tinyllama:latest"
+
+    def test_accepts_legit_hf_id(self):
+        req = LoadRequest(model_id="meta-llama/Llama-3-8B", name="s1")
+        assert req.model_id == "meta-llama/Llama-3-8B"
+
+    def test_accepts_bare_name(self):
+        req = LoadRequest(model_id="tinyllama", name="s1")
+        assert req.model_id == "tinyllama"
+
+    def test_convert_request_accepts_legit_ids(self):
+        assert ConvertRequest(model_id="openlm-research/open_llama_3b").model_id
+        assert ConvertRequest(model_id="tinyllama:latest").model_id
 
