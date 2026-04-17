@@ -13,18 +13,22 @@ class HiddenStateCache:
         return sum(t.nelement() * t.element_size() for t in data.values())
 
     def put(self, session: str, prompt_hash: str, data: Dict[str, torch.Tensor]) -> None:
+        # Store on CPU so an eviction of the source session doesn't pin
+        # GPU allocations via cached references. Consumers (ops.replace,
+        # ops.project_out) move back to the target device at use time.
+        cpu_data = {k: t.detach().cpu() for k, t in data.items()}
         key = (session, prompt_hash)
         if key in self._cache:
             self._current_bytes -= self._sizes[key]
             del self._cache[key]
             del self._sizes[key]
 
-        size = self._entry_size(data)
+        size = self._entry_size(cpu_data)
         while self._current_bytes + size > self._max_bytes and self._cache:
             evict_key, _ = self._cache.popitem(last=False)
             self._current_bytes -= self._sizes.pop(evict_key)
 
-        self._cache[key] = data
+        self._cache[key] = cpu_data
         self._sizes[key] = size
         self._current_bytes += size
 
