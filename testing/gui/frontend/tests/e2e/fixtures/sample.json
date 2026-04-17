@@ -1,0 +1,115 @@
+{
+  "schema": "llm-surgeon-gui-experiment/v1",
+  "exportedAt": "2026-04-17T10:00:00.000Z",
+  "note": "Fixture used by the Playwright smoke suite. Two logit-lens results and one generate so the tab bar renders and GenerationOutput has something to display.",
+  "activeTab": "probe",
+  "prompt": "fixture prompt for seeding",
+  "operation": "logit-lens",
+  "targetSession": "fixture-A",
+  "targetSessionB": null,
+  "samplingParams": {
+    "displayTopK": 10,
+    "maxTokens": 64,
+    "temperature": 0.0,
+    "samplingTopK": 0,
+    "topP": 1.0,
+    "minP": 0.0,
+    "seed": "",
+    "repPenalty": 1.0,
+    "stopSeqs": "\\n\\n",
+    "numSeeds": 1,
+    "sweepAxis": "seed",
+    "sweepFrom": 0.0,
+    "sweepTo": 1.0,
+    "sweepAxis2": "none",
+    "sweepFrom2": 0.0,
+    "sweepTo2": 1.0,
+    "numSeeds2": 1
+  },
+  "interventionSpecs": [],
+  "captureLogitLens": false,
+  "intervenePrompt": "",
+  "interveneSession": "",
+  "promptLibrary": [
+    { "id": "p-fixture-1", "name": "fixture-prompt", "text": "A fixture prompt", "createdAt": 1700000000000 }
+  ],
+  "results": [
+    {
+      "id": "res-A",
+      "operation": "logit-lens",
+      "sessionName": "fixture-A",
+      "prompt": "The capital of France is",
+      "data": [
+        {
+          "type": "data",
+          "layer": 0,
+          "sublayer": "ffn",
+          "predictions": [
+            [{ "token": "the", "prob": 0.5 }, { "token": "a", "prob": 0.2 }],
+            [{ "token": "Paris", "prob": 0.7 }, { "token": "Lyon", "prob": 0.1 }]
+          ],
+          "metrics": [
+            { "entropy": 1.0, "top1_prob": 0.5, "top1_margin": 0.3 },
+            { "entropy": 0.6, "top1_prob": 0.7, "top1_margin": 0.6 }
+          ]
+        },
+        { "type": "complete" }
+      ],
+      "timestamp": 1700000000000,
+      "isB": false,
+      "tags": ["capital"]
+    },
+    {
+      "id": "res-B",
+      "operation": "logit-lens",
+      "sessionName": "fixture-B",
+      "prompt": "Hello world",
+      "data": [
+        {
+          "type": "data",
+          "layer": 0,
+          "sublayer": "ffn",
+          "predictions": [
+            [{ "token": "Hello", "prob": 0.9 }],
+            [{ "token": " world", "prob": 0.8 }]
+          ],
+          "metrics": [
+            { "entropy": 0.3, "top1_prob": 0.9, "top1_margin": 0.8 },
+            { "entropy": 0.4, "top1_prob": 0.8, "top1_margin": 0.7 }
+          ]
+        },
+        { "type": "complete" }
+      ],
+      "timestamp": 1700000001000,
+      "isB": false
+    },
+    {
+      "id": "res-gen",
+      "operation": "generate",
+      "sessionName": "fixture-A",
+      "prompt": "Once upon a time",
+      "data": [
+        { "type": "data", "step": 0, "token": " there", "token_id": 1, "top_k": [{ "token": " there", "prob": 0.6 }, { "token": " was", "prob": 0.2 }] },
+        { "type": "data", "step": 1, "token": " was", "token_id": 2, "top_k": [{ "token": " was", "prob": 0.9 }] },
+        { "type": "complete" }
+      ],
+      "timestamp": 1700000002000,
+      "isB": false
+    }
+  ],
+  "activeResultId": "res-A",
+  "sessionSnapshots": [
+    {
+      "name": "fixture-A",
+      "model_id": "fixture-model",
+      "mode": "bf16",
+      "num_layers": 2,
+      "pending_count": 0,
+      "applied_count": 0,
+      "device": "cuda",
+      "engine_llama": false,
+      "engine_pytorch": true,
+      "dirty": false
+    }
+  ]
+}

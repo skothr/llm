@@ -31,6 +31,11 @@ testing/gui/frontend/.vite/
 testing/gui/frontend/dist/
 testing/gui/frontend/tsconfig.tsbuildinfo
 
+# Playwright outputs (traces, screenshots, per-run reports)
+testing/gui/frontend/test-results/
+testing/gui/frontend/playwright-report/
+testing/gui/frontend/.playwright/
+
 # LaTeX build artifacts
 *.aux
 *.log
