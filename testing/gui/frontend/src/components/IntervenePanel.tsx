@@ -117,6 +117,8 @@ function InterventionCard({
 
 export function IntervenePanel() {
   const sessions = useStore((s) => s.sessions);
+  const backendOnline = useStore((s) => s.backendOnline);
+  const backendProbed = useStore((s) => s.backendProbed);
   const interventionSpecs = useStore((s) => s.interventionSpecs);
   const captureLogitLens = useStore((s) => s.captureLogitLens);
   const intervenePrompt = useStore((s) => s.intervenePrompt);
@@ -154,10 +156,15 @@ export function IntervenePanel() {
       prompt: intervenePrompt,
       data: [],
       timestamp: Date.now(),
+      isB: false,
     });
 
     const clearLocal = () => localPendingIdsRef.current.delete(resultId);
 
+    // Error/disconnect policy: discard the pending result (matches ProbePanel).
+    // Keeping half-streamed results from a crashed WS was confusing — they
+    // showed up in the results list indistinguishable from a completed run.
+    // If the user wants to preserve a partial stream, they click Stop.
     connect(resultId, `/ws/sessions/${interveneSession}/intervene`, {
       prompt: intervenePrompt,
       interventions: interventionSpecs,
@@ -165,8 +172,8 @@ export function IntervenePanel() {
     }, {
       onMessage: (msg: WsMessage) => { updatePendingResult(resultId, msg); },
       onComplete: (msg: WsMessage) => { finalizePendingResult(resultId, msg); clearLocal(); setRunning(false); },
-      onError: (message: string) => { finalizePendingResult(resultId); clearLocal(); setError(message); setRunning(false); },
-      onDisconnect: () => { finalizePendingResult(resultId); clearLocal(); setError("Connection lost"); setRunning(false); },
+      onError: (message: string) => { removePendingResult(resultId); clearLocal(); setError(message); setRunning(false); },
+      onDisconnect: () => { removePendingResult(resultId); clearLocal(); setError("Connection lost"); setRunning(false); },
     });
   };
 
@@ -199,7 +206,11 @@ export function IntervenePanel() {
 
       <div style={{ display: "flex", gap: 4 }}>
         {!isRunning ? (
-          <button onClick={handleRun} disabled={!interveneSession || interventionSpecs.length === 0}>Run</button>
+          <button
+            onClick={handleRun}
+            disabled={!interveneSession || interventionSpecs.length === 0 || (backendProbed && !backendOnline)}
+            title={backendProbed && !backendOnline ? "Backend offline — wait for reconnect" : undefined}
+          >Run</button>
         ) : (
           <>
             <button onClick={() => {

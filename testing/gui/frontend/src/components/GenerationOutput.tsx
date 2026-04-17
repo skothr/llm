@@ -11,11 +11,11 @@ export function GenerationOutput() {
     .filter((r) => r.operation === "generate");
 
   const latestA = allGen
-    .filter((r) => !r.id.endsWith("-B"))
+    .filter((r) => !r.isB)
     .sort((a, b) => b.timestamp - a.timestamp)[0];
 
   const latestB = latestA
-    ? allGen.find((r) => r.id === `${latestA.id}-B`)
+    ? allGen.find((r) => r.isB && r.id === `${latestA.id}-B`)
     : undefined;
 
   const panels = [latestA, latestB].filter(Boolean) as ProbeResult[];

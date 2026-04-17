@@ -54,11 +54,11 @@ export function VisualizationArea() {
   const rawActive = getResult(results, pendingResults, activeResultId);
   const activeResult = rawActive && rawActive.operation !== "generate"
     ? rawActive
-    : vizResults.find((r) => !r.id.includes("-B")) || null;
+    : vizResults.find((r) => !r.isB) || null;
   const isPending = activeResult ? activeResult.id in pendingResults : false;
 
-  const abPair = activeResult && !activeResult.id.includes("-B")
-    ? all.find((r) => r.id === `${activeResult.id}-B`)
+  const abPair = activeResult && !activeResult.isB
+    ? all.find((r) => r.isB && r.id === `${activeResult.id}-B`)
     : null;
 
   return (
@@ -75,7 +75,7 @@ export function VisualizationArea() {
 
       {vizResults.length > 1 && (
         <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
-          {vizResults.filter((r) => !r.id.includes("-B")).map((r) => (
+          {vizResults.filter((r) => !r.isB).map((r) => (
             <button
               key={r.id}
               onClick={() => setActiveResult(r.id)}
@@ -85,7 +85,7 @@ export function VisualizationArea() {
               }}
             >
               {r.operation} | {r.sessionName}
-              {all.find((b) => b.id === `${r.id}-B`) ? " (A/B)" : ""}
+              {all.find((b) => b.isB && b.id === `${r.id}-B`) ? " (A/B)" : ""}
               {r.id in pendingResults ? " ..." : ""}
             </button>
           ))}

@@ -251,15 +251,18 @@ export const useStore = create<StoreState>((set, get) => ({
   setRunning: (running) => set({ isRunning: running }),
 
   addResult: (result) => set((s) => ({
-    results: [result, ...s.results],
-    activeResultId: result.operation !== "generate" && !result.id.endsWith("-B") ? result.id : s.activeResultId,
+    // Dedupe by id. Defensive: addResult and finalizePendingResult should
+    // never fire for the same id today, but filtering here keeps the state
+    // machine correct if a future caller slips up.
+    results: [result, ...s.results.filter((r) => r.id !== result.id)],
+    activeResultId: result.operation !== "generate" && !result.isB ? result.id : s.activeResultId,
   })),
   clearResults: () => set({ results: [], activeResultId: null }),
   setActiveResult: (id) => set({ activeResultId: id }),
 
   setPendingResult: (id, result) => set((s) => ({
     pendingResults: { ...s.pendingResults, [id]: result },
-    activeResultId: result.operation !== "generate" && !id.endsWith("-B") ? id : s.activeResultId,
+    activeResultId: result.operation !== "generate" && !result.isB ? id : s.activeResultId,
   })),
 
   updatePendingResult: (id, msg) => set((s) => {
@@ -280,8 +283,8 @@ export const useStore = create<StoreState>((set, get) => ({
     const { [id]: _, ...remaining } = s.pendingResults;
     return {
       pendingResults: remaining,
-      results: [{ ...pending, data: finalData }, ...s.results],
-      activeResultId: pending.operation !== "generate" && !pending.id.endsWith("-B") ? pending.id : s.activeResultId,
+      results: [{ ...pending, data: finalData }, ...s.results.filter((r) => r.id !== id)],
+      activeResultId: pending.operation !== "generate" && !pending.isB ? pending.id : s.activeResultId,
     };
   }),
 
