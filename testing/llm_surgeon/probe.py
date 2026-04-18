@@ -801,7 +801,7 @@ def activation_patch(
             RuntimeWarning, stacklevel=2,
         )
 
-    # -- Tokenize once more for the forward passes (reuse ids) -------------
+    # -- Move pre-validated ids to device for the two baseline forward passes
     device = _get_input_device(model)
     clean_input_ids = clean_ids.to(device)
     corr_input_ids = corr_ids.to(device)
