@@ -85,6 +85,11 @@ export interface EncodedHiddenStateMsg {
   b64: string;
 }
 
+export interface EncodedTensor {
+  shape: number[];
+  b64: string;
+}
+
 export interface LogitLensData {
   type: "data";
   layer: number;
@@ -93,6 +98,35 @@ export interface LogitLensData {
   predictions: Array<Array<{ token: string; prob: number }>>;
   metrics?: Array<CellMetrics>;
   hidden_state?: EncodedHiddenStateMsg;
+}
+
+export interface PatchingBaselinesData {
+  type: "baselines";
+  clean_logits: EncodedTensor;
+  corrupted_logits: EncodedTensor;
+  prompt_tokens_clean: string[];
+  prompt_tokens_corrupted: string[];
+  measurement_position: number;
+  correct_token_id?: number;
+  incorrect_token_id?: number;
+}
+
+export interface PatchingCellData {
+  type: "data";
+  layer: number;
+  original_layer?: number;
+  sublayer: "attn" | "ffn";
+  position: number;
+  patched_logits: EncodedTensor;
+}
+
+export interface PatchingCompleteData {
+  type: "complete";
+  summary: {
+    num_cells: number;
+    direction: "denoise" | "noise";
+    measurement_position: number;
+  };
 }
 
 export interface GenerateData {
@@ -121,7 +155,16 @@ export interface WsError {
   message: string;
 }
 
-export type WsMessage = LogitLensData | GenerateData | InterveneData | CompareLogitLensData | WsComplete | WsError;
+export type WsMessage =
+  | LogitLensData
+  | GenerateData
+  | InterveneData
+  | CompareLogitLensData
+  | WsComplete
+  | WsError
+  | PatchingBaselinesData
+  | PatchingCellData
+  | PatchingCompleteData;
 
 export interface InterventionSpec {
   layer: number;
@@ -130,7 +173,13 @@ export interface InterventionSpec {
   params: Record<string, unknown>;
 }
 
-export type ProbeOperation = "logit-lens" | "influence" | "attention" | "residual-norms" | "generate";
+export type ProbeOperation =
+  | "logit-lens"
+  | "influence"
+  | "attention"
+  | "residual-norms"
+  | "generate"
+  | "activation-patching";
 export type ResultOperation = ProbeOperation | "intervene";
 export interface AvailableModel {
   model_id: string;
