@@ -1,0 +1,199 @@
+/**
+ * Conditional subpanel rendered by ProbePanel when operation is
+ * "activation-patching". Owns patching-only local state (debounced
+ * tokenize counts); does NOT own the Run button (ProbePanel does).
+ *
+ * Layout:
+ *   [clean prompt textarea]              [N tokens]
+ *   [corrupted prompt textarea]          [M tokens ✓/✗]
+ *   direction: (●) denoise  ( ) noise
+ *   measure @ [-1]
+ *   target:   (●) auto-pick  ( ) manual
+ *     correct: [ ]   incorrect: [ ]
+ */
+import { useEffect, useState } from "react";
+
+export interface PatchingState {
+  cleanPrompt: string;
+  corruptedPrompt: string;
+  direction: "denoise" | "noise";
+  measurementPos: number;
+  tokenPairMode: "auto" | "manual";
+  manualCorrect: string;
+  manualIncorrect: string;
+}
+
+export const DEFAULT_PATCHING_STATE: PatchingState = {
+  cleanPrompt: "",
+  corruptedPrompt: "",
+  direction: "denoise",
+  measurementPos: -1,
+  tokenPairMode: "auto",
+  manualCorrect: "",
+  manualIncorrect: "",
+};
+
+interface Props {
+  targetSession: string;
+  state: PatchingState;
+  onChange: (patch: Partial<PatchingState>) => void;
+  /** True when clean and corrupted tokenize to same length. Bound to Run enable. */
+  onLengthMatchChange: (match: boolean) => void;
+}
+
+const labelStyle: React.CSSProperties = {
+  fontFamily: "monospace", color: "#a0a0c0", fontSize: 12,
+};
+
+const gridStyle: React.CSSProperties = {
+  display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 8px",
+  alignItems: "center", fontSize: 12,
+};
+
+export function PatchingControls({ targetSession, state, onChange, onLengthMatchChange }: Props) {
+  const [cleanTokens, setCleanTokens] = useState<number | null>(null);
+  const [corrTokens, setCorrTokens] = useState<number | null>(null);
+
+  // Debounced tokenize probe for the clean prompt — mirrors the pattern
+  // ProbePanel uses for its context-budget display. 250 ms debounce keeps
+  // typing snappy without flooding the backend.
+  useEffect(() => {
+    if (!targetSession || !state.cleanPrompt) { setCleanTokens(null); return; }
+    const ac = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/sessions/${targetSession}/tokenize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: state.cleanPrompt }),
+        signal: ac.signal,
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && typeof d.count === "number") setCleanTokens(d.count); })
+        .catch(() => { /* abort / offline — leave prior count */ });
+    }, 250);
+    return () => { clearTimeout(t); ac.abort(); };
+  }, [state.cleanPrompt, targetSession]);
+
+  useEffect(() => {
+    if (!targetSession || !state.corruptedPrompt) { setCorrTokens(null); return; }
+    const ac = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/sessions/${targetSession}/tokenize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: state.corruptedPrompt }),
+        signal: ac.signal,
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && typeof d.count === "number") setCorrTokens(d.count); })
+        .catch(() => { /* abort / offline */ });
+    }, 250);
+    return () => { clearTimeout(t); ac.abort(); };
+  }, [state.corruptedPrompt, targetSession]);
+
+  const lengthsMatch =
+    cleanTokens != null && corrTokens != null && cleanTokens === corrTokens && cleanTokens > 0;
+  useEffect(() => { onLengthMatchChange(lengthsMatch); }, [lengthsMatch, onLengthMatchChange]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div>
+        <textarea
+          placeholder="Clean prompt"
+          value={state.cleanPrompt}
+          onChange={(e) => onChange({ cleanPrompt: e.target.value })}
+          rows={2}
+          style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }}
+        />
+        <div style={{ fontSize: 10, color: "#8888aa", textAlign: "right" }}>
+          {cleanTokens == null ? "\u2014" : `${cleanTokens} tokens`}
+        </div>
+      </div>
+
+      <div>
+        <textarea
+          placeholder="Corrupted prompt"
+          value={state.corruptedPrompt}
+          onChange={(e) => onChange({ corruptedPrompt: e.target.value })}
+          rows={2}
+          style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }}
+        />
+        <div style={{
+          fontSize: 10,
+          textAlign: "right",
+          color: cleanTokens == null || corrTokens == null
+            ? "#8888aa"
+            : lengthsMatch ? "#6bc06b" : "#c06060",
+        }}>
+          {corrTokens == null
+            ? "\u2014"
+            : lengthsMatch
+              ? `${corrTokens} tokens \u2713`
+              : cleanTokens != null
+                ? `${corrTokens} tokens \u2717 (lengths differ: ${cleanTokens} vs ${corrTokens})`
+                : `${corrTokens} tokens`}
+        </div>
+      </div>
+
+      <div style={gridStyle}>
+        <label style={labelStyle}>direction</label>
+        <div style={{ display: "flex", gap: 10 }}>
+          <label style={{ fontSize: 12 }}>
+            <input type="radio" name="direction" value="denoise"
+              checked={state.direction === "denoise"}
+              onChange={() => onChange({ direction: "denoise" })} />
+            {" "}denoise
+          </label>
+          <label style={{ fontSize: 12 }}>
+            <input type="radio" name="direction" value="noise"
+              checked={state.direction === "noise"}
+              onChange={() => onChange({ direction: "noise" })} />
+            {" "}noise
+          </label>
+        </div>
+
+        <label style={labelStyle} title="Absolute or negative index. -1 = last token.">measure @</label>
+        <input
+          type="number"
+          value={state.measurementPos}
+          onChange={(e) => onChange({ measurementPos: Number(e.target.value) })}
+          style={{ width: 60, fontFamily: "monospace", fontSize: 12 }}
+        />
+
+        <label style={labelStyle}>target</label>
+        <div style={{ display: "flex", gap: 10 }}>
+          <label style={{ fontSize: 12 }}>
+            <input type="radio" name="tokenPairMode" value="auto"
+              checked={state.tokenPairMode === "auto"}
+              onChange={() => onChange({ tokenPairMode: "auto" })} />
+            {" "}auto-pick
+          </label>
+          <label style={{ fontSize: 12 }}>
+            <input type="radio" name="tokenPairMode" value="manual"
+              checked={state.tokenPairMode === "manual"}
+              onChange={() => onChange({ tokenPairMode: "manual" })} />
+            {" "}manual
+          </label>
+        </div>
+
+        <label style={labelStyle}>correct</label>
+        <input type="text"
+          value={state.manualCorrect}
+          disabled={state.tokenPairMode !== "manual"}
+          onChange={(e) => onChange({ manualCorrect: e.target.value })}
+          placeholder="e.g. Paris"
+          style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }}
+        />
+
+        <label style={labelStyle}>incorrect</label>
+        <input type="text"
+          value={state.manualIncorrect}
+          disabled={state.tokenPairMode !== "manual"}
+          onChange={(e) => onChange({ manualIncorrect: e.target.value })}
+          placeholder="e.g. Rome"
+          style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }}
+        />
+      </div>
+    </div>
+  );
+}
