@@ -110,7 +110,7 @@ export function ActivationPatchingHeatmap({ result }: Props) {
     for (const c of cells) rowKeySet.add(`${c.layer}.${c.sublayer}`);
     const rowKeys = Array.from(rowKeySet).sort((a, b) => {
       const [la, sa] = a.split(".");
-      const [lb, sb] = b.split(".");
+      const [lb] = b.split(".");
       if (la !== lb) return Number(la) - Number(lb);
       return sa === "attn" ? -1 : 1;
     });
