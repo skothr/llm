@@ -5,6 +5,7 @@ import { useStopCancel } from "../hooks/useStopCancel";
 import { num } from "../utils/num";
 import { PromptLibraryBar } from "./PromptLibraryBar";
 import type { WsMessage, ProbeOperation } from "../types/api";
+import { PatchingControls, DEFAULT_PATCHING_STATE, type PatchingState } from "./PatchingControls";
 
 // Shared styles for the param grids below. A 4-column grid
 // (label | input | label | input) packs two name/value pairs per row,
@@ -74,7 +75,7 @@ const dim = (off: boolean, base: React.CSSProperties): React.CSSProperties =>
 // One-shot inspection ops (influence, attention, residual-norms) go via REST
 // because the backend returns a single complete result — a WS would buy
 // nothing but a handshake cost. Keep in sync with backend route types.
-const WS_OPS = new Set<ProbeOperation>(["logit-lens", "generate"]);
+const WS_OPS = new Set<ProbeOperation>(["logit-lens", "generate", "activation-patching"]);
 
 // Sensible default ranges per sweep axis. Used when the user flips axis
 // away from seed and the range is still at the 0..1 seed-mode default.
@@ -171,6 +172,10 @@ export function ProbePanel() {
   const setSweepTo2 = (v: number) => setSamplingParams({ sweepTo2: v });
   const setNumSeeds2 = (v: number) => setSamplingParams({ numSeeds2: Math.max(1, Math.min(8, v)) });
   const [error, setError] = useState("");
+  const [patchingState, setPatchingStateLocal] = useState<PatchingState>(DEFAULT_PATCHING_STATE);
+  const [patchingLengthsMatch, setPatchingLengthsMatch] = useState(false);
+  const updatePatchingState = (patch: Partial<PatchingState>) =>
+    setPatchingStateLocal((prev) => ({ ...prev, ...patch }));
   // Authoritative token count from the session's tokenizer; null until the
   // first successful fetch (or while re-fetching). Falls back to a char/3.5
   // estimate if the backend hasn't answered yet, so the "Context" line is
@@ -266,6 +271,11 @@ export function ProbePanel() {
 
   const getWsConfig = (maxTokensOverride?: number) => {
     if (operation === "logit-lens") return { prompt, top_k: displayTopK };
+    if (operation === "activation-patching") {
+      // AP runs go through the dedicated branch in handleRun(); this fallback
+      // is for fan-out / "Run on all" paths that shouldn't route here anyway.
+      return { prompt };
+    }
     const seedNum = seed.trim() === "" ? null : Number(seed);
     return {
       prompt,
@@ -283,6 +293,7 @@ export function ProbePanel() {
 
   const getWsPath = (session: string) => {
     if (operation === "logit-lens") return `/ws/sessions/${session}/logit-lens`;
+    if (operation === "activation-patching") return `/ws/sessions/${session}/activation-patching`;
     return `/ws/sessions/${session}/generate`;
   };
 
@@ -308,6 +319,39 @@ export function ProbePanel() {
     const resultId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     if (isWs) {
+      if (operation === "activation-patching") {
+        if (!patchingLengthsMatch) {
+          setError("Clean and corrupted prompts must tokenize to the same length.");
+          setRunning(false);
+          return;
+        }
+        localPendingIdsRef.current.add(resultId);
+        const runParamsSnapshot = { ...samplingParams };
+        setPendingResult(resultId, {
+          id: resultId,
+          operation,
+          sessionName: targetSession,
+          prompt: patchingState.cleanPrompt,
+          data: [],
+          timestamp: Date.now(),
+          isB: false,
+          runParams: runParamsSnapshot,
+        });
+        const cfg: Record<string, unknown> = {
+          clean_prompt: patchingState.cleanPrompt,
+          corrupted_prompt: patchingState.corruptedPrompt,
+          direction: patchingState.direction,
+          measurement_position: patchingState.measurementPos,
+        };
+        if (patchingState.tokenPairMode === "manual") {
+          cfg.correct_token = patchingState.manualCorrect;
+          cfg.incorrect_token = patchingState.manualIncorrect;
+        }
+        const path = `/ws/sessions/${targetSession}/activation-patching`;
+        connect(resultId, path, cfg, makeWsHandlers(resultId), targetSession);
+        return;
+      }
+
       // Fan-out: N>1 generate runs on the same session. Mutually exclusive
       // with A/B — UI disables numSeeds when B is selected, so this branch
       // can assume !targetSessionB. Optional 2nd axis produces N×M grid.
@@ -574,6 +618,7 @@ export function ProbePanel() {
         <option value="influence">Layer Influence</option>
         <option value="attention">Attention Entropy</option>
         <option value="residual-norms">Residual Norms</option>
+        <option value="activation-patching">Activation Patching</option>
       </select>
 
       <div style={{ display: "flex", gap: 4 }}>
@@ -597,6 +642,15 @@ export function ProbePanel() {
             onChange={(e) => setDisplayTopK(num(e.target.value, displayTopK))}
             style={dim(off.show, numInputStyle)} />
         </div>
+      )}
+
+      {operation === "activation-patching" && targetSession && (
+        <PatchingControls
+          targetSession={targetSession}
+          state={patchingState}
+          onChange={updatePatchingState}
+          onLengthMatchChange={setPatchingLengthsMatch}
+        />
       )}
 
       {operation === "generate" && (
