@@ -801,14 +801,75 @@ def activation_patch(
             RuntimeWarning, stacklevel=2,
         )
 
-    # Placeholder return so validation tests pass. Task 3 replaces this body
-    # with the real clean/corrupted capture + patching loop.
+    # -- Tokenize once more for the forward passes (reuse ids) -------------
+    device = _get_input_device(model)
+    clean_input_ids = clean_ids.to(device)
+    corr_input_ids = corr_ids.to(device)
+
+    # -- Capture residual streams for both prompts -------------------------
+    captured_clean, prompt_tokens_clean = _capture_residual_stream(
+        model, tokenizer, clean_prompt,
+        sublayers=sublayers, layers=layers,
+    )
+    captured_corr, prompt_tokens_corrupted = _capture_residual_stream(
+        model, tokenizer, corrupted_prompt,
+        sublayers=sublayers, layers=layers,
+    )
+
+    # -- Baseline forward passes at measurement_position -------------------
+    with torch.no_grad():
+        clean_out = model(clean_input_ids)
+        corr_out = model(corr_input_ids)
+    clean_baseline_logits = clean_out.logits[0, resolved_meas].detach().cpu()
+    corrupted_baseline_logits = corr_out.logits[0, resolved_meas].detach().cpu()
+
+    # -- Direction selects base prompt + patch source ---------------------
+    if direction == "denoise":
+        base_prompt = corrupted_prompt
+        patch_source = captured_clean
+    else:  # "noise"
+        base_prompt = clean_prompt
+        patch_source = captured_corr
+
+    # -- Resolve iteration sets -------------------------------------------
+    target_positions = list(range(seq_len)) if positions is None else list(positions)
+    # captured_* keys are already filtered by sublayers/layers; iterate them.
+    # Sort: layer-major, attn before ffn within each layer.
+    sort_key = lambda k: (k[0], 0 if k[1] == "attn" else 1)
+    triples = sorted(patch_source.keys(), key=sort_key)
+
+    # -- Patching loop ----------------------------------------------------
+    cells: List[Dict] = []
+    for (L, sub) in triples:
+        patch_tensor = patch_source[(L, sub)]  # shape: (seq_len, d_model)
+        for pos in target_positions:
+            clean_vec = patch_tensor[pos]
+            iv = Intervention(
+                layer=L, sublayer=sub,
+                fn=_make_position_patch(pos, clean_vec),
+            )
+            result = intervene(
+                model, tokenizer, base_prompt,
+                interventions=[iv],
+                capture_logit_lens=False,
+            )
+            patched_logits = result.output_logits[resolved_meas].detach().cpu()
+            cell: Dict = {
+                "layer": L,
+                "sublayer": sub,
+                "position": pos,
+                "patched_logits": patched_logits,
+            }
+            if on_cell is not None:
+                on_cell(L, sub, pos, cell)
+            cells.append(cell)
+
     return PatchingResult(
-        cells=[],
-        clean_baseline_logits=torch.zeros(0),
-        corrupted_baseline_logits=torch.zeros(0),
-        prompt_tokens_clean=tokenizer.convert_ids_to_tokens(clean_ids[0]),
-        prompt_tokens_corrupted=tokenizer.convert_ids_to_tokens(corr_ids[0]),
+        cells=cells,
+        clean_baseline_logits=clean_baseline_logits,
+        corrupted_baseline_logits=corrupted_baseline_logits,
+        prompt_tokens_clean=prompt_tokens_clean,
+        prompt_tokens_corrupted=prompt_tokens_corrupted,
         direction=direction,
         measurement_position=resolved_meas,
     )
