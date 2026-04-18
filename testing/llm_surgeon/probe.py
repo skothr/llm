@@ -724,7 +724,7 @@ class PatchingResult:
     measurement_position: int
 
 
-def activation_patch(  # pyright: ignore[reportUnusedFunction]
+def activation_patch(
     model,
     tokenizer,
     clean_prompt: str,
