@@ -6,6 +6,7 @@ import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const FIXTURE_PATH = path.join(__dirname, "fixtures", "sample.json");
+const AP_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching.json");
 
 // Wipe IDB between tests so the persistence layer doesn't carry state
 // from one case into the next. Must be called while a page is loaded on
@@ -225,4 +226,37 @@ test("bulk tag applies to every selected result", async ({ page }) => {
   // critical because the bulk-tag name also appears inside the result
   // tab buttons (tab text now includes "#bulk-tag-value").
   await expect(page.getByRole("button", { name: "bulk-tag-value", exact: true })).toBeVisible();
+});
+
+test("activation-patching heatmap renders from imported fixture", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  const apFixture = fs.readFileSync(AP_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(apFixture),
+  });
+
+  await page.getByText(/Activation Patching/).waitFor({ state: "visible", timeout: 5000 });
+
+  const metric = page.getByRole("combobox", { name: /Metric/i }).first();
+  for (const opt of [
+    "KL from clean (nats)",
+    "Top-1 matches clean",
+    "\u0394 p(clean top-1)",
+    "Logit-diff recovery",
+  ]) {
+    await metric.selectOption({ label: opt });
+    await page.waitForTimeout(50);
+  }
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
 });
