@@ -842,3 +842,175 @@ async def intervene_ws(ws: WebSocket, name: str):
             await ws.close()
         except RuntimeError:
             pass
+
+
+@router.websocket("/sessions/{name}/activation-patching")
+async def activation_patching_ws(ws: WebSocket, name: str):
+    """Streaming activation-patching: one frame per (layer, sublayer, position) cell.
+
+    Config (first JSON message):
+      {
+        "clean_prompt": str,
+        "corrupted_prompt": str,
+        "direction": "denoise" | "noise",     # default "denoise"
+        "measurement_position": int,           # default -1
+        "positions": [int] | null,             # default null (= all)
+        "sublayers": ["attn","ffn"] subset,    # default ["attn","ffn"]
+        "layers": [int] | null,                # default null (= all)
+        "correct_token": str (optional),       # for manual logit-diff token pair
+        "incorrect_token": str (optional)
+      }
+
+    Frames: status → data (N) → baselines → complete | error.
+    """
+    await ws.accept()
+    log.info("WS activation-patching connected (session='%s')", name)
+    mgr = get_manager()
+
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        log.warning("WS activation-patching: session '%s' not found", name)
+        await _send_json(ws, {"type": "error", "message": f"Session '{name}' not found"})
+        await ws.close()
+        return
+
+    try:
+        mgr.ensure_pytorch(name)
+    except Exception as e:
+        log.exception("WS activation-patching: ensure_pytorch failed for '%s'", name)
+        await _send_json(ws, {"type": "error", "message": f"Failed to load PyTorch model: {e}"})
+        await ws.close()
+        return
+
+    try:
+        raw = await ws.receive_text()
+        config = json.loads(raw)
+    except json.JSONDecodeError as e:
+        await _send_json(ws, {"type": "error", "message": f"Invalid JSON config: {e}"})
+        await ws.close()
+        return
+    except WebSocketDisconnect:
+        return
+
+    clean_prompt = config.get("clean_prompt", "")
+    corrupted_prompt = config.get("corrupted_prompt", "")
+    direction = config.get("direction", "denoise")
+    measurement_position = int(config.get("measurement_position", -1))
+    positions = config.get("positions")
+    sublayers = tuple(config.get("sublayers", ["attn", "ffn"]))
+    layers = config.get("layers")
+    correct_token = config.get("correct_token")
+    incorrect_token = config.get("incorrect_token")
+
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+
+    from llm_surgeon import probe
+
+    correct_token_id: int | None = None
+    incorrect_token_id: int | None = None
+    if correct_token is not None or incorrect_token is not None:
+        if correct_token is None or incorrect_token is None:
+            await _send_json(ws, {"type": "error",
+                                  "message": "correct_token and incorrect_token must both be provided or both omitted"})
+            await ws.close()
+            return
+        try:
+            c_ids = info.tokenizer(correct_token, add_special_tokens=False)["input_ids"]
+            i_ids = info.tokenizer(incorrect_token, add_special_tokens=False)["input_ids"]
+            if len(c_ids) != 1 or len(i_ids) != 1:
+                raise ValueError(
+                    f"correct_token/incorrect_token must tokenize to exactly one token "
+                    f"(got {len(c_ids)} and {len(i_ids)})"
+                )
+            correct_token_id = int(c_ids[0])
+            incorrect_token_id = int(i_ids[0])
+        except Exception as e:
+            await _send_json(ws, {"type": "error", "message": str(e)})
+            await ws.close()
+            return
+
+    connected = True
+    loop = asyncio.get_running_loop()
+
+    def on_cell(layer_idx, sublayer, position, cell):
+        nonlocal connected
+        if not connected:
+            return
+        msg = {
+            "type": "data",
+            "layer": layer_idx,
+            "original_layer": (info._layer_map[layer_idx]
+                               if layer_idx < len(info._layer_map) else layer_idx),
+            "sublayer": sublayer,
+            "position": position,
+            "patched_logits": _encode_hidden_state(cell["patched_logits"]),
+        }
+        fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
+        try:
+            ok = fut.result(timeout=10)
+        except Exception:
+            ok = False
+        if not ok:
+            connected = False
+
+    if info.dirty:
+        await _send_json(ws, {"type": "status", "message": "Waiting for model export..."})
+
+    try:
+        async with info.lock:
+            await _send_json(ws, {"type": "status", "message": "Capturing activations..."})
+            result = await loop.run_in_executor(
+                None,
+                lambda: probe.activation_patch(
+                    info.model, info.tokenizer,
+                    clean_prompt=clean_prompt,
+                    corrupted_prompt=corrupted_prompt,
+                    direction=direction,
+                    measurement_position=measurement_position,
+                    positions=positions,
+                    sublayers=sublayers,
+                    layers=layers,
+                    on_cell=on_cell,
+                ),
+            )
+
+        if connected:
+            baselines_msg: dict = {
+                "type": "baselines",
+                "clean_logits": _encode_hidden_state(result.clean_baseline_logits),
+                "corrupted_logits": _encode_hidden_state(result.corrupted_baseline_logits),
+                "prompt_tokens_clean": result.prompt_tokens_clean,
+                "prompt_tokens_corrupted": result.prompt_tokens_corrupted,
+                "measurement_position": result.measurement_position,
+            }
+            if correct_token_id is None:
+                correct_token_id = int(result.clean_baseline_logits.argmax().item())
+                incorrect_token_id = int(result.corrupted_baseline_logits.argmax().item())
+            baselines_msg["correct_token_id"] = correct_token_id
+            baselines_msg["incorrect_token_id"] = incorrect_token_id
+            await _send_json(ws, baselines_msg)
+
+            await _send_json(ws, {
+                "type": "complete",
+                "summary": {
+                    "num_cells": len(result.cells),
+                    "direction": result.direction,
+                    "measurement_position": result.measurement_position,
+                },
+            })
+
+    except ValueError as e:
+        log.warning("WS activation-patching validation error: %s", e)
+        await _send_json(ws, {"type": "error", "message": str(e)})
+    except Exception as e:
+        log.exception("WS activation-patching error (session='%s')", name)
+        await _send_json(ws, {"type": "error", "message": str(e)})
+    finally:
+        log.info("WS activation-patching disconnected (session='%s')", name)
+        try:
+            await ws.close()
+        except RuntimeError:
+            pass
