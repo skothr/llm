@@ -1,0 +1,89 @@
+{
+  "schema": "llm-surgeon-gui-experiment/v1",
+  "exportedAt": "2026-04-17T10:00:00.000Z",
+  "note": "Minimal activation-patching fixture for the Playwright smoke test. One baselines message + two cells (attn+ffn) + complete.",
+  "activeTab": "probe",
+  "prompt": "The capital of France is",
+  "operation": "activation-patching",
+  "targetSession": "test-session",
+  "targetSessionB": null,
+  "samplingParams": {
+    "displayTopK": 10,
+    "maxTokens": 64,
+    "temperature": 0.0,
+    "samplingTopK": 0,
+    "topP": 1.0,
+    "minP": 0.0,
+    "seed": "",
+    "repPenalty": 1.0,
+    "stopSeqs": "\\n\\n",
+    "numSeeds": 1,
+    "sweepAxis": "seed",
+    "sweepFrom": 0.0,
+    "sweepTo": 1.0,
+    "sweepAxis2": "none",
+    "sweepFrom2": 0.0,
+    "sweepTo2": 1.0,
+    "numSeeds2": 1
+  },
+  "interventionSpecs": [],
+  "captureLogitLens": false,
+  "intervenePrompt": "",
+  "interveneSession": "",
+  "promptLibrary": [],
+  "results": [
+    {
+      "id": "ap-test-1",
+      "operation": "activation-patching",
+      "sessionName": "test-session",
+      "prompt": "The capital of France is",
+      "timestamp": 1713000000000,
+      "isB": false,
+      "data": [
+        {
+          "type": "baselines",
+          "clean_logits": {"shape": [4], "b64": "zczMPc3MTD6amZk+zcxMPw=="},
+          "corrupted_logits": {"shape": [4], "b64": "zczMPc3MTD6amZk+zcxMPw=="},
+          "prompt_tokens_clean": ["The", "capital", "of", "France"],
+          "prompt_tokens_corrupted": ["The", "capital", "of", "Italy"],
+          "measurement_position": 3,
+          "correct_token_id": 0,
+          "incorrect_token_id": 1
+        },
+        {
+          "type": "data",
+          "layer": 0,
+          "sublayer": "attn",
+          "position": 0,
+          "patched_logits": {"shape": [4], "b64": "zczMPc3MTD6amZk+zcxMPw=="}
+        },
+        {
+          "type": "data",
+          "layer": 0,
+          "sublayer": "ffn",
+          "position": 1,
+          "patched_logits": {"shape": [4], "b64": "zczMPc3MTD6amZk+zcxMPw=="}
+        },
+        {
+          "type": "complete",
+          "summary": {"num_cells": 2, "direction": "denoise", "measurement_position": 3}
+        }
+      ]
+    }
+  ],
+  "activeResultId": "ap-test-1",
+  "sessionSnapshots": [
+    {
+      "name": "test-session",
+      "model_id": "fixture-model",
+      "mode": "bf16",
+      "num_layers": 2,
+      "pending_count": 0,
+      "applied_count": 0,
+      "device": "cuda",
+      "engine_llama": false,
+      "engine_pytorch": true,
+      "dirty": false
+    }
+  ]
+}
