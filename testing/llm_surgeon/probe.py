@@ -517,6 +517,26 @@ ops = _Ops()
 
 
 # ---------------------------------------------------------------------------
+# Activation patching — position-scoped replace for causal attribution
+# ---------------------------------------------------------------------------
+
+def _make_position_patch(pos: int, clean_vec: torch.Tensor) -> _Op:  # pyright: ignore[reportUnusedFunction]
+    """Build an intervention op that replaces hidden_state[pos] with clean_vec,
+    leaving all other positions untouched.
+
+    Used by activation_patch() to inject a single cached activation at exactly
+    one (layer, sublayer, position) triple during a corrupted (or clean) base
+    forward pass. The clone avoids mutating the input tensor that intervene()'s
+    hook path still references downstream.
+    """
+    def fn(h: torch.Tensor, _layer_idx: int) -> torch.Tensor:
+        out = h.clone()
+        out[pos] = clean_vec.to(device=h.device, dtype=h.dtype)
+        return out
+    return _Op(fn, f"patch_pos({pos})")
+
+
+# ---------------------------------------------------------------------------
 # Intervention API
 # ---------------------------------------------------------------------------
 
