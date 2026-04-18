@@ -707,3 +707,108 @@ def intervene(
         logit_lens_result=logit_lens_result,
         interventions_applied=interventions_applied,
     )
+
+
+# ---------------------------------------------------------------------------
+# Activation patching — public API
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PatchingResult:
+    cells: List[Dict]
+    clean_baseline_logits: torch.Tensor
+    corrupted_baseline_logits: torch.Tensor
+    prompt_tokens_clean: List[str]
+    prompt_tokens_corrupted: List[str]
+    direction: str
+    measurement_position: int
+
+
+def activation_patch(  # pyright: ignore[reportUnusedFunction]
+    model,
+    tokenizer,
+    clean_prompt: str,
+    corrupted_prompt: str,
+    *,
+    direction: str = "denoise",
+    measurement_position: int = -1,
+    positions: Optional[List[int]] = None,
+    sublayers: Tuple[str, ...] = ("attn", "ffn"),
+    layers: Optional[List[int]] = None,
+    on_cell: Optional[Callable[[int, str, int, Dict], None]] = None,
+) -> PatchingResult:
+    """Causal attribution via activation patching.
+
+    Given two same-length prompts (clean, corrupted), computes how much each
+    (layer, sublayer, position) residual-stream point causally drives the
+    output delta between clean and corrupted behavior. See
+    docs/superpowers/specs/2026-04-17-phase3-activation-patching-design.md.
+
+    Args:
+        direction: "denoise" (base=corrupted, patches from clean — bright cells
+            are *sufficient* for clean behavior) or "noise" (base=clean, patches
+            from corrupted — bright cells are *necessary* for clean behavior).
+        measurement_position: absolute or negative (-1 = last) index where
+            output logits are recorded. Out-of-range raises IndexError.
+        positions: patch-position subset; None = all positions.
+        sublayers: must be subset of {"attn", "ffn"}.
+        layers: layer subset; None = all layers.
+        on_cell: called with (layer, sublayer, position, cell_dict) per frame,
+            before the frame is appended to the result. Used by the WS handler
+            to stream cells live.
+
+    Returns:
+        PatchingResult with one cell per iterated (layer, sublayer, position).
+    """
+    if direction not in ("denoise", "noise"):
+        raise ValueError(f"direction must be 'denoise' or 'noise', got {direction!r}")
+
+    if not clean_prompt:
+        raise ValueError("clean_prompt cannot be empty")
+    if not corrupted_prompt:
+        raise ValueError("corrupted_prompt cannot be empty")
+
+    allowed_subs = {"attn", "ffn"}
+    if not set(sublayers).issubset(allowed_subs):
+        raise ValueError(f"sublayers must be subset of {allowed_subs}, got {sublayers}")
+
+    clean_ids = tokenizer(clean_prompt, return_tensors="pt")["input_ids"]
+    corr_ids = tokenizer(corrupted_prompt, return_tensors="pt")["input_ids"]
+    n_clean = clean_ids.shape[1]
+    n_corr = corr_ids.shape[1]
+    if n_clean != n_corr:
+        raise ValueError(
+            f"prompts must tokenize to same length (clean={n_clean}, corrupted={n_corr})"
+        )
+    seq_len = n_clean
+
+    if measurement_position < -seq_len or measurement_position >= seq_len:
+        raise IndexError(
+            f"measurement_position {measurement_position} out of range for seq_len={seq_len}"
+        )
+    resolved_meas = measurement_position % seq_len
+
+    if positions is not None:
+        for p in positions:
+            if p < 0 or p >= seq_len:
+                raise IndexError(f"position {p} out of range for seq_len={seq_len}")
+
+    if getattr(model, "hf_quantizer", None) is not None:
+        import warnings
+        warnings.warn(
+            "activation_patch on a quantized model: patching works but round-trips "
+            "through dequant — slower and slightly less precise than fp16/fp32.",
+            RuntimeWarning, stacklevel=2,
+        )
+
+    # Placeholder return so validation tests pass. Task 3 replaces this body
+    # with the real clean/corrupted capture + patching loop.
+    return PatchingResult(
+        cells=[],
+        clean_baseline_logits=torch.zeros(0),
+        corrupted_baseline_logits=torch.zeros(0),
+        prompt_tokens_clean=tokenizer.convert_ids_to_tokens(clean_ids[0]),
+        prompt_tokens_corrupted=tokenizer.convert_ids_to_tokens(corr_ids[0]),
+        direction=direction,
+        measurement_position=resolved_meas,
+    )
