@@ -4,6 +4,7 @@ import { LayerInfluence } from "./visualizations/LayerInfluence";
 import { ABDiff } from "./visualizations/ABDiff";
 import { AttentionEntropy } from "./visualizations/AttentionEntropy";
 import { ResidualNorms } from "./visualizations/ResidualNorms";
+import { ActivationPatchingHeatmap } from "./visualizations/ActivationPatchingHeatmap";
 import { ResultMetaEditor } from "./ResultMetaEditor";
 import { ResultFilterBar, makeResultPredicate } from "./ResultFilterBar";
 import { BulkActionBar } from "./BulkActionBar";
@@ -206,6 +207,8 @@ export function VisualizationArea() {
           <AttentionEntropy result={activeResult} />
         ) : activeResult.operation === "residual-norms" ? (
           <ResidualNorms result={activeResult} />
+        ) : activeResult.operation === "activation-patching" ? (
+          <ActivationPatchingHeatmap result={activeResult} />
         ) : (
           <p style={{ color: "#666" }}>No visualization for {activeResult.operation}</p>
         )
