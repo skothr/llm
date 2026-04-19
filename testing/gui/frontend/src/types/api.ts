@@ -117,7 +117,8 @@ export interface PatchingCellData {
   original_layer?: number;
   sublayer: "attn" | "ffn";
   position: number;
-  patched_logits: EncodedTensor;
+  patched_logits?: EncodedTensor;
+  ap_recovery?: number;
 }
 
 export interface PatchingCompleteData {
@@ -126,6 +127,7 @@ export interface PatchingCompleteData {
     num_cells: number;
     direction: "denoise" | "noise";
     measurement_position: number;
+    mode?: "exact" | "approx";
   };
 }
 
