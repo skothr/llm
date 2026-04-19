@@ -57,6 +57,19 @@ class SessionInfo:
     def num_original_layers(self) -> int:
         return self._original_config.num_hidden_layers
 
+    def original_layer(self, current_idx: int) -> int:
+        """Map a current layer index to its original (pre-surgery) index.
+
+        For sessions with no surgery applied, `_layer_map` is `list(range(N))`
+        and this returns `current_idx`. For compressed sessions it returns the
+        historical layer the current position maps to. Out-of-range indices
+        pass through unchanged (defensive — the frontend sometimes sees stale
+        indices during op apply/revert windows).
+        """
+        if current_idx < len(self._layer_map):
+            return self._layer_map[current_idx]
+        return current_idx
+
     def stage_op(self, operation: str, params: dict) -> dict:
         validate_original_indices(operation, params, self.num_original_layers)
         self._check_conflicts(operation, params)

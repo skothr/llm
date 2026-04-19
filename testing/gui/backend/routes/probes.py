@@ -144,7 +144,7 @@ async def logit_lens_ws(ws: WebSocket, name: str):
         msg = {
             "type": "data",
             "layer": layer_idx,
-            "original_layer": info._layer_map[layer_idx] if layer_idx < len(info._layer_map) else layer_idx,
+            "original_layer": info.original_layer(layer_idx),
             "sublayer": sublayer,
             "predictions": serializable_preds,
             "metrics": data.get("metrics", []),
@@ -975,8 +975,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
         msg: dict = {
             "type": "data",
             "layer": layer_idx,
-            "original_layer": (info._layer_map[layer_idx]
-                               if layer_idx < len(info._layer_map) else layer_idx),
+            "original_layer": info.original_layer(layer_idx),
             "sublayer": sublayer,
             "position": position,
         }
