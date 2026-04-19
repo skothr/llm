@@ -908,6 +908,14 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
     from llm_surgeon import probe
+    from llm_surgeon.probe import attribution_patch
+
+    mode = config.get("mode", "exact")
+    if mode not in ("exact", "approx"):
+        await _send_json(ws, {"type": "error",
+                              "message": f"mode must be 'exact' or 'approx', got {mode!r}"})
+        await ws.close()
+        return
 
     correct_token_id: int | None = None
     incorrect_token_id: int | None = None
@@ -932,22 +940,50 @@ async def activation_patching_ws(ws: WebSocket, name: str):
             await ws.close()
             return
 
+    # approx mode requires token IDs before the call (backward needs a scalar metric).
+    # Auto-pick: do a quick no_grad forward on the clean prompt to argmax the target pair.
+    if mode == "approx" and correct_token_id is None:
+        try:
+            def _auto_pick_ids():
+                device = next(info.model.parameters()).device
+                clean_ids = info.tokenizer(clean_prompt, return_tensors="pt")["input_ids"].to(device)
+                corr_ids = info.tokenizer(corrupted_prompt, return_tensors="pt")["input_ids"].to(device)
+                with torch.no_grad():
+                    clean_logits = info.model(clean_ids).logits[0, measurement_position]
+                    corr_logits = info.model(corr_ids).logits[0, measurement_position]
+                return (
+                    int(clean_logits.argmax().item()),
+                    int(corr_logits.argmax().item()),
+                )
+            loop = asyncio.get_running_loop()
+            async with info.lock:
+                correct_token_id, incorrect_token_id = await loop.run_in_executor(
+                    None, _auto_pick_ids
+                )
+        except Exception as e:
+            await _send_json(ws, {"type": "error", "message": f"Auto-pick token IDs failed: {e}"})
+            await ws.close()
+            return
+
     connected = True
     loop = asyncio.get_running_loop()
 
-    def on_cell(layer_idx, sublayer, position, cell):
+    def on_cell(layer_idx: int, sublayer: str, position: int, cell: dict) -> None:
         nonlocal connected
         if not connected:
             return
-        msg = {
+        msg: dict = {
             "type": "data",
             "layer": layer_idx,
             "original_layer": (info._layer_map[layer_idx]
                                if layer_idx < len(info._layer_map) else layer_idx),
             "sublayer": sublayer,
             "position": position,
-            "patched_logits": _encode_hidden_state(cell["patched_logits"]),
         }
+        if "patched_logits" in cell:
+            msg["patched_logits"] = _encode_hidden_state(cell["patched_logits"])
+        if "ap_recovery" in cell:
+            msg["ap_recovery"] = cell["ap_recovery"]
         fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
         try:
             ok = fut.result(timeout=10)
@@ -962,20 +998,41 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     try:
         async with info.lock:
             await _send_json(ws, {"type": "status", "message": "Capturing activations..."})
-            result = await loop.run_in_executor(
-                None,
-                lambda: probe.activation_patch(
-                    info.model, info.tokenizer,
-                    clean_prompt=clean_prompt,
-                    corrupted_prompt=corrupted_prompt,
-                    direction=direction,
-                    measurement_position=measurement_position,
-                    positions=positions,
-                    sublayers=sublayers,
-                    layers=layers,
-                    on_cell=on_cell,
-                ),
-            )
+            if mode == "exact":
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: probe.activation_patch(
+                        info.model, info.tokenizer,
+                        clean_prompt=clean_prompt,
+                        corrupted_prompt=corrupted_prompt,
+                        direction=direction,
+                        measurement_position=measurement_position,
+                        positions=positions,
+                        sublayers=sublayers,
+                        layers=layers,
+                        on_cell=on_cell,
+                    ),
+                )
+            else:
+                assert correct_token_id is not None and incorrect_token_id is not None
+                _cid: int = correct_token_id
+                _iid: int = incorrect_token_id
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: attribution_patch(
+                        info.model, info.tokenizer,
+                        clean_prompt=clean_prompt,
+                        corrupted_prompt=corrupted_prompt,
+                        correct_token_id=_cid,
+                        incorrect_token_id=_iid,
+                        direction=direction,
+                        measurement_position=measurement_position,
+                        positions=positions,
+                        sublayers=sublayers,
+                        layers=layers,
+                        on_cell=on_cell,
+                    ),
+                )
 
         if connected:
             baselines_msg: dict = {
@@ -999,6 +1056,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                     "num_cells": len(result.cells),
                     "direction": result.direction,
                     "measurement_position": result.measurement_position,
+                    "mode": result.mode,
                 },
             })
 
