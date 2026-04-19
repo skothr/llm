@@ -722,6 +722,7 @@ class PatchingResult:
     prompt_tokens_corrupted: List[str]
     direction: str
     measurement_position: int
+    mode: str = "exact"  # "exact" | "approx"
 
 
 def activation_patch(
