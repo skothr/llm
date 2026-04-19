@@ -127,8 +127,6 @@ def _gguf_meta_cached(blob_path: Path) -> dict:
     if cached is not None:
         return cached
     try:
-        import sys
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
         from llm_surgeon.gguf_reader import gguf_model_meta
         meta = gguf_model_meta(blob_path) or {}
     except Exception:
@@ -377,9 +375,6 @@ async def load_session(req: LoadRequest):
     if req.name in mgr._sessions:
         raise HTTPException(409, f"Session '{req.name}' already exists")
 
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-
     from llm_surgeon.surgery import _is_ollama_id
     if _is_ollama_id(req.model_id):
         from llm_surgeon.gguf_reader import resolve_ollama_blob, _build_tokenizer, GGUFFile
@@ -559,8 +554,6 @@ async def commit_surgery(name: str):
     if not info.has_pending:
         raise HTTPException(409, "No pending operations to commit")
 
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import surgery
     from ..sessions import update_layer_map, translate_to_current
 
@@ -626,8 +619,7 @@ async def revert_surgery(name: str):
     if not info.applied_ops:
         raise HTTPException(409, "No applied operations to revert")
 
-    import sys, gc
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+    import gc
     from llm_surgeon import surgery
     from llm_surgeon.surgery import _is_cached
     import shutil
@@ -802,8 +794,7 @@ async def clone_session(name: str, req: CloneRequest):
         raise HTTPException(404, f"Session '{name}' not found")
     log.info("Cloning session '%s' -> '%s'", name, req.target_name)
 
-    import copy, sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+    import copy
 
     # Remember whether the original was on GPU so we can move it back after
     # briefly evicting it for the clone's fresh load.
