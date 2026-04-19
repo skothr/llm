@@ -72,7 +72,7 @@ export function ActivationPatchingHeatmap({ result }: Props) {
   const corruptedLogits = useMemo(
     () => baselines ? decodeLogits(baselines.corrupted_logits) : null, [baselines]);
   const cellLogits = useMemo(
-    () => new Map(cells.map((c) => [`${c.layer}.${c.sublayer}.${c.position}`, decodeLogits(c.patched_logits)])),
+    () => new Map(cells.map((c) => [`${c.layer}.${c.sublayer}.${c.position}`, decodeLogits(c.patched_logits!)])),
     [cells]
   );
 
