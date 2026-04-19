@@ -488,6 +488,41 @@ async def tokenize_prompt(name: str, req: TokenizeRequest):
         raise HTTPException(500, "Session has no tokenizer loaded")
     return {"count": count}
 
+
+class DecodeIdsRequest(BaseModel):
+    ids: List[int]
+
+
+_DECODE_IDS_MAX = 64  # pin-card tops out at ~10; 64 leaves headroom for batches
+
+
+@router.post("/sessions/{name}/decode-ids")
+async def decode_token_ids(name: str, req: DecodeIdsRequest):
+    """Return the string rendering of each token id under this session's
+    tokenizer. Used by the activation-patching pin card to show top-k
+    tokens without shipping the entire vocabulary to the browser.
+    """
+    if len(req.ids) > _DECODE_IDS_MAX:
+        raise HTTPException(
+            413,
+            f"too many ids ({len(req.ids)}); limit is {_DECODE_IDS_MAX}",
+        )
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    if info.tokenizer is None:
+        raise HTTPException(500, "Session has no tokenizer loaded")
+    tok = info.tokenizer
+    # decode per-id rather than as a batch so we get separable tokens
+    # (batch decode would merge into a single string including spacing).
+    tokens = await asyncio.get_running_loop().run_in_executor(
+        None, lambda: [tok.decode([i], skip_special_tokens=False) for i in req.ids]
+    )
+    return {"tokens": tokens}
+
+
 VALID_OPS = {op["name"] for op in SURGERY_OPS}
 
 @router.post("/sessions/{name}/surgery")

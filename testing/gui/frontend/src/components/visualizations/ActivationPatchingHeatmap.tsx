@@ -2,7 +2,8 @@ import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import * as d3 from "d3";
 import { ExportButtons } from "../ExportButtons";
 import {
-  decodeLogits, logitDiffRecovery, klFromClean, top1Match, probDelta,
+  decodeLogits, logitDiffRecovery, klFromClean, top1Match, probDelta, topK,
+  type TopKEntry,
 } from "../../utils/patchingMetrics";
 import type { ProbeResult, PatchingBaselinesData, PatchingCellData, PatchingCompleteData } from "../../types/api";
 
@@ -289,19 +290,73 @@ export function ActivationPatchingHeatmap({ result }: Props) {
       </div>
       <div style={{ overflowX: "auto" }}><svg ref={svgRef} /></div>
       {pinned && (
-        <PinnedCard cell={pinned.cell} x={pinned.x} y={pinned.y} mode={mode} onClose={() => setPinned(null)} />
+        <PinnedCard
+          cell={pinned.cell}
+          x={pinned.x} y={pinned.y}
+          mode={mode}
+          sessionName={result.sessionName}
+          baselines={baselines}
+          onClose={() => setPinned(null)}
+        />
       )}
     </div>
   );
 }
 
-function PinnedCard({ cell, x, y, mode, onClose }: { cell: PatchingCellData; x: number; y: number; mode: "exact" | "approx"; onClose: () => void }) {
+interface PinnedCardProps {
+  cell: PatchingCellData;
+  x: number; y: number;
+  mode: "exact" | "approx";
+  sessionName: string;
+  baselines: PatchingBaselinesData | undefined;
+  onClose: () => void;
+}
+
+function PinnedCard({ cell, x, y, mode, sessionName, baselines, onClose }: PinnedCardProps) {
+  // Exact-mode top-k decoding: compute top-5 indices client-side from the
+  // cell's patched_logits and the shared clean baseline, then fetch string
+  // renderings for those ids from the session tokenizer. Runs once per
+  // pin-click; cached in state. Approx mode skips this entirely.
+  const [patchedTop, setPatchedTop] = useState<TopKEntry[]>([]);
+  const [cleanTop, setCleanTop] = useState<TopKEntry[]>([]);
+  const [tokenMap, setTokenMap] = useState<Map<number, string>>(new Map());
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "exact" || !cell.patched_logits || !baselines) return;
+    const patchedLogits = decodeLogits(cell.patched_logits);
+    const cleanLogits = decodeLogits(baselines.clean_logits);
+    const pTop = topK(patchedLogits, 5);
+    const cTop = topK(cleanLogits, 5);
+    setPatchedTop(pTop);
+    setCleanTop(cTop);
+    const uniqueIds = Array.from(new Set([...pTop, ...cTop].map((e) => e.id)));
+    const ac = new AbortController();
+    fetch(`/api/sessions/${sessionName}/decode-ids`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: uniqueIds }),
+      signal: ac.signal,
+    })
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error(`decode-ids ${r.status}`)))
+      .then((data: { tokens: string[] }) => {
+        const m = new Map<number, string>();
+        uniqueIds.forEach((id, i) => m.set(id, data.tokens[i]));
+        setTokenMap(m);
+        setError(null);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") setError(e.message ?? String(e));
+      });
+    return () => ac.abort();
+  }, [mode, cell, sessionName, baselines]);
+
   return (
     <div style={{
       position: "fixed", left: x, top: y, background: "#0f1626",
       border: "1px solid #1a5276", borderRadius: 4, padding: "10px 12px",
       fontFamily: "monospace", fontSize: 12, color: "#e0e0f0", zIndex: 200,
-      boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+      boxShadow: "0 4px 16px rgba(0,0,0,0.5)", minWidth: 280,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 6 }}>
         <strong style={{ color: "#a0a0c0" }}>
@@ -319,11 +374,30 @@ function PinnedCard({ cell, x, y, mode, onClose }: { cell: PatchingCellData; x: 
             First-order approximation \u2014 run exact mode to confirm.
           </div>
         </div>
-      ) : (
-        <div style={{ fontSize: 10, color: "#888" }}>
-          Click a cell to see patched logits (detailed top-k view \u2014 enhancement).
+      ) : patchedTop.length > 0 ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 4 }}>
+          <TopKColumn title="patched" entries={patchedTop} tokens={tokenMap} />
+          <TopKColumn title="clean" entries={cleanTop} tokens={tokenMap} />
         </div>
+      ) : error ? (
+        <div style={{ fontSize: 10, color: "#c88" }}>decode-ids failed: {error}</div>
+      ) : (
+        <div style={{ fontSize: 10, color: "#888" }}>decoding top-5 tokens...</div>
       )}
+    </div>
+  );
+}
+
+function TopKColumn({ title, entries, tokens }: { title: string; entries: TopKEntry[]; tokens: Map<number, string> }) {
+  return (
+    <div>
+      <div style={{ color: "#8888aa", fontSize: 10, marginBottom: 2 }}>{title}</div>
+      {entries.map((e) => (
+        <div key={e.id} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+          <span style={{ color: "#e0e0f0" }}>{tokens.get(e.id) ?? `<${e.id}>`}</span>
+          <span style={{ color: "#888" }}>{e.prob.toFixed(3)}</span>
+        </div>
+      ))}
     </div>
   );
 }

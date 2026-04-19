@@ -98,3 +98,30 @@ function argmax(arr: Float32Array): number {
   }
   return best;
 }
+
+export interface TopKEntry {
+  id: number;
+  prob: number;
+}
+
+/**
+ * Top-k indices by probability after softmax. Used by the AP pin card to show
+ * top tokens for the clicked cell. O(n log k) via partial sort; cheap for
+ * vocab sizes up to ~100k and k ≤ 10.
+ */
+export function topK(logits: Float32Array, k: number): TopKEntry[] {
+  const probs = softmax(logits);
+  const result: TopKEntry[] = [];
+  for (let i = 0; i < probs.length; i++) {
+    if (result.length < k) {
+      result.push({ id: i, prob: probs[i] });
+      if (result.length === k) result.sort((a, b) => b.prob - a.prob);
+    } else if (probs[i] > result[k - 1].prob) {
+      result[k - 1] = { id: i, prob: probs[i] };
+      for (let j = k - 1; j > 0 && result[j].prob > result[j - 1].prob; j--) {
+        [result[j], result[j - 1]] = [result[j - 1], result[j]];
+      }
+    }
+  }
+  return result;
+}
