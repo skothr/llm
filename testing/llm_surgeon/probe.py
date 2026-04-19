@@ -175,6 +175,71 @@ def _capture_residual_stream(model, tokenizer, prompt, sublayers=("ffn",), layer
     return captured, prompt_tokens
 
 
+def _capture_residual_stream_with_grad(
+    model,
+    tokenizer,
+    prompt: str,
+    sublayers: Tuple[str, ...] = ("attn", "ffn"),
+    layers: Optional[List[int]] = None,
+) -> Tuple[Dict[Tuple[int, str], torch.Tensor], torch.Tensor, List[str]]:
+    """Capture residual-stream states with autograd graph intact.
+
+    Mirrors _capture_residual_stream but keeps tensors attached to the graph
+    so a downstream .backward() populates .grad on each captured tensor.
+    Caller is responsible for providing a torch.enable_grad() context.
+
+    Returns: (captured_states, output_logits, prompt_tokens)
+    """
+    device = _get_input_device(model)
+    enc = tokenizer(prompt, return_tensors="pt")
+    input_ids = enc["input_ids"].to(device)
+    prompt_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
+
+    num_layers = len(model.model.layers)
+    target_layers = set(range(num_layers)) if layers is None else set(layers)
+
+    captured: Dict[Tuple[int, str], torch.Tensor] = {}
+    hooks: List = []
+
+    for i in range(num_layers):
+        if i not in target_layers:
+            continue
+
+        if "attn" in sublayers:
+            def make_attn(idx):
+                def hook(_module, _inp, out):
+                    # Capture self_attn's direct output (attn delta) — this
+                    # tensor IS in the main computation graph, so retain_grad()
+                    # correctly accumulates .grad after a downstream backward().
+                    # Shape: (batch=1, seq_len, d_model).
+                    attn_out = out[0] if isinstance(out, tuple) else out
+                    if attn_out.requires_grad:
+                        attn_out.retain_grad()
+                    captured[(idx, "attn")] = attn_out
+                return hook
+            hooks.append(model.model.layers[i].self_attn.register_forward_hook(make_attn(i)))
+
+        if "ffn" in sublayers:
+            def make_ffn(idx):
+                def hook(_module, _inp, out):
+                    # Capture the decoder layer's full output — this IS in the
+                    # main graph. Shape: (batch=1, seq_len, d_model).
+                    hidden = out[0] if isinstance(out, tuple) else out
+                    if hidden.requires_grad:
+                        hidden.retain_grad()
+                    captured[(idx, "ffn")] = hidden
+                return hook
+            hooks.append(model.model.layers[i].register_forward_hook(make_ffn(i)))
+
+    try:
+        model_output = model(input_ids)
+    finally:
+        for h in hooks:
+            h.remove()
+
+    return captured, model_output.logits[0], prompt_tokens
+
+
 # ---------------------------------------------------------------------------
 # Observation API
 # ---------------------------------------------------------------------------
@@ -873,4 +938,163 @@ def activation_patch(
         prompt_tokens_corrupted=prompt_tokens_corrupted,
         direction=direction,
         measurement_position=resolved_meas,
+    )
+
+
+def attribution_patch(
+    model,
+    tokenizer,
+    clean_prompt: str,
+    corrupted_prompt: str,
+    *,
+    correct_token_id: int,
+    incorrect_token_id: int,
+    direction: str = "denoise",
+    measurement_position: int = -1,
+    positions: Optional[List[int]] = None,
+    sublayers: Tuple[str, ...] = ("attn", "ffn"),
+    layers: Optional[List[int]] = None,
+    on_cell: Optional[Callable[[int, str, int, Dict], None]] = None,
+) -> PatchingResult:
+    """Gradient-based attribution patching (Phase 3.5).
+
+    One forward + one backward pass produces a per-cell AP score that
+    approximates exact activation_patch's logit_diff_recovery. Much cheaper
+    than the O(L·S·P) exact loop.
+
+    See: Nanda 2023 (attribution patching primer) and Kramár et al. 2024
+    (Attribution Patching Outperforms Automated Circuit Discovery).
+    """
+    import warnings
+
+    # --- Validation (raise before any forward pass) ---
+    if correct_token_id is None or incorrect_token_id is None:
+        raise ValueError(
+            "attribution_patch requires correct_token_id and incorrect_token_id"
+        )
+    if direction not in ("denoise", "noise"):
+        raise ValueError("direction must be 'denoise' or 'noise'")
+    if not set(sublayers).issubset({"attn", "ffn"}):
+        raise ValueError("sublayers must be subset of {'attn', 'ffn'}")
+    if not clean_prompt or not corrupted_prompt:
+        raise ValueError("prompt cannot be empty")
+
+    if getattr(model, "hf_quantizer", None) is not None:
+        warnings.warn(
+            "attribution_patch on a quantized model: gradient flow works but "
+            "precision is reduced (fp16/int8 through bitsandbytes).",
+            stacklevel=2,
+        )
+
+    # --- Tokenize + length check ---
+    clean_ids = tokenizer(clean_prompt, return_tensors="pt")["input_ids"]
+    corr_ids = tokenizer(corrupted_prompt, return_tensors="pt")["input_ids"]
+    if clean_ids.shape[1] != corr_ids.shape[1]:
+        raise ValueError(
+            f"prompts must tokenize to same length "
+            f"(clean={clean_ids.shape[1]}, corrupted={corr_ids.shape[1]})"
+        )
+    seq_len = clean_ids.shape[1]
+    if positions is None:
+        positions = list(range(seq_len))
+    for pos in positions:
+        if pos < -seq_len or pos >= seq_len:
+            raise IndexError(f"position {pos} out of range for seq_len={seq_len}")
+    normalized_positions: List[int] = [p if p >= 0 else seq_len + p for p in positions]
+    meas_pos = measurement_position if measurement_position >= 0 else seq_len + measurement_position
+    if meas_pos < 0 or meas_pos >= seq_len:
+        raise IndexError(
+            f"measurement_position {measurement_position} out of range for seq_len={seq_len}"
+        )
+
+    # --- Step 1: Forward 'from' prompt in no_grad to cache activations ---
+    # denoise: from=clean, base=corrupted
+    # noise:   from=corrupted, base=clean
+    from_prompt = clean_prompt if direction == "denoise" else corrupted_prompt
+    base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
+
+    with torch.no_grad():
+        from_captured, from_logits, from_tokens = _capture_residual_stream_with_grad(
+            model, tokenizer, from_prompt, sublayers=sublayers, layers=layers,
+        )
+        # Detach + clone so the 'from' tensors don't pollute the upcoming
+        # base-side graph. They're used purely as values.
+        from_states = {k: v.detach().clone() for k, v in from_captured.items()}
+
+    # --- Step 2: Forward 'base' prompt WITH grad to build the graph ---
+    with torch.enable_grad():
+        base_captured, base_logits, base_tokens = _capture_residual_stream_with_grad(
+            model, tokenizer, base_prompt, sublayers=sublayers, layers=layers,
+        )
+
+        # base_logits already has the base-prompt logits — reuse them.
+        clean_baseline = from_logits if direction == "denoise" else base_logits
+        corrupted_baseline = base_logits if direction == "denoise" else from_logits
+
+        d_clean = (
+            clean_baseline[meas_pos, correct_token_id]
+            - clean_baseline[meas_pos, incorrect_token_id]
+        ).detach()
+        d_corrupted = (
+            corrupted_baseline[meas_pos, correct_token_id]
+            - corrupted_baseline[meas_pos, incorrect_token_id]
+        ).detach()
+
+        denominator = (d_clean - d_corrupted).item()
+        if abs(denominator) < 1e-6:
+            raise ValueError(
+                "clean and corrupted baselines have identical logit_diff; "
+                "AP would divide by zero"
+            )
+
+        # --- Step 3: Metric scalar on base-side logits, backward ---
+        metric = (
+            base_logits[meas_pos, correct_token_id]
+            - base_logits[meas_pos, incorrect_token_id]
+        )
+        metric.backward()
+
+    # --- Step 4: Compute AP per cell ---
+    # Captured tensors have shape (1, seq_len, d_model); access batch dim [0].
+    cells: List[Dict] = []
+    sorted_keys = sorted(base_captured.keys(), key=lambda k: (k[0], k[1]))
+    for (L, sub) in sorted_keys:
+        base_act = base_captured[(L, sub)]  # (1, seq_len, d_model)
+        if base_act.grad is None:
+            continue  # shouldn't happen after backward but guard defensively
+        base_grad = base_act.grad  # (1, seq_len, d_model)
+        from_act = from_states[(L, sub)]  # (1, seq_len, d_model)
+        for pos in normalized_positions:
+            if direction == "denoise":
+                ap_raw = (
+                    (from_act[0, pos] - base_act[0, pos].detach()) * base_grad[0, pos]
+                ).sum().item()
+                ap_recovery = ap_raw / denominator
+            else:  # noise
+                ap_raw = (
+                    (from_act[0, pos] - base_act[0, pos].detach()) * base_grad[0, pos]
+                ).sum().item()
+                ap_recovery = 1.0 + ap_raw / denominator
+            cell: Dict = {
+                "layer": L,
+                "sublayer": sub,
+                "position": pos,
+                "ap_recovery": float(ap_recovery),
+            }
+            cells.append(cell)
+            if on_cell is not None:
+                on_cell(L, sub, pos, cell)
+
+    clean_tokens = from_tokens if direction == "denoise" else base_tokens
+    corrupted_tokens = base_tokens if direction == "denoise" else from_tokens
+
+    return PatchingResult(
+        cells=cells,
+        clean_baseline_logits=clean_baseline.detach(),
+        corrupted_baseline_logits=corrupted_baseline.detach(),
+        prompt_tokens_clean=clean_tokens,
+        prompt_tokens_corrupted=corrupted_tokens,
+        direction=direction,
+        measurement_position=meas_pos,
+        mode="approx",
     )
