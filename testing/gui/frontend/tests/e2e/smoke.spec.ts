@@ -244,9 +244,11 @@ test("activation-patching heatmap renders from imported fixture", async ({ page 
     buffer: Buffer.from(apFixture),
   });
 
-  await page.getByText(/Activation Patching/).waitFor({ state: "visible", timeout: 5000 });
+  await page.getByRole("heading", { name: /Activation Patching/ }).waitFor({ state: "visible", timeout: 5000 });
 
-  const metric = page.getByRole("combobox", { name: /Metric/i }).first();
+  const metric = page.locator("select").filter({
+    has: page.locator("option", { hasText: "Logit-diff recovery" }),
+  }).first();
   for (const opt of [
     "KL from clean (nats)",
     "Top-1 matches clean",
