@@ -21,6 +21,7 @@ export interface PatchingState {
   tokenPairMode: "auto" | "manual";
   manualCorrect: string;
   manualIncorrect: string;
+  mode: "exact" | "approx";
 }
 
 export const DEFAULT_PATCHING_STATE: PatchingState = {
@@ -31,6 +32,7 @@ export const DEFAULT_PATCHING_STATE: PatchingState = {
   tokenPairMode: "auto",
   manualCorrect: "",
   manualIncorrect: "",
+  mode: "exact",
 };
 
 interface Props {
@@ -150,6 +152,29 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
               onChange={() => onChange({ direction: "noise" })} />
             {" "}noise
           </label>
+        </div>
+
+        <label style={labelStyle}>mode</label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ display: "flex", gap: 10 }}>
+            <label style={{ fontSize: 12 }}>
+              <input type="radio" name="mode" value="exact"
+                checked={state.mode === "exact"}
+                onChange={() => onChange({ mode: "exact" })} />
+              {" "}exact
+            </label>
+            <label style={{ fontSize: 12 }}>
+              <input type="radio" name="mode" value="approx"
+                checked={state.mode === "approx"}
+                onChange={() => onChange({ mode: "approx" })} />
+              {" "}approx <span style={{ color: "#888", fontSize: 11 }}>(gradient AP, fast)</span>
+            </label>
+          </div>
+          {state.mode === "approx" && state.tokenPairMode === "auto" && (
+            <div style={{ color: "#7f7", fontSize: 11 }}>
+              auto-pick uses clean argmax; switch to manual for a specific target
+            </div>
+          )}
         </div>
 
         <label style={labelStyle} title="Absolute or negative index. -1 = last token.">measure @</label>

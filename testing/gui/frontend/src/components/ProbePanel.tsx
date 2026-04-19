@@ -342,6 +342,7 @@ export function ProbePanel() {
           corrupted_prompt: patchingState.corruptedPrompt,
           direction: patchingState.direction,
           measurement_position: patchingState.measurementPos,
+          mode: patchingState.mode,
         };
         if (patchingState.tokenPairMode === "manual") {
           cfg.correct_token = patchingState.manualCorrect;
