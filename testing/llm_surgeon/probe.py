@@ -211,6 +211,12 @@ def _capture_residual_stream_with_grad(
                     # Capture self_attn's direct output (attn delta) — this
                     # tensor IS in the main computation graph, so retain_grad()
                     # correctly accumulates .grad after a downstream backward().
+                    # Semantic note: this is the attn *delta*, not the residual
+                    # stream post-attn (h_in + attn_out). Approx AP thus
+                    # approximates sensitivity to attn-out perturbations rather
+                    # than to the residual stream; correlation with exact AP
+                    # (which patches the full residual stream) is reduced for
+                    # attn rows. See Spearman test in TinyLlama integration.
                     # Shape: (batch=1, seq_len, d_model).
                     attn_out = out[0] if isinstance(out, tuple) else out
                     if attn_out.requires_grad:
@@ -223,7 +229,8 @@ def _capture_residual_stream_with_grad(
             def make_ffn(idx):
                 def hook(_module, _inp, out):
                     # Capture the decoder layer's full output — this IS in the
-                    # main graph. Shape: (batch=1, seq_len, d_model).
+                    # main graph AND matches exact AP's "ffn" row semantics
+                    # (residual stream post-layer). Shape: (1, seq_len, d_model).
                     hidden = out[0] if isinstance(out, tuple) else out
                     if hidden.requires_grad:
                         hidden.retain_grad()
