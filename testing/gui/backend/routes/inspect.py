@@ -1,12 +1,8 @@
 import asyncio
 import logging
-import sys
-from pathlib import Path
 from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from ..sessions import SessionManager
 

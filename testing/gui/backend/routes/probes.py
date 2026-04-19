@@ -114,10 +114,6 @@ async def logit_lens_ws(ws: WebSocket, name: str):
 
     connected = True
 
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-
     from llm_surgeon import probe
 
     loop = asyncio.get_running_loop()
@@ -244,9 +240,6 @@ async def compare_logit_lens_ws(ws: WebSocket, name: str):
         await ws.close()
         return
 
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
     from llm_surgeon import probe
 
     connected = True
@@ -754,10 +747,6 @@ async def intervene_ws(ws: WebSocket, name: str):
     prompt = config.get("prompt", "")
     capture_logit_lens = config.get("capture_logit_lens", False)
 
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-
     from llm_surgeon.probe import Intervention, intervene
 
     try:
@@ -902,10 +891,6 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     layers = config.get("layers")
     correct_token = config.get("correct_token")
     incorrect_token = config.get("incorrect_token")
-
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
     from llm_surgeon import probe
     from llm_surgeon.probe import attribution_patch
