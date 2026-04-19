@@ -181,14 +181,27 @@ def _capture_residual_stream_with_grad(
     prompt: str,
     sublayers: Tuple[str, ...] = ("attn", "ffn"),
     layers: Optional[List[int]] = None,
-) -> Tuple[Dict[Tuple[int, str], torch.Tensor], torch.Tensor, List[str]]:
+) -> Tuple[Dict[Tuple[int, str], torch.Tensor], Dict[int, torch.Tensor], torch.Tensor, List[str]]:
     """Capture residual-stream states with autograd graph intact.
 
     Mirrors _capture_residual_stream but keeps tensors attached to the graph
     so a downstream .backward() populates .grad on each captured tensor.
     Caller is responsible for providing a torch.enable_grad() context.
 
-    Returns: (captured_states, output_logits, prompt_tokens)
+    For "attn" rows, `captured[(L, "attn")]` stores the self_attn output (the
+    attn delta), which IS in the graph and accepts retain_grad(). The
+    corresponding residual-stream-post-attn value `h_post_attn = h_in + attn_out`
+    cannot be intercepted as a live graph node (LLaMA's layer.forward computes
+    it as an ephemeral intermediate), so callers must reconstruct it from
+    `h_ins[L] + captured[(L, "attn")]`. The gradient `captured[(L,"attn")].grad`
+    equals `∂L/∂h_post_attn` by chain rule through `+` (since
+    `h_post_attn = h_in + attn_out` and h_in is not a function of attn_out),
+    so using attn_out.grad as the gradient of h_post_attn is correct.
+
+    For "ffn" rows, `captured[(L, "ffn")]` is the decoder layer's full output
+    (residual stream post-layer) and matches exact AP's ffn-row semantics.
+
+    Returns: (captured_states, h_ins, output_logits, prompt_tokens).
     """
     device = _get_input_device(model)
     enc = tokenizer(prompt, return_tensors="pt")
@@ -199,25 +212,28 @@ def _capture_residual_stream_with_grad(
     target_layers = set(range(num_layers)) if layers is None else set(layers)
 
     captured: Dict[Tuple[int, str], torch.Tensor] = {}
+    h_ins: Dict[int, torch.Tensor] = {}
     hooks: List = []
+
+    # Pre-hook captures layer input (h_in). Needed for the attn-row value
+    # reconstruction (h_post_attn = h_in + attn_out). Always register when
+    # "attn" is targeted; cost is trivial.
+    capture_h_in = "attn" in sublayers
 
     for i in range(num_layers):
         if i not in target_layers:
             continue
 
+        if capture_h_in:
+            def make_pre(idx):
+                def hook(_module, args):
+                    h_ins[idx] = args[0]
+                return hook
+            hooks.append(model.model.layers[i].register_forward_pre_hook(make_pre(i)))
+
         if "attn" in sublayers:
             def make_attn(idx):
                 def hook(_module, _inp, out):
-                    # Capture self_attn's direct output (attn delta) — this
-                    # tensor IS in the main computation graph, so retain_grad()
-                    # correctly accumulates .grad after a downstream backward().
-                    # Semantic note: this is the attn *delta*, not the residual
-                    # stream post-attn (h_in + attn_out). Approx AP thus
-                    # approximates sensitivity to attn-out perturbations rather
-                    # than to the residual stream; correlation with exact AP
-                    # (which patches the full residual stream) is reduced for
-                    # attn rows. See Spearman test in TinyLlama integration.
-                    # Shape: (batch=1, seq_len, d_model).
                     attn_out = out[0] if isinstance(out, tuple) else out
                     if attn_out.requires_grad:
                         attn_out.retain_grad()
@@ -228,9 +244,6 @@ def _capture_residual_stream_with_grad(
         if "ffn" in sublayers:
             def make_ffn(idx):
                 def hook(_module, _inp, out):
-                    # Capture the decoder layer's full output — this IS in the
-                    # main graph AND matches exact AP's "ffn" row semantics
-                    # (residual stream post-layer). Shape: (1, seq_len, d_model).
                     hidden = out[0] if isinstance(out, tuple) else out
                     if hidden.requires_grad:
                         hidden.retain_grad()
@@ -244,7 +257,7 @@ def _capture_residual_stream_with_grad(
         for h in hooks:
             h.remove()
 
-    return captured, model_output.logits[0], prompt_tokens
+    return captured, h_ins, model_output.logits[0], prompt_tokens
 
 
 # ---------------------------------------------------------------------------
@@ -1021,16 +1034,17 @@ def attribution_patch(
     base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
 
     with torch.no_grad():
-        from_captured, from_logits, from_tokens = _capture_residual_stream_with_grad(
+        from_captured, from_h_ins_raw, from_logits, from_tokens = _capture_residual_stream_with_grad(
             model, tokenizer, from_prompt, sublayers=sublayers, layers=layers,
         )
         # Detach + clone so the 'from' tensors don't pollute the upcoming
         # base-side graph. They're used purely as values.
         from_states = {k: v.detach().clone() for k, v in from_captured.items()}
+        from_h_ins = {idx: v.detach().clone() for idx, v in from_h_ins_raw.items()}
 
     # --- Step 2: Forward 'base' prompt WITH grad to build the graph ---
     with torch.enable_grad():
-        base_captured, base_logits, base_tokens = _capture_residual_stream_with_grad(
+        base_captured, base_h_ins, base_logits, base_tokens = _capture_residual_stream_with_grad(
             model, tokenizer, base_prompt, sublayers=sublayers, layers=layers,
         )
 
@@ -1063,6 +1077,9 @@ def attribution_patch(
 
     # --- Step 4: Compute AP per cell ---
     # Captured tensors have shape (1, seq_len, d_model); access batch dim [0].
+    # For attn rows, reconstruct h_post_attn = h_in + attn_out to match exact
+    # AP's patched quantity. Gradient of h_post_attn equals gradient of attn_out
+    # (chain rule through the `+`), so base_act.grad is correct either way.
     cells: List[Dict] = []
     sorted_keys = sorted(base_captured.keys(), key=lambda k: (k[0], k[1]))
     for (L, sub) in sorted_keys:
@@ -1071,16 +1088,20 @@ def attribution_patch(
             continue  # shouldn't happen after backward but guard defensively
         base_grad = base_act.grad  # (1, seq_len, d_model)
         from_act = from_states[(L, sub)]  # (1, seq_len, d_model)
+        if sub == "attn":
+            # Residual-stream value = h_in + attn_out
+            from_val_full = from_h_ins[L] + from_act
+            base_val_full = base_h_ins[L].detach() + base_act.detach()
+        else:  # ffn — captured tensor is already the residual stream post-layer
+            from_val_full = from_act
+            base_val_full = base_act.detach()
         for pos in normalized_positions:
+            ap_raw = (
+                (from_val_full[0, pos] - base_val_full[0, pos]) * base_grad[0, pos]
+            ).sum().item()
             if direction == "denoise":
-                ap_raw = (
-                    (from_act[0, pos] - base_act[0, pos].detach()) * base_grad[0, pos]
-                ).sum().item()
                 ap_recovery = ap_raw / denominator
             else:  # noise
-                ap_raw = (
-                    (from_act[0, pos] - base_act[0, pos].detach()) * base_grad[0, pos]
-                ).sum().item()
                 ap_recovery = 1.0 + ap_raw / denominator
             cell: Dict = {
                 "layer": L,
