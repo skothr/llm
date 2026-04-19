@@ -4,7 +4,7 @@ import { ExportButtons } from "../ExportButtons";
 import {
   decodeLogits, logitDiffRecovery, klFromClean, top1Match, probDelta,
 } from "../../utils/patchingMetrics";
-import type { ProbeResult, PatchingBaselinesData, PatchingCellData } from "../../types/api";
+import type { ProbeResult, PatchingBaselinesData, PatchingCellData, PatchingCompleteData } from "../../types/api";
 
 interface Props {
   result: ProbeResult;
@@ -62,17 +62,24 @@ export function ActivationPatchingHeatmap({ result }: Props) {
   );
   const cells = useMemo(
     () => result.data.filter((m): m is PatchingCellData =>
-      m.type === "data" && "patched_logits" in m && "position" in m
+      m.type === "data" && "position" in m
     ),
     [result.data]
   );
+  const completeFrame = useMemo(
+    () => result.data.find((m): m is PatchingCompleteData => m.type === "complete"),
+    [result.data]
+  );
+  const mode: "exact" | "approx" = completeFrame?.summary.mode ?? "exact";
 
   const cleanLogits = useMemo(
     () => baselines ? decodeLogits(baselines.clean_logits) : null, [baselines]);
   const corruptedLogits = useMemo(
     () => baselines ? decodeLogits(baselines.corrupted_logits) : null, [baselines]);
   const cellLogits = useMemo(
-    () => new Map(cells.map((c) => [`${c.layer}.${c.sublayer}.${c.position}`, decodeLogits(c.patched_logits!)])),
+    () => new Map(cells.filter((c) => c.patched_logits != null).map(
+      (c) => [`${c.layer}.${c.sublayer}.${c.position}`, decodeLogits(c.patched_logits!)]
+    )),
     [cells]
   );
 
@@ -126,7 +133,8 @@ export function ActivationPatchingHeatmap({ result }: Props) {
     const height = margin.top + rowKeys.length * cellH + margin.bottom;
     svg.attr("width", width).attr("height", height);
 
-    const def = METRICS[metric];
+    const effectiveMetric: MetricKey = mode === "approx" ? "logit_diff_recovery" : metric;
+    const def = METRICS[effectiveMetric];
 
     let domain: [number, number];
     if (def.fixedDomain) {
@@ -134,7 +142,9 @@ export function ActivationPatchingHeatmap({ result }: Props) {
     } else {
       let minV = Infinity, maxV = -Infinity;
       for (const c of cells) {
-        const v = getCellValueFor(c, metric);
+        const v = mode === "approx"
+          ? (typeof c.ap_recovery === "number" ? c.ap_recovery : null)
+          : getCellValueFor(c, effectiveMetric);
         if (v == null) continue;
         if (v < minV) minV = v;
         if (v > maxV) maxV = v;
@@ -174,7 +184,9 @@ export function ActivationPatchingHeatmap({ result }: Props) {
       const colIdx = positions.indexOf(cell.position);
       if (rowIdx < 0 || colIdx < 0) continue;
 
-      const v = getCellValueFor(cell, metric);
+      const v = mode === "approx"
+        ? (typeof cell.ap_recovery === "number" ? cell.ap_recovery : null)
+        : getCellValueFor(cell, effectiveMetric);
       const fill = v != null ? colorScale(v) : "#222";
 
       g.append("rect")
@@ -211,9 +223,17 @@ export function ActivationPatchingHeatmap({ result }: Props) {
     g.append("text")
       .attr("x", legendW / 2).attr("y", legendY - 2)
       .attr("text-anchor", "middle").attr("font-size", 9).attr("fill", "#aaa").text(def.label);
-  }, [cells, metric, getCellValueFor, result.id]);
+  }, [cells, metric, mode, getCellValueFor, result.id]);
 
   const csvRows = useCallback((): (string | number)[][] => {
+    if (mode === "approx") {
+      const header = ["layer", "sublayer", "position", "ap_recovery"];
+      const rows: (string | number)[][] = [header];
+      for (const cell of cells) {
+        rows.push([cell.layer, cell.sublayer, cell.position, cell.ap_recovery ?? ""]);
+      }
+      return rows;
+    }
     const header = ["layer", "sublayer", "position",
       "logit_diff_recovery", "kl_from_clean", "top1_match", "prob_delta"];
     const rows: (string | number)[][] = [header];
@@ -227,29 +247,32 @@ export function ActivationPatchingHeatmap({ result }: Props) {
       ]);
     }
     return rows;
-  }, [cells, getCellValueFor]);
+  }, [cells, mode, getCellValueFor]);
 
   return (
     <div style={{ position: "relative" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
         <h3 style={{ fontSize: 13, color: "#a0a0c0", margin: 0 }}>
-          Activation Patching \u2014 {result.sessionName} \u2014 "{result.prompt.slice(0, 40)}"
+          {mode === "approx" ? "Attribution Patching (\u2207)" : "Activation Patching"}
+          {" \u2014 "}{result.sessionName}{" \u2014 \""}{result.prompt.slice(0, 40)}{"\""}
         </h3>
-        <label style={{ fontSize: 12, color: "#8888aa", display: "flex", alignItems: "center", gap: 6 }}>
-          Metric:
-          <select
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as MetricKey)}
-            style={{
-              background: "#0f1626", color: "#e0e0f0", border: "1px solid #1a5276",
-              borderRadius: 3, padding: "2px 6px", fontSize: 12,
-            }}
-          >
-            {(Object.keys(METRICS) as MetricKey[]).map((k) => (
-              <option key={k} value={k}>{METRICS[k].label}</option>
-            ))}
-          </select>
-        </label>
+        {mode === "exact" && (
+          <label style={{ fontSize: 12, color: "#8888aa", display: "flex", alignItems: "center", gap: 6 }}>
+            Metric:
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value as MetricKey)}
+              style={{
+                background: "#0f1626", color: "#e0e0f0", border: "1px solid #1a5276",
+                borderRadius: 3, padding: "2px 6px", fontSize: 12,
+              }}
+            >
+              {(Object.keys(METRICS) as MetricKey[]).map((k) => (
+                <option key={k} value={k}>{METRICS[k].label}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <div style={{ marginLeft: "auto" }}>
           <ExportButtons
             filenameBase={`activation_patching_${result.sessionName}`}
@@ -266,13 +289,13 @@ export function ActivationPatchingHeatmap({ result }: Props) {
       </div>
       <div style={{ overflowX: "auto" }}><svg ref={svgRef} /></div>
       {pinned && (
-        <PinnedCard cell={pinned.cell} x={pinned.x} y={pinned.y} onClose={() => setPinned(null)} />
+        <PinnedCard cell={pinned.cell} x={pinned.x} y={pinned.y} mode={mode} onClose={() => setPinned(null)} />
       )}
     </div>
   );
 }
 
-function PinnedCard({ cell, x, y, onClose }: { cell: PatchingCellData; x: number; y: number; onClose: () => void }) {
+function PinnedCard({ cell, x, y, mode, onClose }: { cell: PatchingCellData; x: number; y: number; mode: "exact" | "approx"; onClose: () => void }) {
   return (
     <div style={{
       position: "fixed", left: x, top: y, background: "#0f1626",
@@ -289,9 +312,18 @@ function PinnedCard({ cell, x, y, onClose }: { cell: PatchingCellData; x: number
           cursor: "pointer", fontSize: 14, padding: 0, lineHeight: 1,
         }}>\u00d7</button>
       </div>
-      <div style={{ fontSize: 10, color: "#888" }}>
-        Click a cell to see patched logits (detailed top-k view \u2014 enhancement).
-      </div>
+      {mode === "approx" && typeof cell.ap_recovery === "number" ? (
+        <div style={{ marginTop: 4 }}>
+          AP recovery: <strong>{cell.ap_recovery.toFixed(3)}</strong>
+          <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
+            First-order approximation \u2014 run exact mode to confirm.
+          </div>
+        </div>
+      ) : (
+        <div style={{ fontSize: 10, color: "#888" }}>
+          Click a cell to see patched logits (detailed top-k view \u2014 enhancement).
+        </div>
+      )}
     </div>
   );
 }
