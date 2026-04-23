@@ -893,12 +893,12 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     incorrect_token = config.get("incorrect_token")
 
     from llm_surgeon import probe
-    from llm_surgeon.probe import attribution_patch
+    from llm_surgeon.probe import attribution_patch, attribution_patch_per_head
 
     mode = config.get("mode", "exact")
-    if mode not in ("exact", "approx"):
+    if mode not in ("exact", "approx", "approx_head"):
         await _send_json(ws, {"type": "error",
-                              "message": f"mode must be 'exact' or 'approx', got {mode!r}"})
+                              "message": f"mode must be 'exact', 'approx', or 'approx_head', got {mode!r}"})
         await ws.close()
         return
 
@@ -925,9 +925,9 @@ async def activation_patching_ws(ws: WebSocket, name: str):
             await ws.close()
             return
 
-    # approx mode requires token IDs before the call (backward needs a scalar metric).
+    # approx/approx_head mode requires token IDs before the call (backward needs a scalar metric).
     # Auto-pick: do a quick no_grad forward on the clean prompt to argmax the target pair.
-    if mode == "approx" and correct_token_id is None:
+    if mode in ("approx", "approx_head") and correct_token_id is None:
         try:
             def _auto_pick_ids():
                 device = next(info.model.parameters()).device
@@ -953,7 +953,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     connected = True
     loop = asyncio.get_running_loop()
 
-    def on_cell(layer_idx: int, sublayer: str, position: int, cell: dict) -> None:
+    def on_cell(layer_idx: int, unit_or_sub: str, position: int, cell: dict) -> None:
         nonlocal connected
         if not connected:
             return
@@ -961,9 +961,12 @@ async def activation_patching_ws(ws: WebSocket, name: str):
             "type": "data",
             "layer": layer_idx,
             "original_layer": info.original_layer(layer_idx),
-            "sublayer": sublayer,
             "position": position,
         }
+        if mode == "approx_head":
+            msg["unit"] = cell.get("unit", unit_or_sub)
+        else:
+            msg["sublayer"] = unit_or_sub
         if "patched_logits" in cell:
             msg["patched_logits"] = _encode_hidden_state(cell["patched_logits"])
         if "ap_recovery" in cell:
@@ -997,10 +1000,29 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                         on_cell=on_cell,
                     ),
                 )
-            else:
+            elif mode == "approx_head":
                 assert correct_token_id is not None and incorrect_token_id is not None
                 _cid: int = correct_token_id
                 _iid: int = incorrect_token_id
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: attribution_patch_per_head(
+                        info.model, info.tokenizer,
+                        clean_prompt=clean_prompt,
+                        corrupted_prompt=corrupted_prompt,
+                        correct_token_id=_cid,
+                        incorrect_token_id=_iid,
+                        direction=direction,
+                        measurement_position=measurement_position,
+                        positions=positions,
+                        layers=layers,
+                        on_cell=on_cell,
+                    ),
+                )
+            else:
+                assert correct_token_id is not None and incorrect_token_id is not None
+                _cid = correct_token_id
+                _iid = incorrect_token_id
                 result = await loop.run_in_executor(
                     None,
                     lambda: attribution_patch(
@@ -1034,15 +1056,15 @@ async def activation_patching_ws(ws: WebSocket, name: str):
             baselines_msg["incorrect_token_id"] = incorrect_token_id
             await _send_json(ws, baselines_msg)
 
-            await _send_json(ws, {
-                "type": "complete",
-                "summary": {
-                    "num_cells": len(result.cells),
-                    "direction": result.direction,
-                    "measurement_position": result.measurement_position,
-                    "mode": result.mode,
-                },
-            })
+            summary: dict = {
+                "num_cells": len(result.cells),
+                "direction": result.direction,
+                "measurement_position": result.measurement_position,
+                "mode": result.mode,
+            }
+            if result.n_heads is not None:
+                summary["n_heads"] = result.n_heads
+            await _send_json(ws, {"type": "complete", "summary": summary})
 
     except ValueError as e:
         log.warning("WS activation-patching validation error: %s", e)
