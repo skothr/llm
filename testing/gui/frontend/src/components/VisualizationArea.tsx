@@ -7,11 +7,12 @@ import { ResidualNorms } from "./visualizations/ResidualNorms";
 import { ActivationPatchingHeatmap } from "./visualizations/ActivationPatchingHeatmap";
 import { PerHeadPatchingHeatmap } from "./visualizations/PerHeadPatchingHeatmap";
 import { EdgeAttributionPanel } from "./visualizations/EdgeAttributionPanel";
+import { CircuitPanel } from "./visualizations/CircuitPanel";
 import { ResultMetaEditor } from "./ResultMetaEditor";
 import { ResultFilterBar, makeResultPredicate } from "./ResultFilterBar";
 import { BulkActionBar } from "./BulkActionBar";
 import { timeAgo, useTimeAgoTick } from "../utils/timeAgo";
-import type { ProbeResult, PatchingCompleteData } from "../types/api";
+import type { ProbeResult, PatchingCompleteData, PatchingCellData } from "../types/api";
 
 function InterveneSummary({ result }: { result: ProbeResult }) {
   const completeMsg = result.data.find((m) => m.type === "complete") as
@@ -209,13 +210,24 @@ export function VisualizationArea() {
           <AttentionEntropy result={activeResult} />
         ) : activeResult.operation === "residual-norms" ? (
           <ResidualNorms result={activeResult} />
-        ) : activeResult.operation === "activation-patching" ? (
-          activeResult.data.find((m): m is PatchingCompleteData => m.type === "complete")?.summary.mode === "edge"
-            ? <EdgeAttributionPanel result={activeResult} />
-            : activeResult.data.find((m): m is PatchingCompleteData => m.type === "complete")?.summary.mode === "approx_head"
-            ? <PerHeadPatchingHeatmap result={activeResult} />
-            : <ActivationPatchingHeatmap result={activeResult} />
-        ) : (
+        ) : activeResult.operation === "activation-patching" ? (() => {
+          const completeMsg = activeResult.data.find(
+            (m): m is PatchingCompleteData => m.type === "complete",
+          );
+          const mode = completeMsg?.summary.mode;
+          const cellMsgs = activeResult.data.filter(
+            (m): m is PatchingCellData => m.type === "data" && "writer_unit" in m,
+          );
+          return mode === "circuit" ? (
+            <CircuitPanel cells={cellMsgs} complete={completeMsg} />
+          ) : mode === "edge" ? (
+            <EdgeAttributionPanel result={activeResult} />
+          ) : mode === "approx_head" ? (
+            <PerHeadPatchingHeatmap result={activeResult} />
+          ) : (
+            <ActivationPatchingHeatmap result={activeResult} />
+          );
+        })() : (
           <p style={{ color: "#666" }}>No visualization for {activeResult.operation}</p>
         )
       ) : (
