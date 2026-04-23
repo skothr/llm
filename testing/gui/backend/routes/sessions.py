@@ -523,6 +523,84 @@ async def decode_token_ids(name: str, req: DecodeIdsRequest):
     return {"tokens": tokens}
 
 
+class DecodeNeuronRequest(BaseModel):
+    layer: int
+    neuron: int
+    top_k: int = 10
+
+
+_DECODE_NEURON_TOPK_MAX = 50
+
+
+@router.post("/sessions/{name}/decode-neuron")
+async def decode_neuron(name: str, req: DecodeNeuronRequest):
+    """Return top-k and bottom-k tokens most strongly promoted/suppressed by
+    FFN neuron `neuron` at `layer`, computed as W_U @ W_down[layer][:, neuron].
+
+    Classic logit-lens applied per-neuron (Geva 2020, nostalgebraist 2020).
+    V1 deliberately skips the final-norm scaling — within-neuron ranking is
+    unchanged by it; cross-neuron magnitudes are noisy (documented in UI).
+
+    Returns: {
+        "top_tokens":    [{"token": str, "logit": float}, ...],
+        "bottom_tokens": [{"token": str, "logit": float}, ...]
+    }
+    """
+    import torch
+
+    top_k = max(1, min(req.top_k, _DECODE_NEURON_TOPK_MAX))
+
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    if info.model is None:
+        raise HTTPException(500, "Session has no PyTorch model loaded")
+    if info.tokenizer is None:
+        raise HTTPException(500, "Session has no tokenizer loaded")
+
+    model = info.model
+    num_layers = len(model.model.layers)
+    if not 0 <= req.layer < num_layers:
+        raise HTTPException(
+            400,
+            f"layer out of range: got {req.layer}, valid [0, {num_layers})",
+        )
+    intermediate = model.config.intermediate_size
+    if not 0 <= req.neuron < intermediate:
+        raise HTTPException(
+            400,
+            f"neuron out of range: got {req.neuron}, valid [0, {intermediate})",
+        )
+
+    def _compute() -> dict:
+        with torch.no_grad():
+            # W_down.weight: [hidden, intermediate]; column = direction written
+            # by neuron `neuron` at layer `req.layer`.
+            direction = model.model.layers[req.layer].mlp.down_proj.weight[:, req.neuron]
+            # lm_head.weight: [vocab, hidden]. Matmul yields [vocab] logit scores.
+            scores = model.lm_head.weight @ direction  # [vocab]
+            vocab_size = scores.shape[0]
+            k = max(1, min(top_k, _DECODE_NEURON_TOPK_MAX, vocab_size))
+            top_vals, top_ids = torch.topk(scores, k, largest=True)
+            bot_vals, bot_ids = torch.topk(scores, k, largest=False)
+
+        tok = info.tokenizer
+        top_tokens = [
+            {"token": tok.decode([int(i)], skip_special_tokens=False), "logit": float(v)}
+            for i, v in zip(top_ids.tolist(), top_vals.tolist())
+        ]
+        bottom_tokens = [
+            {"token": tok.decode([int(i)], skip_special_tokens=False), "logit": float(v)}
+            for i, v in zip(bot_ids.tolist(), bot_vals.tolist())
+        ]
+        return {"top_tokens": top_tokens, "bottom_tokens": bottom_tokens}
+
+    result = await asyncio.to_thread(_compute)
+    return result
+
+
 VALID_OPS = {op["name"] for op in SURGERY_OPS}
 
 @router.post("/sessions/{name}/surgery")
