@@ -8,6 +8,7 @@ import { ActivationPatchingHeatmap } from "./visualizations/ActivationPatchingHe
 import { PerHeadPatchingHeatmap } from "./visualizations/PerHeadPatchingHeatmap";
 import { EdgeAttributionPanel } from "./visualizations/EdgeAttributionPanel";
 import { CircuitPanel } from "./visualizations/CircuitPanel";
+import { PerNeuronPatchingPanel } from "./visualizations/PerNeuronPatchingPanel";
 import { ResultMetaEditor } from "./ResultMetaEditor";
 import { ResultFilterBar, makeResultPredicate } from "./ResultFilterBar";
 import { BulkActionBar } from "./BulkActionBar";
@@ -216,12 +217,14 @@ export function VisualizationArea() {
           );
           const mode = completeMsg?.summary.mode;
           const cellMsgs = activeResult.data.filter(
-            (m): m is PatchingCellData => m.type === "data" && "writer_unit" in m,
+            (m): m is PatchingCellData => m.type === "data" && ("writer_unit" in m || "neuron" in m),
           );
           return mode === "circuit" ? (
             <CircuitPanel cells={cellMsgs} complete={completeMsg} />
           ) : mode === "edge" ? (
             <EdgeAttributionPanel result={activeResult} />
+          ) : mode === "approx_neuron" ? (
+            <PerNeuronPatchingPanel cells={cellMsgs} complete={completeMsg} />
           ) : mode === "approx_head" ? (
             <PerHeadPatchingHeatmap result={activeResult} />
           ) : (
