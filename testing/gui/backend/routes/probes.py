@@ -893,12 +893,12 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     incorrect_token = config.get("incorrect_token")
 
     from llm_surgeon import probe
-    from llm_surgeon.probe import attribution_patch, attribution_patch_per_head
+    from llm_surgeon.probe import attribution_patch, attribution_patch_per_head, attribution_patch_per_neuron
 
     mode = config.get("mode", "exact")
-    if mode not in ("exact", "approx", "approx_head", "edge", "circuit"):
+    if mode not in ("exact", "approx", "approx_head", "edge", "circuit", "approx_neuron"):
         await _send_json(ws, {"type": "error",
-                              "message": f"mode must be 'exact', 'approx', 'approx_head', 'edge', or 'circuit', got {mode!r}"})
+                              "message": f"mode must be 'exact', 'approx', 'approx_head', 'edge', 'circuit', or 'approx_neuron', got {mode!r}"})
         await ws.close()
         return
 
@@ -928,10 +928,11 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     top_k_edges = int(config.get("top_k_edges", 200))
     tau = float(config.get("tau", 0.02))
     top_k_candidates = int(config.get("top_k_candidates", 2000))
+    top_k_neurons = int(config.get("top_k_neurons", 200))
 
-    # approx/approx_head/edge/circuit mode requires token IDs before the call (backward needs a scalar metric).
+    # approx/approx_head/edge/circuit/approx_neuron mode requires token IDs before the call (backward needs a scalar metric).
     # Auto-pick: do a quick no_grad forward on the clean prompt to argmax the target pair.
-    if mode in ("approx", "approx_head", "edge", "circuit") and correct_token_id is None:
+    if mode in ("approx", "approx_head", "edge", "circuit", "approx_neuron") and correct_token_id is None:
         try:
             def _auto_pick_ids():
                 device = next(info.model.parameters()).device
@@ -1120,6 +1121,44 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                     top_k_candidates=_topkc,
                     on_cell=on_cell_circuit,
                 )
+            elif mode == "approx_neuron":
+                if top_k_neurons < 1:
+                    await _send_json(ws, {"type": "error", "message": "top_k_neurons must be >= 1"})
+                    await ws.close()
+                    return
+                assert correct_token_id is not None and incorrect_token_id is not None
+                _cid4: int = correct_token_id
+                _iid4: int = incorrect_token_id
+                _topkn: int = top_k_neurons
+
+                def on_cell_neuron(cell: dict) -> None:
+                    nonlocal connected
+                    if not connected:
+                        return
+                    msg: dict = {"type": "data", **cell}
+                    fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
+                    try:
+                        ok = fut.result(timeout=10)
+                    except Exception:
+                        ok = False
+                    if not ok:
+                        connected = False
+
+                result = await asyncio.to_thread(
+                    attribution_patch_per_neuron,
+                    info.model,
+                    info.tokenizer,
+                    clean_prompt,
+                    corrupted_prompt,
+                    correct_token_id=_cid4,
+                    incorrect_token_id=_iid4,
+                    direction=direction,
+                    measurement_position=measurement_position,
+                    positions=positions,
+                    layers=layers,
+                    top_k_neurons=_topkn,
+                    on_cell=on_cell_neuron,
+                )
             else:
                 assert correct_token_id is not None and incorrect_token_id is not None
                 _cid = correct_token_id
@@ -1173,8 +1212,12 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 summary["n_nodes_in_circuit"] = result.n_nodes_in_circuit
             if result.tau is not None:
                 summary["tau"] = result.tau
+            if result.n_neurons is not None:
+                summary["n_neurons"] = result.n_neurons
             if mode == "circuit":
                 summary["top_k_candidates"] = top_k_candidates
+            if mode == "approx_neuron":
+                summary["top_k_neurons"] = top_k_neurons
             await _send_json(ws, {"type": "complete", "summary": summary})
 
     except ValueError as e:
