@@ -896,9 +896,9 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     from llm_surgeon.probe import attribution_patch, attribution_patch_per_head
 
     mode = config.get("mode", "exact")
-    if mode not in ("exact", "approx", "approx_head", "edge"):
+    if mode not in ("exact", "approx", "approx_head", "edge", "circuit"):
         await _send_json(ws, {"type": "error",
-                              "message": f"mode must be 'exact', 'approx', 'approx_head', or 'edge', got {mode!r}"})
+                              "message": f"mode must be 'exact', 'approx', 'approx_head', 'edge', or 'circuit', got {mode!r}"})
         await ws.close()
         return
 
@@ -926,10 +926,12 @@ async def activation_patching_ws(ws: WebSocket, name: str):
             return
 
     top_k_edges = int(config.get("top_k_edges", 200))
+    tau = float(config.get("tau", 0.02))
+    top_k_candidates = int(config.get("top_k_candidates", 2000))
 
-    # approx/approx_head/edge mode requires token IDs before the call (backward needs a scalar metric).
+    # approx/approx_head/edge/circuit mode requires token IDs before the call (backward needs a scalar metric).
     # Auto-pick: do a quick no_grad forward on the clean prompt to argmax the target pair.
-    if mode in ("approx", "approx_head", "edge") and correct_token_id is None:
+    if mode in ("approx", "approx_head", "edge", "circuit") and correct_token_id is None:
         try:
             def _auto_pick_ids():
                 device = next(info.model.parameters()).device
@@ -1064,6 +1066,60 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                         on_cell=on_cell_edge,
                     ),
                 )
+            elif mode == "circuit":
+                from llm_surgeon.probe import extract_circuit
+                assert correct_token_id is not None and incorrect_token_id is not None
+                if tau < 0.0:
+                    await _send_json(ws, {"type": "error", "message": "tau must be >= 0"})
+                    await ws.close()
+                    return
+                if top_k_candidates < 1:
+                    await _send_json(ws, {"type": "error", "message": "top_k_candidates must be >= 1"})
+                    await ws.close()
+                    return
+
+                def on_cell_circuit(cell: dict) -> None:
+                    nonlocal connected
+                    if not connected:
+                        return
+                    msg: dict = {
+                        "type": "data",
+                        "writer_layer": cell["writer_layer"],
+                        "writer_unit": cell["writer_unit"],
+                        "reader_layer": cell["reader_layer"],
+                        "reader_unit": cell["reader_unit"],
+                        "position": cell["position"],
+                        "ap_recovery": cell["ap_recovery"],
+                        "in_circuit": cell.get("in_circuit", False),
+                    }
+                    fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
+                    try:
+                        ok = fut.result(timeout=10)
+                    except Exception:
+                        ok = False
+                    if not ok:
+                        connected = False
+
+                _cid3: int = correct_token_id
+                _iid3: int = incorrect_token_id
+                _tau: float = tau
+                _topkc: int = top_k_candidates
+                result = await asyncio.to_thread(
+                    extract_circuit,
+                    info.model,
+                    info.tokenizer,
+                    clean_prompt,
+                    corrupted_prompt,
+                    correct_token_id=_cid3,
+                    incorrect_token_id=_iid3,
+                    direction=direction,
+                    measurement_position=measurement_position,
+                    positions=positions,
+                    layers=layers,
+                    tau=_tau,
+                    top_k_candidates=_topkc,
+                    on_cell=on_cell_circuit,
+                )
             else:
                 assert correct_token_id is not None and incorrect_token_id is not None
                 _cid = correct_token_id
@@ -1111,6 +1167,14 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 summary["n_heads"] = result.n_heads
             if result.n_edges is not None:
                 summary["n_edges"] = result.n_edges
+            if result.n_edges_in_circuit is not None:
+                summary["n_edges_in_circuit"] = result.n_edges_in_circuit
+            if result.n_nodes_in_circuit is not None:
+                summary["n_nodes_in_circuit"] = result.n_nodes_in_circuit
+            if result.tau is not None:
+                summary["tau"] = result.tau
+            if mode == "circuit":
+                summary["top_k_candidates"] = top_k_candidates
             await _send_json(ws, {"type": "complete", "summary": summary})
 
     except ValueError as e:
