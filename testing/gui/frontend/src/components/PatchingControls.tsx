@@ -13,7 +13,7 @@
  */
 import { useEffect, useState } from "react";
 
-export type PatchingMode = "exact" | "approx" | "approx_head" | "edge" | "circuit";
+export type PatchingMode = "exact" | "approx" | "approx_head" | "edge" | "circuit" | "approx_neuron";
 
 export interface PatchingState {
   cleanPrompt: string;
@@ -27,6 +27,7 @@ export interface PatchingState {
   top_k_edges: number;
   top_k_candidates: number;
   tau: number;
+  top_k_neurons: number;
 }
 
 export const DEFAULT_PATCHING_STATE: PatchingState = {
@@ -41,6 +42,7 @@ export const DEFAULT_PATCHING_STATE: PatchingState = {
   top_k_edges: 200,
   top_k_candidates: 2000,
   tau: 0.02,
+  top_k_neurons: 200,
 };
 
 interface Props {
@@ -198,6 +200,12 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
               {" "}circuit (ACDC){" "}
               <span style={{ color: "#888", fontSize: 11 }}>(cheap-ACDC, tau-filtered BFS)</span>
             </label>
+            <label style={{ fontSize: 12 }}>
+              <input type="radio" name="mode" value="approx_neuron"
+                checked={state.mode === "approx_neuron"}
+                onChange={() => onChange({ mode: "approx_neuron" })} />
+              {" "}per-neuron FFN (approx)
+            </label>
           </div>
           {state.mode === "edge" && (
             <label style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
@@ -243,7 +251,23 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
               </label>
             </div>
           )}
-          {(state.mode === "approx" || state.mode === "approx_head" || state.mode === "edge" || state.mode === "circuit") && state.tokenPairMode === "auto" && (
+          {state.mode === "approx_neuron" && (
+            <div className="row" style={{ marginTop: 6 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                top_k_neurons:
+                <input
+                  type="number"
+                  min={1}
+                  value={state.top_k_neurons}
+                  onChange={(e) =>
+                    onChange({ top_k_neurons: Math.max(1, Number(e.target.value)) })
+                  }
+                  style={{ width: 70 }}
+                />
+              </label>
+            </div>
+          )}
+          {(state.mode === "approx" || state.mode === "approx_head" || state.mode === "edge" || state.mode === "circuit" || state.mode === "approx_neuron") && state.tokenPairMode === "auto" && (
             <div style={{ color: "#7f7", fontSize: 11 }}>
               auto-pick uses clean argmax; switch to manual for a specific target
             </div>
