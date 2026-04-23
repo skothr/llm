@@ -344,6 +344,9 @@ export function ProbePanel() {
           measurement_position: patchingState.measurementPos,
           mode: patchingState.mode,
         };
+        if (patchingState.mode === "edge") {
+          cfg.top_k_edges = patchingState.top_k_edges;
+        }
         if (patchingState.tokenPairMode === "manual") {
           cfg.correct_token = patchingState.manualCorrect;
           cfg.incorrect_token = patchingState.manualIncorrect;
