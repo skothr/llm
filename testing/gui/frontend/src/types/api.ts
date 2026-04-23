@@ -121,11 +121,13 @@ export interface PatchingCellData {
   position: number;
   patched_logits?: EncodedTensor;
   ap_recovery?: number;
-  // edge mode fields (optional — only present when mode === "edge")
+  // edge / circuit mode fields (optional — only present when mode === "edge" or "circuit")
   writer_layer?: number;
   writer_unit?: string;
   reader_layer?: number;
   reader_unit?: string;
+  // circuit-only
+  in_circuit?: boolean;
 }
 
 export interface EdgeCellData {
@@ -138,7 +140,7 @@ export interface EdgeCellData {
   ap_recovery: number;
 }
 
-export type PatchingMode = "exact" | "approx" | "approx_head" | "edge";
+export type PatchingMode = "exact" | "approx" | "approx_head" | "edge" | "circuit";
 
 export interface PatchingCompleteData {
   type: "complete";
@@ -149,6 +151,10 @@ export interface PatchingCompleteData {
     mode?: PatchingMode;
     n_heads?: number;
     n_edges?: number;
+    n_edges_in_circuit?: number;
+    n_nodes_in_circuit?: number;
+    tau?: number;
+    top_k_candidates?: number;
   };
 }
 
