@@ -10,6 +10,7 @@ const AP_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching.js
 const AP_APPROX_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-approx.json");
 const PH_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-per-head.json");
 const EDGE_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-edge.json");
+const CIRCUIT_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-circuit.json");
 
 // Wipe IDB between tests so the persistence layer doesn't carry state
 // from one case into the next. Must be called while a page is loaded on
@@ -353,6 +354,41 @@ test("edge AP panel mounts without crash, tabs visible", async ({ page }) => {
   await expect(page.getByRole("button", { name: "sankey" })).toBeVisible();
   await expect(page.getByRole("button", { name: "matrix" })).toBeVisible();
   await expect(page.getByRole("button", { name: "list" })).toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("circuit panel renders with τ slider and stats", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  // Circuit (ACDC) heading must appear
+  await page.getByRole("heading", { name: /Circuit \(ACDC\)/i })
+    .waitFor({ state: "visible", timeout: 5000 });
+
+  // Stats strip shows edge count (the regex intentionally matches the stats
+  // div, not the heading which also says "edges in circuit").
+  await expect(page.getByText(/Edges in circuit: \d+ of \d+/i)).toBeVisible();
+
+  // τ slider
+  const tauSlider = page.locator('input[type="range"]').first();
+  await expect(tauSlider).toBeVisible();
+
+  // copy JSON export button
+  await expect(page.getByRole("button", { name: /copy json/i })).toBeVisible();
 
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
