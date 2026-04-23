@@ -181,7 +181,14 @@ def _capture_residual_stream_with_grad(
     prompt: str,
     sublayers: Tuple[str, ...] = ("attn", "ffn"),
     layers: Optional[List[int]] = None,
-) -> Tuple[Dict[Tuple[int, str], torch.Tensor], Dict[int, torch.Tensor], torch.Tensor, List[str]]:
+    capture_concat_z: bool = False,
+) -> Tuple[
+    Dict[Tuple[int, str], torch.Tensor],
+    Dict[int, torch.Tensor],
+    torch.Tensor,
+    List[str],
+    Dict[int, torch.Tensor],
+]:
     """Capture residual-stream states with autograd graph intact.
 
     Mirrors _capture_residual_stream but keeps tensors attached to the graph
@@ -201,7 +208,8 @@ def _capture_residual_stream_with_grad(
     For "ffn" rows, `captured[(L, "ffn")]` is the decoder layer's full output
     (residual stream post-layer) and matches exact AP's ffn-row semantics.
 
-    Returns: (captured_states, h_ins, output_logits, prompt_tokens).
+    Returns: (captured_states, h_ins, output_logits, prompt_tokens, concat_z_captured).
+        concat_z_captured is empty when capture_concat_z=False.
     """
     device = _get_input_device(model)
     enc = tokenizer(prompt, return_tensors="pt")
@@ -213,6 +221,7 @@ def _capture_residual_stream_with_grad(
 
     captured: Dict[Tuple[int, str], torch.Tensor] = {}
     h_ins: Dict[int, torch.Tensor] = {}
+    concat_z_captured: Dict[int, torch.Tensor] = {}
     hooks: List = []
 
     # Pre-hook captures layer input (h_in). Needed for the attn-row value
@@ -251,13 +260,27 @@ def _capture_residual_stream_with_grad(
                 return hook
             hooks.append(model.model.layers[i].register_forward_hook(make_ffn(i)))
 
+        if capture_concat_z and "attn" in sublayers:
+            def make_concat_z_hook(idx: int):
+                def hook(_module: torch.nn.Module, args: Tuple) -> None:
+                    z = args[0]             # [batch, seq, hidden]
+                    if z.requires_grad:
+                        z.retain_grad()
+                    concat_z_captured[idx] = z
+                return hook
+            hooks.append(
+                model.model.layers[i].self_attn.o_proj.register_forward_pre_hook(
+                    make_concat_z_hook(i)
+                )
+            )
+
     try:
         model_output = model(input_ids)
     finally:
         for h in hooks:
             h.remove()
 
-    return captured, h_ins, model_output.logits[0], prompt_tokens
+    return captured, h_ins, model_output.logits[0], prompt_tokens, concat_z_captured
 
 
 # ---------------------------------------------------------------------------
@@ -807,7 +830,8 @@ class PatchingResult:
     prompt_tokens_corrupted: List[str]
     direction: str
     measurement_position: int
-    mode: str = "exact"  # "exact" | "approx"
+    mode: str = "exact"                  # "exact" | "approx" | "approx_head"
+    n_heads: Optional[int] = None        # set by attribution_patch_per_head
 
 
 def activation_patch(
@@ -1034,9 +1058,10 @@ def attribution_patch(
     base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
 
     with torch.no_grad():
-        from_captured, from_h_ins_raw, from_logits, from_tokens = _capture_residual_stream_with_grad(
-            model, tokenizer, from_prompt, sublayers=sublayers, layers=layers,
-        )
+        from_captured, from_h_ins_raw, from_logits, from_tokens, _ = \
+            _capture_residual_stream_with_grad(
+                model, tokenizer, from_prompt, sublayers=sublayers, layers=layers,
+            )
         # Detach + clone so the 'from' tensors don't pollute the upcoming
         # base-side graph. They're used purely as values.
         from_states = {k: v.detach().clone() for k, v in from_captured.items()}
@@ -1044,9 +1069,10 @@ def attribution_patch(
 
     # --- Step 2: Forward 'base' prompt WITH grad to build the graph ---
     with torch.enable_grad():
-        base_captured, base_h_ins, base_logits, base_tokens = _capture_residual_stream_with_grad(
-            model, tokenizer, base_prompt, sublayers=sublayers, layers=layers,
-        )
+        base_captured, base_h_ins, base_logits, base_tokens, _ = \
+            _capture_residual_stream_with_grad(
+                model, tokenizer, base_prompt, sublayers=sublayers, layers=layers,
+            )
 
         # base_logits already has the base-prompt logits — reuse them.
         clean_baseline = from_logits if direction == "denoise" else base_logits
@@ -1125,4 +1151,196 @@ def attribution_patch(
         direction=direction,
         measurement_position=meas_pos,
         mode="approx",
+    )
+
+
+def attribution_patch_per_head(
+    model,
+    tokenizer,
+    clean_prompt: str,
+    corrupted_prompt: str,
+    *,
+    correct_token_id: int,
+    incorrect_token_id: int,
+    direction: str = "denoise",
+    measurement_position: int = -1,
+    positions: Optional[List[int]] = None,
+    layers: Optional[List[int]] = None,
+    on_cell: Optional[Callable[[int, str, int, Dict], None]] = None,
+) -> PatchingResult:
+    """Per-attention-head gradient attribution patching (Phase 3.6).
+
+    Decomposes attn_out's contribution to the metric into per-head scores via
+    chain rule through W_O (o_proj). Produces per-(layer, head, position) AP
+    values plus FFN anchor rows. One forward + one backward pass, same cost as
+    Phase 3.5.
+
+    Unit strings in on_cell / cells: "attn.h{N}" (0-indexed) for head N,
+    "ffn" for FFN anchor.
+
+    Note: sum_h AP_head(L,h,pos) == (delta_attn_out · attn_out.grad) / D, which
+    equals Phase 3.5's AP_attn(L,pos) ONLY when h_in is identical between the
+    clean and corrupted prompts (trivially at L=0 for same-length tokenizations
+    but not at deeper layers). Phase 3.5 AP_attn linearizes at the full residual
+    stream h_post_attn = h_in + attn_out to match exact AP's patched quantity;
+    per-head AP decomposes attn_out alone, which is the right unit for
+    mechanistic interpretability of individual heads.
+    """
+    import warnings
+
+    if correct_token_id is None or incorrect_token_id is None:
+        raise ValueError(
+            "attribution_patch_per_head requires correct_token_id and incorrect_token_id"
+        )
+    if direction not in ("denoise", "noise"):
+        raise ValueError("direction must be 'denoise' or 'noise'")
+    if not clean_prompt or not corrupted_prompt:
+        raise ValueError("prompt cannot be empty")
+
+    if getattr(model, "hf_quantizer", None) is not None:
+        warnings.warn(
+            "attribution_patch_per_head on a quantized model: gradient flow works "
+            "but precision is reduced.",
+            stacklevel=2,
+        )
+
+    clean_ids = tokenizer(clean_prompt, return_tensors="pt")["input_ids"]
+    corr_ids = tokenizer(corrupted_prompt, return_tensors="pt")["input_ids"]
+    if clean_ids.shape[1] != corr_ids.shape[1]:
+        raise ValueError(
+            f"prompts must tokenize to same length "
+            f"(clean={clean_ids.shape[1]}, corrupted={corr_ids.shape[1]})"
+        )
+    seq_len = clean_ids.shape[1]
+    normalized_positions: List[int] = (
+        list(range(seq_len)) if positions is None
+        else [p if p >= 0 else seq_len + p for p in positions]
+    )
+    meas_pos = measurement_position % seq_len
+
+    n_heads: int = model.config.num_attention_heads
+    hidden: int = model.config.hidden_size
+    head_dim: int = hidden // n_heads
+
+    from_prompt = clean_prompt if direction == "denoise" else corrupted_prompt
+    base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
+    sublayers: Tuple[str, ...] = ("attn", "ffn")
+
+    with torch.no_grad():
+        from_captured, _, from_logits, from_tokens, from_concat_z_raw = \
+            _capture_residual_stream_with_grad(
+                model, tokenizer, from_prompt,
+                sublayers=sublayers, layers=layers,
+                capture_concat_z=True,
+            )
+        from_states = {k: v.detach().clone() for k, v in from_captured.items()}
+        from_concat_z = {i: v.detach().clone() for i, v in from_concat_z_raw.items()}
+
+    with torch.enable_grad():
+        base_captured, _, base_logits, base_tokens, base_concat_z = \
+            _capture_residual_stream_with_grad(
+                model, tokenizer, base_prompt,
+                sublayers=sublayers, layers=layers,
+                capture_concat_z=True,
+            )
+
+        clean_baseline = from_logits if direction == "denoise" else base_logits
+        corrupted_baseline = base_logits if direction == "denoise" else from_logits
+
+        d_clean = (
+            clean_baseline[meas_pos, correct_token_id]
+            - clean_baseline[meas_pos, incorrect_token_id]
+        ).detach()
+        d_corrupted = (
+            corrupted_baseline[meas_pos, correct_token_id]
+            - corrupted_baseline[meas_pos, incorrect_token_id]
+        ).detach()
+        denominator = (d_clean - d_corrupted).item()
+        if abs(denominator) < 1e-6:
+            raise ValueError(
+                "clean and corrupted baselines have identical logit_diff; "
+                "AP would divide by zero"
+            )
+
+        metric = (
+            base_logits[meas_pos, correct_token_id]
+            - base_logits[meas_pos, incorrect_token_id]
+        )
+        metric.backward()
+
+    num_layers = len(model.model.layers)
+    target_layers = sorted(
+        set(range(num_layers)) if layers is None else set(layers)
+    )
+
+    cells: List[Dict] = []
+
+    for L in target_layers:
+        # --- FFN anchor (identical math to Phase 3.5) ---
+        if (L, "ffn") in base_captured:
+            base_ffn = base_captured[(L, "ffn")]    # [1, seq, hidden]
+            ffn_grad = base_ffn.grad
+            from_ffn = from_states.get((L, "ffn"))
+            if ffn_grad is not None and from_ffn is not None:
+                for pos in normalized_positions:
+                    ap_raw = (
+                        (from_ffn[0, pos] - base_ffn[0, pos].detach()) * ffn_grad[0, pos]
+                    ).sum().item()
+                    ap_recovery = ap_raw / denominator if direction == "denoise" else 1.0 + ap_raw / denominator
+                    cell: Dict = {"layer": L, "unit": "ffn", "position": pos,
+                                  "ap_recovery": float(ap_recovery)}
+                    cells.append(cell)
+                    if on_cell is not None:
+                        on_cell(L, "ffn", pos, cell)
+
+        # --- Per-head AP via chain rule through W_O ---
+        if (L, "attn") in base_captured and L in base_concat_z:
+            attn_out_grad = base_captured[(L, "attn")].grad    # [1, seq, hidden]
+            if attn_out_grad is None:
+                continue
+            W_O: torch.Tensor = model.model.layers[L].self_attn.o_proj.weight  # [hidden, hidden]
+            # Chain rule: ∂metric/∂concat_z = attn_out_grad @ W_O
+            # attn_out_grad[0]: [seq, hidden]; W_O: [hidden, hidden]
+            concat_z_grad = attn_out_grad[0] @ W_O             # [seq, hidden]
+
+            base_cz = base_concat_z[L]              # [1, seq, hidden], in graph
+            from_cz = from_concat_z.get(L)
+            if from_cz is None:
+                continue
+
+            for pos in normalized_positions:
+                delta_z = (from_cz[0, pos] - base_cz[0, pos].detach())      # [hidden]
+                cz_grad_pos = concat_z_grad[pos]                              # [hidden]
+
+                dz_heads = delta_z.view(n_heads, head_dim)           # [n_heads, head_dim]
+                cz_grad_heads = cz_grad_pos.view(n_heads, head_dim)  # [n_heads, head_dim]
+                ap_heads_raw = (dz_heads * cz_grad_heads).sum(dim=-1)  # [n_heads]
+
+                for h in range(n_heads):
+                    ap_raw_h = ap_heads_raw[h].item()
+                    ap_recovery_h = (
+                        ap_raw_h / denominator
+                        if direction == "denoise"
+                        else 1.0 + ap_raw_h / denominator
+                    )
+                    unit = f"attn.h{h}"
+                    hcell: Dict = {"layer": L, "unit": unit, "position": pos,
+                                   "ap_recovery": float(ap_recovery_h)}
+                    cells.append(hcell)
+                    if on_cell is not None:
+                        on_cell(L, unit, pos, hcell)
+
+    clean_tokens = from_tokens if direction == "denoise" else base_tokens
+    corrupted_tokens = base_tokens if direction == "denoise" else from_tokens
+
+    return PatchingResult(
+        cells=cells,
+        clean_baseline_logits=clean_baseline.detach(),
+        corrupted_baseline_logits=corrupted_baseline.detach(),
+        prompt_tokens_clean=clean_tokens,
+        prompt_tokens_corrupted=corrupted_tokens,
+        direction=direction,
+        measurement_position=meas_pos,
+        mode="approx_head",
+        n_heads=n_heads,
     )
