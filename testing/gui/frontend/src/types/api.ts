@@ -115,7 +115,9 @@ export interface PatchingCellData {
   type: "data";
   layer: number;
   original_layer?: number;
-  sublayer: "attn" | "ffn";
+  sublayer?: "attn" | "ffn";     // present in exact/approx modes
+  unit?: string;                  // present in approx_head mode: "attn.hN" or "ffn"
+  head?: number | null;           // derived client-side from unit; not sent by backend
   position: number;
   patched_logits?: EncodedTensor;
   ap_recovery?: number;
@@ -127,7 +129,8 @@ export interface PatchingCompleteData {
     num_cells: number;
     direction: "denoise" | "noise";
     measurement_position: number;
-    mode?: "exact" | "approx";
+    mode?: "exact" | "approx" | "approx_head";
+    n_heads?: number;
   };
 }
 
