@@ -349,6 +349,8 @@ export function ProbePanel() {
         } else if (patchingState.mode === "circuit") {
           cfg.top_k_candidates = patchingState.top_k_candidates;
           cfg.tau = patchingState.tau;
+        } else if (patchingState.mode === "approx_neuron") {
+          cfg.top_k_neurons = patchingState.top_k_neurons;
         }
         if (patchingState.tokenPairMode === "manual") {
           cfg.correct_token = patchingState.manualCorrect;
