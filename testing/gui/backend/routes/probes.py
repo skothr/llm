@@ -526,7 +526,7 @@ async def generate_ws(ws: WebSocket, name: str):
                     outputs = await loop.run_in_executor(None, _forward)
                     logits = outputs.logits[:, -1, :]
                     past_key_values = outputs.past_key_values
-                except (torch.OutOfMemoryError, RuntimeError) as e:
+                except (torch.OutOfMemoryError, RuntimeError) as e:  # pyright: ignore[reportAttributeAccessIssue]
                     # torch.OutOfMemoryError catches the common CUDA path. Some
                     # backends (MPS, older CPU allocators, XPU) surface OOM as
                     # a plain RuntimeError with "out of memory" in the message
