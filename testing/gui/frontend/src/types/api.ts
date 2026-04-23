@@ -121,7 +121,24 @@ export interface PatchingCellData {
   position: number;
   patched_logits?: EncodedTensor;
   ap_recovery?: number;
+  // edge mode fields (optional — only present when mode === "edge")
+  writer_layer?: number;
+  writer_unit?: string;
+  reader_layer?: number;
+  reader_unit?: string;
 }
+
+export interface EdgeCellData {
+  type: "data";
+  writer_layer: number;
+  writer_unit: string;
+  reader_layer: number;
+  reader_unit: string;
+  position: number;
+  ap_recovery: number;
+}
+
+export type PatchingMode = "exact" | "approx" | "approx_head" | "edge";
 
 export interface PatchingCompleteData {
   type: "complete";
@@ -129,8 +146,9 @@ export interface PatchingCompleteData {
     num_cells: number;
     direction: "denoise" | "noise";
     measurement_position: number;
-    mode?: "exact" | "approx" | "approx_head";
+    mode?: PatchingMode;
     n_heads?: number;
+    n_edges?: number;
   };
 }
 
@@ -169,6 +187,7 @@ export type WsMessage =
   | WsError
   | PatchingBaselinesData
   | PatchingCellData
+  | EdgeCellData
   | PatchingCompleteData;
 
 export interface InterventionSpec {
