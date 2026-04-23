@@ -13,7 +13,7 @@
  */
 import { useEffect, useState } from "react";
 
-export type PatchingMode = "exact" | "approx" | "approx_head" | "edge";
+export type PatchingMode = "exact" | "approx" | "approx_head" | "edge" | "circuit";
 
 export interface PatchingState {
   cleanPrompt: string;
@@ -25,6 +25,8 @@ export interface PatchingState {
   manualIncorrect: string;
   mode: PatchingMode;
   top_k_edges: number;
+  top_k_candidates: number;
+  tau: number;
 }
 
 export const DEFAULT_PATCHING_STATE: PatchingState = {
@@ -37,6 +39,8 @@ export const DEFAULT_PATCHING_STATE: PatchingState = {
   manualIncorrect: "",
   mode: "exact",
   top_k_edges: 200,
+  top_k_candidates: 2000,
+  tau: 0.02,
 };
 
 interface Props {
@@ -187,6 +191,13 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
               {" "}edge AP{" "}
               <span style={{ color: "#888", fontSize: 11 }}>(gradient EAP, writer→reader edges)</span>
             </label>
+            <label style={{ fontSize: 12 }}>
+              <input type="radio" name="mode" value="circuit"
+                checked={state.mode === "circuit"}
+                onChange={() => onChange({ mode: "circuit" })} />
+              {" "}circuit (ACDC){" "}
+              <span style={{ color: "#888", fontSize: 11 }}>(cheap-ACDC, tau-filtered BFS)</span>
+            </label>
           </div>
           {state.mode === "edge" && (
             <label style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
@@ -203,7 +214,36 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
               />
             </label>
           )}
-          {(state.mode === "approx" || state.mode === "approx_head" || state.mode === "edge") && state.tokenPairMode === "auto" && (
+          {state.mode === "circuit" && (
+            <div className="row" style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                top_k_candidates:
+                <input
+                  type="number"
+                  min={1}
+                  value={state.top_k_candidates}
+                  onChange={(e) =>
+                    onChange({ top_k_candidates: Math.max(1, Number(e.target.value)) })
+                  }
+                  style={{ width: 70 }}
+                />
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                {"τ"} (threshold):
+                <input
+                  type="number"
+                  min={0}
+                  step={0.005}
+                  value={state.tau}
+                  onChange={(e) =>
+                    onChange({ tau: Math.max(0, Number(e.target.value)) })
+                  }
+                  style={{ width: 70 }}
+                />
+              </label>
+            </div>
+          )}
+          {(state.mode === "approx" || state.mode === "approx_head" || state.mode === "edge" || state.mode === "circuit") && state.tokenPairMode === "auto" && (
             <div style={{ color: "#7f7", fontSize: 11 }}>
               auto-pick uses clean argmax; switch to manual for a specific target
             </div>

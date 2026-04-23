@@ -346,6 +346,9 @@ export function ProbePanel() {
         };
         if (patchingState.mode === "edge") {
           cfg.top_k_edges = patchingState.top_k_edges;
+        } else if (patchingState.mode === "circuit") {
+          cfg.top_k_candidates = patchingState.top_k_candidates;
+          cfg.tau = patchingState.tau;
         }
         if (patchingState.tokenPairMode === "manual") {
           cfg.correct_token = patchingState.manualCorrect;
