@@ -891,9 +891,12 @@ class PatchingResult:
     prompt_tokens_corrupted: List[str]
     direction: str
     measurement_position: int
-    mode: str = "exact"                  # "exact" | "approx" | "approx_head" | "edge"
-    n_heads: Optional[int] = None        # set by attribution_patch_per_head / edge_attribution_patch
-    n_edges: Optional[int] = None        # set by edge_attribution_patch (pre-top-k count)
+    mode: str = "exact"                           # "exact" | "approx" | "approx_head" | "edge" | "circuit"
+    n_heads: Optional[int] = None                  # set by attribution_patch_per_head / edge_attribution_patch / extract_circuit
+    n_edges: Optional[int] = None                  # set by edge_attribution_patch / extract_circuit (pre-filter count)
+    n_edges_in_circuit: Optional[int] = None       # set by extract_circuit
+    n_nodes_in_circuit: Optional[int] = None       # set by extract_circuit (includes the logits sink)
+    tau: Optional[float] = None                    # set by extract_circuit (applied threshold)
 
 
 def activation_patch(
@@ -1432,7 +1435,7 @@ def _is_valid_ffn_writer(L_w: int, reader_type: str, reader_L: int) -> bool:
     return False
 
 
-def edge_attribution_patch(
+def _compute_all_edges(
     model,
     tokenizer,
     clean_prompt: str,
@@ -1440,32 +1443,25 @@ def edge_attribution_patch(
     *,
     correct_token_id: int,
     incorrect_token_id: int,
-    direction: str = "denoise",
-    measurement_position: int = -1,
-    positions: Optional[List[int]] = None,
-    layers: Optional[List[int]] = None,
-    top_k_edges: int = 200,
-    on_cell: Optional[Callable[[Dict], None]] = None,
-) -> PatchingResult:
-    """Per-edge gradient attribution patching (Phase 3.7).
+    direction: str,
+    measurement_position: int,
+    positions: Optional[List[int]],
+    layers: Optional[List[int]],
+) -> Tuple[
+    List[Dict],            # all_edge_scores (unsorted)
+    torch.Tensor,          # clean_baseline_logits (detached)
+    torch.Tensor,          # corrupted_baseline_logits (detached)
+    List[str],             # clean_tokens (ordered by direction)
+    List[str],             # corrupted_tokens (ordered by direction)
+    int,                   # meas_pos (normalized to [0, seq_len))
+    int,                   # n_heads
+]:
+    """Core forward+backward+edge-enumeration shared by edge_attribution_patch
+    and extract_circuit.
 
-    Decomposes the residual stream's additive structure into per-(writer, reader,
-    position) AP scores. One forward + one backward pass. Each edge score measures
-    how much writer w's output delta (clean - corrupted) aligned with the gradient
-    at reader r's input.
-
-    Valid edges respect the residual stream's topological order:
-    - embed → any reader
-    - attn(L_w) → attn_in(L_r) iff L_w < L_r
-    - attn(L_w) → ffn_in(L_r) iff L_w <= L_r
-    - ffn(L_w) → attn_in(L_r) or ffn_in(L_r) iff L_w < L_r
-    - any writer → logits reader
-
-    Returns PatchingResult with mode="edge", n_edges=total_pre_filter_count.
-    cells contains only the top-k edges by |ap_recovery|.
+    Validates prompts/direction/top-k-candidate preconditions upstream
+    (each caller is responsible for its own param validation).
     """
-    if top_k_edges < 1:
-        raise ValueError("top_k_edges must be >= 1")
     if not clean_prompt or not corrupted_prompt:
         raise ValueError("prompts cannot be empty")
     if direction not in ("denoise", "noise"):
@@ -1488,23 +1484,20 @@ def edge_attribution_patch(
         else [p if p >= 0 else seq_len + p for p in positions]
     )
 
-    # --- Direction: denoise = from=clean, base=corrupted; noise = swapped ---
     from_prompt = clean_prompt if direction == "denoise" else corrupted_prompt
     base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
 
     sublayers: Tuple[str, ...] = ("attn", "ffn")
 
-    # --- Step 1: Embed deltas (no_grad, before any forward pass) ---
     with torch.no_grad():
         from_embed = model.model.embed_tokens(
             tokenizer(from_prompt, return_tensors="pt")["input_ids"].to(device)
-        ).detach()  # [1, seq, hidden]
+        ).detach()
         base_embed = model.model.embed_tokens(
             tokenizer(base_prompt, return_tensors="pt")["input_ids"].to(device)
         ).detach()
-    delta_embed = from_embed - base_embed  # [1, seq, hidden]
+    delta_embed = from_embed - base_embed
 
-    # --- Step 2: Capture 'from' prompt (no_grad) ---
     with torch.no_grad():
         from_captured_raw, _, from_logits, from_tokens, from_cz_raw, _ = \
             _capture_residual_stream_with_grad(
@@ -1517,7 +1510,6 @@ def edge_attribution_patch(
         from_states = {k: v.detach().clone() for k, v in from_captured_raw.items()}
         from_cz = {k: v.detach().clone() for k, v in from_cz_raw.items()}
 
-    # --- Step 3: Capture 'base' prompt (enable_grad, with reader grad hooks) ---
     with torch.enable_grad():
         base_captured, _, base_logits, base_tokens, base_cz, reader_inputs = \
             _capture_residual_stream_with_grad(
@@ -1553,9 +1545,6 @@ def edge_attribution_patch(
         )
         metric.backward()
 
-    # --- Step 4: FFN output deltas via direct MLP capture ---
-    # (L, "ffn_out") holds the raw MLP output before residual add, captured by
-    # register_forward_hook on model.model.layers[L].mlp.
     delta_ffn: Dict[int, torch.Tensor] = {}
     num_layers = len(model.model.layers)
     target_layers_set = set(range(num_layers)) if layers is None else set(layers)
@@ -1565,25 +1554,22 @@ def edge_attribution_patch(
         if from_ffn_out is not None and base_ffn_out is not None:
             delta_ffn[L] = from_ffn_out - base_ffn_out.detach()
 
-    # --- Step 5: Model config for head decomposition ---
     n_heads: int = model.config.num_attention_heads
     hidden: int = model.config.hidden_size
     head_dim: int = hidden // n_heads
 
-    # --- Step 6: Edge loop ---
     all_edge_scores: List[Dict] = []
 
     for reader_key, reader_tensor in reader_inputs.items():
-        reader_type = reader_key[0]   # "attn_in" | "ffn_in" | "logits"
-        reader_L = reader_key[1]      # layer index (or N_L for logits)
+        reader_type = reader_key[0]
+        reader_L = reader_key[1]
 
         if reader_tensor.grad is None:
             continue
 
         for pos in normalized_positions:
-            grad_r = reader_tensor.grad[0, pos].detach()   # [hidden]
+            grad_r = reader_tensor.grad[0, pos].detach()
 
-            # Embed writer (always valid for any reader)
             ap_embed_raw = (delta_embed[0, pos] * grad_r).sum().item()
             ap_recovery_embed = (
                 ap_embed_raw / denominator
@@ -1600,7 +1586,6 @@ def edge_attribution_patch(
             })
 
             for L_w in sorted(target_layers_set):
-                # FFN writer
                 if _is_valid_ffn_writer(L_w, reader_type, reader_L) and L_w in delta_ffn:
                     ap_ffn_raw = (delta_ffn[L_w][0, pos] * grad_r).sum().item()
                     ap_recovery_ffn = (
@@ -1617,16 +1602,15 @@ def edge_attribution_patch(
                         "ap_recovery": float(ap_recovery_ffn),
                     })
 
-                # Attn head writers (vectorized over all heads)
                 if _is_valid_attn_writer(L_w, reader_type, reader_L):
                     if (L_w, "attn") in from_states and L_w in base_cz and L_w in from_cz:
-                        W_O: torch.Tensor = model.model.layers[L_w].self_attn.o_proj.weight  # [hidden, hidden]
-                        grad_z_r = grad_r @ W_O                        # [hidden]
-                        grad_z_r_heads = grad_z_r.view(n_heads, head_dim)   # [n_heads, head_dim]
+                        W_O: torch.Tensor = model.model.layers[L_w].self_attn.o_proj.weight
+                        grad_z_r = grad_r @ W_O
+                        grad_z_r_heads = grad_z_r.view(n_heads, head_dim)
 
-                        delta_z = from_cz[L_w][0, pos] - base_cz[L_w][0, pos].detach()  # [hidden]
-                        delta_z_heads = delta_z.view(n_heads, head_dim)                   # [n_heads, head_dim]
-                        ap_heads_raw = (delta_z_heads * grad_z_r_heads).sum(dim=-1)       # [n_heads]
+                        delta_z = from_cz[L_w][0, pos] - base_cz[L_w][0, pos].detach()
+                        delta_z_heads = delta_z.view(n_heads, head_dim)
+                        ap_heads_raw = (delta_z_heads * grad_z_r_heads).sum(dim=-1)
 
                         for h in range(n_heads):
                             ap_h_raw = ap_heads_raw[h].item()
@@ -1644,7 +1628,73 @@ def edge_attribution_patch(
                                 "ap_recovery": float(ap_recovery_h),
                             })
 
-    # --- Step 7: Top-k selection ---
+    clean_tokens = from_tokens if direction == "denoise" else base_tokens
+    corrupted_tokens = base_tokens if direction == "denoise" else from_tokens
+
+    return (
+        all_edge_scores,
+        clean_baseline.detach(),
+        corrupted_baseline.detach(),
+        clean_tokens,
+        corrupted_tokens,
+        meas_pos,
+        n_heads,
+    )
+
+
+def edge_attribution_patch(
+    model,
+    tokenizer,
+    clean_prompt: str,
+    corrupted_prompt: str,
+    *,
+    correct_token_id: int,
+    incorrect_token_id: int,
+    direction: str = "denoise",
+    measurement_position: int = -1,
+    positions: Optional[List[int]] = None,
+    layers: Optional[List[int]] = None,
+    top_k_edges: int = 200,
+    on_cell: Optional[Callable[[Dict], None]] = None,
+) -> PatchingResult:
+    """Per-edge gradient attribution patching (Phase 3.7).
+
+    Decomposes the residual stream's additive structure into per-(writer, reader,
+    position) AP scores. One forward + one backward pass. Each edge score measures
+    how much writer w's output delta (clean - corrupted) aligned with the gradient
+    at reader r's input.
+
+    Valid edges respect the residual stream's topological order:
+    - embed → any reader
+    - attn(L_w) → attn_in(L_r) iff L_w < L_r
+    - attn(L_w) → ffn_in(L_r) iff L_w <= L_r
+    - ffn(L_w) → attn_in(L_r) or ffn_in(L_r) iff L_w < L_r
+    - any writer → logits reader
+
+    Returns PatchingResult with mode="edge", n_edges=total_pre_filter_count.
+    cells contains only the top-k edges by |ap_recovery|.
+    """
+    if top_k_edges < 1:
+        raise ValueError("top_k_edges must be >= 1")
+
+    (
+        all_edge_scores,
+        clean_baseline_logits,
+        corrupted_baseline_logits,
+        clean_tokens,
+        corrupted_tokens,
+        meas_pos,
+        n_heads,
+    ) = _compute_all_edges(
+        model, tokenizer, clean_prompt, corrupted_prompt,
+        correct_token_id=correct_token_id,
+        incorrect_token_id=incorrect_token_id,
+        direction=direction,
+        measurement_position=measurement_position,
+        positions=positions,
+        layers=layers,
+    )
+
     n_edges_total = len(all_edge_scores)
     all_edge_scores.sort(key=lambda c: abs(c["ap_recovery"]), reverse=True)
     top_cells = all_edge_scores[:top_k_edges]
@@ -1653,13 +1703,10 @@ def edge_attribution_patch(
         for cell in top_cells:
             on_cell(cell)
 
-    clean_tokens = from_tokens if direction == "denoise" else base_tokens
-    corrupted_tokens = base_tokens if direction == "denoise" else from_tokens
-
     return PatchingResult(
         cells=top_cells,
-        clean_baseline_logits=clean_baseline.detach(),
-        corrupted_baseline_logits=corrupted_baseline.detach(),
+        clean_baseline_logits=clean_baseline_logits,
+        corrupted_baseline_logits=corrupted_baseline_logits,
         prompt_tokens_clean=clean_tokens,
         prompt_tokens_corrupted=corrupted_tokens,
         direction=direction,
@@ -1667,4 +1714,123 @@ def edge_attribution_patch(
         mode="edge",
         n_heads=n_heads,
         n_edges=n_edges_total,
+    )
+
+
+def extract_circuit(
+    model,
+    tokenizer,
+    clean_prompt: str,
+    corrupted_prompt: str,
+    *,
+    correct_token_id: int,
+    incorrect_token_id: int,
+    direction: str = "denoise",
+    measurement_position: int = -1,
+    positions: Optional[List[int]] = None,
+    layers: Optional[List[int]] = None,
+    tau: float = 0.02,
+    top_k_candidates: int = 2000,
+    on_cell: Optional[Callable[[Dict], None]] = None,
+) -> PatchingResult:
+    """Cheap-ACDC circuit extraction (Syed et al. 2023, arXiv 2310.10348).
+
+    Runs the Phase 3.7 edge attribution pass, then annotates the top
+    `top_k_candidates` edges with `in_circuit: bool` based on:
+      1. |ap_recovery| >= tau (filter)
+      2. reader is reverse-reachable from 'logits' through surviving edges
+
+    Returns PatchingResult with mode='circuit'. Cells include all top-k
+    candidates (in-circuit and out). Summary fields:
+      n_edges              - total pre-filter edge count
+      n_edges_in_circuit   - count of cells with in_circuit=True
+      n_nodes_in_circuit   - |visited| from reverse-BFS, inclusive of the
+                              logits sink (a graph with only embed->logits
+                              yields n_nodes_in_circuit == 2).
+      tau                  - applied threshold
+
+    If `top_k_candidates > total valid edges`, silently caps at the actual
+    edge count (matches edge_attribution_patch's top_k_edges behavior).
+    """
+    if tau < 0.0:
+        raise ValueError("tau must be >= 0.0")
+    if top_k_candidates < 1:
+        raise ValueError("top_k_candidates must be >= 1")
+
+    (
+        all_edge_scores,
+        clean_baseline_logits,
+        corrupted_baseline_logits,
+        clean_tokens,
+        corrupted_tokens,
+        meas_pos,
+        n_heads,
+    ) = _compute_all_edges(
+        model, tokenizer, clean_prompt, corrupted_prompt,
+        correct_token_id=correct_token_id,
+        incorrect_token_id=incorrect_token_id,
+        direction=direction,
+        measurement_position=measurement_position,
+        positions=positions,
+        layers=layers,
+    )
+
+    n_edges_total = len(all_edge_scores)
+    all_edge_scores.sort(key=lambda c: abs(c["ap_recovery"]), reverse=True)
+    top_cells = all_edge_scores[:top_k_candidates]
+
+    def node_of_writer(cell: Dict) -> Tuple[int, str, int]:
+        return (cell["writer_layer"], cell["writer_unit"], cell["position"])
+
+    def node_of_reader(cell: Dict) -> Tuple[int, str, int]:
+        return (cell["reader_layer"], cell["reader_unit"], cell["position"])
+
+    reverse_adj: Dict[Tuple[int, str, int], List[Tuple[int, str, int]]] = {}
+    for cell in top_cells:
+        if abs(cell["ap_recovery"]) < tau:
+            continue
+        r_node = node_of_reader(cell)
+        w_node = node_of_writer(cell)
+        reverse_adj.setdefault(r_node, []).append(w_node)
+
+    visited: set[Tuple[int, str, int]] = set()
+    queue: List[Tuple[int, str, int]] = []
+    for node in reverse_adj.keys():
+        if node[1] == "logits":
+            visited.add(node)
+            queue.append(node)
+
+    while queue:
+        r = queue.pop()
+        for w in reverse_adj.get(r, []):
+            if w not in visited:
+                visited.add(w)
+                queue.append(w)
+
+    n_edges_in_circuit = 0
+    for cell in top_cells:
+        if abs(cell["ap_recovery"]) >= tau and node_of_reader(cell) in visited:
+            cell["in_circuit"] = True
+            n_edges_in_circuit += 1
+        else:
+            cell["in_circuit"] = False
+
+    if on_cell is not None:
+        for cell in top_cells:
+            on_cell(cell)
+
+    return PatchingResult(
+        cells=top_cells,
+        clean_baseline_logits=clean_baseline_logits,
+        corrupted_baseline_logits=corrupted_baseline_logits,
+        prompt_tokens_clean=clean_tokens,
+        prompt_tokens_corrupted=corrupted_tokens,
+        direction=direction,
+        measurement_position=meas_pos,
+        mode="circuit",
+        n_heads=n_heads,
+        n_edges=n_edges_total,
+        n_edges_in_circuit=n_edges_in_circuit,
+        n_nodes_in_circuit=len(visited),
+        tau=tau,
     )
