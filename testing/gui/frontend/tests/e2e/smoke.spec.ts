@@ -9,6 +9,7 @@ const FIXTURE_PATH = path.join(__dirname, "fixtures", "sample.json");
 const AP_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching.json");
 const AP_APPROX_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-approx.json");
 const PH_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-per-head.json");
+const EDGE_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-edge.json");
 
 // Wipe IDB between tests so the persistence layer doesn't carry state
 // from one case into the next. Must be called while a page is loaded on
@@ -317,6 +318,41 @@ test("per-head attribution heatmap renders with position selector", async ({ pag
     has: page.locator("option", { hasText: /^0:/ }),
   });
   await expect(positionSelect).toHaveCount(1);
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("edge AP panel mounts without crash, tabs visible", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  const fixture = fs.readFileSync(EDGE_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-edge.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  // Heading must include "Edge Attribution"
+  await page.getByRole("heading", { name: /Edge Attribution/ })
+    .waitFor({ state: "visible", timeout: 5000 });
+
+  // Position selector dropdown must be present
+  const positionSelect = page.locator("select").filter({
+    has: page.locator("option", { hasText: /^4:/ }),
+  });
+  await expect(positionSelect).toHaveCount(1);
+
+  // Tab bar: sankey, matrix, list buttons
+  await expect(page.getByRole("button", { name: "sankey" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "matrix" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "list" })).toBeVisible();
 
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
