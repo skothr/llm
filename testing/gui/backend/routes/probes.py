@@ -896,9 +896,9 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     from llm_surgeon.probe import attribution_patch, attribution_patch_per_head
 
     mode = config.get("mode", "exact")
-    if mode not in ("exact", "approx", "approx_head"):
+    if mode not in ("exact", "approx", "approx_head", "edge"):
         await _send_json(ws, {"type": "error",
-                              "message": f"mode must be 'exact', 'approx', or 'approx_head', got {mode!r}"})
+                              "message": f"mode must be 'exact', 'approx', 'approx_head', or 'edge', got {mode!r}"})
         await ws.close()
         return
 
@@ -925,9 +925,11 @@ async def activation_patching_ws(ws: WebSocket, name: str):
             await ws.close()
             return
 
-    # approx/approx_head mode requires token IDs before the call (backward needs a scalar metric).
+    top_k_edges = int(config.get("top_k_edges", 200))
+
+    # approx/approx_head/edge mode requires token IDs before the call (backward needs a scalar metric).
     # Auto-pick: do a quick no_grad forward on the clean prompt to argmax the target pair.
-    if mode in ("approx", "approx_head") and correct_token_id is None:
+    if mode in ("approx", "approx_head", "edge") and correct_token_id is None:
         try:
             def _auto_pick_ids():
                 device = next(info.model.parameters()).device
@@ -979,6 +981,27 @@ async def activation_patching_ws(ws: WebSocket, name: str):
         if not ok:
             connected = False
 
+    def on_cell_edge(cell: dict) -> None:
+        nonlocal connected
+        if not connected:
+            return
+        msg: dict = {
+            "type": "data",
+            "writer_layer": cell["writer_layer"],
+            "writer_unit": cell["writer_unit"],
+            "reader_layer": cell["reader_layer"],
+            "reader_unit": cell["reader_unit"],
+            "position": cell["position"],
+            "ap_recovery": cell["ap_recovery"],
+        }
+        fut = asyncio.run_coroutine_threadsafe(_send_json(ws, msg), loop)
+        try:
+            ok = fut.result(timeout=10)
+        except Exception:
+            ok = False
+        if not ok:
+            connected = False
+
     if info.dirty:
         await _send_json(ws, {"type": "status", "message": "Waiting for model export..."})
 
@@ -1017,6 +1040,28 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                         positions=positions,
                         layers=layers,
                         on_cell=on_cell,
+                    ),
+                )
+            elif mode == "edge":
+                from llm_surgeon.probe import edge_attribution_patch
+                assert correct_token_id is not None and incorrect_token_id is not None
+                _cid2: int = correct_token_id
+                _iid2: int = incorrect_token_id
+                _topk: int = top_k_edges
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: edge_attribution_patch(
+                        info.model, info.tokenizer,
+                        clean_prompt=clean_prompt,
+                        corrupted_prompt=corrupted_prompt,
+                        correct_token_id=_cid2,
+                        incorrect_token_id=_iid2,
+                        direction=direction,
+                        measurement_position=measurement_position,
+                        positions=positions,
+                        layers=layers,
+                        top_k_edges=_topk,
+                        on_cell=on_cell_edge,
                     ),
                 )
             else:
@@ -1064,6 +1109,8 @@ async def activation_patching_ws(ws: WebSocket, name: str):
             }
             if result.n_heads is not None:
                 summary["n_heads"] = result.n_heads
+            if result.n_edges is not None:
+                summary["n_edges"] = result.n_edges
             await _send_json(ws, {"type": "complete", "summary": summary})
 
     except ValueError as e:
