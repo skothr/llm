@@ -128,6 +128,8 @@ export interface PatchingCellData {
   reader_unit?: string;
   // circuit-only
   in_circuit?: boolean;
+  // approx_neuron mode fields
+  neuron?: number;
 }
 
 export interface EdgeCellData {
@@ -140,7 +142,7 @@ export interface EdgeCellData {
   ap_recovery: number;
 }
 
-export type PatchingMode = "exact" | "approx" | "approx_head" | "edge" | "circuit";
+export type PatchingMode = "exact" | "approx" | "approx_head" | "edge" | "circuit" | "approx_neuron";
 
 export interface PatchingCompleteData {
   type: "complete";
@@ -155,6 +157,8 @@ export interface PatchingCompleteData {
     n_nodes_in_circuit?: number;
     tau?: number;
     top_k_candidates?: number;
+    n_neurons?: number;
+    top_k_neurons?: number;
   };
 }
 
