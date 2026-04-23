@@ -6,6 +6,7 @@ import { AttentionEntropy } from "./visualizations/AttentionEntropy";
 import { ResidualNorms } from "./visualizations/ResidualNorms";
 import { ActivationPatchingHeatmap } from "./visualizations/ActivationPatchingHeatmap";
 import { PerHeadPatchingHeatmap } from "./visualizations/PerHeadPatchingHeatmap";
+import { EdgeAttributionPanel } from "./visualizations/EdgeAttributionPanel";
 import { ResultMetaEditor } from "./ResultMetaEditor";
 import { ResultFilterBar, makeResultPredicate } from "./ResultFilterBar";
 import { BulkActionBar } from "./BulkActionBar";
@@ -209,7 +210,9 @@ export function VisualizationArea() {
         ) : activeResult.operation === "residual-norms" ? (
           <ResidualNorms result={activeResult} />
         ) : activeResult.operation === "activation-patching" ? (
-          (activeResult.data.find((m): m is PatchingCompleteData => m.type === "complete")?.summary.mode === "approx_head")
+          activeResult.data.find((m): m is PatchingCompleteData => m.type === "complete")?.summary.mode === "edge"
+            ? <EdgeAttributionPanel result={activeResult} />
+            : activeResult.data.find((m): m is PatchingCompleteData => m.type === "complete")?.summary.mode === "approx_head"
             ? <PerHeadPatchingHeatmap result={activeResult} />
             : <ActivationPatchingHeatmap result={activeResult} />
         ) : (
