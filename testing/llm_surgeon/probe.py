@@ -182,12 +182,15 @@ def _capture_residual_stream_with_grad(
     sublayers: Tuple[str, ...] = ("attn", "ffn"),
     layers: Optional[List[int]] = None,
     capture_concat_z: bool = False,
+    capture_reader_grads: bool = False,
+    capture_ffn_out: bool = False,
 ) -> Tuple[
     Dict[Tuple[int, str], torch.Tensor],
     Dict[int, torch.Tensor],
     torch.Tensor,
     List[str],
     Dict[int, torch.Tensor],
+    Dict[Tuple, torch.Tensor],
 ]:
     """Capture residual-stream states with autograd graph intact.
 
@@ -208,8 +211,15 @@ def _capture_residual_stream_with_grad(
     For "ffn" rows, `captured[(L, "ffn")]` is the decoder layer's full output
     (residual stream post-layer) and matches exact AP's ffn-row semantics.
 
-    Returns: (captured_states, h_ins, output_logits, prompt_tokens, concat_z_captured).
+    Returns: (captured_states, h_ins, output_logits, prompt_tokens,
+              concat_z_captured, reader_inputs).
         concat_z_captured is empty when capture_concat_z=False.
+        reader_inputs is empty when capture_reader_grads=False; otherwise
+        holds pre-LN residual tensors keyed by ("attn_in", L), ("ffn_in", L),
+        ("logits", N_L) with retain_grad() called so .grad is populated after
+        backward().
+        When capture_ffn_out=True, captured also contains (L, "ffn_out") keys
+        holding the raw MLP output before the residual add.
     """
     device = _get_input_device(model)
     enc = tokenizer(prompt, return_tensors="pt")
@@ -222,6 +232,7 @@ def _capture_residual_stream_with_grad(
     captured: Dict[Tuple[int, str], torch.Tensor] = {}
     h_ins: Dict[int, torch.Tensor] = {}
     concat_z_captured: Dict[int, torch.Tensor] = {}
+    reader_inputs: Dict[Tuple, torch.Tensor] = {}
     hooks: List = []
 
     # Pre-hook captures layer input (h_in). Needed for the attn-row value
@@ -234,29 +245,29 @@ def _capture_residual_stream_with_grad(
             continue
 
         if capture_h_in:
-            def make_pre(idx):
-                def hook(_module, args):
+            def make_pre(idx: int):
+                def hook(_module: torch.nn.Module, args: Tuple) -> None:
                     h_ins[idx] = args[0]
                 return hook
             hooks.append(model.model.layers[i].register_forward_pre_hook(make_pre(i)))
 
         if "attn" in sublayers:
-            def make_attn(idx):
-                def hook(_module, _inp, out):
-                    attn_out = out[0] if isinstance(out, tuple) else out
-                    if attn_out.requires_grad:
-                        attn_out.retain_grad()
-                    captured[(idx, "attn")] = attn_out
+            def make_attn(idx: int):
+                def hook(_module: torch.nn.Module, _inp: Tuple, out: object) -> None:
+                    attn_out = out[0] if isinstance(out, tuple) else out  # type: ignore[index]
+                    if attn_out.requires_grad:  # type: ignore[union-attr]
+                        attn_out.retain_grad()  # type: ignore[union-attr]
+                    captured[(idx, "attn")] = attn_out  # type: ignore[assignment]
                 return hook
             hooks.append(model.model.layers[i].self_attn.register_forward_hook(make_attn(i)))
 
         if "ffn" in sublayers:
-            def make_ffn(idx):
-                def hook(_module, _inp, out):
-                    hidden = out[0] if isinstance(out, tuple) else out
-                    if hidden.requires_grad:
-                        hidden.retain_grad()
-                    captured[(idx, "ffn")] = hidden
+            def make_ffn(idx: int):
+                def hook(_module: torch.nn.Module, _inp: Tuple, out: object) -> None:
+                    hidden = out[0] if isinstance(out, tuple) else out  # type: ignore[index]
+                    if hidden.requires_grad:  # type: ignore[union-attr]
+                        hidden.retain_grad()  # type: ignore[union-attr]
+                    captured[(idx, "ffn")] = hidden  # type: ignore[assignment]
                 return hook
             hooks.append(model.model.layers[i].register_forward_hook(make_ffn(i)))
 
@@ -274,13 +285,63 @@ def _capture_residual_stream_with_grad(
                 )
             )
 
+        if capture_ffn_out:
+            def make_mlp_hook(idx: int):
+                def hook(_module: torch.nn.Module, _inp: Tuple, out: object) -> None:
+                    mlp_out = out[0] if isinstance(out, tuple) else out  # type: ignore[index]
+                    captured[(idx, "ffn_out")] = mlp_out  # type: ignore[assignment]
+                return hook
+            hooks.append(model.model.layers[i].mlp.register_forward_hook(make_mlp_hook(i)))
+
+        if capture_reader_grads:
+            def make_attn_in_hook(idx: int):
+                def hook(_module: torch.nn.Module, args: Tuple) -> None:
+                    x = args[0]
+                    if x.requires_grad:
+                        x.retain_grad()
+                    reader_inputs[("attn_in", idx)] = x
+                return hook
+            hooks.append(
+                model.model.layers[i].input_layernorm.register_forward_pre_hook(
+                    make_attn_in_hook(i)
+                )
+            )
+
+            def make_ffn_in_hook(idx: int):
+                def hook(_module: torch.nn.Module, args: Tuple) -> None:
+                    x = args[0]
+                    if x.requires_grad:
+                        x.retain_grad()
+                    reader_inputs[("ffn_in", idx)] = x
+                return hook
+            hooks.append(
+                model.model.layers[i].post_attention_layernorm.register_forward_pre_hook(
+                    make_ffn_in_hook(i)
+                )
+            )
+
+    n_layers_total = len(model.model.layers)
+    if capture_reader_grads:
+        def make_logits_hook(n: int):
+            def hook(_module: torch.nn.Module, args: Tuple) -> None:
+                x = args[0]
+                if x.requires_grad:
+                    x.retain_grad()
+                reader_inputs[("logits", n)] = x
+            return hook
+        hooks.append(
+            model.model.norm.register_forward_pre_hook(
+                make_logits_hook(n_layers_total)
+            )
+        )
+
     try:
         model_output = model(input_ids)
     finally:
         for h in hooks:
             h.remove()
 
-    return captured, h_ins, model_output.logits[0], prompt_tokens, concat_z_captured
+    return captured, h_ins, model_output.logits[0], prompt_tokens, concat_z_captured, reader_inputs
 
 
 # ---------------------------------------------------------------------------
@@ -830,8 +891,9 @@ class PatchingResult:
     prompt_tokens_corrupted: List[str]
     direction: str
     measurement_position: int
-    mode: str = "exact"                  # "exact" | "approx" | "approx_head"
-    n_heads: Optional[int] = None        # set by attribution_patch_per_head
+    mode: str = "exact"                  # "exact" | "approx" | "approx_head" | "edge"
+    n_heads: Optional[int] = None        # set by attribution_patch_per_head / edge_attribution_patch
+    n_edges: Optional[int] = None        # set by edge_attribution_patch (pre-top-k count)
 
 
 def activation_patch(
@@ -1058,7 +1120,7 @@ def attribution_patch(
     base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
 
     with torch.no_grad():
-        from_captured, from_h_ins_raw, from_logits, from_tokens, _ = \
+        from_captured, from_h_ins_raw, from_logits, from_tokens, _, _ = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, from_prompt, sublayers=sublayers, layers=layers,
             )
@@ -1069,7 +1131,7 @@ def attribution_patch(
 
     # --- Step 2: Forward 'base' prompt WITH grad to build the graph ---
     with torch.enable_grad():
-        base_captured, base_h_ins, base_logits, base_tokens, _ = \
+        base_captured, base_h_ins, base_logits, base_tokens, _, _ = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, base_prompt, sublayers=sublayers, layers=layers,
             )
@@ -1227,7 +1289,7 @@ def attribution_patch_per_head(
     sublayers: Tuple[str, ...] = ("attn", "ffn")
 
     with torch.no_grad():
-        from_captured, _, from_logits, from_tokens, from_concat_z_raw = \
+        from_captured, _, from_logits, from_tokens, from_concat_z_raw, _ = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, from_prompt,
                 sublayers=sublayers, layers=layers,
@@ -1237,7 +1299,7 @@ def attribution_patch_per_head(
         from_concat_z = {i: v.detach().clone() for i, v in from_concat_z_raw.items()}
 
     with torch.enable_grad():
-        base_captured, _, base_logits, base_tokens, base_concat_z = \
+        base_captured, _, base_logits, base_tokens, base_concat_z, _ = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, base_prompt,
                 sublayers=sublayers, layers=layers,
@@ -1343,4 +1405,266 @@ def attribution_patch_per_head(
         measurement_position=meas_pos,
         mode="approx_head",
         n_heads=n_heads,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Edge attribution patching — valid-edge predicates (module-level helpers)
+# ---------------------------------------------------------------------------
+
+def _is_valid_attn_writer(L_w: int, reader_type: str, reader_L: int) -> bool:
+    """True when attn writer at L_w can causally precede reader of type reader_type at reader_L."""
+    if reader_type == "attn_in":
+        return L_w < reader_L
+    if reader_type == "ffn_in":
+        return L_w <= reader_L  # same-layer attn → same-layer ffn_in is valid
+    if reader_type == "logits":
+        return True
+    return False
+
+
+def _is_valid_ffn_writer(L_w: int, reader_type: str, reader_L: int) -> bool:
+    """True when FFN writer at L_w can causally precede reader of type reader_type at reader_L."""
+    if reader_type in ("attn_in", "ffn_in"):
+        return L_w < reader_L
+    if reader_type == "logits":
+        return True
+    return False
+
+
+def edge_attribution_patch(
+    model,
+    tokenizer,
+    clean_prompt: str,
+    corrupted_prompt: str,
+    *,
+    correct_token_id: int,
+    incorrect_token_id: int,
+    direction: str = "denoise",
+    measurement_position: int = -1,
+    positions: Optional[List[int]] = None,
+    layers: Optional[List[int]] = None,
+    top_k_edges: int = 200,
+    on_cell: Optional[Callable[[Dict], None]] = None,
+) -> PatchingResult:
+    """Per-edge gradient attribution patching (Phase 3.7).
+
+    Decomposes the residual stream's additive structure into per-(writer, reader,
+    position) AP scores. One forward + one backward pass. Each edge score measures
+    how much writer w's output delta (clean - corrupted) aligned with the gradient
+    at reader r's input.
+
+    Valid edges respect the residual stream's topological order:
+    - embed → any reader
+    - attn(L_w) → attn_in(L_r) iff L_w < L_r
+    - attn(L_w) → ffn_in(L_r) iff L_w <= L_r
+    - ffn(L_w) → attn_in(L_r) or ffn_in(L_r) iff L_w < L_r
+    - any writer → logits reader
+
+    Returns PatchingResult with mode="edge", n_edges=total_pre_filter_count.
+    cells contains only the top-k edges by |ap_recovery|.
+    """
+    if top_k_edges < 1:
+        raise ValueError("top_k_edges must be >= 1")
+    if not clean_prompt or not corrupted_prompt:
+        raise ValueError("prompts cannot be empty")
+    if direction not in ("denoise", "noise"):
+        raise ValueError("direction must be 'denoise' or 'noise'")
+
+    device = _get_input_device(model)
+
+    clean_ids = tokenizer(clean_prompt, return_tensors="pt")["input_ids"]
+    corr_ids = tokenizer(corrupted_prompt, return_tensors="pt")["input_ids"]
+    if clean_ids.shape[1] != corr_ids.shape[1]:
+        raise ValueError(
+            f"prompts must tokenize to same length "
+            f"(clean={clean_ids.shape[1]}, corrupted={corr_ids.shape[1]})"
+        )
+    seq_len = clean_ids.shape[1]
+    meas_pos = measurement_position % seq_len
+
+    normalized_positions: List[int] = (
+        list(range(seq_len)) if positions is None
+        else [p if p >= 0 else seq_len + p for p in positions]
+    )
+
+    # --- Direction: denoise = from=clean, base=corrupted; noise = swapped ---
+    from_prompt = clean_prompt if direction == "denoise" else corrupted_prompt
+    base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
+
+    sublayers: Tuple[str, ...] = ("attn", "ffn")
+
+    # --- Step 1: Embed deltas (no_grad, before any forward pass) ---
+    with torch.no_grad():
+        from_embed = model.model.embed_tokens(
+            tokenizer(from_prompt, return_tensors="pt")["input_ids"].to(device)
+        ).detach()  # [1, seq, hidden]
+        base_embed = model.model.embed_tokens(
+            tokenizer(base_prompt, return_tensors="pt")["input_ids"].to(device)
+        ).detach()
+    delta_embed = from_embed - base_embed  # [1, seq, hidden]
+
+    # --- Step 2: Capture 'from' prompt (no_grad) ---
+    with torch.no_grad():
+        from_captured_raw, _, from_logits, from_tokens, from_cz_raw, _ = \
+            _capture_residual_stream_with_grad(
+                model, tokenizer, from_prompt,
+                sublayers=sublayers, layers=layers,
+                capture_concat_z=True,
+                capture_reader_grads=False,
+                capture_ffn_out=True,
+            )
+        from_states = {k: v.detach().clone() for k, v in from_captured_raw.items()}
+        from_cz = {k: v.detach().clone() for k, v in from_cz_raw.items()}
+
+    # --- Step 3: Capture 'base' prompt (enable_grad, with reader grad hooks) ---
+    with torch.enable_grad():
+        base_captured, _, base_logits, base_tokens, base_cz, reader_inputs = \
+            _capture_residual_stream_with_grad(
+                model, tokenizer, base_prompt,
+                sublayers=sublayers, layers=layers,
+                capture_concat_z=True,
+                capture_reader_grads=True,
+                capture_ffn_out=True,
+            )
+
+        clean_baseline = from_logits if direction == "denoise" else base_logits
+        corrupted_baseline = base_logits if direction == "denoise" else from_logits
+
+        d_clean = (
+            clean_baseline[meas_pos, correct_token_id]
+            - clean_baseline[meas_pos, incorrect_token_id]
+        ).detach()
+        d_corrupted = (
+            corrupted_baseline[meas_pos, correct_token_id]
+            - corrupted_baseline[meas_pos, incorrect_token_id]
+        ).detach()
+        denominator = (d_clean - d_corrupted).item()
+
+        if abs(denominator) < 1e-6:
+            raise ValueError(
+                "clean and corrupted baselines have identical logit_diff; "
+                "AP would divide by zero"
+            )
+
+        metric = (
+            base_logits[meas_pos, correct_token_id]
+            - base_logits[meas_pos, incorrect_token_id]
+        )
+        metric.backward()
+
+    # --- Step 4: FFN output deltas via direct MLP capture ---
+    # (L, "ffn_out") holds the raw MLP output before residual add, captured by
+    # register_forward_hook on model.model.layers[L].mlp.
+    delta_ffn: Dict[int, torch.Tensor] = {}
+    num_layers = len(model.model.layers)
+    target_layers_set = set(range(num_layers)) if layers is None else set(layers)
+    for L in sorted(target_layers_set):
+        from_ffn_out = from_states.get((L, "ffn_out"))
+        base_ffn_out = base_captured.get((L, "ffn_out"))
+        if from_ffn_out is not None and base_ffn_out is not None:
+            delta_ffn[L] = from_ffn_out - base_ffn_out.detach()
+
+    # --- Step 5: Model config for head decomposition ---
+    n_heads: int = model.config.num_attention_heads
+    hidden: int = model.config.hidden_size
+    head_dim: int = hidden // n_heads
+
+    # --- Step 6: Edge loop ---
+    all_edge_scores: List[Dict] = []
+
+    for reader_key, reader_tensor in reader_inputs.items():
+        reader_type = reader_key[0]   # "attn_in" | "ffn_in" | "logits"
+        reader_L = reader_key[1]      # layer index (or N_L for logits)
+
+        if reader_tensor.grad is None:
+            continue
+
+        for pos in normalized_positions:
+            grad_r = reader_tensor.grad[0, pos].detach()   # [hidden]
+
+            # Embed writer (always valid for any reader)
+            ap_embed_raw = (delta_embed[0, pos] * grad_r).sum().item()
+            ap_recovery_embed = (
+                ap_embed_raw / denominator
+                if direction == "denoise"
+                else 1.0 + ap_embed_raw / denominator
+            )
+            all_edge_scores.append({
+                "writer_layer": 0,
+                "writer_unit": "embed",
+                "reader_layer": reader_L,
+                "reader_unit": reader_type,
+                "position": pos,
+                "ap_recovery": float(ap_recovery_embed),
+            })
+
+            for L_w in sorted(target_layers_set):
+                # FFN writer
+                if _is_valid_ffn_writer(L_w, reader_type, reader_L) and L_w in delta_ffn:
+                    ap_ffn_raw = (delta_ffn[L_w][0, pos] * grad_r).sum().item()
+                    ap_recovery_ffn = (
+                        ap_ffn_raw / denominator
+                        if direction == "denoise"
+                        else 1.0 + ap_ffn_raw / denominator
+                    )
+                    all_edge_scores.append({
+                        "writer_layer": L_w,
+                        "writer_unit": "ffn",
+                        "reader_layer": reader_L,
+                        "reader_unit": reader_type,
+                        "position": pos,
+                        "ap_recovery": float(ap_recovery_ffn),
+                    })
+
+                # Attn head writers (vectorized over all heads)
+                if _is_valid_attn_writer(L_w, reader_type, reader_L):
+                    if (L_w, "attn") in from_states and L_w in base_cz and L_w in from_cz:
+                        W_O: torch.Tensor = model.model.layers[L_w].self_attn.o_proj.weight  # [hidden, hidden]
+                        grad_z_r = grad_r @ W_O                        # [hidden]
+                        grad_z_r_heads = grad_z_r.view(n_heads, head_dim)   # [n_heads, head_dim]
+
+                        delta_z = from_cz[L_w][0, pos] - base_cz[L_w][0, pos].detach()  # [hidden]
+                        delta_z_heads = delta_z.view(n_heads, head_dim)                   # [n_heads, head_dim]
+                        ap_heads_raw = (delta_z_heads * grad_z_r_heads).sum(dim=-1)       # [n_heads]
+
+                        for h in range(n_heads):
+                            ap_h_raw = ap_heads_raw[h].item()
+                            ap_recovery_h = (
+                                ap_h_raw / denominator
+                                if direction == "denoise"
+                                else 1.0 + ap_h_raw / denominator
+                            )
+                            all_edge_scores.append({
+                                "writer_layer": L_w,
+                                "writer_unit": f"attn.h{h}",
+                                "reader_layer": reader_L,
+                                "reader_unit": reader_type,
+                                "position": pos,
+                                "ap_recovery": float(ap_recovery_h),
+                            })
+
+    # --- Step 7: Top-k selection ---
+    n_edges_total = len(all_edge_scores)
+    all_edge_scores.sort(key=lambda c: abs(c["ap_recovery"]), reverse=True)
+    top_cells = all_edge_scores[:top_k_edges]
+
+    if on_cell is not None:
+        for cell in top_cells:
+            on_cell(cell)
+
+    clean_tokens = from_tokens if direction == "denoise" else base_tokens
+    corrupted_tokens = base_tokens if direction == "denoise" else from_tokens
+
+    return PatchingResult(
+        cells=top_cells,
+        clean_baseline_logits=clean_baseline.detach(),
+        corrupted_baseline_logits=corrupted_baseline.detach(),
+        prompt_tokens_clean=clean_tokens,
+        prompt_tokens_corrupted=corrupted_tokens,
+        direction=direction,
+        measurement_position=meas_pos,
+        mode="edge",
+        n_heads=n_heads,
+        n_edges=n_edges_total,
     )
