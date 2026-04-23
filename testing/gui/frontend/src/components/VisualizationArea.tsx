@@ -5,11 +5,12 @@ import { ABDiff } from "./visualizations/ABDiff";
 import { AttentionEntropy } from "./visualizations/AttentionEntropy";
 import { ResidualNorms } from "./visualizations/ResidualNorms";
 import { ActivationPatchingHeatmap } from "./visualizations/ActivationPatchingHeatmap";
+import { PerHeadPatchingHeatmap } from "./visualizations/PerHeadPatchingHeatmap";
 import { ResultMetaEditor } from "./ResultMetaEditor";
 import { ResultFilterBar, makeResultPredicate } from "./ResultFilterBar";
 import { BulkActionBar } from "./BulkActionBar";
 import { timeAgo, useTimeAgoTick } from "../utils/timeAgo";
-import type { ProbeResult } from "../types/api";
+import type { ProbeResult, PatchingCompleteData } from "../types/api";
 
 function InterveneSummary({ result }: { result: ProbeResult }) {
   const completeMsg = result.data.find((m) => m.type === "complete") as
@@ -208,7 +209,9 @@ export function VisualizationArea() {
         ) : activeResult.operation === "residual-norms" ? (
           <ResidualNorms result={activeResult} />
         ) : activeResult.operation === "activation-patching" ? (
-          <ActivationPatchingHeatmap result={activeResult} />
+          (activeResult.data.find((m): m is PatchingCompleteData => m.type === "complete")?.summary.mode === "approx_head")
+            ? <PerHeadPatchingHeatmap result={activeResult} />
+            : <ActivationPatchingHeatmap result={activeResult} />
         ) : (
           <p style={{ color: "#666" }}>No visualization for {activeResult.operation}</p>
         )

@@ -71,7 +71,8 @@ export function ActivationPatchingHeatmap({ result }: Props) {
     () => result.data.find((m): m is PatchingCompleteData => m.type === "complete"),
     [result.data]
   );
-  const mode: "exact" | "approx" = completeFrame?.summary.mode ?? "exact";
+  const rawMode = completeFrame?.summary.mode ?? "exact";
+  const mode: "exact" | "approx" = rawMode === "approx" ? "approx" : "exact";
 
   const cleanLogits = useMemo(
     () => baselines ? decodeLogits(baselines.clean_logits) : null, [baselines]);
@@ -231,7 +232,7 @@ export function ActivationPatchingHeatmap({ result }: Props) {
       const header = ["layer", "sublayer", "position", "ap_recovery"];
       const rows: (string | number)[][] = [header];
       for (const cell of cells) {
-        rows.push([cell.layer, cell.sublayer, cell.position, cell.ap_recovery ?? ""]);
+        rows.push([cell.layer, cell.sublayer ?? "", cell.position, cell.ap_recovery ?? ""]);
       }
       return rows;
     }
@@ -240,7 +241,7 @@ export function ActivationPatchingHeatmap({ result }: Props) {
     const rows: (string | number)[][] = [header];
     for (const cell of cells) {
       rows.push([
-        cell.layer, cell.sublayer, cell.position,
+        cell.layer, cell.sublayer ?? "", cell.position,
         getCellValueFor(cell, "logit_diff_recovery") ?? "",
         getCellValueFor(cell, "kl_from_clean") ?? "",
         getCellValueFor(cell, "top1_match") ?? "",

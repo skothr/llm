@@ -13,6 +13,8 @@
  */
 import { useEffect, useState } from "react";
 
+export type PatchingMode = "exact" | "approx" | "approx_head";
+
 export interface PatchingState {
   cleanPrompt: string;
   corruptedPrompt: string;
@@ -21,7 +23,7 @@ export interface PatchingState {
   tokenPairMode: "auto" | "manual";
   manualCorrect: string;
   manualIncorrect: string;
-  mode: "exact" | "approx";
+  mode: PatchingMode;
 }
 
 export const DEFAULT_PATCHING_STATE: PatchingState = {
@@ -156,7 +158,7 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
 
         <label style={labelStyle}>mode</label>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <label style={{ fontSize: 12 }}>
               <input type="radio" name="mode" value="exact"
                 checked={state.mode === "exact"}
@@ -169,8 +171,15 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
                 onChange={() => onChange({ mode: "approx" })} />
               {" "}approx <span style={{ color: "#888", fontSize: 11 }}>(gradient AP, fast)</span>
             </label>
+            <label style={{ fontSize: 12 }}>
+              <input type="radio" name="mode" value="approx_head"
+                checked={state.mode === "approx_head"}
+                onChange={() => onChange({ mode: "approx_head" })} />
+              {" "}per-head{" "}
+              <span style={{ color: "#888", fontSize: 11 }}>(gradient AP, head resolution)</span>
+            </label>
           </div>
-          {state.mode === "approx" && state.tokenPairMode === "auto" && (
+          {(state.mode === "approx" || state.mode === "approx_head") && state.tokenPairMode === "auto" && (
             <div style={{ color: "#7f7", fontSize: 11 }}>
               auto-pick uses clean argmax; switch to manual for a specific target
             </div>
