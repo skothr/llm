@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PatchingCellData, PatchingCompleteData } from "../../types/api";
 
 interface Props {
   cells: PatchingCellData[];
   complete?: PatchingCompleteData;
+  sessionName?: string;
 }
 
 type SortKey = "ap_recovery" | "layer" | "neuron";
@@ -22,7 +23,41 @@ function apColor(ap: number): string {
   }
 }
 
-export function PerNeuronPatchingPanel({ cells, complete }: Props) {
+export function PerNeuronPatchingPanel({ cells, complete, sessionName }: Props) {
+  const [pinnedRow, setPinnedRow] = useState<{ layer: number; neuron: number } | null>(null);
+  const [decode, setDecode] = useState<{
+    top: Array<{ token: string; logit: number }>;
+    bottom: Array<{ token: string; logit: number }>;
+  } | null>(null);
+  const [decodeLoading, setDecodeLoading] = useState<boolean>(false);
+  const [decodeError, setDecodeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (pinnedRow === null || !sessionName) {
+      setDecode(null);
+      setDecodeError(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    setDecodeLoading(true);
+    setDecodeError(null);
+    fetch(`/api/sessions/${sessionName}/decode-neuron`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layer: pinnedRow.layer, neuron: pinnedRow.neuron, top_k: 10 }),
+      signal: ctrl.signal,
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`decode-neuron ${r.status}`))))
+      .then((body: { top_tokens: Array<{ token: string; logit: number }>; bottom_tokens: Array<{ token: string; logit: number }> }) => {
+        setDecode({ top: body.top_tokens, bottom: body.bottom_tokens });
+      })
+      .catch((err: Error) => {
+        if (err.name !== "AbortError") setDecodeError(err.message);
+      })
+      .finally(() => setDecodeLoading(false));
+    return () => ctrl.abort();
+  }, [pinnedRow, sessionName]);
+
   const neuronCells = useMemo(
     () => cells.filter((c) => c.neuron !== undefined && c.layer !== undefined),
     [cells],
@@ -156,6 +191,67 @@ export function PerNeuronPatchingPanel({ cells, complete }: Props) {
         Showing <b>{visible.length}</b> of {neuronCells.length} cells. min={stats.min.toFixed(4)}, max={stats.max.toFixed(4)}, mean={stats.mean.toFixed(4)}.
       </div>
 
+      {pinnedRow !== null && (
+        <div
+          className="neuron-pin-card"
+          style={{
+            border: "1px solid #333",
+            background: "#12121a",
+            padding: 12,
+            marginBottom: 8,
+            borderRadius: 4,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div>
+              <b>
+                Neuron L{pinnedRow.layer}.n{pinnedRow.neuron}
+              </b>{" "}
+              <span style={{ color: "#888", fontSize: 11, marginLeft: 8 }}>
+                Raw W_U @ W_down[:, n] — normalize-for-magnitudes deferred.
+              </span>
+            </div>
+            <button onClick={() => setPinnedRow(null)}>close</button>
+          </div>
+          {decodeLoading && <div style={{ color: "#aaa" }}>loading…</div>}
+          {decodeError && <div style={{ color: "#c88" }}>error: {decodeError}</div>}
+          {decode && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontFamily: "monospace", fontSize: 12 }}>
+              <div>
+                <div style={{ color: "#8abaff", marginBottom: 4 }}>top 10 promoted</div>
+                <table style={{ width: "100%" }}>
+                  <tbody>
+                    {decode.top.map((t, i) => (
+                      <tr key={`top-${i}`}>
+                        <td style={{ padding: "2px 4px" }}>{t.token}</td>
+                        <td style={{ padding: "2px 4px", textAlign: "right", color: "#4caf50" }}>
+                          +{t.logit.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <div style={{ color: "#ffca8a", marginBottom: 4 }}>bottom 10 suppressed</div>
+                <table style={{ width: "100%" }}>
+                  <tbody>
+                    {decode.bottom.map((t, i) => (
+                      <tr key={`bot-${i}`}>
+                        <td style={{ padding: "2px 4px" }}>{t.token}</td>
+                        <td style={{ padding: "2px 4px", textAlign: "right", color: "#c62828" }}>
+                          {t.logit.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ maxHeight: 600, overflowY: "auto", border: "1px solid #333" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "monospace", fontSize: 12 }}>
           <thead style={{ position: "sticky", top: 0, background: "#1a1a1a" }}>
@@ -168,15 +264,37 @@ export function PerNeuronPatchingPanel({ cells, complete }: Props) {
             </tr>
           </thead>
           <tbody>
-            {visible.slice(0, 200).map((c, i) => (
-              <tr key={`${c.layer}-${c.neuron}-${c.position}`} style={{ background: apColor(c.ap_recovery ?? 0) }}>
-                <td style={{ padding: 4 }}>{i + 1}</td>
-                <td style={{ padding: 4 }}>L{c.layer}</td>
-                <td style={{ padding: 4 }}>n{c.neuron}</td>
-                <td style={{ padding: 4 }}>{c.position}</td>
-                <td style={{ padding: 4, textAlign: "right" }}>{(c.ap_recovery ?? 0).toFixed(4)}</td>
-              </tr>
-            ))}
+            {visible.slice(0, 200).map((c, i) => {
+              const isPinned =
+                pinnedRow !== null &&
+                pinnedRow.layer === c.layer &&
+                pinnedRow.neuron === c.neuron;
+              return (
+                <tr
+                  key={`${c.layer}-${c.neuron}-${c.position}`}
+                  onClick={() =>
+                    setPinnedRow(
+                      isPinned
+                        ? null
+                        : { layer: c.layer ?? 0, neuron: c.neuron ?? 0 },
+                    )
+                  }
+                  style={{
+                    background: apColor(c.ap_recovery ?? 0),
+                    cursor: "pointer",
+                    outline: isPinned ? "2px solid #8abaff" : "none",
+                  }}
+                >
+                  <td style={{ padding: 4 }}>{i + 1}</td>
+                  <td style={{ padding: 4 }}>L{c.layer}</td>
+                  <td style={{ padding: 4 }}>n{c.neuron}</td>
+                  <td style={{ padding: 4 }}>{c.position}</td>
+                  <td style={{ padding: 4, textAlign: "right" }}>
+                    {(c.ap_recovery ?? 0).toFixed(4)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

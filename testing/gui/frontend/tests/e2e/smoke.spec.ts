@@ -429,3 +429,75 @@ test("per-neuron FFN panel renders with table and filters", async ({ page }) => 
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
 });
+
+test("per-neuron row click opens pinned card with decoded tokens", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  // Intercept the decode-neuron endpoint with a stub so this test doesn't
+  // depend on a live backend.
+  await page.route("**/api/sessions/*/decode-neuron", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        top_tokens: [
+          { token: " Paris", logit: 2.34 },
+          { token: " Lyon", logit: 1.87 },
+          { token: " France", logit: 1.42 },
+          { token: " French", logit: 1.10 },
+          { token: " capital", logit: 0.91 },
+          { token: " city", logit: 0.75 },
+          { token: " Europe", logit: 0.60 },
+          { token: " Seine", logit: 0.48 },
+          { token: " Eiffel", logit: 0.31 },
+          { token: " Louvre", logit: 0.22 },
+        ],
+        bottom_tokens: [
+          { token: " Rome", logit: -1.89 },
+          { token: " Milan", logit: -1.52 },
+          { token: " Italy", logit: -1.30 },
+          { token: " Italian", logit: -1.10 },
+          { token: " Vatican", logit: -0.95 },
+          { token: " pizza", logit: -0.81 },
+          { token: " pasta", logit: -0.67 },
+          { token: " Venice", logit: -0.55 },
+          { token: " Colosseum", logit: -0.40 },
+          { token: " Florence", logit: -0.31 },
+        ],
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(PER_NEURON_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-per-neuron.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByRole("heading", { name: /Per-Neuron FFN Attribution/i })
+    .waitFor({ state: "visible", timeout: 5000 });
+
+  // Click the first data row (skipping the header row).
+  const firstRow = page.locator("tbody tr").first();
+  await firstRow.click();
+
+  // Pinned card assertions.
+  await expect(page.getByText(/Raw W_U @ W_down/i)).toBeVisible();
+  await expect(page.getByText(" Paris", { exact: true })).toBeVisible();
+  await expect(page.getByText(" Rome", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /close/i })).toBeVisible();
+
+  // Close the card.
+  await page.getByRole("button", { name: /close/i }).click();
+  await expect(page.getByText(/Raw W_U @ W_down/i)).not.toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
