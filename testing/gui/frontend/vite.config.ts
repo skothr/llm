@@ -61,6 +61,15 @@ const quietOnBackendOffline = (proxy: unknown) => {
 
 export default defineConfig({
   plugins: [react()],
+  // Scope Vitest to src/ unit tests. Playwright's tests/e2e/ also ends in
+  // .spec.ts but is not a Vitest target — importing @playwright/test under
+  // Vitest triggers a "two different versions" error.
+  test: {
+    include: [
+      "src/**/*.{test,spec}.{ts,tsx}",
+      "tests/unit/**/*.{test,spec}.{ts,tsx}",
+    ],
+  } as unknown as Record<string, unknown>,
   server: {
     port: 5173,
     // Fail loudly if 5173 is already bound rather than silently falling
