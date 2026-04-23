@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 const FIXTURE_PATH = path.join(__dirname, "fixtures", "sample.json");
 const AP_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching.json");
 const AP_APPROX_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-approx.json");
+const PH_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-per-head.json");
 
 // Wipe IDB between tests so the persistence layer doesn't carry state
 // from one case into the next. Must be called while a page is loaded on
@@ -286,6 +287,36 @@ test("attribution-patching heatmap renders without metric dropdown", async ({ pa
     has: page.locator("option", { hasText: "Logit-diff recovery" }),
   });
   await expect(metricSelects).toHaveCount(0);
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("per-head attribution heatmap renders with position selector", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  const fixture = fs.readFileSync(PH_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-per-head.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  // Heading must include "Per-head Attribution"
+  await page.getByRole("heading", { name: /Per-head Attribution/ })
+    .waitFor({ state: "visible", timeout: 5000 });
+
+  // Position selector dropdown must be present (distinguishes this viz from others)
+  const positionSelect = page.locator("select").filter({
+    has: page.locator("option", { hasText: /^0:/ }),
+  });
+  await expect(positionSelect).toHaveCount(1);
 
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
