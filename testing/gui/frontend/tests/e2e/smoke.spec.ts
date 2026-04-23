@@ -11,6 +11,7 @@ const AP_APPROX_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patc
 const PH_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-per-head.json");
 const EDGE_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-edge.json");
 const CIRCUIT_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-circuit.json");
+const PER_NEURON_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-per-neuron.json");
 
 // Wipe IDB between tests so the persistence layer doesn't carry state
 // from one case into the next. Must be called while a page is loaded on
@@ -389,6 +390,41 @@ test("circuit panel renders with τ slider and stats", async ({ page }) => {
 
   // copy JSON export button
   await expect(page.getByRole("button", { name: /copy json/i })).toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("per-neuron FFN panel renders with table and filters", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  const fixture = fs.readFileSync(PER_NEURON_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-per-neuron.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByRole("heading", { name: /Per-Neuron FFN Attribution/i })
+    .waitFor({ state: "visible", timeout: 5000 });
+
+  // Stats strip
+  await expect(page.getByText(/Showing \d+ of \d+ cells/i)).toBeVisible();
+
+  // Table header — scope by column-header text rather than role because
+  // sticky <thead> inside a scrollable <div> confuses Playwright's
+  // accessibility tree ("Received: hidden" despite correct rendering).
+  await expect(page.locator("th", { hasText: "ap_recovery" })).toBeVisible();
+  await expect(page.locator("th", { hasText: /^neuron$/ })).toBeVisible();
+
+  // Copy TSV button
+  await expect(page.getByRole("button", { name: /copy tsv/i })).toBeVisible();
 
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
