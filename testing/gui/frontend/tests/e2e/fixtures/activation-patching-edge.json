@@ -1,0 +1,109 @@
+{
+  "schema": "llm-surgeon-gui-experiment/v1",
+  "exportedAt": "2026-04-23T00:00:00.000Z",
+  "note": "Minimal edge attribution-patching (edge mode) fixture for the Playwright smoke test.",
+  "activeTab": "probe",
+  "prompt": "The Eiffel Tower is in",
+  "operation": "activation-patching",
+  "targetSession": "ap-edge-demo",
+  "targetSessionB": null,
+  "samplingParams": {
+    "displayTopK": 10,
+    "maxTokens": 64,
+    "temperature": 0.0,
+    "samplingTopK": 0,
+    "topP": 1.0,
+    "minP": 0.0,
+    "seed": "",
+    "repPenalty": 1.0,
+    "stopSeqs": "\\n\\n",
+    "numSeeds": 1,
+    "sweepAxis": "seed",
+    "sweepFrom": 0.0,
+    "sweepTo": 1.0,
+    "sweepAxis2": "none",
+    "sweepFrom2": 0.0,
+    "sweepTo2": 1.0,
+    "numSeeds2": 1
+  },
+  "interventionSpecs": [],
+  "captureLogitLens": false,
+  "intervenePrompt": "",
+  "interveneSession": "",
+  "promptLibrary": [],
+  "results": [
+    {
+      "id": "ap-edge-1",
+      "operation": "activation-patching",
+      "sessionName": "ap-edge-demo",
+      "prompt": "The Eiffel Tower is in",
+      "timestamp": 1745366400000,
+      "isB": false,
+      "data": [
+        {
+          "type": "baselines",
+          "clean_logits": {"shape": [4], "b64": "zczMPc3MTD6amZk+zcxMPw=="},
+          "corrupted_logits": {"shape": [4], "b64": "zczMPc3MTD6amZk+zcxMPw=="},
+          "prompt_tokens_clean": ["The", "Eiffel", "Tower", "is", "in"],
+          "prompt_tokens_corrupted": ["The", "Colosseum", "is", "in", "Rome"],
+          "measurement_position": 4,
+          "correct_token_id": 0,
+          "incorrect_token_id": 1
+        },
+        {
+          "type": "data",
+          "writer_layer": 0,
+          "writer_unit": "embed",
+          "reader_layer": 5,
+          "reader_unit": "attn_in",
+          "position": 4,
+          "ap_recovery": 0.12
+        },
+        {
+          "type": "data",
+          "writer_layer": 2,
+          "writer_unit": "attn.h1",
+          "reader_layer": 10,
+          "reader_unit": "ffn_in",
+          "position": 4,
+          "ap_recovery": 0.74
+        },
+        {
+          "type": "data",
+          "writer_layer": 5,
+          "writer_unit": "ffn",
+          "reader_layer": 21,
+          "reader_unit": "logits",
+          "position": 4,
+          "ap_recovery": -0.08
+        },
+        {
+          "type": "complete",
+          "summary": {
+            "num_cells": 3,
+            "direction": "denoise",
+            "measurement_position": 4,
+            "mode": "edge",
+            "n_heads": 32,
+            "n_edges": 90432
+          }
+        }
+      ]
+    }
+  ],
+  "activeResultId": "ap-edge-1",
+  "sessionSnapshots": [
+    {
+      "name": "ap-edge-demo",
+      "model_id": "mock",
+      "mode": "bf16",
+      "num_layers": 22,
+      "pending_count": 0,
+      "applied_count": 0,
+      "device": "cuda",
+      "engine_llama": false,
+      "engine_pytorch": true,
+      "dirty": false
+    }
+  ]
+}
