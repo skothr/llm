@@ -1778,11 +1778,13 @@ def attribution_patch_per_neuron(
             base_ffn_out = base_captured[(L, "ffn_out")]
             if base_ffn_out.grad is None:
                 continue
-            grad_ffn_out_tensor: Optional[torch.Tensor] = base_ffn_out.grad
+            grad_ffn_out_tensor: torch.Tensor = base_ffn_out.grad
         else:
-            grad_ffn_out_tensor = avg_grad_neuron.get((L, "ffn")) if avg_grad_neuron is not None else None
-            if grad_ffn_out_tensor is None:
+            assert avg_grad_neuron is not None
+            maybe_grad = avg_grad_neuron.get((L, "ffn"))
+            if maybe_grad is None:
                 continue
+            grad_ffn_out_tensor = maybe_grad
         if L not in base_ffn_acts or L not in from_ffn_acts:
             continue
         W_down: torch.Tensor = model.model.layers[L].mlp.down_proj.weight  # [hidden, intermediate]
