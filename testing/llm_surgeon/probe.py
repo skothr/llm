@@ -923,6 +923,7 @@ class PatchingResult:
     n_nodes_in_circuit: Optional[int] = None       # set by extract_circuit (includes the logits sink)
     tau: Optional[float] = None                    # set by extract_circuit (applied threshold)
     n_neurons: Optional[int] = None                # set by attribution_patch_per_neuron (= intermediate_size)
+    n_steps: Optional[int] = None                  # set by attribution_patch when n_steps > 1 (IG path steps)
 
 
 def activation_patch(
@@ -1076,6 +1077,147 @@ def activation_patch(
     )
 
 
+def _integrated_gradients_loop(
+    *,
+    model,
+    tokenizer,
+    base_prompt: str,
+    base_captured: Dict[Tuple[int, str], torch.Tensor],
+    base_h_ins: Dict[int, torch.Tensor],
+    from_states: Dict[Tuple[int, str], torch.Tensor],
+    from_h_ins: Dict[int, torch.Tensor],
+    sublayers: Tuple[str, ...],
+    layers: Optional[List[int]],
+    measurement_position: int,
+    correct_token_id: int,
+    incorrect_token_id: int,
+    n_steps: int,
+) -> Dict[Tuple[int, str], torch.Tensor]:
+    """N forward+backward midpoint-rule Integrated Gradients over the path
+    base_act → from_act at each captured (L, sub) site.
+
+    At each step k with α_k = (k + 0.5)/N, attaches self_attn and mlp
+    post-hooks that REPLACE module outputs with interpolated values
+    base_component + α_k · (from_component - base_component). The native
+    residual-adds then produce h_post_attn = base + α·Δh_post_attn and
+    h_post_ffn = base + α·Δh_post_ffn, giving the correct IG path.
+    Gradients read off the fresh leaf tensors; averaged across steps.
+
+    Keyed components:
+      - attn: base_attn_out[L] = base_captured[(L, "attn")]
+              from_attn_out[L] = from_states[(L, "attn")]
+      - ffn:  base_ffn_out[L]  = base_captured[(L, "ffn")] - (base_h_ins[L] + base_captured[(L, "attn")])
+              (layer_output - h_post_attn = ffn_out, assuming attn row exists)
+              Analogous for from_ side.
+
+    When "attn" not in sublayers we cannot reconstruct ffn_out without h_in,
+    so ffn-only IG is not supported; an empty avg_grad is returned for ffn
+    rows in that case. (Phase 3.10 requires "attn" in sublayers for IG;
+    caller can document the constraint.)
+    """
+    num_layers = len(model.model.layers)
+    target_layers_set = (
+        set(range(num_layers)) if layers is None else set(layers)
+    )
+    need_attn = "attn" in sublayers
+    need_ffn = "ffn" in sublayers
+
+    base_attn: Dict[int, torch.Tensor] = {}
+    base_ffn: Dict[int, torch.Tensor] = {}
+    from_attn: Dict[int, torch.Tensor] = {}
+    from_ffn: Dict[int, torch.Tensor] = {}
+    for L in sorted(target_layers_set):
+        if need_attn:
+            base_attn[L] = base_captured[(L, "attn")].detach()
+            from_attn[L] = from_states[(L, "attn")]
+        if need_ffn and need_attn:
+            b_layer = base_captured[(L, "ffn")].detach()
+            b_hpa = base_h_ins[L].detach() + base_captured[(L, "attn")].detach()
+            base_ffn[L] = b_layer - b_hpa
+            f_layer = from_states[(L, "ffn")]
+            f_hpa = from_h_ins[L] + from_states[(L, "attn")]
+            from_ffn[L] = f_layer - f_hpa
+
+    grad_sum_attn: Dict[int, torch.Tensor] = {
+        L: torch.zeros_like(base_attn[L]) for L in base_attn
+    }
+    grad_sum_ffn: Dict[int, torch.Tensor] = {
+        L: torch.zeros_like(base_ffn[L]) for L in base_ffn
+    }
+
+    device = _get_input_device(model)
+    enc = tokenizer(base_prompt, return_tensors="pt")
+    input_ids = enc["input_ids"].to(device)
+
+    for k in range(n_steps):
+        alpha = (k + 0.5) / n_steps
+
+        interp_attn: Dict[int, torch.Tensor] = {}
+        interp_ffn: Dict[int, torch.Tensor] = {}
+        for L in base_attn:
+            t = base_attn[L] + alpha * (from_attn[L] - base_attn[L])
+            t = t.detach().clone().requires_grad_(True)
+            interp_attn[L] = t
+        for L in base_ffn:
+            t = base_ffn[L] + alpha * (from_ffn[L] - base_ffn[L])
+            t = t.detach().clone().requires_grad_(True)
+            interp_ffn[L] = t
+
+        hooks: List = []
+
+        def make_attn_replace(L_captured: int):
+            def hook(_mod, _inp, out):
+                new = interp_attn[L_captured]
+                if isinstance(out, tuple):
+                    return (new,) + tuple(out[1:])
+                return new
+            return hook
+
+        def make_mlp_replace(L_captured: int):
+            def hook(_mod, _inp, _out):
+                return interp_ffn[L_captured]
+            return hook
+
+        for L in interp_attn:
+            hooks.append(
+                model.model.layers[L].self_attn.register_forward_hook(
+                    make_attn_replace(L)
+                )
+            )
+        for L in interp_ffn:
+            hooks.append(
+                model.model.layers[L].mlp.register_forward_hook(
+                    make_mlp_replace(L)
+                )
+            )
+
+        try:
+            out = model(input_ids)
+            step_logits = out.logits[0]
+            step_metric = (
+                step_logits[measurement_position, correct_token_id]
+                - step_logits[measurement_position, incorrect_token_id]
+            )
+            step_metric.backward()
+        finally:
+            for h in hooks:
+                h.remove()
+
+        for L, t in interp_attn.items():
+            if t.grad is not None:
+                grad_sum_attn[L] += t.grad.detach()
+        for L, t in interp_ffn.items():
+            if t.grad is not None:
+                grad_sum_ffn[L] += t.grad.detach()
+
+    avg_grad: Dict[Tuple[int, str], torch.Tensor] = {}
+    for L in grad_sum_attn:
+        avg_grad[(L, "attn")] = grad_sum_attn[L] / n_steps
+    for L in grad_sum_ffn:
+        avg_grad[(L, "ffn")] = grad_sum_ffn[L] / n_steps
+    return avg_grad
+
+
 def attribution_patch(
     model,
     tokenizer,
@@ -1089,6 +1231,7 @@ def attribution_patch(
     positions: Optional[List[int]] = None,
     sublayers: Tuple[str, ...] = ("attn", "ffn"),
     layers: Optional[List[int]] = None,
+    n_steps: int = 1,
     on_cell: Optional[Callable[[int, str, int, Dict], None]] = None,
 ) -> PatchingResult:
     """Gradient-based attribution patching (Phase 3.5).
@@ -1113,6 +1256,8 @@ def attribution_patch(
         raise ValueError("sublayers must be subset of {'attn', 'ffn'}")
     if not clean_prompt or not corrupted_prompt:
         raise ValueError("prompt cannot be empty")
+    if not isinstance(n_steps, int) or n_steps < 1 or n_steps > 50:
+        raise ValueError(f"n_steps must be int in [1, 50], got {n_steps!r}")
 
     if getattr(model, "hf_quantizer", None) is not None:
         warnings.warn(
@@ -1185,12 +1330,30 @@ def attribution_patch(
                 "AP would divide by zero"
             )
 
-        # --- Step 3: Metric scalar on base-side logits, backward ---
-        metric = (
-            base_logits[meas_pos, correct_token_id]
-            - base_logits[meas_pos, incorrect_token_id]
-        )
-        metric.backward()
+        if n_steps == 1:
+            # --- Step 3: Metric scalar on base-side logits, backward (Phase 3.5 path) ---
+            metric = (
+                base_logits[meas_pos, correct_token_id]
+                - base_logits[meas_pos, incorrect_token_id]
+            )
+            metric.backward()
+            avg_grad: Optional[Dict[Tuple[int, str], torch.Tensor]] = None  # unused on this path
+        else:
+            avg_grad = _integrated_gradients_loop(
+                model=model,
+                tokenizer=tokenizer,
+                base_prompt=base_prompt,
+                base_captured=base_captured,
+                base_h_ins=base_h_ins,
+                from_states=from_states,
+                from_h_ins=from_h_ins,
+                sublayers=sublayers,
+                layers=layers,
+                measurement_position=meas_pos,
+                correct_token_id=correct_token_id,
+                incorrect_token_id=incorrect_token_id,
+                n_steps=n_steps,
+            )
 
     # --- Step 4: Compute AP per cell ---
     # Captured tensors have shape (1, seq_len, d_model); access batch dim [0].
@@ -1201,9 +1364,15 @@ def attribution_patch(
     sorted_keys = sorted(base_captured.keys(), key=lambda k: (k[0], k[1]))
     for (L, sub) in sorted_keys:
         base_act = base_captured[(L, sub)]  # (1, seq_len, d_model)
-        if base_act.grad is None:
-            continue  # shouldn't happen after backward but guard defensively
-        base_grad = base_act.grad  # (1, seq_len, d_model)
+        if n_steps == 1:
+            if base_act.grad is None:
+                continue  # shouldn't happen after backward but guard defensively
+            base_grad = base_act.grad  # (1, seq_len, d_model)
+        else:
+            assert avg_grad is not None
+            if (L, sub) not in avg_grad:
+                continue
+            base_grad = avg_grad[(L, sub)]
         from_act = from_states[(L, sub)]  # (1, seq_len, d_model)
         if sub == "attn":
             # Residual-stream value = h_in + attn_out
@@ -1242,6 +1411,7 @@ def attribution_patch(
         direction=direction,
         measurement_position=meas_pos,
         mode="approx",
+        n_steps=(n_steps if n_steps > 1 else None),
     )
 
 
