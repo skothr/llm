@@ -1427,6 +1427,7 @@ def attribution_patch_per_head(
     measurement_position: int = -1,
     positions: Optional[List[int]] = None,
     layers: Optional[List[int]] = None,
+    n_steps: int = 1,
     on_cell: Optional[Callable[[int, str, int, Dict], None]] = None,
 ) -> PatchingResult:
     """Per-attention-head gradient attribution patching (Phase 3.6).
@@ -1458,6 +1459,9 @@ def attribution_patch_per_head(
     if not clean_prompt or not corrupted_prompt:
         raise ValueError("prompt cannot be empty")
 
+    if not isinstance(n_steps, int) or n_steps < 1 or n_steps > 50:
+        raise ValueError(f"n_steps must be int in [1, 50], got {n_steps!r}")
+
     if getattr(model, "hf_quantizer", None) is not None:
         warnings.warn(
             "attribution_patch_per_head on a quantized model: gradient flow works "
@@ -1488,17 +1492,18 @@ def attribution_patch_per_head(
     sublayers: Tuple[str, ...] = ("attn", "ffn")
 
     with torch.no_grad():
-        from_captured, _, from_logits, from_tokens, from_concat_z_raw, _, _ = \
+        from_captured, from_h_ins_raw, from_logits, from_tokens, from_concat_z_raw, _, _ = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, from_prompt,
                 sublayers=sublayers, layers=layers,
                 capture_concat_z=True,
             )
         from_states = {k: v.detach().clone() for k, v in from_captured.items()}
+        from_h_ins = {idx: v.detach().clone() for idx, v in from_h_ins_raw.items()}
         from_concat_z = {i: v.detach().clone() for i, v in from_concat_z_raw.items()}
 
     with torch.enable_grad():
-        base_captured, _, base_logits, base_tokens, base_concat_z, _, _ = \
+        base_captured, base_h_ins, base_logits, base_tokens, base_concat_z, _, _ = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, base_prompt,
                 sublayers=sublayers, layers=layers,
@@ -1527,7 +1532,25 @@ def attribution_patch_per_head(
             base_logits[meas_pos, correct_token_id]
             - base_logits[meas_pos, incorrect_token_id]
         )
-        metric.backward()
+        if n_steps == 1:
+            metric.backward()
+            avg_grad_head: Optional[Dict[Tuple[int, str], torch.Tensor]] = None
+        else:
+            avg_grad_head = _integrated_gradients_loop(
+                model=model,
+                tokenizer=tokenizer,
+                base_prompt=base_prompt,
+                base_captured=base_captured,
+                base_h_ins=base_h_ins,
+                from_states=from_states,
+                from_h_ins=from_h_ins,
+                sublayers=sublayers,
+                layers=layers,
+                measurement_position=meas_pos,
+                correct_token_id=correct_token_id,
+                incorrect_token_id=incorrect_token_id,
+                n_steps=n_steps,
+            )
 
     num_layers = len(model.model.layers)
     target_layers = sorted(
@@ -1540,7 +1563,7 @@ def attribution_patch_per_head(
         # --- FFN anchor (identical math to Phase 3.5) ---
         if (L, "ffn") in base_captured:
             base_ffn = base_captured[(L, "ffn")]    # [1, seq, hidden]
-            ffn_grad = base_ffn.grad
+            ffn_grad = base_ffn.grad if n_steps == 1 else (avg_grad_head.get((L, "ffn")) if avg_grad_head is not None else None)
             from_ffn = from_states.get((L, "ffn"))
             if ffn_grad is not None and from_ffn is not None:
                 for pos in normalized_positions:
@@ -1556,7 +1579,10 @@ def attribution_patch_per_head(
 
         # --- Per-head AP via chain rule through W_O ---
         if (L, "attn") in base_captured and L in base_concat_z:
-            attn_out_grad = base_captured[(L, "attn")].grad    # [1, seq, hidden]
+            attn_out_grad = (
+                base_captured[(L, "attn")].grad if n_steps == 1
+                else (avg_grad_head.get((L, "attn")) if avg_grad_head is not None else None)
+            )    # [1, seq, hidden]
             if attn_out_grad is None:
                 continue
             W_O: torch.Tensor = model.model.layers[L].self_attn.o_proj.weight  # [hidden, hidden]
@@ -1604,6 +1630,7 @@ def attribution_patch_per_head(
         measurement_position=meas_pos,
         mode="approx_head",
         n_heads=n_heads,
+        n_steps=(n_steps if n_steps > 1 else None),
     )
 
 
@@ -1620,6 +1647,7 @@ def attribution_patch_per_neuron(
     positions: Optional[List[int]] = None,
     layers: Optional[List[int]] = None,
     top_k_neurons: int = 200,
+    n_steps: int = 1,
     on_cell: Optional[Callable[[Dict], None]] = None,
 ) -> PatchingResult:
     """Per-neuron FFN attribution patching (Phase 3.9).
@@ -1645,6 +1673,8 @@ def attribution_patch_per_neuron(
         raise ValueError("prompts cannot be empty")
     if direction not in ("denoise", "noise"):
         raise ValueError("direction must be 'denoise' or 'noise'")
+    if not isinstance(n_steps, int) or n_steps < 1 or n_steps > 50:
+        raise ValueError(f"n_steps must be int in [1, 50], got {n_steps!r}")
 
     clean_ids = tokenizer(clean_prompt, return_tensors="pt")["input_ids"]
     corr_ids = tokenizer(corrupted_prompt, return_tensors="pt")["input_ids"]
@@ -1668,7 +1698,7 @@ def attribution_patch_per_neuron(
 
     # --- From pass (no_grad, capture ffn_act + ffn_out) ---
     with torch.no_grad():
-        from_captured_raw, _, from_logits, from_tokens, _, _, from_ffn_acts_raw = \
+        from_captured_raw, from_h_ins_raw, from_logits, from_tokens, _, _, from_ffn_acts_raw = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, from_prompt,
                 sublayers=sublayers, layers=layers,
@@ -1678,10 +1708,12 @@ def attribution_patch_per_neuron(
                 capture_ffn_act=True,
             )
         from_ffn_acts = {k: v.detach().clone() for k, v in from_ffn_acts_raw.items()}
+        from_states_neuron = {k: v.detach().clone() for k, v in from_captured_raw.items()}
+        from_h_ins_neuron = {idx: v.detach().clone() for idx, v in from_h_ins_raw.items()}
 
     # --- Base pass (enable_grad, backward through metric) ---
     with torch.enable_grad():
-        base_captured, _, base_logits, base_tokens, _, _, base_ffn_acts = \
+        base_captured, base_h_ins_neuron, base_logits, base_tokens, _, _, base_ffn_acts = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, base_prompt,
                 sublayers=sublayers, layers=layers,
@@ -1714,7 +1746,25 @@ def attribution_patch_per_neuron(
             base_logits[meas_pos, correct_token_id]
             - base_logits[meas_pos, incorrect_token_id]
         )
-        metric.backward()
+        if n_steps == 1:
+            metric.backward()
+            avg_grad_neuron: Optional[Dict[Tuple[int, str], torch.Tensor]] = None
+        else:
+            avg_grad_neuron = _integrated_gradients_loop(
+                model=model,
+                tokenizer=tokenizer,
+                base_prompt=base_prompt,
+                base_captured=base_captured,
+                base_h_ins=base_h_ins_neuron,
+                from_states=from_states_neuron,
+                from_h_ins=from_h_ins_neuron,
+                sublayers=sublayers,
+                layers=layers,
+                measurement_position=meas_pos,
+                correct_token_id=correct_token_id,
+                incorrect_token_id=incorrect_token_id,
+                n_steps=n_steps,
+            )
 
     intermediate_size: int = model.config.intermediate_size
     num_layers = len(model.model.layers)
@@ -1722,11 +1772,17 @@ def attribution_patch_per_neuron(
 
     all_cells: List[Dict] = []
     for L in sorted(target_layers_set):
-        if (L, "ffn_out") not in base_captured:
-            continue
-        base_ffn_out = base_captured[(L, "ffn_out")]
-        if base_ffn_out.grad is None:
-            continue
+        if n_steps == 1:
+            if (L, "ffn_out") not in base_captured:
+                continue
+            base_ffn_out = base_captured[(L, "ffn_out")]
+            if base_ffn_out.grad is None:
+                continue
+            grad_ffn_out_tensor: Optional[torch.Tensor] = base_ffn_out.grad
+        else:
+            grad_ffn_out_tensor = avg_grad_neuron.get((L, "ffn")) if avg_grad_neuron is not None else None
+            if grad_ffn_out_tensor is None:
+                continue
         if L not in base_ffn_acts or L not in from_ffn_acts:
             continue
         W_down: torch.Tensor = model.model.layers[L].mlp.down_proj.weight  # [hidden, intermediate]
@@ -1734,7 +1790,7 @@ def attribution_patch_per_neuron(
         base_act_L = base_ffn_acts[L]
 
         for pos in normalized_positions:
-            grad_ffn_out = base_ffn_out.grad[0, pos].detach()            # [hidden]
+            grad_ffn_out = grad_ffn_out_tensor[0, pos].detach()          # [hidden]
             grad_act = grad_ffn_out @ W_down                             # [intermediate]
             delta_act = from_act[0, pos] - base_act_L[0, pos].detach()   # [intermediate]
             ap_raw = (delta_act * grad_act)                              # [intermediate]
@@ -1773,6 +1829,7 @@ def attribution_patch_per_neuron(
         measurement_position=meas_pos,
         mode="approx_neuron",
         n_neurons=intermediate_size,
+        n_steps=(n_steps if n_steps > 1 else None),
     )
 
 
