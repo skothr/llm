@@ -28,6 +28,7 @@ export interface PatchingState {
   top_k_candidates: number;
   tau: number;
   top_k_neurons: number;
+  n_steps: number;
 }
 
 export const DEFAULT_PATCHING_STATE: PatchingState = {
@@ -43,6 +44,7 @@ export const DEFAULT_PATCHING_STATE: PatchingState = {
   top_k_candidates: 2000,
   tau: 0.02,
   top_k_neurons: 200,
+  n_steps: 1,
 };
 
 interface Props {
@@ -266,6 +268,25 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
                 />
               </label>
             </div>
+          )}
+          {state.mode === "approx" && (
+            <label style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+              IG steps:
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={state.n_steps}
+                onChange={(e) =>
+                  onChange({ n_steps: Math.max(1, Math.min(50, Number(e.target.value) || 1)) })
+                }
+                style={{ width: 60 }}
+                title="n_steps=1: first-order AP (fast). n_steps>=2: Integrated Gradients (N× cost, more accurate)."
+              />
+              <span style={{ color: "#888", fontSize: 11 }}>
+                {state.n_steps === 1 ? "(first-order)" : `(IG, ${state.n_steps}×)`}
+              </span>
+            </label>
           )}
           {(state.mode === "approx" || state.mode === "approx_head" || state.mode === "edge" || state.mode === "circuit" || state.mode === "approx_neuron") && state.tokenPairMode === "auto" && (
             <div style={{ color: "#7f7", fontSize: 11 }}>

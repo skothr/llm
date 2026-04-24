@@ -502,6 +502,30 @@ test("per-neuron row click opens pinned card with decoded tokens", async ({ page
   expect(consoleErrors).toEqual([]);
 });
 
+test("approx mode with IG shows step count alongside heatmap header", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  const fixture = fs.readFileSync(AP_APPROX_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-approx.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByRole("heading", { name: /Attribution Patching/ }).waitFor({ state: "visible", timeout: 5000 });
+
+  await expect(page.getByText(/IG 5 steps/i)).toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
 test("per-head pin card shows decoded tokens for attn head", async ({ page }) => {
   await page.goto("/");
   const consoleErrors: string[] = [];
