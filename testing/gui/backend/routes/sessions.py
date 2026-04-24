@@ -601,6 +601,107 @@ async def decode_neuron(name: str, req: DecodeNeuronRequest):
     return result
 
 
+class DecodeHeadRequest(BaseModel):
+    layer: int
+    head: int
+    top_k: int = 10
+
+
+@router.post("/sessions/{name}/decode-head")
+async def decode_head(name: str, req: DecodeHeadRequest):
+    """Return top-k and bottom-k tokens along the dominant write direction
+    of attention head `head` at `layer`, computed via SVD of
+    W_O[:, h*head_dim:(h+1)*head_dim].
+
+    Sign is oriented so promoted tokens dominate. Response:
+      {
+        "top_tokens":    [{"token": str, "logit": float}, ...],
+        "bottom_tokens": [{"token": str, "logit": float}, ...],
+        "singular_value_ratio": float  # S[0]^2 / sum(S^2)
+      }
+    """
+    import torch
+
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    if info.model is None:
+        raise HTTPException(500, "Session has no PyTorch model loaded")
+    if info.tokenizer is None:
+        raise HTTPException(500, "Session has no tokenizer loaded")
+
+    model = info.model
+    num_layers = len(model.model.layers)
+    if not 0 <= req.layer < num_layers:
+        raise HTTPException(
+            400,
+            f"layer out of range: got {req.layer}, valid [0, {num_layers})",
+        )
+    n_heads: int = model.config.num_attention_heads
+    if not 0 <= req.head < n_heads:
+        raise HTTPException(
+            400,
+            f"head out of range: got {req.head}, valid [0, {n_heads})",
+        )
+
+    def _compute() -> dict:
+        with torch.no_grad():
+            W_O = model.model.layers[req.layer].self_attn.o_proj.weight  # [hidden, hidden]
+            hidden = W_O.shape[0]
+            head_dim = hidden // n_heads
+            start = req.head * head_dim
+            end = start + head_dim
+            W_O_h = W_O[:, start:end]  # [hidden, head_dim]
+
+            # torch.linalg.svd with full_matrices=False gives U: [hidden, head_dim],
+            # S: [head_dim], Vt: [head_dim, head_dim]. Cast to fp32 for numerical
+            # stability on fp16 models.
+            W_O_h_f32 = W_O_h.to(dtype=torch.float32)
+            U, S, _Vt = torch.linalg.svd(W_O_h_f32, full_matrices=False)
+
+            sv_energy_total = float((S ** 2).sum().item())
+            sv_ratio = (
+                float((S[0] ** 2).item()) / sv_energy_total
+                if sv_energy_total > 0 else 0.0
+            )
+
+            write_direction = U[:, 0] * S[0]  # [hidden]
+            W_U = model.lm_head.weight.to(dtype=torch.float32)  # [vocab, hidden]
+            scores = W_U @ write_direction     # [vocab]
+
+            vocab_size = int(scores.shape[0])
+            top_k = max(1, min(req.top_k, 50, vocab_size))
+
+            top_vals, top_ids = torch.topk(scores, top_k, largest=True)
+            bot_vals, bot_ids = torch.topk(scores, top_k, largest=False)
+
+            # Sign orientation: flip if "suppressed" has more magnitude than "promoted".
+            if abs(float(top_vals.sum().item())) < abs(float(bot_vals.sum().item())):
+                scores = -scores
+                top_vals, top_ids = torch.topk(scores, top_k, largest=True)
+                bot_vals, bot_ids = torch.topk(scores, top_k, largest=False)
+
+        tok = info.tokenizer
+        top_tokens = [
+            {"token": tok.decode([int(i)], skip_special_tokens=False), "logit": float(v)}
+            for i, v in zip(top_ids.tolist(), top_vals.tolist())
+        ]
+        bottom_tokens = [
+            {"token": tok.decode([int(i)], skip_special_tokens=False), "logit": float(v)}
+            for i, v in zip(bot_ids.tolist(), bot_vals.tolist())
+        ]
+        return {
+            "top_tokens": top_tokens,
+            "bottom_tokens": bottom_tokens,
+            "singular_value_ratio": sv_ratio,
+        }
+
+    result = await asyncio.to_thread(_compute)
+    return result
+
+
 VALID_OPS = {op["name"] for op in SURGERY_OPS}
 
 @router.post("/sessions/{name}/surgery")
