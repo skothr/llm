@@ -501,3 +501,59 @@ test("per-neuron row click opens pinned card with decoded tokens", async ({ page
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
 });
+
+test("per-head pin card shows decoded tokens for attn head", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  // Intercept decode-head with a stub.
+  await page.route("**/api/sessions/*/decode-head", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        top_tokens: [
+          { token: " Paris", logit: 3.21 },
+          { token: " Lyon", logit: 2.10 },
+          { token: " France", logit: 1.85 },
+          { token: " French", logit: 1.42 },
+          { token: " Seine", logit: 1.05 },
+        ],
+        bottom_tokens: [
+          { token: " Rome", logit: -2.78 },
+          { token: " Milan", logit: -1.92 },
+          { token: " Italy", logit: -1.60 },
+          { token: " Italian", logit: -1.33 },
+          { token: " Vatican", logit: -1.10 },
+        ],
+        singular_value_ratio: 0.58,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(PH_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-per-head.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  // Target the attn.h0 cell at layer 1 directly via data attributes —
+  // row-major d3 iteration puts non-clickable (no-data) cells first, so
+  // positional indexing is fragile.
+  await page.locator('rect[data-layer="1"][data-unit="attn.h0"]').click();
+
+  // Pin card assertions. Target by text — only the decode card renders this.
+  await expect(page.getByText(/Dominant write direction \(sv energy ratio:/i))
+    .toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(" Paris", { exact: true })).toBeVisible();
+  await expect(page.getByText(" Rome", { exact: true })).toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
