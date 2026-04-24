@@ -929,6 +929,15 @@ async def activation_patching_ws(ws: WebSocket, name: str):
     tau = float(config.get("tau", 0.02))
     top_k_candidates = int(config.get("top_k_candidates", 2000))
     top_k_neurons = int(config.get("top_k_neurons", 200))
+    n_steps_raw = config.get("n_steps", 1)
+    try:
+        n_steps = int(n_steps_raw)
+    except (TypeError, ValueError):
+        n_steps = 1
+    if n_steps < 1 or n_steps > 50:
+        await ws.send_json({"type": "error", "message": f"n_steps must be int in [1, 50], got {n_steps_raw!r}"})
+        await ws.close()
+        return
 
     # approx/approx_head/edge/circuit/approx_neuron mode requires token IDs before the call (backward needs a scalar metric).
     # Auto-pick: do a quick no_grad forward on the clean prompt to argmax the target pair.
@@ -1163,6 +1172,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 assert correct_token_id is not None and incorrect_token_id is not None
                 _cid = correct_token_id
                 _iid = incorrect_token_id
+                _n_steps = n_steps
                 result = await loop.run_in_executor(
                     None,
                     lambda: attribution_patch(
@@ -1176,6 +1186,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                         positions=positions,
                         sublayers=sublayers,
                         layers=layers,
+                        n_steps=_n_steps,
                         on_cell=on_cell,
                     ),
                 )
@@ -1218,6 +1229,8 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 summary["top_k_candidates"] = top_k_candidates
             if mode == "approx_neuron":
                 summary["top_k_neurons"] = top_k_neurons
+            if result.n_steps is not None:
+                summary["n_steps"] = result.n_steps
             await _send_json(ws, {"type": "complete", "summary": summary})
 
     except ValueError as e:
