@@ -1039,6 +1039,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 assert correct_token_id is not None and incorrect_token_id is not None
                 _cid: int = correct_token_id
                 _iid: int = incorrect_token_id
+                _n_steps_head: int = n_steps
                 result = await loop.run_in_executor(
                     None,
                     lambda: attribution_patch_per_head(
@@ -1051,6 +1052,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                         measurement_position=measurement_position,
                         positions=positions,
                         layers=layers,
+                        n_steps=_n_steps_head,
                         on_cell=on_cell,
                     ),
                 )
@@ -1153,6 +1155,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                     if not ok:
                         connected = False
 
+                _n_steps_neuron: int = n_steps
                 result = await asyncio.to_thread(
                     attribution_patch_per_neuron,
                     info.model,
@@ -1166,6 +1169,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                     positions=positions,
                     layers=layers,
                     top_k_neurons=_topkn,
+                    n_steps=_n_steps_neuron,
                     on_cell=on_cell_neuron,
                 )
             else:
