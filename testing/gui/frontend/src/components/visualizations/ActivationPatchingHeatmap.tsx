@@ -258,6 +258,11 @@ export function ActivationPatchingHeatmap({ result }: Props) {
           {mode === "approx" ? "Attribution Patching (\u2207)" : "Activation Patching"}
           {" \u2014 "}{result.sessionName}{" \u2014 \""}{result.prompt.slice(0, 40)}{"\""}
         </h3>
+        {mode === "approx" && completeFrame?.summary?.n_steps != null && completeFrame.summary.n_steps > 1 && (
+          <span style={{ color: "#a0a0c0", fontSize: 13, fontWeight: "normal" }}>
+            {` — IG ${completeFrame.summary.n_steps} steps`}
+          </span>
+        )}
         {mode === "exact" && (
           <label style={{ fontSize: 12, color: "#8888aa", display: "flex", alignItems: "center", gap: 6 }}>
             Metric:

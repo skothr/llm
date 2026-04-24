@@ -159,6 +159,7 @@ export interface PatchingCompleteData {
     top_k_candidates?: number;
     n_neurons?: number;
     top_k_neurons?: number;
+    n_steps?: number;
   };
 }
 

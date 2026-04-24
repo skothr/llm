@@ -56,7 +56,7 @@
         {"type": "data", "layer": 1, "sublayer": "ffn", "position": 3, "ap_recovery": 0.91},
         {
           "type": "complete",
-          "summary": {"num_cells": 4, "direction": "denoise", "measurement_position": 3, "mode": "approx"}
+          "summary": {"num_cells": 4, "direction": "denoise", "measurement_position": 3, "mode": "approx", "n_steps": 5}
         }
       ]
     }
