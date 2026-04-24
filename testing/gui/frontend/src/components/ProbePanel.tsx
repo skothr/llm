@@ -351,7 +351,8 @@ export function ProbePanel() {
           cfg.tau = patchingState.tau;
         } else if (patchingState.mode === "approx_neuron") {
           cfg.top_k_neurons = patchingState.top_k_neurons;
-        } else if (patchingState.mode === "approx") {
+          cfg.n_steps = patchingState.n_steps;
+        } else if (patchingState.mode === "approx" || patchingState.mode === "approx_head") {
           cfg.n_steps = patchingState.n_steps;
         }
         if (patchingState.tokenPairMode === "manual") {

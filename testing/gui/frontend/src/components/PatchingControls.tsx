@@ -269,7 +269,7 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
               </label>
             </div>
           )}
-          {state.mode === "approx" && (
+          {["approx", "approx_head", "approx_neuron"].includes(state.mode) && (
             <label style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
               IG steps:
               <input
