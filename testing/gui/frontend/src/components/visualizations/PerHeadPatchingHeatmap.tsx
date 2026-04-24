@@ -20,6 +20,68 @@ export function PerHeadPatchingHeatmap({ result }: Props) {
   const [selectedPos, setSelectedPos] = useState<number>(0);
   const [pinned, setPinned] = useState<PinnedCell | null>(null);
 
+  const [decodeState, setDecodeState] = useState<{
+    loading: boolean;
+    error: string | null;
+    data: {
+      top: Array<{ token: string; logit: number }>;
+      bottom: Array<{ token: string; logit: number }>;
+      sv_ratio: number;
+    } | null;
+  }>({ loading: false, error: null, data: null });
+
+  useEffect(() => {
+    if (pinned === null) {
+      setDecodeState({ loading: false, error: null, data: null });
+      return;
+    }
+    const unit = pinned.cell.unit;
+    if (typeof unit !== "string" || !unit.startsWith("attn.h")) {
+      setDecodeState({ loading: false, error: null, data: null });
+      return;
+    }
+    const headIdx = parseInt(unit.slice("attn.h".length), 10);
+    if (Number.isNaN(headIdx)) {
+      setDecodeState({ loading: false, error: null, data: null });
+      return;
+    }
+    const layer = pinned.cell.layer;
+    if (typeof layer !== "number") return;
+
+    const ctrl = new AbortController();
+    setDecodeState({ loading: true, error: null, data: null });
+    fetch(`/api/sessions/${result.sessionName}/decode-head`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layer, head: headIdx, top_k: 10 }),
+      signal: ctrl.signal,
+    })
+      .then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(`decode-head ${r.status}`)),
+      )
+      .then((body: {
+        top_tokens: Array<{ token: string; logit: number }>;
+        bottom_tokens: Array<{ token: string; logit: number }>;
+        singular_value_ratio: number;
+      }) => {
+        setDecodeState({
+          loading: false,
+          error: null,
+          data: {
+            top: body.top_tokens,
+            bottom: body.bottom_tokens,
+            sv_ratio: body.singular_value_ratio,
+          },
+        });
+      })
+      .catch((err: Error) => {
+        if (err.name !== "AbortError") {
+          setDecodeState({ loading: false, error: err.message, data: null });
+        }
+      });
+    return () => ctrl.abort();
+  }, [pinned, result.sessionName]);
+
   const completeFrame = useMemo(
     () => result.data.find((m): m is PatchingCompleteData => m.type === "complete"),
     [result.data]
@@ -118,6 +180,8 @@ export function PerHeadPatchingHeatmap({ result }: Props) {
           .attr("x", colIdx * cellW).attr("y", rowIdx * cellH)
           .attr("width", cellW - 1).attr("height", cellH - 1)
           .attr("fill", fill).attr("rx", 2)
+          .attr("data-layer", String(L))
+          .attr("data-unit", unit)
           .style("cursor", v != null ? "pointer" : "default")
           .on("click", (event) => {
             if (v == null) return;
@@ -228,6 +292,52 @@ export function PerHeadPatchingHeatmap({ result }: Props) {
           <div style={{ fontSize: 10, color: "#666", marginTop: 6 }}>
             First-order approximation &mdash; run exact mode to confirm.
           </div>
+          {typeof pinned.cell.unit === "string" && pinned.cell.unit.startsWith("attn.h") && (
+            <div style={{ marginTop: 10, borderTop: "1px solid #234", paddingTop: 8 }}>
+              {decodeState.loading && <div style={{ color: "#aaa" }}>loading decode…</div>}
+              {decodeState.error && (
+                <div style={{ color: "#c88" }}>decode error: {decodeState.error}</div>
+              )}
+              {decodeState.data && (
+                <div>
+                  <div style={{ fontSize: 10, color: "#888", marginBottom: 4 }}>
+                    Dominant write direction (sv energy ratio:{" "}
+                    {(decodeState.data.sv_ratio * 100).toFixed(0)}%)
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontFamily: "monospace", fontSize: 11 }}>
+                    <div>
+                      <div style={{ color: "#8abaff", marginBottom: 2 }}>promoted</div>
+                      {decodeState.data.top.slice(0, 5).map((t, i) => (
+                        <div key={`ht-${i}`} style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }}>
+                            {t.token}
+                          </span>
+                          <span style={{ color: "#4caf50" }}>+{t.logit.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <div style={{ color: "#ffca8a", marginBottom: 2 }}>suppressed</div>
+                      {decodeState.data.bottom.slice(0, 5).map((t, i) => (
+                        <div key={`hb-${i}`} style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }}>
+                            {t.token}
+                          </span>
+                          <span style={{ color: "#c62828" }}>{t.logit.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {pinned.cell.unit === "ffn" && (
+            <div style={{ fontSize: 10, color: "#888", marginTop: 8, fontStyle: "italic" }}>
+              FFN blocks are decoded per-neuron &mdash; switch to the
+              approx_neuron mode for interpretation.
+            </div>
+          )}
         </div>
       )}
     </div>
