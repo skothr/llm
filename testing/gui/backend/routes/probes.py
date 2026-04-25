@@ -1062,6 +1062,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 _cid2: int = correct_token_id
                 _iid2: int = incorrect_token_id
                 _topk: int = top_k_edges
+                _n_steps_edge: int = n_steps
                 result = await loop.run_in_executor(
                     None,
                     lambda: edge_attribution_patch(
@@ -1075,6 +1076,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                         positions=positions,
                         layers=layers,
                         top_k_edges=_topk,
+                        n_steps=_n_steps_edge,
                         on_cell=on_cell_edge,
                     ),
                 )
@@ -1116,6 +1118,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 _iid3: int = incorrect_token_id
                 _tau: float = tau
                 _topkc: int = top_k_candidates
+                _n_steps_circuit: int = n_steps
                 result = await asyncio.to_thread(
                     extract_circuit,
                     info.model,
@@ -1130,6 +1133,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                     layers=layers,
                     tau=_tau,
                     top_k_candidates=_topkc,
+                    n_steps=_n_steps_circuit,
                     on_cell=on_cell_circuit,
                 )
             elif mode == "approx_neuron":

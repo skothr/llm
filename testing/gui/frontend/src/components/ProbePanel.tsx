@@ -346,9 +346,11 @@ export function ProbePanel() {
         };
         if (patchingState.mode === "edge") {
           cfg.top_k_edges = patchingState.top_k_edges;
+          cfg.n_steps = patchingState.n_steps;
         } else if (patchingState.mode === "circuit") {
           cfg.top_k_candidates = patchingState.top_k_candidates;
           cfg.tau = patchingState.tau;
+          cfg.n_steps = patchingState.n_steps;
         } else if (patchingState.mode === "approx_neuron") {
           cfg.top_k_neurons = patchingState.top_k_neurons;
           cfg.n_steps = patchingState.n_steps;
