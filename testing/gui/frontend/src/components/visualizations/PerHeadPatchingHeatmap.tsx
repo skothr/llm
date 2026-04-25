@@ -236,6 +236,11 @@ export function PerHeadPatchingHeatmap({ result }: Props) {
           {" — "}{result.sessionName}
           {" — \""}{result.prompt.slice(0, 40)}{"\""}
         </h3>
+        {completeFrame?.summary?.n_steps != null && completeFrame.summary.n_steps > 1 && (
+          <span style={{ color: "#a0a0c0", fontSize: 13, fontWeight: "normal" }}>
+            {` — IG ${completeFrame.summary.n_steps} steps`}
+          </span>
+        )}
         <label style={{ fontSize: 12, color: "#8888aa", display: "flex", alignItems: "center", gap: 6 }}>
           position:
           <select

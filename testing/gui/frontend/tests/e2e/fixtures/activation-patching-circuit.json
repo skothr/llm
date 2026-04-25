@@ -92,7 +92,8 @@
             "n_edges_in_circuit": 2,
             "n_nodes_in_circuit": 3,
             "tau": 0.02,
-            "top_k_candidates": 10
+            "top_k_candidates": 10,
+            "n_steps": 5
           }
         }
       ]

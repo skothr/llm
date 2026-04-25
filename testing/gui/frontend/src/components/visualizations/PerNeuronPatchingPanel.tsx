@@ -129,7 +129,14 @@ export function PerNeuronPatchingPanel({ cells, complete, sessionName }: Props) 
 
   return (
     <div className="per-neuron-panel">
-      <h3>Per-Neuron FFN Attribution</h3>
+      <h3>
+        Per-Neuron FFN Attribution
+        {complete?.summary?.n_steps != null && complete.summary.n_steps > 1 && (
+          <span style={{ color: "#a0a0c0", fontSize: 13, fontWeight: "normal", marginLeft: 8 }}>
+            {` — IG ${complete.summary.n_steps} steps`}
+          </span>
+        )}
+      </h3>
       <div className="controls" style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
         <label>
           position:

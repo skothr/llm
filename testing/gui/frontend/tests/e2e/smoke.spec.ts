@@ -321,6 +321,9 @@ test("per-head attribution heatmap renders with position selector", async ({ pag
   });
   await expect(positionSelect).toHaveCount(1);
 
+  // Phase 3.10.3: IG step annotation visible when n_steps > 1
+  await expect(page.getByText(/IG 5 steps/i)).toBeVisible();
+
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
 });
@@ -355,6 +358,9 @@ test("edge AP panel mounts without crash, tabs visible", async ({ page }) => {
   await expect(page.getByRole("button", { name: "sankey" })).toBeVisible();
   await expect(page.getByRole("button", { name: "matrix" })).toBeVisible();
   await expect(page.getByRole("button", { name: "list" })).toBeVisible();
+
+  // Phase 3.10.3: IG step annotation visible when n_steps > 1
+  await expect(page.getByText(/IG 5 steps/i)).toBeVisible();
 
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
@@ -391,6 +397,9 @@ test("circuit panel renders with τ slider and stats", async ({ page }) => {
   // copy JSON export button
   await expect(page.getByRole("button", { name: /copy json/i })).toBeVisible();
 
+  // Phase 3.10.3: IG step annotation visible when n_steps > 1
+  await expect(page.getByText(/IG 5 steps/i)).toBeVisible();
+
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
 });
@@ -425,6 +434,9 @@ test("per-neuron FFN panel renders with table and filters", async ({ page }) => 
 
   // Copy TSV button
   await expect(page.getByRole("button", { name: /copy tsv/i })).toBeVisible();
+
+  // Phase 3.10.3: IG step annotation visible when n_steps > 1
+  await expect(page.getByText(/IG 5 steps/i)).toBeVisible();
 
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);

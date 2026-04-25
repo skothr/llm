@@ -85,7 +85,8 @@
             "measurement_position": 4,
             "mode": "edge",
             "n_heads": 32,
-            "n_edges": 90432
+            "n_edges": 90432,
+            "n_steps": 5
           }
         }
       ]

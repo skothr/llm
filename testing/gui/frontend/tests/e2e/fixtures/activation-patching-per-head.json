@@ -63,7 +63,8 @@
             "direction": "denoise",
             "measurement_position": 3,
             "mode": "approx_head",
-            "n_heads": 2
+            "n_heads": 2,
+            "n_steps": 5
           }
         }
       ]
