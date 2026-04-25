@@ -108,6 +108,11 @@ export function CircuitPanel({ cells, complete }: Props) {
     <div className="circuit-panel">
       <h3 style={{ fontSize: 13, color: "#a0a0c0", marginBottom: 8 }}>
         Circuit (ACDC) — {complete?.summary?.n_edges_in_circuit ?? bfs.n_edges_in_circuit} edges in circuit
+        {complete?.summary?.n_steps != null && complete.summary.n_steps > 1 && (
+          <span style={{ color: "#a0a0c0", fontSize: 13, fontWeight: "normal", marginLeft: 8 }}>
+            {` — IG ${complete.summary.n_steps} steps`}
+          </span>
+        )}
       </h3>
       <div className="controls" style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
         <label style={{ fontSize: 12 }}>

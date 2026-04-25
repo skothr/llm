@@ -275,6 +275,11 @@ export function EdgeAttributionPanel({ result }: Props) {
             ({nEdges.toLocaleString()} total edges)
           </span>
         )}
+        {completeFrame?.summary?.n_steps != null && completeFrame.summary.n_steps > 1 && (
+          <span style={{ color: "#a0a0c0", fontSize: 13, fontWeight: "normal", marginLeft: 8 }}>
+            {` — IG ${completeFrame.summary.n_steps} steps`}
+          </span>
+        )}
       </h3>
 
       {positions.length > 0 && (

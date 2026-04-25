@@ -63,7 +63,8 @@
             "measurement_position": 4,
             "mode": "approx_neuron",
             "n_neurons": 5632,
-            "top_k_neurons": 5
+            "top_k_neurons": 5,
+            "n_steps": 5
           }
         }
       ]
