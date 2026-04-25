@@ -1092,7 +1092,8 @@ def _integrated_gradients_loop(
     correct_token_id: int,
     incorrect_token_id: int,
     n_steps: int,
-) -> Dict[Tuple[int, str], torch.Tensor]:
+    capture_reader_grads: bool = False,
+) -> Tuple[Dict[Tuple[int, str], torch.Tensor], Dict[Tuple[str, int], torch.Tensor]]:
     """N forward+backward midpoint-rule Integrated Gradients over the path
     base_act → from_act at each captured (L, sub) site.
 
@@ -1144,6 +1145,7 @@ def _integrated_gradients_loop(
     grad_sum_ffn: Dict[int, torch.Tensor] = {
         L: torch.zeros_like(base_ffn[L]) for L in base_ffn
     }
+    grad_sum_reader: Dict[Tuple[str, int], torch.Tensor] = {}
 
     device = _get_input_device(model)
     enc = tokenizer(base_prompt, return_tensors="pt")
@@ -1164,6 +1166,7 @@ def _integrated_gradients_loop(
             interp_ffn[L] = t
 
         hooks: List = []
+        step_readers: Dict[Tuple[str, int], torch.Tensor] = {}
 
         def make_attn_replace(L_captured: int):
             def hook(_mod, _inp, out):
@@ -1191,6 +1194,48 @@ def _integrated_gradients_loop(
                 )
             )
 
+        if capture_reader_grads:
+            def make_attn_in_hook(idx: int):
+                def hook(_module: torch.nn.Module, args: Tuple) -> None:
+                    x = args[0]
+                    if x.requires_grad:
+                        x.retain_grad()
+                    step_readers[("attn_in", idx)] = x
+                return hook
+
+            def make_ffn_in_hook(idx: int):
+                def hook(_module: torch.nn.Module, args: Tuple) -> None:
+                    x = args[0]
+                    if x.requires_grad:
+                        x.retain_grad()
+                    step_readers[("ffn_in", idx)] = x
+                return hook
+
+            def make_logits_hook(n: int):
+                def hook(_module: torch.nn.Module, args: Tuple) -> None:
+                    x = args[0]
+                    if x.requires_grad:
+                        x.retain_grad()
+                    step_readers[("logits", n)] = x
+                return hook
+
+            for L in range(num_layers):
+                hooks.append(
+                    model.model.layers[L].input_layernorm.register_forward_pre_hook(
+                        make_attn_in_hook(L)
+                    )
+                )
+                hooks.append(
+                    model.model.layers[L].post_attention_layernorm.register_forward_pre_hook(
+                        make_ffn_in_hook(L)
+                    )
+                )
+            hooks.append(
+                model.model.norm.register_forward_pre_hook(
+                    make_logits_hook(num_layers)
+                )
+            )
+
         try:
             out = model(input_ids)
             step_logits = out.logits[0]
@@ -1210,12 +1255,25 @@ def _integrated_gradients_loop(
             if t.grad is not None:
                 grad_sum_ffn[L] += t.grad.detach()
 
+        if capture_reader_grads:
+            for reader_key, reader_tensor in step_readers.items():
+                if reader_tensor.grad is not None:
+                    if reader_key not in grad_sum_reader:
+                        grad_sum_reader[reader_key] = torch.zeros_like(reader_tensor.grad.detach())
+                    grad_sum_reader[reader_key] += reader_tensor.grad.detach()
+
     avg_grad: Dict[Tuple[int, str], torch.Tensor] = {}
     for L in grad_sum_attn:
         avg_grad[(L, "attn")] = grad_sum_attn[L] / n_steps
     for L in grad_sum_ffn:
         avg_grad[(L, "ffn")] = grad_sum_ffn[L] / n_steps
-    return avg_grad
+
+    avg_reader_grads: Dict[Tuple[str, int], torch.Tensor] = {}
+    if capture_reader_grads:
+        for reader_key, grad_sum in grad_sum_reader.items():
+            avg_reader_grads[reader_key] = grad_sum / n_steps
+
+    return avg_grad, avg_reader_grads
 
 
 def attribution_patch(
@@ -1339,7 +1397,7 @@ def attribution_patch(
             metric.backward()
             avg_grad: Optional[Dict[Tuple[int, str], torch.Tensor]] = None  # unused on this path
         else:
-            avg_grad = _integrated_gradients_loop(
+            avg_grad, _ = _integrated_gradients_loop(
                 model=model,
                 tokenizer=tokenizer,
                 base_prompt=base_prompt,
@@ -1536,7 +1594,7 @@ def attribution_patch_per_head(
             metric.backward()
             avg_grad_head: Optional[Dict[Tuple[int, str], torch.Tensor]] = None
         else:
-            avg_grad_head = _integrated_gradients_loop(
+            avg_grad_head, _ = _integrated_gradients_loop(
                 model=model,
                 tokenizer=tokenizer,
                 base_prompt=base_prompt,
@@ -1750,7 +1808,7 @@ def attribution_patch_per_neuron(
             metric.backward()
             avg_grad_neuron: Optional[Dict[Tuple[int, str], torch.Tensor]] = None
         else:
-            avg_grad_neuron = _integrated_gradients_loop(
+            avg_grad_neuron, _ = _integrated_gradients_loop(
                 model=model,
                 tokenizer=tokenizer,
                 base_prompt=base_prompt,
@@ -1871,6 +1929,7 @@ def _compute_all_edges(
     measurement_position: int,
     positions: Optional[List[int]],
     layers: Optional[List[int]],
+    n_steps: int = 1,
 ) -> Tuple[
     List[Dict],            # all_edge_scores (unsorted)
     torch.Tensor,          # clean_baseline_logits (detached)
@@ -1923,7 +1982,7 @@ def _compute_all_edges(
     delta_embed = from_embed - base_embed
 
     with torch.no_grad():
-        from_captured_raw, _, from_logits, from_tokens, from_cz_raw, _, _ = \
+        from_captured_raw, from_h_ins_raw, from_logits, from_tokens, from_cz_raw, _, _ = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, from_prompt,
                 sublayers=sublayers, layers=layers,
@@ -1933,9 +1992,10 @@ def _compute_all_edges(
             )
         from_states = {k: v.detach().clone() for k, v in from_captured_raw.items()}
         from_cz = {k: v.detach().clone() for k, v in from_cz_raw.items()}
+        from_h_ins = {idx: v.detach().clone() for idx, v in from_h_ins_raw.items()}
 
     with torch.enable_grad():
-        base_captured, _, base_logits, base_tokens, base_cz, reader_inputs, _ = \
+        base_captured, base_h_ins, base_logits, base_tokens, base_cz, reader_inputs, _ = \
             _capture_residual_stream_with_grad(
                 model, tokenizer, base_prompt,
                 sublayers=sublayers, layers=layers,
@@ -1963,11 +2023,30 @@ def _compute_all_edges(
                 "AP would divide by zero"
             )
 
-        metric = (
-            base_logits[meas_pos, correct_token_id]
-            - base_logits[meas_pos, incorrect_token_id]
-        )
-        metric.backward()
+        avg_reader_grads: Dict[Tuple[str, int], torch.Tensor] = {}
+        if n_steps == 1:
+            metric = (
+                base_logits[meas_pos, correct_token_id]
+                - base_logits[meas_pos, incorrect_token_id]
+            )
+            metric.backward()
+        else:
+            _, avg_reader_grads = _integrated_gradients_loop(
+                model=model,
+                tokenizer=tokenizer,
+                base_prompt=base_prompt,
+                base_captured=base_captured,
+                base_h_ins=base_h_ins,
+                from_states=from_states,
+                from_h_ins=from_h_ins,
+                sublayers=sublayers,
+                layers=layers,
+                measurement_position=meas_pos,
+                correct_token_id=correct_token_id,
+                incorrect_token_id=incorrect_token_id,
+                n_steps=n_steps,
+                capture_reader_grads=True,
+            )
 
     delta_ffn: Dict[int, torch.Tensor] = {}
     num_layers = len(model.model.layers)
@@ -1988,11 +2067,16 @@ def _compute_all_edges(
         reader_type = reader_key[0]
         reader_L = reader_key[1]
 
-        if reader_tensor.grad is None:
+        maybe_grad = (
+            reader_tensor.grad if n_steps == 1
+            else avg_reader_grads.get(reader_key)
+        )
+        if maybe_grad is None:
             continue
+        grad_r_full: torch.Tensor = maybe_grad
 
         for pos in normalized_positions:
-            grad_r = reader_tensor.grad[0, pos].detach()
+            grad_r = grad_r_full[0, pos].detach() if n_steps == 1 else grad_r_full[0, pos]
 
             ap_embed_raw = (delta_embed[0, pos] * grad_r).sum().item()
             ap_recovery_embed = (
@@ -2079,6 +2163,7 @@ def edge_attribution_patch(
     positions: Optional[List[int]] = None,
     layers: Optional[List[int]] = None,
     top_k_edges: int = 200,
+    n_steps: int = 1,
     on_cell: Optional[Callable[[Dict], None]] = None,
 ) -> PatchingResult:
     """Per-edge gradient attribution patching (Phase 3.7).
@@ -2100,6 +2185,8 @@ def edge_attribution_patch(
     """
     if top_k_edges < 1:
         raise ValueError("top_k_edges must be >= 1")
+    if not isinstance(n_steps, int) or n_steps < 1 or n_steps > 50:
+        raise ValueError(f"n_steps must be int in [1, 50], got {n_steps!r}")
 
     (
         all_edge_scores,
@@ -2117,6 +2204,7 @@ def edge_attribution_patch(
         measurement_position=measurement_position,
         positions=positions,
         layers=layers,
+        n_steps=n_steps,
     )
 
     n_edges_total = len(all_edge_scores)
@@ -2127,7 +2215,7 @@ def edge_attribution_patch(
         for cell in top_cells:
             on_cell(cell)
 
-    return PatchingResult(
+    result = PatchingResult(
         cells=top_cells,
         clean_baseline_logits=clean_baseline_logits,
         corrupted_baseline_logits=corrupted_baseline_logits,
@@ -2139,6 +2227,8 @@ def edge_attribution_patch(
         n_heads=n_heads,
         n_edges=n_edges_total,
     )
+    result.n_steps = n_steps if n_steps > 1 else None
+    return result
 
 
 def extract_circuit(
@@ -2155,6 +2245,7 @@ def extract_circuit(
     layers: Optional[List[int]] = None,
     tau: float = 0.02,
     top_k_candidates: int = 2000,
+    n_steps: int = 1,
     on_cell: Optional[Callable[[Dict], None]] = None,
 ) -> PatchingResult:
     """Cheap-ACDC circuit extraction (Syed et al. 2023, arXiv 2310.10348).
@@ -2180,6 +2271,8 @@ def extract_circuit(
         raise ValueError("tau must be >= 0.0")
     if top_k_candidates < 1:
         raise ValueError("top_k_candidates must be >= 1")
+    if not isinstance(n_steps, int) or n_steps < 1 or n_steps > 50:
+        raise ValueError(f"n_steps must be int in [1, 50], got {n_steps!r}")
 
     (
         all_edge_scores,
@@ -2197,6 +2290,7 @@ def extract_circuit(
         measurement_position=measurement_position,
         positions=positions,
         layers=layers,
+        n_steps=n_steps,
     )
 
     n_edges_total = len(all_edge_scores)
@@ -2243,7 +2337,7 @@ def extract_circuit(
         for cell in top_cells:
             on_cell(cell)
 
-    return PatchingResult(
+    result = PatchingResult(
         cells=top_cells,
         clean_baseline_logits=clean_baseline_logits,
         corrupted_baseline_logits=corrupted_baseline_logits,
@@ -2258,3 +2352,5 @@ def extract_circuit(
         n_nodes_in_circuit=len(visited),
         tau=tau,
     )
+    result.n_steps = n_steps if n_steps > 1 else None
+    return result
