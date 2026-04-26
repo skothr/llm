@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import * as d3 from "d3";
 import type { PatchingCellData, PatchingCompleteData } from "../../types/api";
 import { computeCircuit, CircuitEdge } from "../../utils/circuitBFS";
-import { computeCausalStory } from "../../utils/causalStory";
+import { computeCausalStory, storyNodeId, type StoryNodeId } from "../../utils/causalStory";
 import { useResidualGrid } from "../../utils/useResidualGrid";
 import { CausalStoryPanel } from "./CausalStoryPanel";
 
@@ -45,6 +45,7 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
   const [selectedPos, setSelectedPos] = useState<number>(initialPos);
   const [tau, setTau] = useState<number>(initialTau);
   const [showAll, setShowAll] = useState<boolean>(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<StoryNodeId | null>(null);
 
   const edgesAtPos = useMemo(
     () => edges.filter((e) => e.position === selectedPos),
@@ -171,23 +172,42 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
           p.bezierCurveTo(cx1, y1, cx2, y2, R_X, y2);
           const color = e.ap_recovery >= 0 ? "#4caf50" : "#c62828";
           const stroke = Math.max(1, (Math.abs(e.ap_recovery) / maxMag) * 6);
+          const writerStoryId = storyNodeId(e.writer_layer, e.writer_unit);
+          const writerSelected = selectedNodeId === writerStoryId;
+          const dimmed = selectedNodeId !== null && !writerSelected;
+          const baseOpacity = isIn ? 0.7 : 0.15;
           return (
             <path
               key={i}
               d={p.toString()}
-              stroke={color}
-              strokeOpacity={isIn ? 0.7 : 0.15}
-              strokeWidth={stroke}
+              stroke={writerSelected ? "#fff" : color}
+              strokeOpacity={dimmed ? baseOpacity * 0.3 : baseOpacity}
+              strokeWidth={writerSelected ? stroke + 2 : stroke}
               fill="none"
+              style={{ cursor: "pointer" }}
+              onClick={() => setSelectedNodeId(writerSelected ? null : writerStoryId)}
             />
           );
         })}
         {writerNodes.map((n) => {
           const y = writerY(n.id);
+          const sId = storyNodeId(n.layer, n.unit);
+          const selected = selectedNodeId === sId;
           return (
-            <g key={n.id}>
-              <circle cx={W_X} cy={y} r={4} fill="#8abaff" />
-              <text x={W_X - 8} y={y + 4} fill="#aaa" fontSize={11} textAnchor="end">
+            <g key={n.id} style={{ cursor: "pointer" }}
+               onClick={() => setSelectedNodeId(selected ? null : sId)}>
+              <circle
+                cx={W_X} cy={y}
+                r={selected ? 6 : 4}
+                fill="#8abaff"
+                stroke={selected ? "#fff" : "none"}
+                strokeWidth={selected ? 2 : 0}
+                data-testid={`circuit-writer-${sId}`}
+              />
+              <text x={W_X - 8} y={y + 4}
+                    fill={selected ? "#fff" : "#aaa"}
+                    fontWeight={selected ? "bold" : "normal"}
+                    fontSize={11} textAnchor="end">
                 L{n.layer}.{n.unit}
               </text>
             </g>
@@ -217,7 +237,14 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
           }));
         const story = computeCausalStory(inCircuitCells, lensGrid.data, selectedPos, 3);
         const promptToken = lensGrid.data?.prompt_tokens?.[selectedPos];
-        return <CausalStoryPanel story={story} promptToken={promptToken} />;
+        return (
+          <CausalStoryPanel
+            story={story}
+            promptToken={promptToken}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={setSelectedNodeId}
+          />
+        );
       })()}
     </div>
   );

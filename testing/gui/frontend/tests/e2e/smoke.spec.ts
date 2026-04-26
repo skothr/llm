@@ -766,3 +766,93 @@ test("circuit panel renders causal story with mocked lens grid", async ({ page }
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
 });
+
+test("causal story <-> sankey two-way click linking", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells: [
+          { layer: 2, sublayer: "attn", position: 4, tokens: [{ token: " Paris", logit: 5.0 }] },
+        ],
+        prompt_tokens: ["The", "Eiffel", "Tower", "is", "in"],
+        num_layers: 22,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByTestId("causal-story-panel").waitFor({ state: "visible", timeout: 5000 });
+
+  // 1) Click the story row → Sankey writer circle should grow + glow.
+  const storyRow = page.getByTestId("causal-story-row-L2-attn.h1");
+  const sankeyCircle = page.getByTestId("circuit-writer-L2-attn.h1");
+
+  await expect(storyRow).toBeVisible();
+  // Initial radius
+  await expect(sankeyCircle).toHaveAttribute("r", "4");
+
+  await storyRow.click();
+  await expect(sankeyCircle).toHaveAttribute("r", "6");
+
+  // 2) Click the row again → deselect → radius back to 4.
+  await storyRow.click();
+  await expect(sankeyCircle).toHaveAttribute("r", "4");
+
+  // 3) Click the Sankey circle → story row picks up its selected style.
+  await sankeyCircle.click();
+  // The selected style applies a left-border accent. Read the inline style:
+  await expect(storyRow).toHaveCSS("border-left-color", "rgb(138, 186, 255)");
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("causal story copy-as-markdown writes to clipboard", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/");
+
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells: [
+          { layer: 2, sublayer: "attn", position: 4, tokens: [{ token: " Paris-md", logit: 5.0 }] },
+        ],
+        prompt_tokens: ["The", "Eiffel", "Tower", "is", "in"],
+        num_layers: 22,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByTestId("causal-story-panel").waitFor({ state: "visible", timeout: 5000 });
+  await page.getByTestId("causal-story-copy-md").click();
+
+  // Read clipboard via page.evaluate
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboardText).toContain("## Causal Story — pos 4");
+  expect(clipboardText).toContain("- **L2 attn.h1** — residual:  Paris-md");
+});

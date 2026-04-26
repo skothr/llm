@@ -112,3 +112,41 @@ export function computeCausalStory(
     note: grid === null ? "lens grid loading…" : null,
   };
 }
+
+/**
+ * Render a CausalStory as markdown for one-click research-note export.
+ * Shape mirrors the panel's visual rendering: bulleted node list with
+ * residual lens tokens; embed writers get an italic caption; trailing
+ * line summarizes the edge count.
+ */
+export function storyToMarkdown(story: CausalStory, promptToken?: string): string {
+  const header = promptToken
+    ? `## Causal Story — pos ${story.position} ("${promptToken}")`
+    : `## Causal Story — pos ${story.position}`;
+  const lines: string[] = [header];
+  if (story.note) lines.push("", `_${story.note}_`);
+  if (story.nodes.length === 0) {
+    lines.push("", "_no nodes to display_");
+  } else {
+    lines.push("");
+    for (const n of story.nodes) {
+      if (n.unit === "embed") {
+        lines.push(`- **L${n.layer} ${n.unit}** — _input embedding (no lens in V1)_`);
+      } else if (n.lensTokens.length === 0) {
+        lines.push(`- **L${n.layer} ${n.unit}** — _no lens data_`);
+      } else {
+        lines.push(`- **L${n.layer} ${n.unit}** — residual: ${n.lensTokens.join(" · ")}`);
+      }
+    }
+  }
+  if (story.edges.length > 0) {
+    lines.push("", `${story.edges.length} edge${story.edges.length === 1 ? "" : "s"} feeding through this circuit`);
+  }
+  return lines.join("\n");
+}
+
+export type StoryNodeId = string;
+/** Stable ID for cross-view selection: `"L{layer}-{unit}"`. */
+export function storyNodeId(layer: number, unit: string): StoryNodeId {
+  return `L${layer}-${unit}`;
+}
