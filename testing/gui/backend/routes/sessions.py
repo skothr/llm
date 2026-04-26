@@ -786,6 +786,83 @@ async def decode_residual(name: str, req: DecodeResidualRequest):
     return await asyncio.to_thread(_compute)
 
 
+class DecodeResidualGridRequest(BaseModel):
+    prompt: str
+    top_k: int = 1
+
+
+_DECODE_RESIDUAL_GRID_TOPK_MAX = 5
+_DECODE_RESIDUAL_GRID_MAX_TOKENS = 200
+
+
+@router.post("/sessions/{name}/decode-residual-grid")
+async def decode_residual_grid(name: str, req: DecodeResidualGridRequest):
+    """Bulk top-K logit-lens decode at every (layer, sublayer, position) point.
+
+    Used by the AP heatmap's lens-trace strip (Phase 3.12). Single forward
+    pass + N_layers * 2 sublayer projections. Returns one entry per
+    (layer, sublayer, position) cell with up to top_k tokens (clamped to 5).
+    """
+    import torch
+    from llm_surgeon.probe import _capture_residual_stream, _project_to_logits
+
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    if info.model is None:
+        raise HTTPException(500, "Session has no PyTorch model loaded")
+    if info.tokenizer is None:
+        raise HTTPException(500, "Session has no tokenizer loaded")
+
+    model = info.model
+    tok = info.tokenizer
+    num_layers = len(model.model.layers)
+
+    def _compute() -> dict:
+        captured, prompt_tokens = _capture_residual_stream(
+            model, tok, req.prompt, sublayers=("attn", "ffn"),
+        )
+        seq_len = len(prompt_tokens)
+        if seq_len > _DECODE_RESIDUAL_GRID_MAX_TOKENS:
+            raise HTTPException(
+                413,
+                f"prompt too long ({seq_len} tokens; max {_DECODE_RESIDUAL_GRID_MAX_TOKENS})",
+            )
+
+        k = max(1, min(req.top_k, _DECODE_RESIDUAL_GRID_TOPK_MAX))
+        cells = []
+        with torch.no_grad():
+            for (layer_idx, sublayer), hidden in sorted(captured.items()):
+                logits = _project_to_logits(model, hidden)  # (seq_len, vocab)
+                vocab_size = int(logits.shape[1])
+                k_eff = min(k, vocab_size)
+                top_vals, top_ids = torch.topk(logits, k_eff, dim=-1, largest=True)
+                for pos in range(seq_len):
+                    tokens = [
+                        {
+                            "token": tok.decode([int(top_ids[pos, j])], skip_special_tokens=False),
+                            "logit": float(top_vals[pos, j]),
+                        }
+                        for j in range(k_eff)
+                    ]
+                    cells.append({
+                        "layer": layer_idx,
+                        "sublayer": sublayer,
+                        "position": pos,
+                        "tokens": tokens,
+                    })
+
+        return {
+            "cells": cells,
+            "prompt_tokens": prompt_tokens,
+            "num_layers": num_layers,
+        }
+
+    return await asyncio.to_thread(_compute)
+
+
 VALID_OPS = {op["name"] for op in SURGERY_OPS}
 
 @router.post("/sessions/{name}/surgery")
