@@ -22,6 +22,9 @@ type Props = {
   compareGrid?: ResidualGridResponse | null;
   compareLoading?: boolean;
   compareError?: string | null;
+  /** Phase 3.18 — prompt-set / divergence-heatmap support. Parent owns the set + grids. */
+  compareSet?: string[];
+  onCompareSetChange?: (next: string[]) => void;
 };
 
 const PLAY_STEP_INTERVAL_MS = 600;
@@ -29,6 +32,7 @@ const PLAY_STEP_INTERVAL_MS = 600;
 export function CausalStoryPanel({
   story, promptToken, selectedNodeId, onSelectNode, playStep, onPlayStepChange,
   comparePrompt, onComparePromptChange, compareGrid, compareLoading, compareError,
+  compareSet, onCompareSetChange,
 }: Props) {
   const headerPos = promptToken ? `pos ${story.position} ("${promptToken}")` : `pos ${story.position}`;
   const interactive = onSelectNode !== undefined;
@@ -47,6 +51,14 @@ export function CausalStoryPanel({
     setCompareDraft(comparePrompt ?? "");
   }, [comparePrompt]);
   const [compareInputOpen, setCompareInputOpen] = useState<boolean>(compareActive);
+  // Phase 3.18 — prompt-set draft (textarea, one prompt per line).
+  const compareSetEnabled = onCompareSetChange !== undefined;
+  const compareSetActive = compareSetEnabled && compareSet !== undefined && compareSet.length > 0;
+  const [setDraft, setSetDraft] = useState<string>((compareSet ?? []).join("\n"));
+  useEffect(() => {
+    setSetDraft((compareSet ?? []).join("\n"));
+  }, [compareSet]);
+  const [setInputOpen, setSetInputOpen] = useState<boolean>(compareSetActive);
 
   const totalNodes = story.nodes.length;
   // Local state when no parent control is provided (component remains usable standalone).
@@ -106,6 +118,20 @@ export function CausalStoryPanel({
     onComparePromptChange(null);
   };
 
+  const handleSetCommit = () => {
+    if (!onCompareSetChange) return;
+    const lines = setDraft
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    onCompareSetChange(lines);
+  };
+  const handleSetClear = () => {
+    if (!onCompareSetChange) return;
+    setSetDraft("");
+    onCompareSetChange([]);
+  };
+
   const handlePlay = () => {
     if (totalNodes === 0) return;
     setStep(playing ? null : 0);
@@ -123,37 +149,53 @@ export function CausalStoryPanel({
         <div style={{ fontSize: 12, color: "#a0a0c0", fontWeight: "bold" }}>
           Causal Story — {headerPos}
         </div>
-        {compareEnabled && (
+        <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          {compareEnabled && (
+            <button
+              onClick={() => setCompareInputOpen((v) => !v)}
+              aria-pressed={compareInputOpen}
+              data-testid="causal-story-compare-toggle"
+              style={{
+                fontSize: 11, padding: "2px 8px",
+                background: compareActive ? "#3a2a55" : (compareInputOpen ? "#2a3a55" : "#1a2438"),
+                color: "#cfd6e6", border: "1px solid #2a3a55",
+                borderRadius: 3, cursor: "pointer",
+              }}
+            >
+              {compareActive ? "✓ compare on" : "compare…"}
+            </button>
+          )}
+          {compareSetEnabled && (
+            <button
+              onClick={() => setSetInputOpen((v) => !v)}
+              aria-pressed={setInputOpen}
+              data-testid="causal-story-set-toggle"
+              style={{
+                fontSize: 11, padding: "2px 8px",
+                background: compareSetActive ? "#3a2a55" : (setInputOpen ? "#2a3a55" : "#1a2438"),
+                color: "#cfd6e6", border: "1px solid #2a3a55",
+                borderRadius: 3, cursor: "pointer",
+              }}
+            >
+              {compareSetActive ? `✓ set (${compareSet?.length ?? 0})` : "prompt set…"}
+            </button>
+          )}
           <button
-            onClick={() => setCompareInputOpen((v) => !v)}
-            aria-pressed={compareInputOpen}
-            data-testid="causal-story-compare-toggle"
+            onClick={handlePlay}
+            aria-pressed={playing}
+            data-testid="causal-story-play"
             style={{
-              fontSize: 11, padding: "2px 8px", marginLeft: "auto",
-              background: compareActive ? "#3a2a55" : (compareInputOpen ? "#2a3a55" : "#1a2438"),
+              fontSize: 11, padding: "2px 8px",
+              background: playing ? "#2a3a55" : "#1a2438",
               color: "#cfd6e6", border: "1px solid #2a3a55",
-              borderRadius: 3, cursor: "pointer",
+              borderRadius: 3, cursor: totalNodes === 0 ? "default" : "pointer",
+              opacity: totalNodes === 0 ? 0.4 : 1,
             }}
+            disabled={totalNodes === 0}
           >
-            {compareActive ? "✓ compare on" : "compare…"}
+            {playing ? "⏸ pause" : "▶ play"}
           </button>
-        )}
-        <button
-          onClick={handlePlay}
-          aria-pressed={playing}
-          data-testid="causal-story-play"
-          style={{
-            fontSize: 11, padding: "2px 8px",
-            marginLeft: compareEnabled ? 0 : "auto",
-            background: playing ? "#2a3a55" : "#1a2438",
-            color: "#cfd6e6", border: "1px solid #2a3a55",
-            borderRadius: 3, cursor: totalNodes === 0 ? "default" : "pointer",
-            opacity: totalNodes === 0 ? 0.4 : 1,
-          }}
-          disabled={totalNodes === 0}
-        >
-          {playing ? "⏸ pause" : "▶ play"}
-        </button>
+        </span>
         <button
           onClick={handleCopyMarkdown}
           data-testid="causal-story-copy-md"
@@ -216,6 +258,56 @@ export function CausalStoryPanel({
       {compareActive && compareError && (
         <div style={{ fontSize: 11, color: "#ff8a8a", marginBottom: 6 }}>
           prompt-B lens failed: {compareError}
+        </div>
+      )}
+      {compareSetEnabled && setInputOpen && (
+        <div
+          data-testid="causal-story-set-input-row"
+          style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}
+        >
+          <textarea
+            data-testid="causal-story-set-input"
+            value={setDraft}
+            onChange={(e) => setSetDraft(e.target.value)}
+            placeholder="one prompt per line — divergence heatmap will compare each against the panel's main prompt"
+            rows={4}
+            style={{
+              fontSize: 12, padding: "4px 6px", fontFamily: "monospace",
+              background: "#0e0e12", color: "#cfd6e6",
+              border: "1px solid #2a3a55", borderRadius: 3, resize: "vertical",
+            }}
+          />
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={handleSetCommit}
+              data-testid="causal-story-set-apply"
+              style={{
+                fontSize: 11, padding: "2px 8px",
+                background: "#1a2438", color: "#cfd6e6",
+                border: "1px solid #2a3a55", borderRadius: 3, cursor: "pointer",
+              }}
+            >
+              apply
+            </button>
+            {compareSetActive && (
+              <button
+                onClick={handleSetClear}
+                data-testid="causal-story-set-clear"
+                style={{
+                  fontSize: 11, padding: "2px 8px",
+                  background: "#1a2438", color: "#cfd6e6",
+                  border: "1px solid #2a3a55", borderRadius: 3, cursor: "pointer",
+                }}
+              >
+                clear
+              </button>
+            )}
+            <span style={{ fontSize: 11, color: "#888", alignSelf: "center" }}>
+              {compareSetActive
+                ? `${compareSet?.length ?? 0} prompt${(compareSet?.length ?? 0) === 1 ? "" : "s"} active`
+                : "(empty — heatmap hidden)"}
+            </span>
+          </div>
         </div>
       )}
       {story.note && (

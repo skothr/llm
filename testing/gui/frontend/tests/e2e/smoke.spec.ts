@@ -877,6 +877,89 @@ test("causal story play button reveals nodes over time then resets", async ({ pa
   expect(consoleErrors).toEqual([]);
 });
 
+test("divergence heatmap renders 3-prompt matrix with correct match/diverge cells", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  // Body-inspecting route: returns Paris-cells for the main prompt
+  // ("Eiffel Tower"), Roma for "Italy", Madrid for "Spain", Paris-also for
+  // "France replicated". Reference (col 0) = main prompt → match w/ itself.
+  // Col 1 = Italy → diverges. Col 2 = Spain → diverges. Col 3 = match.
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    const body = route.request().postDataJSON() as { prompt?: string } | null;
+    const prompt = (body?.prompt ?? "").toLowerCase();
+    let token = " Paris";
+    if (prompt.includes("italy")) token = " Roma";
+    else if (prompt.includes("spain")) token = " Madrid";
+    // "Eiffel" / "France replicated" / unknown → Paris
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells: [
+          { layer: 2, sublayer: "attn", position: 4, tokens: [{ token, logit: 6.0 }, { token: " other", logit: 5.0 }] },
+        ],
+        prompt_tokens: ["The", "Eiffel", "Tower", "is", "in"],
+        num_layers: 22,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByTestId("causal-story-panel").waitFor({ state: "visible", timeout: 5000 });
+
+  // Open the prompt-set textarea and apply 3 prompts.
+  await page.getByTestId("causal-story-set-toggle").click();
+  await page.getByTestId("causal-story-set-input").fill(
+    "The Colosseum is in Italy\nThe Sagrada Familia is in Spain\nThe Eiffel Tower is in France",
+  );
+  await page.getByTestId("causal-story-set-apply").click();
+
+  // Heatmap appears (4 cols: 1 ref + 3 comparisons; 1 row: L2.attn.h1).
+  const heatmap = page.getByTestId("divergence-heatmap");
+  await expect(heatmap).toBeVisible({ timeout: 5000 });
+
+  // Reference column (col 0) — always matches itself.
+  await expect(page.getByTestId("divergence-cell-0-0"))
+    .toHaveAttribute("data-match", "true", { timeout: 5000 });
+  // Italy column → diverge.
+  await expect(page.getByTestId("divergence-cell-0-1")).toHaveAttribute("data-match", "false");
+  // Spain column → diverge.
+  await expect(page.getByTestId("divergence-cell-0-2")).toHaveAttribute("data-match", "false");
+  // "France" prompt — same Paris token → match.
+  await expect(page.getByTestId("divergence-cell-0-3")).toHaveAttribute("data-match", "true");
+
+  // Specificity strip — 1 row diverges from 2 of 3 comparisons → 0.667.
+  const specEl = page.getByTestId("divergence-spec-0");
+  const specValue = await specEl.getAttribute("data-spec");
+  expect(specValue).not.toBeNull();
+  expect(parseFloat(specValue!)).toBeCloseTo(2 / 3, 2);
+
+  // Mode toggle: switch to Jaccard, ensure cells re-render (data-match stays
+  // since the attribute is mode-independent — color changes only).
+  await page.getByTestId("divergence-mode-jaccard").click();
+  await expect(page.getByTestId("divergence-mode-jaccard")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("divergence-mode-top1")).toHaveAttribute("aria-pressed", "false");
+
+  // Clear via the textarea panel — heatmap disappears.
+  await page.getByTestId("causal-story-set-clear").click();
+  await expect(heatmap).not.toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
 test("comparative story renders prompt-B sub-row with divergence highlighting", async ({ page }) => {
   await page.goto("/");
   const consoleErrors: string[] = [];
