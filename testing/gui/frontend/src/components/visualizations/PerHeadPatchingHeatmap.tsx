@@ -4,6 +4,7 @@ import { ExportButtons } from "../ExportButtons";
 import type {
   ProbeResult, PatchingBaselinesData, PatchingCellData, PatchingCompleteData,
 } from "../../types/api";
+import { ResidualDecodeBlock } from "./ResidualDecodeBlock";
 
 interface Props {
   result: ProbeResult;
@@ -342,6 +343,15 @@ export function PerHeadPatchingHeatmap({ result }: Props) {
               FFN blocks are decoded per-neuron &mdash; switch to the
               approx_neuron mode for interpretation.
             </div>
+          )}
+          {typeof pinned.cell.unit === "string" && typeof pinned.cell.layer === "number" && (
+            <ResidualDecodeBlock
+              sessionName={result.sessionName}
+              prompt={result.prompt}
+              layer={pinned.cell.layer}
+              sublayer={pinned.cell.unit.startsWith("attn") ? "attn" : "ffn"}
+              position={pinned.cell.position}
+            />
           )}
         </div>
       )}
