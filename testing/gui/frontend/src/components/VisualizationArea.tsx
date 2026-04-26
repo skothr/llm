@@ -220,7 +220,7 @@ export function VisualizationArea() {
             (m): m is PatchingCellData => m.type === "data" && ("writer_unit" in m || "neuron" in m),
           );
           return mode === "circuit" ? (
-            <CircuitPanel cells={cellMsgs} complete={completeMsg} />
+            <CircuitPanel cells={cellMsgs} complete={completeMsg} sessionName={activeResult.sessionName} prompt={activeResult.prompt} />
           ) : mode === "edge" ? (
             <EdgeAttributionPanel result={activeResult} />
           ) : mode === "approx_neuron" ? (
