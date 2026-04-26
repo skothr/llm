@@ -702,6 +702,90 @@ async def decode_head(name: str, req: DecodeHeadRequest):
     return result
 
 
+class DecodeResidualRequest(BaseModel):
+    prompt: str
+    layer: int
+    sublayer: str
+    position: int
+    top_k: int = 10
+
+
+_DECODE_RESIDUAL_TOPK_MAX = 50
+_DECODE_RESIDUAL_VALID_SUBLAYERS = {"attn", "ffn"}
+
+
+@router.post("/sessions/{name}/decode-residual")
+async def decode_residual(name: str, req: DecodeResidualRequest):
+    """Project the residual stream at (layer, sublayer, position) through
+    the final norm + lm_head, return top/bottom-k tokens.
+
+    Standard logit lens (nostalgebraist 2020) applied to a single
+    residual-stream slot — used by AP pin cards to surface what the
+    model "thinks" it's predicting at the patched point.
+    """
+    import torch
+    from llm_surgeon.probe import _capture_residual_stream, _project_to_logits
+
+    if req.sublayer not in _DECODE_RESIDUAL_VALID_SUBLAYERS:
+        raise HTTPException(
+            400,
+            f"sublayer must be one of {sorted(_DECODE_RESIDUAL_VALID_SUBLAYERS)}; got {req.sublayer!r}",
+        )
+
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+    if info.model is None:
+        raise HTTPException(500, "Session has no PyTorch model loaded")
+    if info.tokenizer is None:
+        raise HTTPException(500, "Session has no tokenizer loaded")
+
+    model = info.model
+    tok = info.tokenizer
+    num_layers = len(model.model.layers)
+    if not 0 <= req.layer < num_layers:
+        raise HTTPException(
+            400,
+            f"layer out of range: got {req.layer}, valid [0, {num_layers})",
+        )
+
+    def _compute() -> dict:
+        captured, prompt_tokens = _capture_residual_stream(
+            model, tok, req.prompt, sublayers=(req.sublayer,),
+        )
+        seq_len = len(prompt_tokens)
+        if not 0 <= req.position < seq_len:
+            raise HTTPException(
+                400,
+                f"position out of range: got {req.position}, valid [0, {seq_len})",
+            )
+        hidden = captured[(req.layer, req.sublayer)]
+        with torch.no_grad():
+            logits = _project_to_logits(model, hidden)
+        scores = logits[req.position]
+        vocab_size = int(scores.shape[0])
+        k = max(1, min(req.top_k, _DECODE_RESIDUAL_TOPK_MAX, vocab_size))
+        top_vals, top_ids = torch.topk(scores, k, largest=True)
+        bot_vals, bot_ids = torch.topk(scores, k, largest=False)
+        top_tokens = [
+            {"token": tok.decode([int(i)], skip_special_tokens=False), "logit": float(v)}
+            for i, v in zip(top_ids.tolist(), top_vals.tolist())
+        ]
+        bottom_tokens = [
+            {"token": tok.decode([int(i)], skip_special_tokens=False), "logit": float(v)}
+            for i, v in zip(bot_ids.tolist(), bot_vals.tolist())
+        ]
+        return {
+            "top_tokens": top_tokens,
+            "bottom_tokens": bottom_tokens,
+            "prompt_tokens": prompt_tokens,
+        }
+
+    return await asyncio.to_thread(_compute)
+
+
 VALID_OPS = {op["name"] for op in SURGERY_OPS}
 
 @router.post("/sessions/{name}/surgery")
