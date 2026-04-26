@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PatchingCellData, PatchingCompleteData } from "../../types/api";
+import { ResidualDecodeBlock } from "./ResidualDecodeBlock";
 
 interface Props {
   cells: PatchingCellData[];
   complete?: PatchingCompleteData;
   sessionName?: string;
+  prompt?: string;
 }
 
 type SortKey = "ap_recovery" | "layer" | "neuron";
@@ -23,8 +25,8 @@ function apColor(ap: number): string {
   }
 }
 
-export function PerNeuronPatchingPanel({ cells, complete, sessionName }: Props) {
-  const [pinnedRow, setPinnedRow] = useState<{ layer: number; neuron: number } | null>(null);
+export function PerNeuronPatchingPanel({ cells, complete, sessionName, prompt }: Props) {
+  const [pinnedRow, setPinnedRow] = useState<{ layer: number; neuron: number; position: number } | null>(null);
   const [decode, setDecode] = useState<{
     top: Array<{ token: string; logit: number }>;
     bottom: Array<{ token: string; logit: number }>;
@@ -256,6 +258,15 @@ export function PerNeuronPatchingPanel({ cells, complete, sessionName }: Props) 
               </div>
             </div>
           )}
+          {sessionName !== undefined && prompt !== undefined && (
+            <ResidualDecodeBlock
+              sessionName={sessionName}
+              prompt={prompt}
+              layer={pinnedRow.layer}
+              sublayer="ffn"
+              position={pinnedRow.position}
+            />
+          )}
         </div>
       )}
 
@@ -283,7 +294,7 @@ export function PerNeuronPatchingPanel({ cells, complete, sessionName }: Props) 
                     setPinnedRow(
                       isPinned
                         ? null
-                        : { layer: c.layer ?? 0, neuron: c.neuron ?? 0 },
+                        : { layer: c.layer ?? 0, neuron: c.neuron ?? 0, position: c.position ?? 0 },
                     )
                   }
                   style={{

@@ -6,6 +6,7 @@ import {
   type TopKEntry,
 } from "../../utils/patchingMetrics";
 import type { ProbeResult, PatchingBaselinesData, PatchingCellData, PatchingCompleteData } from "../../types/api";
+import { ResidualDecodeBlock } from "./ResidualDecodeBlock";
 
 interface Props {
   result: ProbeResult;
@@ -301,6 +302,7 @@ export function ActivationPatchingHeatmap({ result }: Props) {
           x={pinned.x} y={pinned.y}
           mode={mode}
           sessionName={result.sessionName}
+          prompt={result.prompt}
           baselines={baselines}
           onClose={() => setPinned(null)}
         />
@@ -314,11 +316,12 @@ interface PinnedCardProps {
   x: number; y: number;
   mode: "exact" | "approx";
   sessionName: string;
+  prompt: string;
   baselines: PatchingBaselinesData | undefined;
   onClose: () => void;
 }
 
-function PinnedCard({ cell, x, y, mode, sessionName, baselines, onClose }: PinnedCardProps) {
+function PinnedCard({ cell, x, y, mode, sessionName, prompt, baselines, onClose }: PinnedCardProps) {
   // Exact-mode top-k decoding: compute top-5 indices client-side from the
   // cell's patched_logits and the shared clean baseline, then fetch string
   // renderings for those ids from the session tokenizer. Runs once per
@@ -389,6 +392,15 @@ function PinnedCard({ cell, x, y, mode, sessionName, baselines, onClose }: Pinne
         <div style={{ fontSize: 10, color: "#c88" }}>decode-ids failed: {error}</div>
       ) : (
         <div style={{ fontSize: 10, color: "#888" }}>decoding top-5 tokens...</div>
+      )}
+      {(cell.sublayer === "attn" || cell.sublayer === "ffn") && (
+        <ResidualDecodeBlock
+          sessionName={sessionName}
+          prompt={prompt}
+          layer={cell.layer}
+          sublayer={cell.sublayer}
+          position={cell.position}
+        />
       )}
     </div>
   );

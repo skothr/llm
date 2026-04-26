@@ -224,7 +224,7 @@ export function VisualizationArea() {
           ) : mode === "edge" ? (
             <EdgeAttributionPanel result={activeResult} />
           ) : mode === "approx_neuron" ? (
-            <PerNeuronPatchingPanel cells={cellMsgs} complete={completeMsg} sessionName={activeResult.sessionName} />
+            <PerNeuronPatchingPanel cells={cellMsgs} complete={completeMsg} sessionName={activeResult.sessionName} prompt={activeResult.prompt} />
           ) : mode === "approx_head" ? (
             <PerHeadPatchingHeatmap result={activeResult} />
           ) : (
