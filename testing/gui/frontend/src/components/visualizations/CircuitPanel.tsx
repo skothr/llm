@@ -16,7 +16,6 @@ interface Props {
 type Node = { id: string; layer: number; unit: string; position: number };
 
 export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
-  const lensGrid = useResidualGrid(sessionName, prompt, 3);
   const edges: CircuitEdge[] = useMemo(
     () =>
       cells
@@ -46,12 +45,39 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
   const [tau, setTau] = useState<number>(initialTau);
   const [showAll, setShowAll] = useState<boolean>(false);
   const [selectedNodeId, setSelectedNodeId] = useState<StoryNodeId | null>(null);
+  const [playStep, setPlayStep] = useState<number | null>(null);
+
+  const lensGrid = useResidualGrid(sessionName, prompt, 3);
 
   const edgesAtPos = useMemo(
     () => edges.filter((e) => e.position === selectedPos),
     [edges, selectedPos],
   );
   const bfs = useMemo(() => computeCircuit(edgesAtPos, tau), [edgesAtPos, tau]);
+
+  // Story is computed once, used by both the Sankey (for playback dimming)
+  // and the CausalStoryPanel below. Recomputed when bfs, position, or grid change.
+  const inCircuitCells = useMemo(() => edgesAtPos.map((e, i) => ({
+    writer_layer: e.writer_layer,
+    writer_unit: e.writer_unit,
+    reader_layer: e.reader_layer,
+    reader_unit: e.reader_unit,
+    position: e.position,
+    in_circuit: bfs.in_circuit[i],
+  })), [edgesAtPos, bfs.in_circuit]);
+  const story = useMemo(
+    () => computeCausalStory(inCircuitCells, lensGrid.data, selectedPos, 3),
+    [inCircuitCells, lensGrid.data, selectedPos],
+  );
+  const revealedWriterIds = useMemo(() => {
+    if (playStep === null) return null;  // null sentinel = "all visible"
+    const set = new Set<StoryNodeId>();
+    for (let i = 0; i < Math.min(playStep, story.nodes.length); i++) {
+      const n = story.nodes[i];
+      set.add(storyNodeId(n.layer, n.unit));
+    }
+    return set;
+  }, [playStep, story.nodes]);
 
   const maxMag = useMemo(() => {
     let m = 0;
@@ -176,15 +202,19 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
           const writerSelected = selectedNodeId === writerStoryId;
           const dimmed = selectedNodeId !== null && !writerSelected;
           const baseOpacity = isIn ? 0.7 : 0.15;
+          const playHidden = revealedWriterIds !== null && !revealedWriterIds.has(writerStoryId);
+          const finalOpacity = playHidden
+            ? 0
+            : (dimmed ? baseOpacity * 0.3 : baseOpacity);
           return (
             <path
               key={i}
               d={p.toString()}
               stroke={writerSelected ? "#fff" : color}
-              strokeOpacity={dimmed ? baseOpacity * 0.3 : baseOpacity}
+              strokeOpacity={finalOpacity}
               strokeWidth={writerSelected ? stroke + 2 : stroke}
               fill="none"
-              style={{ cursor: "pointer" }}
+              style={{ cursor: "pointer", transition: "stroke-opacity 400ms ease-in" }}
               onClick={() => setSelectedNodeId(writerSelected ? null : writerStoryId)}
             />
           );
@@ -193,8 +223,10 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
           const y = writerY(n.id);
           const sId = storyNodeId(n.layer, n.unit);
           const selected = selectedNodeId === sId;
+          const playHidden = revealedWriterIds !== null && !revealedWriterIds.has(sId);
           return (
-            <g key={n.id} style={{ cursor: "pointer" }}
+            <g key={n.id}
+               style={{ cursor: "pointer", opacity: playHidden ? 0 : 1, transition: "opacity 400ms ease-in" }}
                onClick={() => setSelectedNodeId(selected ? null : sId)}>
               <circle
                 cx={W_X} cy={y}
@@ -225,27 +257,16 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
           );
         })}
       </svg>
-      {sessionName !== undefined && prompt !== undefined && (() => {
-        const inCircuitCells = edgesAtPos
-          .map((e, i) => ({
-            writer_layer: e.writer_layer,
-            writer_unit: e.writer_unit,
-            reader_layer: e.reader_layer,
-            reader_unit: e.reader_unit,
-            position: e.position,
-            in_circuit: bfs.in_circuit[i],
-          }));
-        const story = computeCausalStory(inCircuitCells, lensGrid.data, selectedPos, 3);
-        const promptToken = lensGrid.data?.prompt_tokens?.[selectedPos];
-        return (
-          <CausalStoryPanel
-            story={story}
-            promptToken={promptToken}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
-          />
-        );
-      })()}
+      {sessionName !== undefined && prompt !== undefined && (
+        <CausalStoryPanel
+          story={story}
+          promptToken={lensGrid.data?.prompt_tokens?.[selectedPos]}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={setSelectedNodeId}
+          playStep={playStep}
+          onPlayStepChange={setPlayStep}
+        />
+      )}
     </div>
   );
 }

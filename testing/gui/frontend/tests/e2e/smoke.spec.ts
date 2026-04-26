@@ -823,6 +823,60 @@ test("causal story <-> sankey two-way click linking", async ({ page }) => {
   expect(consoleErrors).toEqual([]);
 });
 
+test("causal story play button reveals nodes over time then resets", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells: [
+          { layer: 2, sublayer: "attn", position: 4, tokens: [{ token: " play-token", logit: 5.0 }] },
+        ],
+        prompt_tokens: ["The", "Eiffel", "Tower", "is", "in"],
+        num_layers: 22,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByTestId("causal-story-panel").waitFor({ state: "visible", timeout: 5000 });
+
+  const row = page.getByTestId("causal-story-row-L2-attn.h1");
+  const playButton = page.getByTestId("causal-story-play");
+
+  // Pre-play: row revealed (data-revealed="true").
+  await expect(row).toHaveAttribute("data-revealed", "true");
+
+  // Click play. With 1 node + 600ms interval + 600ms hold, button should
+  // be aria-pressed="true" briefly.
+  await playButton.click();
+  await expect(playButton).toHaveAttribute("aria-pressed", "true");
+
+  // Wait for animation to finish (600ms*2 + 200ms slack ≈ 1.5s).
+  await page.waitForTimeout(1700);
+
+  // After playback: row revealed again, button no longer pressed.
+  await expect(playButton).toHaveAttribute("aria-pressed", "false");
+  await expect(row).toHaveAttribute("data-revealed", "true");
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
 test("causal story copy-as-markdown writes to clipboard", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
