@@ -4,7 +4,9 @@ import type { PatchingCellData, PatchingCompleteData } from "../../types/api";
 import { computeCircuit, CircuitEdge } from "../../utils/circuitBFS";
 import { computeCausalStory, storyNodeId, type StoryNodeId } from "../../utils/causalStory";
 import { useResidualGrid } from "../../utils/useResidualGrid";
+import { useResidualGridSet } from "../../utils/useResidualGridSet";
 import { CausalStoryPanel } from "./CausalStoryPanel";
+import { DivergenceHeatmap } from "./DivergenceHeatmap";
 
 interface Props {
   cells: PatchingCellData[];
@@ -48,6 +50,8 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
   const [playStep, setPlayStep] = useState<number | null>(null);
   // Phase 3.17 — comparative-story state. `null` = compare mode off.
   const [comparePrompt, setComparePrompt] = useState<string | null>(null);
+  // Phase 3.18 — prompt-set state for divergence heatmap. Empty = off.
+  const [compareSet, setCompareSet] = useState<string[]>([]);
 
   const lensGrid = useResidualGrid(sessionName, prompt, 3);
   // Second grid fires only when the user enters a non-empty compare prompt.
@@ -55,6 +59,12 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
   const compareGrid = useResidualGrid(
     sessionName,
     comparePrompt ?? undefined,
+    3,
+  );
+  // Set-grid: N parallel fetches; idle when compareSet empty.
+  const setGrids = useResidualGridSet(
+    sessionName,
+    compareSet.length > 0 ? compareSet : undefined,
     3,
   );
 
@@ -267,19 +277,33 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
         })}
       </svg>
       {sessionName !== undefined && prompt !== undefined && (
-        <CausalStoryPanel
-          story={story}
-          promptToken={lensGrid.data?.prompt_tokens?.[selectedPos]}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={setSelectedNodeId}
-          playStep={playStep}
-          onPlayStepChange={setPlayStep}
-          comparePrompt={comparePrompt}
-          onComparePromptChange={setComparePrompt}
-          compareGrid={compareGrid.data}
-          compareLoading={compareGrid.loading}
-          compareError={compareGrid.error}
-        />
+        <>
+          <CausalStoryPanel
+            story={story}
+            promptToken={lensGrid.data?.prompt_tokens?.[selectedPos]}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={setSelectedNodeId}
+            playStep={playStep}
+            onPlayStepChange={setPlayStep}
+            comparePrompt={comparePrompt}
+            onComparePromptChange={setComparePrompt}
+            compareGrid={compareGrid.data}
+            compareLoading={compareGrid.loading}
+            compareError={compareGrid.error}
+            compareSet={compareSet}
+            onCompareSetChange={setCompareSet}
+          />
+          {compareSet.length > 0 && (
+            <DivergenceHeatmap
+              story={story}
+              referencePrompt={prompt}
+              referenceGrid={lensGrid.data}
+              comparisonPrompts={compareSet}
+              comparisonGrids={setGrids.results.map((r) => r.data)}
+              loading={setGrids.loading}
+            />
+          )}
+        </>
       )}
     </div>
   );
