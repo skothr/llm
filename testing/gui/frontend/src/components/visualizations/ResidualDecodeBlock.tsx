@@ -4,7 +4,7 @@ type Props = {
   sessionName: string;
   prompt: string;
   layer: number;
-  sublayer: "attn" | "ffn";
+  sublayer: "attn" | "ffn" | "embed";
   position: number;
 };
 

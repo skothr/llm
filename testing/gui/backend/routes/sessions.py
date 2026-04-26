@@ -711,7 +711,7 @@ class DecodeResidualRequest(BaseModel):
 
 
 _DECODE_RESIDUAL_TOPK_MAX = 50
-_DECODE_RESIDUAL_VALID_SUBLAYERS = {"attn", "ffn"}
+_DECODE_RESIDUAL_VALID_SUBLAYERS = {"attn", "ffn", "embed"}
 
 
 @router.post("/sessions/{name}/decode-residual")
@@ -745,7 +745,15 @@ async def decode_residual(name: str, req: DecodeResidualRequest):
     model = info.model
     tok = info.tokenizer
     num_layers = len(model.model.layers)
-    if not 0 <= req.layer < num_layers:
+    # The "embed" sublayer is a single point at layer 0; reject other layers
+    # to avoid silently returning the wrong residual point.
+    if req.sublayer == "embed":
+        if req.layer != 0:
+            raise HTTPException(
+                400,
+                f"sublayer 'embed' requires layer=0; got {req.layer}",
+            )
+    elif not 0 <= req.layer < num_layers:
         raise HTTPException(
             400,
             f"layer out of range: got {req.layer}, valid [0, {num_layers})",
@@ -822,7 +830,7 @@ async def decode_residual_grid(name: str, req: DecodeResidualGridRequest):
 
     def _compute() -> dict:
         captured, prompt_tokens = _capture_residual_stream(
-            model, tok, req.prompt, sublayers=("attn", "ffn"),
+            model, tok, req.prompt, sublayers=("embed", "attn", "ffn"),
         )
         seq_len = len(prompt_tokens)
         if seq_len > _DECODE_RESIDUAL_GRID_MAX_TOKENS:
