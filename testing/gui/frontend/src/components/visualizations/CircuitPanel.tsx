@@ -46,8 +46,17 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
   const [showAll, setShowAll] = useState<boolean>(false);
   const [selectedNodeId, setSelectedNodeId] = useState<StoryNodeId | null>(null);
   const [playStep, setPlayStep] = useState<number | null>(null);
+  // Phase 3.17 — comparative-story state. `null` = compare mode off.
+  const [comparePrompt, setComparePrompt] = useState<string | null>(null);
 
   const lensGrid = useResidualGrid(sessionName, prompt, 3);
+  // Second grid fires only when the user enters a non-empty compare prompt.
+  // `useResidualGrid` returns null/idle when prompt is `undefined`.
+  const compareGrid = useResidualGrid(
+    sessionName,
+    comparePrompt ?? undefined,
+    3,
+  );
 
   const edgesAtPos = useMemo(
     () => edges.filter((e) => e.position === selectedPos),
@@ -265,6 +274,11 @@ export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
           onSelectNode={setSelectedNodeId}
           playStep={playStep}
           onPlayStepChange={setPlayStep}
+          comparePrompt={comparePrompt}
+          onComparePromptChange={setComparePrompt}
+          compareGrid={compareGrid.data}
+          compareLoading={compareGrid.loading}
+          compareError={compareGrid.error}
         />
       )}
     </div>

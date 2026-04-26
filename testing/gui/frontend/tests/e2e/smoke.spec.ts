@@ -877,6 +877,114 @@ test("causal story play button reveals nodes over time then resets", async ({ pa
   expect(consoleErrors).toEqual([]);
 });
 
+test("comparative story renders prompt-B sub-row with divergence highlighting", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  // Single mock dispatches on the JSON body's `prompt` field so prompt A and
+  // prompt B return different lens cells. The circuit fixture's lone in-circuit
+  // edge is (writer_layer=2, attn.h1) at position=4.
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    const body = route.request().postDataJSON() as { prompt?: string } | null;
+    const isItaly = !!body?.prompt && body.prompt.toLowerCase().includes("italy");
+    const tokens = isItaly
+      ? [{ token: " Roma", logit: 6.0 }, { token: " Italia", logit: 5.0 }]
+      : [{ token: " Paris", logit: 6.0 }, { token: " France", logit: 5.0 }];
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells: [{ layer: 2, sublayer: "attn", position: 4, tokens }],
+        prompt_tokens: ["The", "Eiffel", "Tower", "is", "in"],
+        num_layers: 22,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByTestId("causal-story-panel").waitFor({ state: "visible", timeout: 5000 });
+
+  // Initial state — A-only row (no compare mode).
+  const row = page.getByTestId("causal-story-row-L2-attn.h1");
+  await expect(row).toHaveAttribute("data-compare-active", "false");
+
+  // Open the compare input, type prompt B, and apply.
+  await page.getByTestId("causal-story-compare-toggle").click();
+  await page.getByTestId("causal-story-compare-input").fill("The Colosseum is in Italy");
+  await page.getByTestId("causal-story-compare-apply").click();
+
+  // Compare-mode flag flips on; the per-row testid should appear.
+  await expect(row).toHaveAttribute("data-compare-active", "true", { timeout: 5000 });
+  const compareRow = page.getByTestId("causal-story-row-L2-attn.h1-compare");
+  await expect(compareRow).toBeVisible();
+  // Prompt-B tokens render with the divergent values.
+  await expect(compareRow.getByText(" Roma", { exact: true })).toBeVisible();
+  await expect(compareRow.getByText(" Italia", { exact: true })).toBeVisible();
+
+  // Clear button removes compare mode.
+  await page.getByTestId("causal-story-compare-clear").click();
+  await expect(row).toHaveAttribute("data-compare-active", "false");
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("comparative story copy-as-markdown includes A and B sub-rows", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/");
+
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    const body = route.request().postDataJSON() as { prompt?: string } | null;
+    const isItaly = !!body?.prompt && body.prompt.toLowerCase().includes("italy");
+    const tokens = isItaly
+      ? [{ token: " Roma", logit: 6.0 }]
+      : [{ token: " Paris", logit: 6.0 }];
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells: [{ layer: 2, sublayer: "attn", position: 4, tokens }],
+        prompt_tokens: ["The", "Eiffel", "Tower", "is", "in"],
+        num_layers: 22,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByTestId("causal-story-panel").waitFor({ state: "visible", timeout: 5000 });
+  await page.getByTestId("causal-story-compare-toggle").click();
+  await page.getByTestId("causal-story-compare-input").fill("Italy");
+  await page.getByTestId("causal-story-compare-apply").click();
+  await expect(page.getByTestId("causal-story-row-L2-attn.h1"))
+    .toHaveAttribute("data-compare-active", "true", { timeout: 5000 });
+
+  // Wait for both lens grids to settle so the markdown contains B tokens.
+  await expect(page.getByTestId("causal-story-row-L2-attn.h1-compare")).toBeVisible();
+
+  await page.getByTestId("causal-story-copy-md").click();
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboardText).toContain('_compare with: "Italy"_');
+  expect(clipboardText).toContain("- **L2 attn.h1** — A residual:  Paris");
+  expect(clipboardText).toContain("  - B residual:  Roma");
+});
+
 test("causal story copy-as-markdown writes to clipboard", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
