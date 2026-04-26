@@ -32,7 +32,7 @@ export function ResidualDecodeBlock({
             <div style={{ fontSize: 11, color: "#7c7", fontWeight: "bold" }}>Promoted</div>
             {data.top_tokens.map((t, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontFamily: "monospace", color: "#cfc" }}>
-                <span>{JSON.stringify(t.token)}</span>
+                <span>{t.token}</span>
                 <span>+{t.logit.toFixed(2)}</span>
               </div>
             ))}
@@ -41,7 +41,7 @@ export function ResidualDecodeBlock({
             <div style={{ fontSize: 11, color: "#c77", fontWeight: "bold" }}>Suppressed</div>
             {data.bottom_tokens.map((t, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontFamily: "monospace", color: "#fcc" }}>
-                <span>{JSON.stringify(t.token)}</span>
+                <span>{t.token}</span>
                 <span>{t.logit.toFixed(2)}</span>
               </div>
             ))}

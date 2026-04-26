@@ -593,3 +593,64 @@ test("per-head pin card shows decoded tokens for attn head", async ({ page }) =>
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
 });
+
+test("per-neuron pin card shows residual lens decode block", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  // The neuron pin card fetches BOTH decode-neuron (existing) and the
+  // new decode-residual (Phase 3.11). Mock both so the test runs without
+  // a live backend.
+  await page.route("**/api/sessions/*/decode-neuron", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        top_tokens:    [{ token: " neuron-X", logit: 1.0 }],
+        bottom_tokens: [{ token: " neuron-Y", logit: -1.0 }],
+      }),
+    });
+  });
+  await page.route("**/api/sessions/*/decode-residual", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        top_tokens: [
+          { token: " Paris-lens", logit: 5.50 },
+          { token: " France-lens", logit: 4.20 },
+        ],
+        bottom_tokens: [
+          { token: " Rome-lens", logit: -2.00 },
+        ],
+        prompt_tokens: ["The", "capital", "of", "France", "is"],
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(PER_NEURON_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-per-neuron.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByRole("heading", { name: /Per-Neuron FFN Attribution/i })
+    .waitFor({ state: "visible", timeout: 5000 });
+
+  await page.locator("tbody tr").first().click();
+
+  // The new lens block: heading "Logit lens at (L<n>, ffn, pos <n>)"
+  await expect(page.getByText(/Logit lens at \(L\d+, ffn, pos \d+\)/i))
+    .toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(" Paris-lens", { exact: true })).toBeVisible();
+  await expect(page.getByText(" Rome-lens", { exact: true })).toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
