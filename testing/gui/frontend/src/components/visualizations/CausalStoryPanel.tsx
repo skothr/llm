@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CausalStory } from "../../utils/causalStory";
-import { storyToMarkdown, storyNodeId, type StoryNodeId } from "../../utils/causalStory";
+import {
+  comparativeLensTokens,
+  storyToMarkdown,
+  storyNodeId,
+  type StoryNodeId,
+} from "../../utils/causalStory";
+import type { ResidualGridResponse } from "../../utils/useResidualGrid";
 
 type Props = {
   story: CausalStory;
@@ -10,17 +16,37 @@ type Props = {
   /** When set, only nodes with index < playStep are revealed; when null, all nodes are visible. */
   playStep?: number | null;
   onPlayStepChange?: (step: number | null) => void;
+  /** Phase 3.17 — comparative-story support. Parent owns prompt B + grid B. */
+  comparePrompt?: string | null;
+  onComparePromptChange?: (next: string | null) => void;
+  compareGrid?: ResidualGridResponse | null;
+  compareLoading?: boolean;
+  compareError?: string | null;
 };
 
 const PLAY_STEP_INTERVAL_MS = 600;
 
 export function CausalStoryPanel({
   story, promptToken, selectedNodeId, onSelectNode, playStep, onPlayStepChange,
+  comparePrompt, onComparePromptChange, compareGrid, compareLoading, compareError,
 }: Props) {
   const headerPos = promptToken ? `pos ${story.position} ("${promptToken}")` : `pos ${story.position}`;
   const interactive = onSelectNode !== undefined;
   const playable = onPlayStepChange !== undefined;
   const playing = playStep !== null && playStep !== undefined;
+  const compareEnabled = onComparePromptChange !== undefined;
+  const compareActive = compareEnabled && comparePrompt !== null && comparePrompt !== undefined && comparePrompt.length > 0;
+  const compareTokens = useMemo(
+    () => (compareActive ? comparativeLensTokens(story, compareGrid ?? null, 3) : null),
+    [compareActive, story, compareGrid],
+  );
+  // Local draft state so the input can hold partial text without firing
+  // a fetch on every keystroke. Parent only sees the value on commit.
+  const [compareDraft, setCompareDraft] = useState<string>(comparePrompt ?? "");
+  useEffect(() => {
+    setCompareDraft(comparePrompt ?? "");
+  }, [comparePrompt]);
+  const [compareInputOpen, setCompareInputOpen] = useState<boolean>(compareActive);
 
   const totalNodes = story.nodes.length;
   // Local state when no parent control is provided (component remains usable standalone).
@@ -59,8 +85,25 @@ export function CausalStoryPanel({
   }, [effectiveStep, totalNodes]);
 
   const handleCopyMarkdown = () => {
-    const md = storyToMarkdown(story, promptToken);
+    const md =
+      compareActive && compareTokens !== null
+        ? storyToMarkdown(story, promptToken, {
+            compareTokens,
+            comparePrompt: comparePrompt as string,
+          })
+        : storyToMarkdown(story, promptToken);
     navigator.clipboard?.writeText(md).catch(() => undefined);
+  };
+
+  const handleCompareCommit = () => {
+    if (!onComparePromptChange) return;
+    const trimmed = compareDraft.trim();
+    onComparePromptChange(trimmed.length === 0 ? null : trimmed);
+  };
+  const handleCompareClear = () => {
+    if (!onComparePromptChange) return;
+    setCompareDraft("");
+    onComparePromptChange(null);
   };
 
   const handlePlay = () => {
@@ -80,12 +123,28 @@ export function CausalStoryPanel({
         <div style={{ fontSize: 12, color: "#a0a0c0", fontWeight: "bold" }}>
           Causal Story — {headerPos}
         </div>
+        {compareEnabled && (
+          <button
+            onClick={() => setCompareInputOpen((v) => !v)}
+            aria-pressed={compareInputOpen}
+            data-testid="causal-story-compare-toggle"
+            style={{
+              fontSize: 11, padding: "2px 8px", marginLeft: "auto",
+              background: compareActive ? "#3a2a55" : (compareInputOpen ? "#2a3a55" : "#1a2438"),
+              color: "#cfd6e6", border: "1px solid #2a3a55",
+              borderRadius: 3, cursor: "pointer",
+            }}
+          >
+            {compareActive ? "✓ compare on" : "compare…"}
+          </button>
+        )}
         <button
           onClick={handlePlay}
           aria-pressed={playing}
           data-testid="causal-story-play"
           style={{
-            fontSize: 11, padding: "2px 8px", marginLeft: "auto",
+            fontSize: 11, padding: "2px 8px",
+            marginLeft: compareEnabled ? 0 : "auto",
             background: playing ? "#2a3a55" : "#1a2438",
             color: "#cfd6e6", border: "1px solid #2a3a55",
             borderRadius: 3, cursor: totalNodes === 0 ? "default" : "pointer",
@@ -107,6 +166,58 @@ export function CausalStoryPanel({
           copy as markdown
         </button>
       </div>
+      {compareEnabled && compareInputOpen && (
+        <div
+          data-testid="causal-story-compare-input-row"
+          style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center" }}
+        >
+          <input
+            data-testid="causal-story-compare-input"
+            type="text"
+            value={compareDraft}
+            onChange={(e) => setCompareDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleCompareCommit(); }}
+            placeholder="compare with another prompt (e.g. 'The capital of Italy')"
+            style={{
+              flex: 1, fontSize: 12, padding: "3px 6px",
+              background: "#0e0e12", color: "#cfd6e6",
+              border: "1px solid #2a3a55", borderRadius: 3,
+            }}
+          />
+          <button
+            onClick={handleCompareCommit}
+            data-testid="causal-story-compare-apply"
+            style={{
+              fontSize: 11, padding: "2px 8px",
+              background: "#1a2438", color: "#cfd6e6",
+              border: "1px solid #2a3a55", borderRadius: 3, cursor: "pointer",
+            }}
+          >
+            apply
+          </button>
+          {compareActive && (
+            <button
+              onClick={handleCompareClear}
+              data-testid="causal-story-compare-clear"
+              style={{
+                fontSize: 11, padding: "2px 8px",
+                background: "#1a2438", color: "#cfd6e6",
+                border: "1px solid #2a3a55", borderRadius: 3, cursor: "pointer",
+              }}
+            >
+              clear
+            </button>
+          )}
+        </div>
+      )}
+      {compareActive && compareLoading && (
+        <div style={{ fontSize: 11, color: "#888", marginBottom: 6 }}>loading prompt-B lens…</div>
+      )}
+      {compareActive && compareError && (
+        <div style={{ fontSize: 11, color: "#ff8a8a", marginBottom: 6 }}>
+          prompt-B lens failed: {compareError}
+        </div>
+      )}
       {story.note && (
         <div style={{ fontSize: 11, color: "#888", marginBottom: 6 }}>
           {story.note}
@@ -118,16 +229,21 @@ export function CausalStoryPanel({
             const id = storyNodeId(n.layer, n.unit);
             const isSelected = selectedNodeId === id;
             const isEmbed = n.unit === "embed";
+            const labelWord = isEmbed ? "input" : "residual";
             const handleClick = interactive
               ? () => onSelectNode!(isSelected ? null : id)
               : undefined;
             // During playback, only nodes with index < step are shown.
             const isRevealed = effectiveStep === null || i < effectiveStep;
+            const aTokens = n.lensTokens;
+            const bTokens = compareTokens?.[i] ?? null;
+            const showCompareRow = compareActive && bTokens !== null;
             return (
               <div
                 key={id}
                 data-testid={`causal-story-row-${id}`}
                 data-revealed={isRevealed ? "true" : "false"}
+                data-compare-active={compareActive ? "true" : "false"}
                 onClick={handleClick}
                 style={{
                   display: "flex", gap: 12, alignItems: "baseline",
@@ -146,21 +262,46 @@ export function CausalStoryPanel({
                 <span style={{ color: isSelected ? "#cfd6e6" : "#888", minWidth: 110 }}>
                   L{n.layer} {n.unit}
                 </span>
-                {n.lensTokens.length > 0 ? (
-                  <span>
-                    <span style={{ color: "#888" }}>{isEmbed ? "input: " : "residual: "}</span>
-                    <span style={{ color: "#cfc" }}>
-                      {n.lensTokens.map((t, j) => (
-                        <span key={j}>
-                          {j > 0 && <span style={{ color: "#666" }}>{" · "}</span>}
-                          {t}
-                        </span>
-                      ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {aTokens.length > 0 ? (
+                    <span>
+                      <span style={{ color: "#888" }}>
+                        {showCompareRow ? `A ${labelWord}: ` : `${labelWord}: `}
+                      </span>
+                      {aTokens.map((t, j) => {
+                        const matchesB = showCompareRow && bTokens !== null && bTokens[j] === t;
+                        const aColor = showCompareRow && matchesB ? "#888" : "#cfc";
+                        return (
+                          <span key={j}>
+                            {j > 0 && <span style={{ color: "#666" }}>{" · "}</span>}
+                            <span style={{ color: aColor }}>{t}</span>
+                          </span>
+                        );
+                      })}
                     </span>
-                  </span>
-                ) : (
-                  <span style={{ color: "#888", fontStyle: "italic" }}>(no lens data)</span>
-                )}
+                  ) : (
+                    <span style={{ color: "#888", fontStyle: "italic" }}>(no lens data)</span>
+                  )}
+                  {showCompareRow && (
+                    <span data-testid={`causal-story-row-${id}-compare`}>
+                      <span style={{ color: "#888" }}>{`B ${labelWord}: `}</span>
+                      {bTokens !== null && bTokens.length === 0 ? (
+                        <span style={{ color: "#888", fontStyle: "italic" }}>(no lens data)</span>
+                      ) : (
+                        bTokens!.map((t, j) => {
+                          const matchesA = aTokens[j] === t;
+                          const bColor = matchesA ? "#888" : "#ffa07a";
+                          return (
+                            <span key={j}>
+                              {j > 0 && <span style={{ color: "#666" }}>{" · "}</span>}
+                              <span style={{ color: bColor }}>{t}</span>
+                            </span>
+                          );
+                        })
+                      )}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
