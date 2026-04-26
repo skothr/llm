@@ -877,6 +877,84 @@ test("causal story play button reveals nodes over time then resets", async ({ pa
   expect(consoleErrors).toEqual([]);
 });
 
+test("preset library — selecting country-capitals fills textarea, auto-applies, renders heatmap", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  // Mock returns Paris for the main prompt, Roma/Tokyo/etc. for each country.
+  // Specific token doesn't matter for this test — we're checking that the
+  // 5-column heatmap renders, meaning all 5 preset prompts fanned out.
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    const body = route.request().postDataJSON() as { prompt?: string } | null;
+    const prompt = (body?.prompt ?? "").toLowerCase();
+    let token = " Paris";
+    if (prompt.includes("italy")) token = " Roma";
+    else if (prompt.includes("japan")) token = " Tokyo";
+    else if (prompt.includes("brazil")) token = " Brasilia";
+    else if (prompt.includes("egypt")) token = " Cairo";
+    else if (prompt.includes("germany")) token = " Berlin";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells: [
+          { layer: 2, sublayer: "attn", position: 4, tokens: [{ token, logit: 6.0 }, { token: " other", logit: 5.0 }] },
+        ],
+        prompt_tokens: ["The", "Eiffel", "Tower", "is", "in"],
+        num_layers: 22,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByTestId("causal-story-panel").waitFor({ state: "visible", timeout: 5000 });
+
+  // Open the prompt-set section, then load the country-capitals preset.
+  await page.getByTestId("causal-story-set-toggle").click();
+  await page.getByTestId("causal-story-set-preset").selectOption("country-capitals");
+
+  // Caption appears and references the recommended main prompt.
+  const caption = page.getByTestId("causal-story-set-preset-caption");
+  await expect(caption).toBeVisible();
+  await expect(caption).toContainText("Country capitals");
+  await expect(caption).toContainText("recommended main prompt");
+
+  // Textarea filled with the 5 country-capitals comparison prompts.
+  const textarea = page.getByTestId("causal-story-set-input");
+  await expect(textarea).toHaveValue(/The capital of Italy is/);
+  await expect(textarea).toHaveValue(/The capital of Japan is/);
+
+  // Auto-applied — heatmap renders with reference + 5 comparison columns.
+  const heatmap = page.getByTestId("divergence-heatmap");
+  await expect(heatmap).toBeVisible({ timeout: 5000 });
+
+  // Reference column always matches itself.
+  await expect(page.getByTestId("divergence-cell-0-0"))
+    .toHaveAttribute("data-match", "true", { timeout: 5000 });
+
+  // Italy column (index 1) — token differs (Roma vs Paris) → divergence.
+  await expect(page.getByTestId("divergence-cell-0-1")).toHaveAttribute("data-match", "false");
+
+  // Manually editing the textarea clears the preset selection back to "(custom)".
+  await textarea.fill("custom prompt 1\ncustom prompt 2\ncustom prompt 3");
+  await expect(page.getByTestId("causal-story-set-preset")).toHaveValue("");
+  await expect(caption).not.toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
+
 test("divergence heatmap renders 3-prompt matrix with correct match/diverge cells", async ({ page }) => {
   await page.goto("/");
   const consoleErrors: string[] = [];
