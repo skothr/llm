@@ -7,6 +7,7 @@ import {
 } from "../../utils/patchingMetrics";
 import type { ProbeResult, PatchingBaselinesData, PatchingCellData, PatchingCompleteData } from "../../types/api";
 import { ResidualDecodeBlock } from "./ResidualDecodeBlock";
+import { LensTraceStrip } from "./LensTraceStrip";
 
 interface Props {
   result: ProbeResult;
@@ -295,7 +296,15 @@ export function ActivationPatchingHeatmap({ result }: Props) {
           />
         </div>
       </div>
-      <div style={{ overflowX: "auto" }}><svg ref={svgRef} /></div>
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ flex: 1, overflowX: "auto" }}><svg ref={svgRef} /></div>
+        <LensTraceStrip
+          sessionName={result.sessionName}
+          prompt={result.prompt}
+          promptTokens={baselines?.prompt_tokens_clean}
+          initialPosition={baselines?.measurement_position}
+        />
+      </div>
       {pinned && (
         <PinnedCard
           cell={pinned.cell}

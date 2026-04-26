@@ -654,3 +654,60 @@ test("per-neuron pin card shows residual lens decode block", async ({ page }) =>
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
 });
+
+test("AP heatmap renders lens-trace strip with mocked grid response", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  // Mock the bulk grid endpoint (Phase 3.12). 2 layers x 2 sublayers x 5 positions.
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    const cells: Array<{
+      layer: number; sublayer: "attn" | "ffn"; position: number;
+      tokens: Array<{ token: string; logit: number }>;
+    }> = [];
+    // Fixture's measurement_position is 3 (last token of "The capital of France").
+    for (const layer of [0, 1]) {
+      for (const sublayer of ["attn", "ffn"] as const) {
+        for (let pos = 0; pos < 4; pos++) {
+          const token =
+            (layer === 1 && sublayer === "ffn" && pos === 3)
+              ? " Paris-trace"
+              : ` tok-L${layer}-${sublayer}-p${pos}`;
+          cells.push({ layer, sublayer, position: pos, tokens: [{ token, logit: 1.5 }] });
+        }
+      }
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells,
+        prompt_tokens: ["The", "capital", "of", "France"],
+        num_layers: 2,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(AP_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByRole("heading", { name: /Activation Patching/ })
+    .waitFor({ state: "visible", timeout: 5000 });
+
+  await expect(page.getByTestId("lens-trace-strip")).toBeVisible({ timeout: 5000 });
+  // Default position is measurement_position (= 4 = "in") so last-layer ffn
+  // shows our distinctive marker token.
+  await expect(page.getByText(" Paris-trace", { exact: true })).toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
