@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 export type ResidualGridToken = { token: string; logit: number };
 export type ResidualGridCell = {
   layer: number;
-  sublayer: "attn" | "ffn";
+  sublayer: "attn" | "ffn" | "embed";
   position: number;
   tokens: ResidualGridToken[];
 };

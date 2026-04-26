@@ -121,6 +121,12 @@ def _capture_residual_stream(model, tokenizer, prompt, sublayers=("ffn",), layer
     Returns:
         captured: dict mapping (layer_idx, sublayer_name) -> Tensor (seq_len, d_model)
         prompt_tokens: list of token strings
+
+    Sublayer keys:
+      - "attn": h_in + attn_out at each (target) layer, keyed (L, "attn")
+      - "ffn":  layer output at each (target) layer, keyed (L, "ffn")
+      - "embed": output of model.model.embed_tokens (residual stream
+                 BEFORE any layer modifies it), keyed (0, "embed")
     """
     device = _get_input_device(model)
     enc = tokenizer(prompt, return_tensors="pt")
@@ -131,10 +137,17 @@ def _capture_residual_stream(model, tokenizer, prompt, sublayers=("ffn",), layer
     target_layers = set(layers) if layers is not None else set(range(num_layers))
     capture_attn = "attn" in sublayers
     capture_ffn = "ffn" in sublayers
+    capture_embed = "embed" in sublayers
 
     captured: Dict[Tuple[int, str], torch.Tensor] = {}
     layer_block_inputs: Dict[int, torch.Tensor] = {}
     hooks = []
+
+    if capture_embed:
+        def embed_hook(module, inp, out):
+            hidden = out[0].detach() if isinstance(out, tuple) else out.detach()
+            captured[(0, "embed")] = hidden[0]
+        hooks.append(model.model.embed_tokens.register_forward_hook(embed_hook))
 
     if capture_attn:
         def make_block_pre_hook(idx):

@@ -85,15 +85,23 @@ describe("computeCausalStory", () => {
     expect(result.note).toMatch(/lens grid loading/i);
   });
 
-  it("embed writers get null lensSublayer + empty tokens", () => {
+  it("embed writers get embed lensSublayer; tokens come from grid (L=0)", () => {
+    const gridWithEmbed: ResidualGridResponse = {
+      num_layers: 22,
+      prompt_tokens: ["The", "capital", "of", "France"],
+      cells: [
+        { layer: 0, sublayer: "embed", position: 3, tokens: [{ token: "France", logit: 8.0 }] },
+        { layer: 8, sublayer: "attn",  position: 3, tokens: [{ token: " Paris", logit: 5.0 }] },
+      ],
+    };
     const cells = [
       { writer_layer: 0, writer_unit: "embed",   reader_layer: 5, reader_unit: "attn_in", position: 3, in_circuit: true },
       { writer_layer: 8, writer_unit: "attn.h0", reader_layer: 12, reader_unit: "attn_in", position: 3, in_circuit: true },
     ];
-    const result = computeCausalStory(cells, grid(), 3);
+    const result = computeCausalStory(cells, gridWithEmbed, 3);
     const embed = result.nodes.find((n) => n.unit === "embed");
-    expect(embed?.lensSublayer).toBeNull();
-    expect(embed?.lensTokens).toEqual([]);
+    expect(embed?.lensSublayer).toBe("embed");
+    expect(embed?.lensTokens).toEqual(["France"]);
   });
 });
 
@@ -120,15 +128,26 @@ describe("storyToMarkdown", () => {
     expect(md).toContain("1 edge feeding through this circuit");
   });
 
-  it("renders embed writer with italic caption", () => {
+  it("renders embed writer with input-token lens content", () => {
     const story = {
       position: 0,
-      nodes: [{ layer: 0, unit: "embed", position: 0, lensSublayer: null, lensTokens: [] }],
+      nodes: [{ layer: 0, unit: "embed", position: 0, lensSublayer: "embed" as const, lensTokens: ["The"] }],
       edges: [],
       note: null,
     };
     const md = storyToMarkdown(story);
-    expect(md).toContain("- **L0 embed** — _input embedding (no lens in V1)_");
+    expect(md).toContain("- **L0 embed** — input: The");
+  });
+
+  it("renders embed writer with no-lens-data fallback when grid missing", () => {
+    const story = {
+      position: 0,
+      nodes: [{ layer: 0, unit: "embed", position: 0, lensSublayer: "embed" as const, lensTokens: [] }],
+      edges: [],
+      note: null,
+    };
+    const md = storyToMarkdown(story);
+    expect(md).toContain("- **L0 embed** — _no lens data_");
   });
 
   it("renders empty-nodes case as italic placeholder", () => {

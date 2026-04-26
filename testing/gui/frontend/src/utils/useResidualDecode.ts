@@ -11,7 +11,7 @@ export function useResidualDecode(
   sessionName: string | undefined,
   prompt: string | undefined,
   layer: number | undefined,
-  sublayer: "attn" | "ffn" | undefined,
+  sublayer: "attn" | "ffn" | "embed" | undefined,
   position: number | undefined,
   topK: number = 10,
 ): { data: ResidualDecodeResponse | null; error: string | null; loading: boolean } {

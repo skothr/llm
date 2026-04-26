@@ -146,13 +146,9 @@ export function CausalStoryPanel({
                 <span style={{ color: isSelected ? "#cfd6e6" : "#888", minWidth: 110 }}>
                   L{n.layer} {n.unit}
                 </span>
-                {isEmbed ? (
-                  <span style={{ color: "#888", fontStyle: "italic" }}>
-                    input embedding (no lens in V1)
-                  </span>
-                ) : n.lensTokens.length > 0 ? (
+                {n.lensTokens.length > 0 ? (
                   <span>
-                    <span style={{ color: "#888" }}>residual: </span>
+                    <span style={{ color: "#888" }}>{isEmbed ? "input: " : "residual: "}</span>
                     <span style={{ color: "#cfc" }}>
                       {n.lensTokens.map((t, j) => (
                         <span key={j}>

@@ -4,7 +4,8 @@ export type CausalStoryNode = {
   layer: number;
   unit: string;            // "embed" | "attn.hN" | "ffn"
   position: number;
-  lensSublayer: "attn" | "ffn" | null;   // null when no lens point applies (embed)
+  /** Lens point at which this writer's residual content is decoded. */
+  lensSublayer: "attn" | "ffn" | "embed" | null;
   lensTokens: string[];    // top-K residual lens tokens; [] if grid not loaded
 };
 
@@ -29,8 +30,8 @@ export type CausalStory = {
   note: string | null;
 };
 
-function lensSublayerForWriter(unit: string): "attn" | "ffn" | null {
-  if (unit === "embed") return null;
+function lensSublayerForWriter(unit: string): "attn" | "ffn" | "embed" | null {
+  if (unit === "embed") return "embed";
   if (unit.startsWith("attn")) return "attn";
   if (unit === "ffn") return "ffn";
   return null;
@@ -39,13 +40,16 @@ function lensSublayerForWriter(unit: string): "attn" | "ffn" | null {
 function lensTokensFor(
   grid: ResidualGridResponse | null,
   layer: number,
-  sublayer: "attn" | "ffn" | null,
+  sublayer: "attn" | "ffn" | "embed" | null,
   position: number,
   topK: number,
 ): string[] {
   if (grid === null || sublayer === null) return [];
+  // Embed cells live at layer=0 only; the writer's `layer` may be the
+  // edge's writer_layer (from the AP cell), but lens lookup must use 0.
+  const lookupLayer = sublayer === "embed" ? 0 : layer;
   const cell = grid.cells.find(
-    (c) => c.layer === layer && c.sublayer === sublayer && c.position === position,
+    (c) => c.layer === lookupLayer && c.sublayer === sublayer && c.position === position,
   );
   if (!cell) return [];
   return cell.tokens.slice(0, topK).map((t) => t.token);
@@ -130,12 +134,11 @@ export function storyToMarkdown(story: CausalStory, promptToken?: string): strin
   } else {
     lines.push("");
     for (const n of story.nodes) {
-      if (n.unit === "embed") {
-        lines.push(`- **L${n.layer} ${n.unit}** — _input embedding (no lens in V1)_`);
-      } else if (n.lensTokens.length === 0) {
+      if (n.lensTokens.length === 0) {
         lines.push(`- **L${n.layer} ${n.unit}** — _no lens data_`);
       } else {
-        lines.push(`- **L${n.layer} ${n.unit}** — residual: ${n.lensTokens.join(" · ")}`);
+        const label = n.unit === "embed" ? "input" : "residual";
+        lines.push(`- **L${n.layer} ${n.unit}** — ${label}: ${n.lensTokens.join(" · ")}`);
       }
     }
   }
