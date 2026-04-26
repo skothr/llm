@@ -7,6 +7,7 @@ import {
   type StoryNodeId,
 } from "../../utils/causalStory";
 import type { ResidualGridResponse } from "../../utils/useResidualGrid";
+import { PROMPT_SET_PRESETS, getPresetById } from "../../utils/promptSetLibrary";
 
 type Props = {
   story: CausalStory;
@@ -130,6 +131,25 @@ export function CausalStoryPanel({
     if (!onCompareSetChange) return;
     setSetDraft("");
     onCompareSetChange([]);
+  };
+
+  const [presetSelection, setPresetSelection] = useState<string>("");
+  const [presetCaption, setPresetCaption] = useState<string | null>(null);
+  const handlePresetLoad = (id: string) => {
+    if (!onCompareSetChange) return;
+    setPresetSelection(id);
+    if (id === "") {
+      setPresetCaption(null);
+      return;
+    }
+    const preset = getPresetById(id);
+    if (!preset) return;
+    setSetDraft(preset.prompts.join("\n"));
+    onCompareSetChange(preset.prompts);
+    setSetInputOpen(true);
+    setPresetCaption(
+      `${preset.label} — recommended main prompt: "${preset.recommendedMainPrompt}". ${preset.description}`,
+    );
   };
 
   const handlePlay = () => {
@@ -265,10 +285,46 @@ export function CausalStoryPanel({
           data-testid="causal-story-set-input-row"
           style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}
         >
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <label style={{ fontSize: 11, color: "#888" }}>load preset:</label>
+            <select
+              data-testid="causal-story-set-preset"
+              value={presetSelection}
+              onChange={(e) => handlePresetLoad(e.target.value)}
+              style={{
+                fontSize: 11, padding: "2px 6px",
+                background: "#0e0e12", color: "#cfd6e6",
+                border: "1px solid #2a3a55", borderRadius: 3,
+              }}
+            >
+              <option value="">(custom — type below)</option>
+              {PROMPT_SET_PRESETS.map((p) => (
+                <option key={p.id} value={p.id} title={p.description}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {presetCaption && (
+            <div
+              data-testid="causal-story-set-preset-caption"
+              style={{ fontSize: 11, color: "#a0a0c0", fontStyle: "italic", lineHeight: 1.4 }}
+            >
+              {presetCaption}
+            </div>
+          )}
           <textarea
             data-testid="causal-story-set-input"
             value={setDraft}
-            onChange={(e) => setSetDraft(e.target.value)}
+            onChange={(e) => {
+              setSetDraft(e.target.value);
+              // Manual edit clears the preset selection — the textarea no
+              // longer reflects the named preset's state.
+              if (presetSelection !== "") {
+                setPresetSelection("");
+                setPresetCaption(null);
+              }
+            }}
             placeholder="one prompt per line — divergence heatmap will compare each against the panel's main prompt"
             rows={4}
             style={{
