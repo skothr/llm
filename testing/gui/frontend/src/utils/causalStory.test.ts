@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeCausalStory } from "./causalStory";
+import { computeCausalStory, storyToMarkdown, storyNodeId } from "./causalStory";
 import type { ResidualGridResponse } from "./useResidualGrid";
 
 const grid = (): ResidualGridResponse => ({
@@ -94,5 +94,55 @@ describe("computeCausalStory", () => {
     const embed = result.nodes.find((n) => n.unit === "embed");
     expect(embed?.lensSublayer).toBeNull();
     expect(embed?.lensTokens).toEqual([]);
+  });
+});
+
+describe("storyToMarkdown", () => {
+  it("renders header with promptToken when provided", () => {
+    const story = { position: 3, nodes: [], edges: [], note: null };
+    const md = storyToMarkdown(story, "France");
+    expect(md).toContain('## Causal Story — pos 3 ("France")');
+  });
+
+  it("renders bulleted node list with lens tokens", () => {
+    const story = {
+      position: 3,
+      nodes: [
+        { layer: 8, unit: "attn.h0", position: 3, lensSublayer: "attn" as const, lensTokens: [" Paris", " Lyon"] },
+        { layer: 21, unit: "ffn", position: 3, lensSublayer: "ffn" as const, lensTokens: [" Paris"] },
+      ],
+      edges: [{ writer: { layer: 8, unit: "attn.h0" }, reader: { layer: 12, unit: "attn_in" } }],
+      note: null,
+    };
+    const md = storyToMarkdown(story);
+    expect(md).toContain("- **L8 attn.h0** — residual:  Paris ·  Lyon");
+    expect(md).toContain("- **L21 ffn** — residual:  Paris");
+    expect(md).toContain("1 edge feeding through this circuit");
+  });
+
+  it("renders embed writer with italic caption", () => {
+    const story = {
+      position: 0,
+      nodes: [{ layer: 0, unit: "embed", position: 0, lensSublayer: null, lensTokens: [] }],
+      edges: [],
+      note: null,
+    };
+    const md = storyToMarkdown(story);
+    expect(md).toContain("- **L0 embed** — _input embedding (no lens in V1)_");
+  });
+
+  it("renders empty-nodes case as italic placeholder", () => {
+    const story = { position: 5, nodes: [], edges: [], note: "no in-circuit edges at this position" };
+    const md = storyToMarkdown(story);
+    expect(md).toContain("_no in-circuit edges at this position_");
+    expect(md).toContain("_no nodes to display_");
+  });
+});
+
+describe("storyNodeId", () => {
+  it("formats layer + unit consistently", () => {
+    expect(storyNodeId(8, "attn.h0")).toBe("L8-attn.h0");
+    expect(storyNodeId(21, "ffn")).toBe("L21-ffn");
+    expect(storyNodeId(0, "embed")).toBe("L0-embed");
   });
 });
