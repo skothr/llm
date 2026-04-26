@@ -2,15 +2,21 @@ import { useMemo, useState } from "react";
 import * as d3 from "d3";
 import type { PatchingCellData, PatchingCompleteData } from "../../types/api";
 import { computeCircuit, CircuitEdge } from "../../utils/circuitBFS";
+import { computeCausalStory } from "../../utils/causalStory";
+import { useResidualGrid } from "../../utils/useResidualGrid";
+import { CausalStoryPanel } from "./CausalStoryPanel";
 
 interface Props {
   cells: PatchingCellData[];
   complete?: PatchingCompleteData;
+  sessionName?: string;
+  prompt?: string;
 }
 
 type Node = { id: string; layer: number; unit: string; position: number };
 
-export function CircuitPanel({ cells, complete }: Props) {
+export function CircuitPanel({ cells, complete, sessionName, prompt }: Props) {
+  const lensGrid = useResidualGrid(sessionName, prompt, 3);
   const edges: CircuitEdge[] = useMemo(
     () =>
       cells
@@ -199,6 +205,20 @@ export function CircuitPanel({ cells, complete }: Props) {
           );
         })}
       </svg>
+      {sessionName !== undefined && prompt !== undefined && (() => {
+        const inCircuitCells = edgesAtPos
+          .map((e, i) => ({
+            writer_layer: e.writer_layer,
+            writer_unit: e.writer_unit,
+            reader_layer: e.reader_layer,
+            reader_unit: e.reader_unit,
+            position: e.position,
+            in_circuit: bfs.in_circuit[i],
+          }));
+        const story = computeCausalStory(inCircuitCells, lensGrid.data, selectedPos, 3);
+        const promptToken = lensGrid.data?.prompt_tokens?.[selectedPos];
+        return <CausalStoryPanel story={story} promptToken={promptToken} />;
+      })()}
     </div>
   );
 }

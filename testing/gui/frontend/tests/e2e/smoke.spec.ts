@@ -711,3 +711,58 @@ test("AP heatmap renders lens-trace strip with mocked grid response", async ({ p
   await page.waitForTimeout(100);
   expect(consoleErrors).toEqual([]);
 });
+
+test("circuit panel renders causal story with mocked lens grid", async ({ page }) => {
+  await page.goto("/");
+  const consoleErrors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+      consoleErrors.push(msg.text());
+    }
+  });
+
+  // Mock the bulk grid endpoint. Circuit fixture's in-circuit edge is
+  // (writer_layer=2, attn.h1) at position=4. Provide lens tokens for
+  // (L2, attn, pos 4) so the story panel can render them.
+  await page.route("**/api/sessions/*/decode-residual-grid", async (route) => {
+    const cells = [
+      // L2 attn position 4 — distinctive marker tokens
+      { layer: 2, sublayer: "attn", position: 4, tokens: [
+        { token: " Paris-story", logit: 6.0 },
+        { token: " France", logit: 5.0 },
+        { token: " Lyon", logit: 4.0 },
+      ]},
+      // Pad with empty entries for other (layer, sublayer, position) so
+      // the response is still well-formed.
+      { layer: 2, sublayer: "ffn", position: 4, tokens: [{ token: " other", logit: 1.0 }] },
+    ];
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cells,
+        prompt_tokens: ["The", "Eiffel", "Tower", "is", "in"],
+        num_layers: 22,
+      }),
+    });
+  });
+
+  const fixture = fs.readFileSync(CIRCUIT_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "activation-patching-circuit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+
+  await page.getByRole("heading", { name: /Circuit \(ACDC\)/i })
+    .waitFor({ state: "visible", timeout: 5000 });
+
+  await expect(page.getByTestId("causal-story-panel")).toBeVisible({ timeout: 5000 });
+  // The lone in-circuit writer is L2 attn.h1.
+  await expect(page.getByText(/L2 attn\.h1/)).toBeVisible();
+  // Lens tokens render in the story.
+  await expect(page.getByText(" Paris-story", { exact: true })).toBeVisible();
+
+  await page.waitForTimeout(100);
+  expect(consoleErrors).toEqual([]);
+});
