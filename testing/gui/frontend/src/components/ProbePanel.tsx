@@ -3,6 +3,7 @@ import { useStore, SAMPLING_DEFAULTS } from "../state/store";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useStopCancel } from "../hooks/useStopCancel";
 import { num } from "../utils/num";
+import { parseStopSequences } from "../utils/stopSequences";
 import { PromptLibraryBar } from "./PromptLibraryBar";
 import type { WsMessage, ProbeOperation } from "../types/api";
 import { PatchingControls, DEFAULT_PATCHING_STATE, type PatchingState } from "./PatchingControls";
@@ -287,7 +288,7 @@ export function ProbePanel() {
       min_p: minP,
       seed: Number.isFinite(seedNum) ? seedNum : null,
       repetition_penalty: repPenalty,
-      stop_sequences: stopSeqs.split(",").map((s) => s.replace(/\\n/g, "\n").trim()).filter(Boolean),
+      stop_sequences: parseStopSequences(stopSeqs),
     };
   };
 
