@@ -87,8 +87,18 @@ export function GenerationOutput() {
       .sort((a, b) => (a.batchIndex ?? 0) - (b.batchIndex ?? 0));
     batchMode = true;
   } else if (newest) {
-    const partner = sorted.find((r) => r.isB && r.id === `${newest.id}-B`);
-    panels = [newest, partner].filter(Boolean) as ProbeResult[];
+    // Map the newest result onto its A so panels stay A-left B-right
+    // regardless of which streamed last. If newest is B, find A by
+    // stripping the `-B` suffix; otherwise newest IS the A.
+    const aResult = newest.isB
+      ? sorted.find((r) => !r.isB && r.id === newest.id.replace(/-B$/, ""))
+      : newest;
+    if (aResult) {
+      const bResult = sorted.find((r) => r.isB && r.id === `${aResult.id}-B`);
+      panels = bResult ? [aResult, bResult] : [aResult];
+    } else {
+      panels = [newest];
+    }
   }
 
   if (panels.length === 0) {

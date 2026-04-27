@@ -27,7 +27,8 @@ export function ResultFilterBar() {
   if (allTags.length === 0 && !hasAnyPinned && activeCount === 0) return null;
 
   const chipStyle = (active: boolean): React.CSSProperties => ({
-    fontSize: 10, padding: "1px 8px",
+    fontSize: 10, padding: "2px 8px", lineHeight: 1.2,
+    display: "inline-flex", alignItems: "center", gap: 4,
     background: active ? "#1a5276" : "#0d1b2a",
     border: `1px solid ${active ? "#2a7296" : "#1a2540"}`,
     color: active ? "#e0e0f0" : "#8888aa",
@@ -54,7 +55,13 @@ export function ResultFilterBar() {
           onClick={() => setFilterPinnedOnly(!filterPinnedOnly)}
           title="Show only pinned results"
           style={chipStyle(filterPinnedOnly)}
-        >{filterPinnedOnly ? "\u2605 pinned" : "\u2606 pinned"}</button>
+        >
+          <span
+            aria-hidden
+            style={{ display: "inline-block", width: 10, textAlign: "center" }}
+          >{filterPinnedOnly ? "\u2605" : "\u2606"}</span>
+          pinned
+        </button>
       )}
       {allTags.map((t) => (
         <button
