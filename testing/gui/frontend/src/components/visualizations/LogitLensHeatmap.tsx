@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo, useCallback } from "react";
+import { useRef, useEffect, useLayoutEffect, useState, useMemo, useCallback } from "react";
 import * as d3 from "d3";
 import { displayToken } from "../../utils/displayToken";
 import { sliceHiddenStatePosition } from "../../utils/hiddenState";
@@ -240,7 +240,10 @@ export function LogitLensHeatmap({ result }: Props) {
           .attr("rx", 2)
           .style("cursor", "pointer")
           .on("click", (event) => {
-            setPinned({ msg, posIdx, x: event.pageX + 10, y: event.pageY + 10 });
+            // clientX/Y (viewport-relative) — PinnedCard uses position:fixed
+            // so pageX/Y would drift by the scroll offset. Final clamping
+            // happens in PinnedCard once the card has been measured.
+            setPinned({ msg, posIdx, x: event.clientX + 10, y: event.clientY + 10 });
             setTooltip(null);
           })
           .on("mouseenter", (event) => {
@@ -486,6 +489,8 @@ function PinnedCard({ pinned, onClose }: PinnedCardProps) {
   const { msg, posIdx, x, y } = pinned;
   const cellMetrics: CellMetrics | undefined = msg.metrics?.[posIdx];
   const top = msg.predictions[posIdx]?.slice(0, 5) ?? [];
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ x, y });
 
   const hiddenVec = useMemo(() => {
     if (!msg.hidden_state) return null;
@@ -496,12 +501,34 @@ function PinnedCard({ pinned, onClose }: PinnedCardProps) {
     }
   }, [msg.hidden_state, posIdx]);
 
+  // Card height varies with hidden_state presence and shape; pre-render
+  // estimates aren't reliable. Measure after mount and clamp into the
+  // viewport. useLayoutEffect runs before paint so there's no flicker.
+  useLayoutEffect(() => {
+    const node = cardRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const margin = 8;
+    let nx = x;
+    let ny = y;
+    if (nx + rect.width > window.innerWidth - margin) {
+      nx = Math.max(margin, window.innerWidth - rect.width - margin);
+    }
+    if (ny + rect.height > window.innerHeight - margin) {
+      ny = Math.max(margin, window.innerHeight - rect.height - margin);
+    }
+    if (nx < margin) nx = margin;
+    if (ny < margin) ny = margin;
+    setPos({ x: nx, y: ny });
+  }, [x, y, hiddenVec]);
+
   return (
     <div
+      ref={cardRef}
       style={{
         position: "fixed",
-        left: x,
-        top: y,
+        left: pos.x,
+        top: pos.y,
         background: "#0f1626",
         border: "1px solid #1a5276",
         borderRadius: 4,
