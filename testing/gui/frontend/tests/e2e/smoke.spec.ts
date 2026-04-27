@@ -1179,3 +1179,32 @@ test("causal story copy-as-markdown writes to clipboard", async ({ page, context
   expect(clipboardText).toContain("## Causal Story — pos 4");
   expect(clipboardText).toContain("- **L2 attn.h1** — residual:  Paris-md");
 });
+
+test("generation panel preserves leading spaces on streamed tokens", async ({ page }) => {
+  // The fixture's generate result has tokens [" there", " was"] with
+  // leading SP-space markers. The panel renders prompt + tokens
+  // concatenated; we assert the rendered DOM text contains the full
+  // sentence WITH the inter-word gap, since browsers should honor
+  // white-space:pre-wrap on the generation div.
+  const fixture = fs.readFileSync(FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "sample.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+  await expect(page.getByText(/Imported 3 result/)).toBeVisible();
+
+  // The fixture's generate result is the most-recent (timestamp 1700000002000)
+  // so GenerationOutput picks it up. Locate the heading then walk to the
+  // panel content so we don't accidentally match other "Once upon a time"
+  // text on the page (none currently, but cheap insurance).
+  const heading = page.getByRole("heading", { name: "Generation Output" });
+  await expect(heading).toBeVisible();
+  // The panel is the section containing the heading.
+  const panel = heading.locator("xpath=..").locator("xpath=..");
+  // textContent collapses inline-element boundaries into a single
+  // string while preserving the underlying text characters — exactly
+  // what the user sees when they read the panel.
+  const text = (await panel.textContent()) ?? "";
+  expect(text).toContain("Once upon a time there was");
+});
