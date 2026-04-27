@@ -514,6 +514,20 @@ async def generate_ws(ws: WebSocket, name: str):
             prompt_token_count = len(all_token_ids)
             prev_gen_text = ""
             past_key_values = None
+            # Decoded form of the last prompt token. Used as the slicing
+            # baseline so the first generated token retains its leading
+            # SentencePiece space (see the per-step decode comment below).
+            # Falls back to "" when the prompt is empty — in that case the
+            # decode buffer starts at position 0 and the leading-space
+            # quirk doesn't apply (no prior token to bridge from).
+            boundary_text = (
+                info.tokenizer.decode(
+                    all_token_ids[prompt_token_count - 1:prompt_token_count],
+                    skip_special_tokens=True,
+                )
+                if prompt_token_count > 0
+                else ""
+            )
 
             for step in range(max_tokens):
                 if not connected:
@@ -598,9 +612,22 @@ async def generate_ws(ws: WebSocket, name: str):
                     break
 
                 all_token_ids.append(next_id_int)
+                # Decode `[last_prompt_token, *gen_tokens]` rather than
+                # the bare gen-tokens slice, then strip the boundary
+                # token's own decoded prefix. SentencePiece-based
+                # tokenizers (Llama family) drop the leading ▁ marker
+                # whenever decode() runs on a buffer that begins at
+                # position 0 — without this, the very first generated
+                # token loses its leading space, so " Paris" arrives as
+                # "Paris" and the panel displays "isParis" once
+                # concatenated with the prompt. Including one prompt
+                # token of context costs O(1) extra per step and keeps
+                # the slicing baseline stable across the loop.
+                decode_start = prompt_token_count - 1 if prompt_token_count > 0 else 0
                 new_gen_text = info.tokenizer.decode(
-                    all_token_ids[prompt_token_count:], skip_special_tokens=True
-                )
+                    all_token_ids[decode_start:],
+                    skip_special_tokens=True,
+                )[len(boundary_text):]
                 token_str = new_gen_text[len(prev_gen_text):]
                 if not token_str:
                     token_str = _tok_display(info.tokenizer, next_token[0, 0])
