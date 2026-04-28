@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
@@ -70,6 +70,15 @@ function isBackendlessNoise(text: string): boolean {
     text.includes("/api/") ||
     text.includes("/ws/")
   );
+}
+
+// Console-message variant: Chrome's "Failed to load resource: 404"
+// errors put the failing URL in msg.location(), not msg.text(), so a
+// text-only filter never matches them and the assertion-on-empty
+// errors trips. Check both surfaces — either matching means it's
+// backend-related noise we can safely ignore in offline-fixture tests.
+function isConsoleMsgNoise(msg: ConsoleMessage): boolean {
+  return isBackendlessNoise(msg.text()) || isBackendlessNoise(msg.location().url);
 }
 
 test("page renders without console errors", async ({ page }) => {
@@ -238,7 +247,7 @@ test("activation-patching heatmap renders from imported fixture", async ({ page 
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -273,7 +282,7 @@ test("attribution-patching heatmap renders without metric dropdown", async ({ pa
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -300,7 +309,7 @@ test("per-head attribution heatmap renders with position selector", async ({ pag
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -333,7 +342,7 @@ test("edge AP panel mounts without crash, tabs visible", async ({ page }) => {
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -371,7 +380,7 @@ test("circuit panel renders with τ slider and stats", async ({ page }) => {
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -409,7 +418,7 @@ test("per-neuron FFN panel renders with table and filters", async ({ page }) => 
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -447,7 +456,7 @@ test("per-neuron row click opens pinned card with decoded tokens", async ({ page
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -519,7 +528,7 @@ test("approx mode with IG shows step count alongside heatmap header", async ({ p
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -543,7 +552,7 @@ test("per-head pin card shows decoded tokens for attn head", async ({ page }) =>
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -599,7 +608,7 @@ test("per-neuron pin card shows residual lens decode block", async ({ page }) =>
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -660,7 +669,7 @@ test("AP heatmap renders lens-trace strip with mocked grid response", async ({ p
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -717,7 +726,7 @@ test("circuit panel renders causal story with mocked lens grid", async ({ page }
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -772,7 +781,7 @@ test("causal story <-> sankey two-way click linking", async ({ page }) => {
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -828,7 +837,7 @@ test("causal story play button reveals nodes over time then resets", async ({ pa
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -882,7 +891,7 @@ test("preset library — selecting country-capitals fills textarea, auto-applies
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -960,7 +969,7 @@ test("divergence heatmap renders 3-prompt matrix with correct match/diverge cell
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
@@ -1043,7 +1052,7 @@ test("comparative story renders prompt-B sub-row with divergence highlighting", 
   await page.goto("/");
   const consoleErrors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isBackendlessNoise(msg.text())) {
+    if (msg.type() === "error" && !isConsoleMsgNoise(msg)) {
       consoleErrors.push(msg.text());
     }
   });
