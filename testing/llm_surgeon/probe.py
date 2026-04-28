@@ -247,6 +247,31 @@ def _capture_residual_stream_with_grad(
     input_ids = enc["input_ids"].to(device)
     prompt_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
 
+    # Build inputs_embeds as a grad-tracking leaf (in enable_grad
+    # contexts) so the autograd graph has somewhere to anchor when the
+    # caller has frozen all model parameters via requires_grad_(False).
+    # The GUI's SessionManager freezes params at registration time for
+    # memory + safety; without an input that requires grad, every
+    # downstream tensor would inherit requires_grad=False and
+    # `metric.backward()` would raise "element 0 of tensors does not
+    # require grad". Using inputs_embeds (rather than enabling grads on
+    # all params) keeps memory cost at one extra embedding tensor
+    # instead of an entire parameter-grad set — critical for 3B+ models
+    # on consumer GPUs (RTX 2080 = 8 GB).
+    inputs_embeds: Optional[torch.Tensor] = None
+    try:
+        embed_layer = model.get_input_embeddings()
+        if embed_layer is not None:
+            embedded: torch.Tensor = embed_layer(input_ids)
+            if torch.is_grad_enabled():
+                embedded = embedded.detach().requires_grad_(True)
+            inputs_embeds = embedded
+    except AttributeError:
+        # Test mocks that don't extend PreTrainedModel won't have
+        # get_input_embeddings — they typically have grad-enabled params
+        # already, so the legacy input_ids path works for them.
+        pass
+
     num_layers = len(model.model.layers)
     target_layers = set(range(num_layers)) if layers is None else set(layers)
 
@@ -374,7 +399,10 @@ def _capture_residual_stream_with_grad(
         )
 
     try:
-        model_output = model(input_ids)
+        if inputs_embeds is not None:
+            model_output = model(inputs_embeds=inputs_embeds)
+        else:
+            model_output = model(input_ids)
     finally:
         for h in hooks:
             h.remove()
