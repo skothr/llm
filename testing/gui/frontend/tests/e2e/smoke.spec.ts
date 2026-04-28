@@ -6,6 +6,7 @@ import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const FIXTURE_PATH = path.join(__dirname, "fixtures", "sample.json");
+const AB_GEN_FIXTURE_PATH = path.join(__dirname, "fixtures", "sample-ab-generate.json");
 const AP_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching.json");
 const AP_APPROX_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-approx.json");
 const PH_FIXTURE_PATH = path.join(__dirname, "fixtures", "activation-patching-per-head.json");
@@ -1178,6 +1179,107 @@ test("causal story copy-as-markdown writes to clipboard", async ({ page, context
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipboardText).toContain("## Causal Story — pos 4");
   expect(clipboardText).toContain("- **L2 attn.h1** — residual:  Paris-md");
+});
+
+test("A/B generate panel renders both partners regardless of newest", async ({ page }) => {
+  // Regression for the partner-finding bug: previously the panel only
+  // rendered both A and B when newest=A. With newest=B (the more
+  // recent timestamp here, 1700000001000), the lookup `${B.id}-B`
+  // built `<A>-B-B`, missed, and only B rendered. The fix maps newest
+  // back onto its A first, then finds the B partner — so this fixture
+  // (where B is newer) MUST render both panels.
+  const fixture = fs.readFileSync(AB_GEN_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "sample-ab-generate.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+  await expect(page.getByText(/Imported 2 result/)).toBeVisible();
+
+  const heading = page.getByRole("heading", { name: "Generation Output" });
+  await expect(heading).toBeVisible();
+  // Walk to the panel; both session labels should be visible inside.
+  const panel = heading.locator("xpath=..").locator("xpath=..");
+  const panelText = (await panel.textContent()) ?? "";
+  // Both A and B sessions present → both panels rendered.
+  expect(panelText).toContain("fixture-A");
+  expect(panelText).toContain("fixture-B");
+  // Both rendered tokens with leading spaces preserved.
+  expect(panelText).toContain("The capital of France is Paris");
+  expect(panelText).toContain("The capital of France is Lyon");
+});
+
+test("filter bar pinned chip toggles aria-pressed-equivalent state", async ({ page }) => {
+  // Regression: the chip's star-glyph used to jitter on toggle (U+2605
+  // and U+2606 are not equal-width). The fix locked the star into a
+  // fixed-width inline-block. We can't easily assert width without a
+  // pixel snapshot, but we CAN assert the chip exists, has the correct
+  // initial label, and switches its label when clicked — which proves
+  // the toggle is wired and the fixed-width container renders both
+  // states without breaking the click handler.
+  const fixture = fs.readFileSync(AB_GEN_FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "sample-ab-generate.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+  await expect(page.getByText(/Imported 2 result/)).toBeVisible();
+
+  // The fixture pins ab-pair, so the pinned chip should be visible.
+  const chip = page.getByRole("button", { name: /pinned/i });
+  await expect(chip).toBeVisible();
+  // Initial unfilled state: ☆
+  await expect(chip).toContainText("☆");
+  await chip.click();
+  await expect(chip).toContainText("★");
+  await chip.click();
+  await expect(chip).toContainText("☆");
+});
+
+test("logit lens pinned card stays inside viewport on edge clicks", async ({ page }) => {
+  // Regression: clicking a heatmap cell used to position the card via
+  // event.pageX/pageY but render it with position:fixed, so a scrolled
+  // page pushed it off-screen. The fix uses clientX/Y plus a
+  // useLayoutEffect measure-and-clamp pass. Click the rightmost cell
+  // and assert the card's bounding rect fits inside window bounds.
+  const fixture = fs.readFileSync(FIXTURE_PATH, "utf8");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "sample.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(fixture),
+  });
+  await expect(page.getByText(/Imported 3 result/)).toBeVisible();
+
+  // Activate the logit-lens result tab so the heatmap renders.
+  await page.getByRole("button", { name: /logit-lens \| fixture-A/ }).click();
+  // Heatmap data cells use rx=2; legend + modified markers use rx=1
+  // (see LogitLensHeatmap.tsx). Filter on rx so the click lands on a
+  // data cell with the click handler attached.
+  const cells = page.locator('svg rect[rx="2"]');
+  const count = await cells.count();
+  expect(count).toBeGreaterThan(0);
+  // Click the last data cell — likely near the right edge, which is
+  // exactly where the off-screen-popup bug surfaced.
+  await cells.nth(count - 1).click();
+
+  // The pinned card has zIndex 200 — easiest to find via text content.
+  // L0.ffn is the only layer in the fixture so it appears in the card.
+  const card = page.locator("div").filter({ hasText: /L0\.ffn pos/ }).first();
+  await expect(card).toBeVisible();
+
+  // Card bounding rect should be inside the viewport.
+  const box = await card.boundingBox();
+  expect(box).not.toBeNull();
+  if (box) {
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+    if (viewport) {
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+    }
+  }
 });
 
 test("generation panel preserves leading spaces on streamed tokens", async ({ page }) => {
