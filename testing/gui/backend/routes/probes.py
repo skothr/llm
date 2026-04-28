@@ -30,6 +30,40 @@ _hs_cache = HiddenStateCache(max_bytes=500_000_000)
 router = APIRouter(tags=["probes"])
 
 
+def _auto_pick_ap_pair(
+    clean_logits: torch.Tensor, corrupted_logits: torch.Tensor,
+) -> tuple[int, int]:
+    """Pick (correct, incorrect) token IDs that maximize the divergence
+    between the two baseline distributions at the measurement position.
+
+    The naive approach — clean.argmax() vs corrupted.argmax() — collapses
+    when both prompts produce the same top-1 token (common for small
+    models on weak factual tasks like "The capital of France is" vs
+    "...Italy is" — both can predict " a" or another generic filler).
+    With identical correct == incorrect, every logit_diff is zero and
+    AP's recovery metric divides by zero.
+
+    Diff-based picking is the canonical AP framing (Heimersheim & Nanda
+    2024): "correct" is the token clean uniquely promotes vs corrupted,
+    "incorrect" is the token corrupted uniquely promotes vs clean. This
+    is well-defined whenever the two logit vectors aren't bit-identical,
+    which is essentially always for distinct prompts.
+
+    Raises ValueError if the two logit vectors are exactly equal (would
+    still hit divide-by-zero — the caller should surface a clear error
+    instructing the user to fill in correct/incorrect manually).
+    """
+    diff = clean_logits - corrupted_logits
+    if not (diff.max() > 0 or diff.min() < 0):
+        raise ValueError(
+            "clean and corrupted produce identical logits at the "
+            "measurement position; cannot auto-pick a contrastive pair. "
+            "Either choose more-distinct prompts or fill in correct/"
+            "incorrect tokens manually."
+        )
+    return int(diff.argmax().item()), int(diff.argmin().item())
+
+
 def _check_stop(
     accumulated: str,
     new_chunk: str,
@@ -977,10 +1011,7 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 with torch.no_grad():
                     clean_logits = info.model(clean_ids).logits[0, measurement_position]
                     corr_logits = info.model(corr_ids).logits[0, measurement_position]
-                return (
-                    int(clean_logits.argmax().item()),
-                    int(corr_logits.argmax().item()),
-                )
+                return _auto_pick_ap_pair(clean_logits, corr_logits)
             loop = asyncio.get_running_loop()
             async with info.lock:
                 correct_token_id, incorrect_token_id = await loop.run_in_executor(
@@ -1236,8 +1267,9 @@ async def activation_patching_ws(ws: WebSocket, name: str):
                 "measurement_position": result.measurement_position,
             }
             if correct_token_id is None:
-                correct_token_id = int(result.clean_baseline_logits.argmax().item())
-                incorrect_token_id = int(result.corrupted_baseline_logits.argmax().item())
+                correct_token_id, incorrect_token_id = _auto_pick_ap_pair(
+                    result.clean_baseline_logits, result.corrupted_baseline_logits,
+                )
             baselines_msg["correct_token_id"] = correct_token_id
             baselines_msg["incorrect_token_id"] = incorrect_token_id
             await _send_json(ws, baselines_msg)
