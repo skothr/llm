@@ -19,9 +19,71 @@ _scan_executor: ThreadPoolExecutor = ThreadPoolExecutor(
 )
 
 from ..sessions import SessionManager
+from .. import persistence
 
 log = logging.getLogger("gui.backend.routes.sessions")
 router = APIRouter(tags=["sessions"])
+
+
+def _build_op_map():
+    """Return op_name → callable(model, params). Imported lazily because
+    `llm_surgeon.surgery` pulls in torch + bnb at import time, which we
+    don't want to pay for in unit-test contexts that don't apply ops."""
+    from llm_surgeon import surgery
+    return {
+        "remove_layers": lambda m, p: surgery.remove_layers(m, p["layer_indices"]),
+        "keep_layers": lambda m, p: surgery.keep_layers(m, p["layer_indices"]),
+        "zero_heads": lambda m, p: surgery.zero_heads(m, p["layer"], p["heads"]),
+        "scale_heads": lambda m, p: surgery.scale_heads(m, p["layer"], p["heads"], p["factor"]),
+        "swap_layers": lambda m, p: surgery.swap_layers(m, p["i"], p["j"]),
+        "duplicate_layer": lambda m, p: surgery.duplicate_layer(m, p["src"], p["dst"]),
+        "zero_mlp": lambda m, p: surgery.zero_mlp(m, p["layer"]),
+        "zero_attention": lambda m, p: surgery.zero_attention(m, p["layer"]),
+        "swap_heads": lambda m, p: surgery.swap_heads(m, p["layer"], p["h1"], p["h2"]),
+        "reorder_layers": lambda m, p: surgery.reorder_layers(m, p["new_order"]),
+    }
+
+
+def _apply_op_for_replay(model, op_name: str, params: dict) -> None:
+    """Used by persistence.restore to replay one committed op on a freshly-
+    loaded model. Translates the persisted op spec into the same call the
+    commit-surgery route would make for that op."""
+    op_map = _build_op_map()
+    if op_name not in op_map:
+        raise ValueError(f"Unknown op: '{op_name}'")
+    op_map[op_name](model, params)
+
+
+async def _restore_register_one(mgr: SessionManager, name: str, model_id: str, mode: str):
+    """Load a model from cache and register it on the manager. Mirrors
+    the POST /sessions route's load+register flow but without the
+    HTTPException wrapping — used by persistence.restore on startup.
+
+    Returns the SessionInfo so persistence.restore can take info.lock
+    and replay applied_ops on info.model.
+    """
+    from llm_surgeon.surgery import _is_ollama_id
+    if _is_ollama_id(model_id):
+        from llm_surgeon.gguf_reader import resolve_ollama_blob, _build_tokenizer, GGUFFile
+        from llm_surgeon.llama_engine import LlamaEngine
+        blob = resolve_ollama_blob(model_id)
+        if blob is None:
+            raise RuntimeError(f"GGUF blob for '{model_id}' not found in Ollama cache")
+        loop = asyncio.get_running_loop()
+        llama_eng = await loop.run_in_executor(None, lambda: LlamaEngine(blob))
+        with GGUFFile(blob) as g:
+            tokenizer = _build_tokenizer(g.metadata)
+        return mgr.register_llama(
+            name, llama_eng, tokenizer,
+            model_id=model_id, mode=mode, gguf_path=blob,
+        )
+
+    from llm_surgeon import surgery
+    loop = asyncio.get_running_loop()
+    model, tokenizer = await loop.run_in_executor(
+        None, lambda: surgery.load_model(model_id, mode=mode),
+    )
+    return mgr.register(name, model, tokenizer, model_id=model_id, mode=mode)
 
 MODELS_CACHE = Path(__file__).resolve().parent.parent.parent.parent / ".cache" / "models"
 OLLAMA_MODELS_DIR = Path(os.environ.get("OLLAMA_MODELS", "/usr/share/ollama/.ollama/models"))
@@ -363,6 +425,7 @@ async def delete_session(name: str):
     # and a later session with the same name doesn't read stale tensors.
     from .probes import _hs_cache
     _hs_cache.invalidate_session(name)
+    persistence.persist(mgr)
     return {"deleted": name}
 
 @router.post("/sessions")
@@ -392,6 +455,7 @@ async def load_session(req: LoadRequest):
                     model_id=req.model_id, mode=req.mode,
                     gguf_path=blob,
                 )
+                persistence.persist(mgr)
                 return _session_summary(mgr.get(req.name))
             except Exception as e:
                 log.exception("Failed to load GGUF model '%s' via llama.cpp", req.model_id)
@@ -411,6 +475,7 @@ async def load_session(req: LoadRequest):
 
     mgr.register(req.name, model, tokenizer,
                  model_id=req.model_id, mode=req.mode)
+    persistence.persist(mgr)
     return _session_summary(mgr.get(req.name))
 
 SURGERY_OPS = [
@@ -937,21 +1002,9 @@ async def commit_surgery(name: str):
     if not info.has_pending:
         raise HTTPException(409, "No pending operations to commit")
 
-    from llm_surgeon import surgery
     from ..sessions import update_layer_map, translate_to_current
 
-    op_map = {
-        "remove_layers": lambda m, p: surgery.remove_layers(m, p["layer_indices"]),
-        "keep_layers": lambda m, p: surgery.keep_layers(m, p["layer_indices"]),
-        "zero_heads": lambda m, p: surgery.zero_heads(m, p["layer"], p["heads"]),
-        "scale_heads": lambda m, p: surgery.scale_heads(m, p["layer"], p["heads"], p["factor"]),
-        "swap_layers": lambda m, p: surgery.swap_layers(m, p["i"], p["j"]),
-        "duplicate_layer": lambda m, p: surgery.duplicate_layer(m, p["src"], p["dst"]),
-        "zero_mlp": lambda m, p: surgery.zero_mlp(m, p["layer"]),
-        "zero_attention": lambda m, p: surgery.zero_attention(m, p["layer"]),
-        "swap_heads": lambda m, p: surgery.swap_heads(m, p["layer"], p["h1"], p["h2"]),
-        "reorder_layers": lambda m, p: surgery.reorder_layers(m, p["new_order"]),
-    }
+    op_map = _build_op_map()
 
     async with info.lock:
         # Advance ops one-at-a-time from pending → applied so a failure mid-way
@@ -984,6 +1037,9 @@ async def commit_surgery(name: str):
 
         if applied_count > 0 and info.llama is not None:
             info.dirty = True
+
+    if applied_count > 0:
+        persistence.persist(mgr)
 
     return {
         "applied_count": applied_count,
@@ -1074,6 +1130,8 @@ async def revert_surgery(name: str):
                 info._owned_export_dir = None
             info.gguf_path = info.source_gguf_path
         info.dirty = False
+
+    persistence.persist(mgr)
 
     return {
         "pending": info.pending_ops,
@@ -1221,4 +1279,5 @@ async def clone_session(name: str, req: CloneRequest):
     except ValueError as e:
         del cloned_model
         raise HTTPException(409, str(e))
+    persistence.persist(mgr)
     return _session_summary(mgr.get(req.target_name))
