@@ -7,6 +7,20 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
+
+@pytest.fixture(autouse=True)
+def _isolate_persistence_state(tmp_path, monkeypatch):  # pyright: ignore[reportUnusedFunction]
+    """Redirect persistence.DEFAULT_STATE_PATH to a tmp file for every
+    test. Without this, any test that exercises a route handler via
+    TestClient calls persistence.persist(mgr) and trampling the user's
+    real .cache/gui_sessions.json on the dev box."""
+    from gui.backend import persistence
+    monkeypatch.setattr(
+        persistence,
+        "DEFAULT_STATE_PATH",
+        tmp_path / "test_gui_sessions.json",
+    )
+
 @pytest.fixture
 def tiny_config():
     return LlamaConfig(
