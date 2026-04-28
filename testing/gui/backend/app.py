@@ -29,6 +29,19 @@ async def lifespan(app: FastAPI):
             log.exception("Model cache pre-warm failed")
 
     warm_task = asyncio.create_task(_warm())
+
+    # Re-register sessions (and replay surgery deltas) saved before the
+    # last shutdown. Synchronous within startup so that by the time we
+    # accept requests, mgr.list_sessions() reflects the persisted state.
+    # Per-session failures are logged and skipped inside restore() — one
+    # broken session can't block the rest.
+    from . import persistence
+    from .routes.sessions import _restore_register_one, _apply_op_for_replay
+    try:
+        await persistence.restore(manager, _restore_register_one, _apply_op_for_replay)
+    except Exception:
+        log.exception("Session restore failed; starting clean")
+
     try:
         yield
     finally:
