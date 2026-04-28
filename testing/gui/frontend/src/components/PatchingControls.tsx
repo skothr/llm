@@ -39,7 +39,10 @@ export const DEFAULT_PATCHING_STATE: PatchingState = {
   tokenPairMode: "auto",
   manualCorrect: "",
   manualIncorrect: "",
-  mode: "exact",
+  // Default to gradient AP — single forward+backward, fits in <2 GB extra
+  // VRAM even for 3B fp16. Exact AP is fine on TinyLlama but OOMs 8 GB
+  // GPUs on 3B+, so don't expose it as the path of least resistance.
+  mode: "approx",
   top_k_edges: 200,
   top_k_candidates: 2000,
   tau: 0.02,
@@ -170,8 +173,8 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {([
-              ["exact", "exact", "Activation patching: re-run the model with one residual cell swapped from the corrupted prompt's clean cache. Slowest but exact."],
-              ["approx", "approx", "Attribution patching (gradient AP). Linear approximation of activation patching using a single backward pass — much faster, similar shape."],
+              ["exact", "exact (slow)", "Activation patching: re-run the model with one residual cell swapped from the corrupted prompt's clean cache. Exact but expensive — N_layers × N_tokens forward passes. OOM-risk on small (≤8 GB) GPUs for 3B+ models; prefer 'approx' there."],
+              ["approx", "approx", "Attribution patching (gradient AP). Linear approximation of activation patching from a single forward+backward pass — much faster, similar shape, fits in <2 GB extra VRAM. Default."],
               ["approx_head", "per-head", "Per-head attribution patching. Resolves attribution down to individual attention heads (rows = heads, cols = positions)."],
               ["edge", "edge AP", "Edge attribution patching (EAP). Scores writer→reader pairs across the residual stream — yields a graph instead of a heatmap."],
               ["circuit", "circuit (ACDC)", "Cheap-ACDC circuit extraction. BFS over edge attribution above τ to return the connected subgraph that carries the answer."],
