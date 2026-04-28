@@ -169,45 +169,29 @@ export function PatchingControls({ targetSession, state, onChange, onLengthMatch
         <label style={labelStyle}>mode</label>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <label style={{ fontSize: 12 }}>
-              <input type="radio" name="mode" value="exact"
-                checked={state.mode === "exact"}
-                onChange={() => onChange({ mode: "exact" })} />
-              {" "}exact
-            </label>
-            <label style={{ fontSize: 12 }}>
-              <input type="radio" name="mode" value="approx"
-                checked={state.mode === "approx"}
-                onChange={() => onChange({ mode: "approx" })} />
-              {" "}approx <span style={{ color: "#888", fontSize: 11 }}>(gradient AP, fast)</span>
-            </label>
-            <label style={{ fontSize: 12 }}>
-              <input type="radio" name="mode" value="approx_head"
-                checked={state.mode === "approx_head"}
-                onChange={() => onChange({ mode: "approx_head" })} />
-              {" "}per-head{" "}
-              <span style={{ color: "#888", fontSize: 11 }}>(gradient AP, head resolution)</span>
-            </label>
-            <label style={{ fontSize: 12 }}>
-              <input type="radio" name="mode" value="edge"
-                checked={state.mode === "edge"}
-                onChange={() => onChange({ mode: "edge" })} />
-              {" "}edge AP{" "}
-              <span style={{ color: "#888", fontSize: 11 }}>(gradient EAP, writer→reader edges)</span>
-            </label>
-            <label style={{ fontSize: 12 }}>
-              <input type="radio" name="mode" value="circuit"
-                checked={state.mode === "circuit"}
-                onChange={() => onChange({ mode: "circuit" })} />
-              {" "}circuit (ACDC){" "}
-              <span style={{ color: "#888", fontSize: 11 }}>(cheap-ACDC, tau-filtered BFS)</span>
-            </label>
-            <label style={{ fontSize: 12 }}>
-              <input type="radio" name="mode" value="approx_neuron"
-                checked={state.mode === "approx_neuron"}
-                onChange={() => onChange({ mode: "approx_neuron" })} />
-              {" "}per-neuron FFN (approx)
-            </label>
+            {([
+              ["exact", "exact", "Activation patching: re-run the model with one residual cell swapped from the corrupted prompt's clean cache. Slowest but exact."],
+              ["approx", "approx", "Attribution patching (gradient AP). Linear approximation of activation patching using a single backward pass — much faster, similar shape."],
+              ["approx_head", "per-head", "Per-head attribution patching. Resolves attribution down to individual attention heads (rows = heads, cols = positions)."],
+              ["edge", "edge AP", "Edge attribution patching (EAP). Scores writer→reader pairs across the residual stream — yields a graph instead of a heatmap."],
+              ["circuit", "circuit (ACDC)", "Cheap-ACDC circuit extraction. BFS over edge attribution above τ to return the connected subgraph that carries the answer."],
+              ["approx_neuron", "per-neuron FFN", "Per-neuron FFN attribution (approx). Attribution per individual MLP neuron — too many to plot, rendered as a ranked list."],
+            ] as const).map(([value, label, desc]) => (
+              <label
+                key={value}
+                title={desc}
+                style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4, cursor: "help" }}
+              >
+                <input
+                  type="radio"
+                  name="mode"
+                  value={value}
+                  checked={state.mode === value}
+                  onChange={() => onChange({ mode: value })}
+                />
+                {label}
+              </label>
+            ))}
           </div>
           {state.mode === "edge" && (
             <label style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
