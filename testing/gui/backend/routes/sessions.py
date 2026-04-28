@@ -44,7 +44,7 @@ def _build_op_map():
     }
 
 
-def _apply_op_for_replay(model, op_name: str, params: dict) -> None:
+def _apply_op_for_replay(model, op_name: str, params: dict) -> None:  # pyright: ignore[reportUnusedFunction]
     """Used by persistence.restore to replay one committed op on a freshly-
     loaded model. Translates the persisted op spec into the same call the
     commit-surgery route would make for that op."""
@@ -54,7 +54,45 @@ def _apply_op_for_replay(model, op_name: str, params: dict) -> None:
     op_map[op_name](model, params)
 
 
-async def _restore_register_one(mgr: SessionManager, name: str, model_id: str, mode: str):
+def _estimate_load_vram_bytes(model_id: str) -> int:
+    """On-disk weight footprint as a VRAM-cost proxy. Returns 0 for
+    unknown sources (ollama, cache miss) — caller treats 0 as 'no
+    estimate; let the load proceed and fail loudly if it doesn't fit'."""
+    from llm_surgeon.surgery import _is_ollama_id
+    if _is_ollama_id(model_id):
+        # llama.cpp uses CPU+mmap; doesn't contend for GPU memory.
+        return 0
+    return _hf_file_size(model_id) or 0
+
+
+# Conservative reservation for compositor + KV cache + forward activations
+# beyond raw weights. Empirical: 3B fp16 generate at 2K context peaks
+# ~1.2 GB above weights; round up to 1.5 GB to also cover Wayland/X11.
+_VRAM_HEADROOM_BYTES = 1_500_000_000
+
+
+def _free_vram_bytes_for_load() -> int | None:
+    """Free VRAM minus headroom. Returns None when CUDA is unavailable
+    (CPU-only env) — caller should skip the fit-check entirely."""
+    try:
+        import torch
+    except ImportError:
+        return None
+    if not torch.cuda.is_available():
+        return None
+    try:
+        torch.cuda.empty_cache()
+        # torch stubs type mem_get_info as int but it returns Tuple[int, int]
+        # at runtime — cast around the stub lag.
+        from typing import cast, Tuple
+        info = cast(Tuple[int, int], torch.cuda.mem_get_info())
+        free = int(info[0])
+    except Exception:
+        return None
+    return max(0, free - _VRAM_HEADROOM_BYTES)
+
+
+async def _restore_register_one(mgr: SessionManager, name: str, model_id: str, mode: str):  # pyright: ignore[reportUnusedFunction]
     """Load a model from cache and register it on the manager. Mirrors
     the POST /sessions route's load+register flow but without the
     HTTPException wrapping — used by persistence.restore on startup.
@@ -62,6 +100,21 @@ async def _restore_register_one(mgr: SessionManager, name: str, model_id: str, m
     Returns the SessionInfo so persistence.restore can take info.lock
     and replay applied_ops on info.model.
     """
+    # OOM guard for low-VRAM machines: refuse to load a session whose
+    # weights wouldn't fit alongside what's already loaded. Without this,
+    # restoring a state file with multiple large models on an 8 GB GPU
+    # can freeze the desktop while the kernel arbitrates VRAM contention
+    # between Python and the compositor.
+    estimated = _estimate_load_vram_bytes(model_id)
+    free = _free_vram_bytes_for_load()
+    if estimated > 0 and free is not None and estimated > free:
+        raise RuntimeError(
+            f"Insufficient VRAM to restore '{name}' ({model_id}, {mode}): "
+            f"need ~{estimated // (1024 ** 2)} MB, "
+            f"{free // (1024 ** 2)} MB free after headroom. "
+            f"Delete or evict another session, then load this one manually."
+        )
+
     from llm_surgeon.surgery import _is_ollama_id
     if _is_ollama_id(model_id):
         from llm_surgeon.gguf_reader import resolve_ollama_blob, _build_tokenizer, GGUFFile
