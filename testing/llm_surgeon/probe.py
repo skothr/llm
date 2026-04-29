@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
 
 import torch
 import torch.nn.functional as F
@@ -76,9 +76,9 @@ def _attach_reader_grad_hooks(model, store, layers=None):
 
 @dataclass
 class LogitLensResult:
-    predictions: List[Dict]
-    logits: Optional[Dict[Tuple[int, str], torch.Tensor]]
-    prompt_tokens: List[str]
+    predictions: list[dict]
+    logits: dict[tuple[int, str], torch.Tensor] | None
+    prompt_tokens: list[str]
 
     def summary(self, position: int = -1) -> str:
         filtered = [p for p in self.predictions if p["position"] == position]
@@ -96,7 +96,7 @@ class LogitLensResult:
             lines.append(f"{p['layer']:>7} {p['sublayer']:>5} {top1:>12} {prob:>7} {top3}")
         return "\n".join(lines)
 
-    def first_correct_layer(self, position: int, target_token: str) -> Optional[int]:
+    def first_correct_layer(self, position: int, target_token: str) -> int | None:
         for p in self.predictions:
             if p["position"] != position:
                 continue
@@ -134,18 +134,18 @@ class CompareLogitLensResult:
           "compare": {...},       # _pair_metrics output
         }
     """
-    comparisons: List[Dict]
-    prompt_tokens: List[str]
-    aligned_keys: List[Tuple[int, str]]  # (original_layer, sublayer) pairs that were compared
+    comparisons: list[dict]
+    prompt_tokens: list[str]
+    aligned_keys: list[tuple[int, str]]  # (original_layer, sublayer) pairs that were compared
 
 
 @dataclass
 class HiddenStates:
-    states: Dict[Tuple[int, str], torch.Tensor]
-    prompt_tokens: List[str]
+    states: dict[tuple[int, str], torch.Tensor]
+    prompt_tokens: list[str]
 
     def cosine_similarity(
-        self, a: Tuple[int, str], b: Tuple[int, str], position: int = -1
+        self, a: tuple[int, str], b: tuple[int, str], position: int = -1
     ) -> float:
         va = self.states[a][position].float()
         vb = self.states[b][position].float()
@@ -196,8 +196,8 @@ def _capture_residual_stream(model, tokenizer, prompt, sublayers=("ffn",), layer
     capture_ffn = "ffn" in sublayers
     capture_embed = "embed" in sublayers
 
-    captured: Dict[Tuple[int, str], torch.Tensor] = {}
-    layer_block_inputs: Dict[int, torch.Tensor] = {}
+    captured: dict[tuple[int, str], torch.Tensor] = {}
+    layer_block_inputs: dict[int, torch.Tensor] = {}
     hooks = []
 
     if capture_embed:
@@ -249,20 +249,20 @@ def _capture_residual_stream_with_grad(
     model,
     tokenizer,
     prompt: str,
-    sublayers: Tuple[str, ...] = ("attn", "ffn"),
-    layers: Optional[List[int]] = None,
+    sublayers: tuple[str, ...] = ("attn", "ffn"),
+    layers: list[int] | None = None,
     capture_concat_z: bool = False,
     capture_reader_grads: bool = False,
     capture_ffn_out: bool = False,
     capture_ffn_act: bool = False,
-) -> Tuple[
-    Dict[Tuple[int, str], torch.Tensor],
-    Dict[int, torch.Tensor],
+) -> tuple[
+    dict[tuple[int, str], torch.Tensor],
+    dict[int, torch.Tensor],
     torch.Tensor,
-    List[str],
-    Dict[int, torch.Tensor],
-    Dict[Tuple, torch.Tensor],
-    Dict[int, torch.Tensor],
+    list[str],
+    dict[int, torch.Tensor],
+    dict[tuple, torch.Tensor],
+    dict[int, torch.Tensor],
 ]:
     """Capture residual-stream states with autograd graph intact.
 
@@ -315,7 +315,7 @@ def _capture_residual_stream_with_grad(
     # all params) keeps memory cost at one extra embedding tensor
     # instead of an entire parameter-grad set — critical for 3B+ models
     # on consumer GPUs (RTX 2080 = 8 GB).
-    inputs_embeds: Optional[torch.Tensor] = None
+    inputs_embeds: torch.Tensor | None = None
     try:
         embed_layer = model.get_input_embeddings()
         if embed_layer is not None:
@@ -332,12 +332,12 @@ def _capture_residual_stream_with_grad(
     num_layers = len(model.model.layers)
     target_layers = set(range(num_layers)) if layers is None else set(layers)
 
-    captured: Dict[Tuple[int, str], torch.Tensor] = {}
-    h_ins: Dict[int, torch.Tensor] = {}
-    concat_z_captured: Dict[int, torch.Tensor] = {}
-    reader_inputs: Dict[Tuple, torch.Tensor] = {}
-    ffn_acts: Dict[int, torch.Tensor] = {}
-    hooks: List = []
+    captured: dict[tuple[int, str], torch.Tensor] = {}
+    h_ins: dict[int, torch.Tensor] = {}
+    concat_z_captured: dict[int, torch.Tensor] = {}
+    reader_inputs: dict[tuple, torch.Tensor] = {}
+    ffn_acts: dict[int, torch.Tensor] = {}
+    hooks: list = []
 
     # Pre-hook captures layer input (h_in). Needed for the attn-row value
     # reconstruction (h_post_attn = h_in + attn_out). Always register when
@@ -397,10 +397,10 @@ def extract_hidden_states(
     model,
     tokenizer,
     prompt: str,
-    layers: Optional[List[int]] = None,
-    sublayers: Tuple[str, ...] = ("ffn",),
+    layers: list[int] | None = None,
+    sublayers: tuple[str, ...] = ("ffn",),
     detach: bool = True,
-    on_layer: Optional[Callable[[int, str, Dict], None]] = None,
+    on_layer: Callable[[int, str, dict], None] | None = None,
 ) -> HiddenStates:
     """Extract raw hidden state tensors at specified residual stream capture points.
 
@@ -418,7 +418,7 @@ def extract_hidden_states(
     return HiddenStates(states=captured, prompt_tokens=prompt_tokens)
 
 
-def _cell_metrics(pos_probs: torch.Tensor) -> Dict[str, float]:
+def _cell_metrics(pos_probs: torch.Tensor) -> dict[str, float]:
     """Per-position scalar metrics from a full-vocab softmax distribution.
 
     entropy is in nats. top1_margin is p(top1) - p(top2), always >= 0.
@@ -433,7 +433,7 @@ def _cell_metrics(pos_probs: torch.Tensor) -> Dict[str, float]:
     }
 
 
-def _pair_metrics(p_a: torch.Tensor, p_b: torch.Tensor) -> Dict[str, float]:
+def _pair_metrics(p_a: torch.Tensor, p_b: torch.Tensor) -> dict[str, float]:
     """Per-position comparison metrics between two softmax distributions.
 
     kl_ab: KL(A||B) in nats (unbounded above).
@@ -487,8 +487,8 @@ def logit_lens(
     prompt: str,
     top_k: int = 10,
     full_logits: bool = False,
-    positions: Optional[List[int]] = None,
-    on_layer: Optional[Callable[[int, str, Dict], None]] = None,
+    positions: list[int] | None = None,
+    on_layer: Callable[[int, str, dict], None] | None = None,
 ) -> LogitLensResult:
     """Project each layer's residual stream state through the output head.
 
@@ -505,7 +505,7 @@ def logit_lens(
         resolved_positions = list(range(seq_len))
 
     predictions = []
-    logits_dict: Optional[Dict[Tuple[int, str], torch.Tensor]] = {} if full_logits else None
+    logits_dict: dict[tuple[int, str], torch.Tensor] | None = {} if full_logits else None
 
     for (layer_idx, sublayer), hidden in sorted(captured.items()):
         with torch.no_grad():
@@ -564,9 +564,9 @@ def compare_logit_lens(
     tokenizer,
     prompt: str,
     top_k: int = 10,
-    on_layer: Optional[Callable[[int, str, Dict], None]] = None,
-    layer_map_a: Optional[List[int]] = None,
-    layer_map_b: Optional[List[int]] = None,
+    on_layer: Callable[[int, str, dict], None] | None = None,
+    layer_map_a: list[int] | None = None,
+    layer_map_b: list[int] | None = None,
 ) -> CompareLogitLensResult:
     """Run logit lens on two models over the same prompt, compute exact per-cell
     comparison metrics (KL, JS, cosine, top-1 delta/match) from the FULL-vocab
@@ -592,10 +592,10 @@ def compare_logit_lens(
         return layer_map[idx] if 0 <= idx < len(layer_map) else idx
 
     # Build reverse lookups: (original_layer, sublayer) -> compressed key.
-    reverse_a: Dict[Tuple[int, str], Tuple[int, str]] = {}
+    reverse_a: dict[tuple[int, str], tuple[int, str]] = {}
     for (idx, sub) in captured_a.keys():
         reverse_a[(_map(layer_map_a, idx), sub)] = (idx, sub)
-    reverse_b: Dict[Tuple[int, str], Tuple[int, str]] = {}
+    reverse_b: dict[tuple[int, str], tuple[int, str]] = {}
     for (idx, sub) in captured_b.keys():
         reverse_b[(_map(layer_map_b, idx), sub)] = (idx, sub)
 
@@ -606,7 +606,7 @@ def compare_logit_lens(
     seq_len = len(prompt_tokens)
     positions = list(range(seq_len))
 
-    comparisons: List[Dict] = []
+    comparisons: list[dict] = []
     for (orig_layer, sublayer) in aligned_keys:
         hidden_a = captured_a[reverse_a[(orig_layer, sublayer)]]
         hidden_b = captured_b[reverse_b[(orig_layer, sublayer)]]
@@ -692,7 +692,7 @@ class _Ops:
         return _Op(lambda h, _: h * factor, f"scale({factor})")
 
     @staticmethod
-    def zero_dims(dims: List[int]) -> _Op:
+    def zero_dims(dims: list[int]) -> _Op:
         def fn(h, _):
             out = h.clone()
             out[:, dims] = 0
@@ -704,7 +704,7 @@ class _Ops:
         return _Op(lambda h, _: h.clamp(min=min_val, max=max_val), f"clamp({min_val}, {max_val})")
 
     @staticmethod
-    def noise(std: float, seed: Optional[int] = None) -> _Op:
+    def noise(std: float, seed: int | None = None) -> _Op:
         def fn(h, _):
             gen = torch.Generator(device=h.device)
             if seed is not None:
@@ -764,18 +764,18 @@ class Intervention:
 @dataclass
 class InterventionResult:
     output_logits: torch.Tensor
-    logit_lens_result: Optional[LogitLensResult]
-    interventions_applied: List[Dict]
+    logit_lens_result: LogitLensResult | None
+    interventions_applied: list[dict]
 
 
 def intervene(
     model,
     tokenizer,
     prompt: str,
-    interventions: List[Intervention],
+    interventions: list[Intervention],
     capture_logit_lens: bool = False,
     top_k: int = 10,
-    on_layer: Optional[Callable[[int, str, Dict], None]] = None,
+    on_layer: Callable[[int, str, dict], None] | None = None,
 ) -> InterventionResult:
     """Run a forward pass with hidden state modifications at specified points.
 
@@ -789,16 +789,16 @@ def intervene(
 
     num_layers = len(model.model.layers)
 
-    intervention_map: Dict[Tuple[int, str], Callable] = {}
+    intervention_map: dict[tuple[int, str], Callable] = {}
     for iv in interventions:
         intervention_map[(iv.layer, iv.sublayer)] = iv.fn
 
-    captured_states: Optional[Dict[Tuple[int, str], torch.Tensor]] = (
+    captured_states: dict[tuple[int, str], torch.Tensor] | None = (
         {} if capture_logit_lens else None
     )
 
     hooks = []
-    layer_block_inputs: Dict[int, torch.Tensor] = {}
+    layer_block_inputs: dict[int, torch.Tensor] = {}
 
     for i in range(num_layers):
         def make_pre(idx):
@@ -929,21 +929,21 @@ def intervene(
 
 @dataclass
 class PatchingResult:
-    cells: List[Dict]
+    cells: list[dict]
     clean_baseline_logits: torch.Tensor
     corrupted_baseline_logits: torch.Tensor
-    prompt_tokens_clean: List[str]
-    prompt_tokens_corrupted: List[str]
+    prompt_tokens_clean: list[str]
+    prompt_tokens_corrupted: list[str]
     direction: str
     measurement_position: int
     mode: str = "exact"                           # "exact" | "approx" | "approx_head" | "edge" | "circuit" | "approx_neuron"
-    n_heads: Optional[int] = None                  # set by attribution_patch_per_head / edge_attribution_patch / extract_circuit
-    n_edges: Optional[int] = None                  # set by edge_attribution_patch / extract_circuit (pre-filter count)
-    n_edges_in_circuit: Optional[int] = None       # set by extract_circuit
-    n_nodes_in_circuit: Optional[int] = None       # set by extract_circuit (includes the logits sink)
-    tau: Optional[float] = None                    # set by extract_circuit (applied threshold)
-    n_neurons: Optional[int] = None                # set by attribution_patch_per_neuron (= intermediate_size)
-    n_steps: Optional[int] = None                  # set by attribution_patch when n_steps > 1 (IG path steps)
+    n_heads: int | None = None                  # set by attribution_patch_per_head / edge_attribution_patch / extract_circuit
+    n_edges: int | None = None                  # set by edge_attribution_patch / extract_circuit (pre-filter count)
+    n_edges_in_circuit: int | None = None       # set by extract_circuit
+    n_nodes_in_circuit: int | None = None       # set by extract_circuit (includes the logits sink)
+    tau: float | None = None                    # set by extract_circuit (applied threshold)
+    n_neurons: int | None = None                # set by attribution_patch_per_neuron (= intermediate_size)
+    n_steps: int | None = None                  # set by attribution_patch when n_steps > 1 (IG path steps)
 
 
 def activation_patch(
@@ -954,10 +954,10 @@ def activation_patch(
     *,
     direction: str = "denoise",
     measurement_position: int = -1,
-    positions: Optional[List[int]] = None,
-    sublayers: Tuple[str, ...] = ("attn", "ffn"),
-    layers: Optional[List[int]] = None,
-    on_cell: Optional[Callable[[int, str, int, Dict], None]] = None,
+    positions: list[int] | None = None,
+    sublayers: tuple[str, ...] = ("attn", "ffn"),
+    layers: list[int] | None = None,
+    on_cell: Callable[[int, str, int, dict], None] | None = None,
 ) -> PatchingResult:
     """Causal attribution via activation patching.
 
@@ -1061,7 +1061,7 @@ def activation_patch(
     triples = sorted(patch_source.keys(), key=sort_key)
 
     # -- Patching loop ----------------------------------------------------
-    cells: List[Dict] = []
+    cells: list[dict] = []
     for (L, sub) in triples:
         patch_tensor = patch_source[(L, sub)]  # shape: (seq_len, d_model)
         for pos in target_positions:
@@ -1076,7 +1076,7 @@ def activation_patch(
                 capture_logit_lens=False,
             )
             patched_logits = result.output_logits[resolved_meas].detach().cpu()
-            cell: Dict = {
+            cell: dict = {
                 "layer": L,
                 "sublayer": sub,
                 "position": pos,
@@ -1102,18 +1102,18 @@ def _integrated_gradients_loop(
     model,
     tokenizer,
     base_prompt: str,
-    base_captured: Dict[Tuple[int, str], torch.Tensor],
-    base_h_ins: Dict[int, torch.Tensor],
-    from_states: Dict[Tuple[int, str], torch.Tensor],
-    from_h_ins: Dict[int, torch.Tensor],
-    sublayers: Tuple[str, ...],
-    layers: Optional[List[int]],
+    base_captured: dict[tuple[int, str], torch.Tensor],
+    base_h_ins: dict[int, torch.Tensor],
+    from_states: dict[tuple[int, str], torch.Tensor],
+    from_h_ins: dict[int, torch.Tensor],
+    sublayers: tuple[str, ...],
+    layers: list[int] | None,
     measurement_position: int,
     correct_token_id: int,
     incorrect_token_id: int,
     n_steps: int,
     capture_reader_grads: bool = False,
-) -> Tuple[Dict[Tuple[int, str], torch.Tensor], Dict[Tuple[str, int], torch.Tensor]]:
+) -> tuple[dict[tuple[int, str], torch.Tensor], dict[tuple[str, int], torch.Tensor]]:
     """N forward+backward midpoint-rule Integrated Gradients over the path
     base_act → from_act at each captured (L, sub) site.
 
@@ -1143,10 +1143,10 @@ def _integrated_gradients_loop(
     need_attn = "attn" in sublayers
     need_ffn = "ffn" in sublayers
 
-    base_attn: Dict[int, torch.Tensor] = {}
-    base_ffn: Dict[int, torch.Tensor] = {}
-    from_attn: Dict[int, torch.Tensor] = {}
-    from_ffn: Dict[int, torch.Tensor] = {}
+    base_attn: dict[int, torch.Tensor] = {}
+    base_ffn: dict[int, torch.Tensor] = {}
+    from_attn: dict[int, torch.Tensor] = {}
+    from_ffn: dict[int, torch.Tensor] = {}
     for L in sorted(target_layers_set):
         if need_attn:
             base_attn[L] = base_captured[(L, "attn")].detach()
@@ -1159,13 +1159,13 @@ def _integrated_gradients_loop(
             f_hpa = from_h_ins[L] + from_states[(L, "attn")]
             from_ffn[L] = f_layer - f_hpa
 
-    grad_sum_attn: Dict[int, torch.Tensor] = {
+    grad_sum_attn: dict[int, torch.Tensor] = {
         L: torch.zeros_like(base_attn[L]) for L in base_attn
     }
-    grad_sum_ffn: Dict[int, torch.Tensor] = {
+    grad_sum_ffn: dict[int, torch.Tensor] = {
         L: torch.zeros_like(base_ffn[L]) for L in base_ffn
     }
-    grad_sum_reader: Dict[Tuple[str, int], torch.Tensor] = {}
+    grad_sum_reader: dict[tuple[str, int], torch.Tensor] = {}
 
     device = _get_input_device(model)
     enc = tokenizer(base_prompt, return_tensors="pt")
@@ -1174,8 +1174,8 @@ def _integrated_gradients_loop(
     for k in range(n_steps):
         alpha = (k + 0.5) / n_steps
 
-        interp_attn: Dict[int, torch.Tensor] = {}
-        interp_ffn: Dict[int, torch.Tensor] = {}
+        interp_attn: dict[int, torch.Tensor] = {}
+        interp_ffn: dict[int, torch.Tensor] = {}
         for L in base_attn:
             t = base_attn[L] + alpha * (from_attn[L] - base_attn[L])
             t = t.detach().clone().requires_grad_(True)
@@ -1185,8 +1185,8 @@ def _integrated_gradients_loop(
             t = t.detach().clone().requires_grad_(True)
             interp_ffn[L] = t
 
-        hooks: List = []
-        step_readers: Dict[Tuple[str, int], torch.Tensor] = {}
+        hooks: list = []
+        step_readers: dict[tuple[str, int], torch.Tensor] = {}
 
         def make_attn_replace(L_captured: int):
             def hook(_mod, _inp, out):
@@ -1243,13 +1243,13 @@ def _integrated_gradients_loop(
                         grad_sum_reader[reader_key] = torch.zeros_like(reader_tensor.grad.detach())
                     grad_sum_reader[reader_key] += reader_tensor.grad.detach()
 
-    avg_grad: Dict[Tuple[int, str], torch.Tensor] = {}
+    avg_grad: dict[tuple[int, str], torch.Tensor] = {}
     for L in grad_sum_attn:
         avg_grad[(L, "attn")] = grad_sum_attn[L] / n_steps
     for L in grad_sum_ffn:
         avg_grad[(L, "ffn")] = grad_sum_ffn[L] / n_steps
 
-    avg_reader_grads: Dict[Tuple[str, int], torch.Tensor] = {}
+    avg_reader_grads: dict[tuple[str, int], torch.Tensor] = {}
     if capture_reader_grads:
         for reader_key, grad_sum in grad_sum_reader.items():
             avg_reader_grads[reader_key] = grad_sum / n_steps
@@ -1267,11 +1267,11 @@ def attribution_patch(
     incorrect_token_id: int,
     direction: str = "denoise",
     measurement_position: int = -1,
-    positions: Optional[List[int]] = None,
-    sublayers: Tuple[str, ...] = ("attn", "ffn"),
-    layers: Optional[List[int]] = None,
+    positions: list[int] | None = None,
+    sublayers: tuple[str, ...] = ("attn", "ffn"),
+    layers: list[int] | None = None,
     n_steps: int = 1,
-    on_cell: Optional[Callable[[int, str, int, Dict], None]] = None,
+    on_cell: Callable[[int, str, int, dict], None] | None = None,
 ) -> PatchingResult:
     """Gradient-based attribution patching (Phase 3.5).
 
@@ -1319,7 +1319,7 @@ def attribution_patch(
     for pos in positions:
         if pos < -seq_len or pos >= seq_len:
             raise IndexError(f"position {pos} out of range for seq_len={seq_len}")
-    normalized_positions: List[int] = [p if p >= 0 else seq_len + p for p in positions]
+    normalized_positions: list[int] = [p if p >= 0 else seq_len + p for p in positions]
     meas_pos = measurement_position if measurement_position >= 0 else seq_len + measurement_position
     if meas_pos < 0 or meas_pos >= seq_len:
         raise IndexError(
@@ -1376,7 +1376,7 @@ def attribution_patch(
                 - base_logits[meas_pos, incorrect_token_id]
             )
             metric.backward()
-            avg_grad: Optional[Dict[Tuple[int, str], torch.Tensor]] = None  # unused on this path
+            avg_grad: dict[tuple[int, str], torch.Tensor] | None = None  # unused on this path
         else:
             avg_grad, _ = _integrated_gradients_loop(
                 model=model,
@@ -1399,7 +1399,7 @@ def attribution_patch(
     # For attn rows, reconstruct h_post_attn = h_in + attn_out to match exact
     # AP's patched quantity. Gradient of h_post_attn equals gradient of attn_out
     # (chain rule through the `+`), so base_act.grad is correct either way.
-    cells: List[Dict] = []
+    cells: list[dict] = []
     sorted_keys = sorted(base_captured.keys(), key=lambda k: (k[0], k[1]))
     for (L, sub) in sorted_keys:
         base_act = base_captured[(L, sub)]  # (1, seq_len, d_model)
@@ -1428,7 +1428,7 @@ def attribution_patch(
                 ap_recovery = ap_raw / denominator
             else:  # noise
                 ap_recovery = 1.0 + ap_raw / denominator
-            cell: Dict = {
+            cell: dict = {
                 "layer": L,
                 "sublayer": sub,
                 "position": pos,
@@ -1464,10 +1464,10 @@ def attribution_patch_per_head(
     incorrect_token_id: int,
     direction: str = "denoise",
     measurement_position: int = -1,
-    positions: Optional[List[int]] = None,
-    layers: Optional[List[int]] = None,
+    positions: list[int] | None = None,
+    layers: list[int] | None = None,
     n_steps: int = 1,
-    on_cell: Optional[Callable[[int, str, int, Dict], None]] = None,
+    on_cell: Callable[[int, str, int, dict], None] | None = None,
 ) -> PatchingResult:
     """Per-attention-head gradient attribution patching (Phase 3.6).
 
@@ -1516,7 +1516,7 @@ def attribution_patch_per_head(
             f"(clean={clean_ids.shape[1]}, corrupted={corr_ids.shape[1]})"
         )
     seq_len = clean_ids.shape[1]
-    normalized_positions: List[int] = (
+    normalized_positions: list[int] = (
         list(range(seq_len)) if positions is None
         else [p if p >= 0 else seq_len + p for p in positions]
     )
@@ -1528,7 +1528,7 @@ def attribution_patch_per_head(
 
     from_prompt = clean_prompt if direction == "denoise" else corrupted_prompt
     base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
-    sublayers: Tuple[str, ...] = ("attn", "ffn")
+    sublayers: tuple[str, ...] = ("attn", "ffn")
 
     with torch.no_grad():
         from_captured, from_h_ins_raw, from_logits, from_tokens, from_concat_z_raw, _, _ = \
@@ -1573,7 +1573,7 @@ def attribution_patch_per_head(
         )
         if n_steps == 1:
             metric.backward()
-            avg_grad_head: Optional[Dict[Tuple[int, str], torch.Tensor]] = None
+            avg_grad_head: dict[tuple[int, str], torch.Tensor] | None = None
         else:
             avg_grad_head, _ = _integrated_gradients_loop(
                 model=model,
@@ -1596,7 +1596,7 @@ def attribution_patch_per_head(
         set(range(num_layers)) if layers is None else set(layers)
     )
 
-    cells: List[Dict] = []
+    cells: list[dict] = []
 
     for L in target_layers:
         # --- FFN anchor (identical math to Phase 3.5) ---
@@ -1610,7 +1610,7 @@ def attribution_patch_per_head(
                         (from_ffn[0, pos] - base_ffn[0, pos].detach()) * ffn_grad[0, pos]
                     ).sum().item()
                     ap_recovery = ap_raw / denominator if direction == "denoise" else 1.0 + ap_raw / denominator
-                    cell: Dict = {"layer": L, "unit": "ffn", "position": pos,
+                    cell: dict = {"layer": L, "unit": "ffn", "position": pos,
                                   "ap_recovery": float(ap_recovery)}
                     cells.append(cell)
                     if on_cell is not None:
@@ -1650,7 +1650,7 @@ def attribution_patch_per_head(
                         else 1.0 + ap_raw_h / denominator
                     )
                     unit = f"attn.h{h}"
-                    hcell: Dict = {"layer": L, "unit": unit, "position": pos,
+                    hcell: dict = {"layer": L, "unit": unit, "position": pos,
                                    "ap_recovery": float(ap_recovery_h)}
                     cells.append(hcell)
                     if on_cell is not None:
@@ -1683,11 +1683,11 @@ def attribution_patch_per_neuron(
     incorrect_token_id: int,
     direction: str = "denoise",
     measurement_position: int = -1,
-    positions: Optional[List[int]] = None,
-    layers: Optional[List[int]] = None,
+    positions: list[int] | None = None,
+    layers: list[int] | None = None,
     top_k_neurons: int = 200,
     n_steps: int = 1,
-    on_cell: Optional[Callable[[Dict], None]] = None,
+    on_cell: Callable[[dict], None] | None = None,
 ) -> PatchingResult:
     """Per-neuron FFN attribution patching (Phase 3.9).
 
@@ -1725,7 +1725,7 @@ def attribution_patch_per_neuron(
     seq_len = clean_ids.shape[1]
     meas_pos = measurement_position % seq_len
 
-    normalized_positions: List[int] = (
+    normalized_positions: list[int] = (
         list(range(seq_len)) if positions is None
         else [p if p >= 0 else seq_len + p for p in positions]
     )
@@ -1733,7 +1733,7 @@ def attribution_patch_per_neuron(
     from_prompt = clean_prompt if direction == "denoise" else corrupted_prompt
     base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
 
-    sublayers: Tuple[str, ...] = ("attn", "ffn")
+    sublayers: tuple[str, ...] = ("attn", "ffn")
 
     # --- From pass (no_grad, capture ffn_act + ffn_out) ---
     with torch.no_grad():
@@ -1787,7 +1787,7 @@ def attribution_patch_per_neuron(
         )
         if n_steps == 1:
             metric.backward()
-            avg_grad_neuron: Optional[Dict[Tuple[int, str], torch.Tensor]] = None
+            avg_grad_neuron: dict[tuple[int, str], torch.Tensor] | None = None
         else:
             avg_grad_neuron, _ = _integrated_gradients_loop(
                 model=model,
@@ -1809,7 +1809,7 @@ def attribution_patch_per_neuron(
     num_layers = len(model.model.layers)
     target_layers_set = set(range(num_layers)) if layers is None else set(layers)
 
-    all_cells: List[Dict] = []
+    all_cells: list[dict] = []
     for L in sorted(target_layers_set):
         if n_steps == 1:
             if (L, "ffn_out") not in base_captured:
@@ -1908,15 +1908,15 @@ def _compute_all_edges(
     incorrect_token_id: int,
     direction: str,
     measurement_position: int,
-    positions: Optional[List[int]],
-    layers: Optional[List[int]],
+    positions: list[int] | None,
+    layers: list[int] | None,
     n_steps: int = 1,
-) -> Tuple[
-    List[Dict],            # all_edge_scores (unsorted)
+) -> tuple[
+    list[dict],            # all_edge_scores (unsorted)
     torch.Tensor,          # clean_baseline_logits (detached)
     torch.Tensor,          # corrupted_baseline_logits (detached)
-    List[str],             # clean_tokens (ordered by direction)
-    List[str],             # corrupted_tokens (ordered by direction)
+    list[str],             # clean_tokens (ordered by direction)
+    list[str],             # corrupted_tokens (ordered by direction)
     int,                   # meas_pos (normalized to [0, seq_len))
     int,                   # n_heads
 ]:
@@ -1943,7 +1943,7 @@ def _compute_all_edges(
     seq_len = clean_ids.shape[1]
     meas_pos = measurement_position % seq_len
 
-    normalized_positions: List[int] = (
+    normalized_positions: list[int] = (
         list(range(seq_len)) if positions is None
         else [p if p >= 0 else seq_len + p for p in positions]
     )
@@ -1951,7 +1951,7 @@ def _compute_all_edges(
     from_prompt = clean_prompt if direction == "denoise" else corrupted_prompt
     base_prompt = corrupted_prompt if direction == "denoise" else clean_prompt
 
-    sublayers: Tuple[str, ...] = ("attn", "ffn")
+    sublayers: tuple[str, ...] = ("attn", "ffn")
 
     with torch.no_grad():
         from_embed = model.model.embed_tokens(
@@ -2004,7 +2004,7 @@ def _compute_all_edges(
                 "AP would divide by zero"
             )
 
-        avg_reader_grads: Dict[Tuple[str, int], torch.Tensor] = {}
+        avg_reader_grads: dict[tuple[str, int], torch.Tensor] = {}
         if n_steps == 1:
             metric = (
                 base_logits[meas_pos, correct_token_id]
@@ -2029,7 +2029,7 @@ def _compute_all_edges(
                 capture_reader_grads=True,
             )
 
-    delta_ffn: Dict[int, torch.Tensor] = {}
+    delta_ffn: dict[int, torch.Tensor] = {}
     num_layers = len(model.model.layers)
     target_layers_set = set(range(num_layers)) if layers is None else set(layers)
     for L in sorted(target_layers_set):
@@ -2042,7 +2042,7 @@ def _compute_all_edges(
     hidden: int = model.config.hidden_size
     head_dim: int = hidden // n_heads
 
-    all_edge_scores: List[Dict] = []
+    all_edge_scores: list[dict] = []
 
     for reader_key, reader_tensor in reader_inputs.items():
         reader_type = reader_key[0]
@@ -2141,11 +2141,11 @@ def edge_attribution_patch(
     incorrect_token_id: int,
     direction: str = "denoise",
     measurement_position: int = -1,
-    positions: Optional[List[int]] = None,
-    layers: Optional[List[int]] = None,
+    positions: list[int] | None = None,
+    layers: list[int] | None = None,
     top_k_edges: int = 200,
     n_steps: int = 1,
-    on_cell: Optional[Callable[[Dict], None]] = None,
+    on_cell: Callable[[dict], None] | None = None,
 ) -> PatchingResult:
     """Per-edge gradient attribution patching (Phase 3.7).
 
@@ -2222,12 +2222,12 @@ def extract_circuit(
     incorrect_token_id: int,
     direction: str = "denoise",
     measurement_position: int = -1,
-    positions: Optional[List[int]] = None,
-    layers: Optional[List[int]] = None,
+    positions: list[int] | None = None,
+    layers: list[int] | None = None,
     tau: float = 0.02,
     top_k_candidates: int = 2000,
     n_steps: int = 1,
-    on_cell: Optional[Callable[[Dict], None]] = None,
+    on_cell: Callable[[dict], None] | None = None,
 ) -> PatchingResult:
     """Cheap-ACDC circuit extraction (Syed et al. 2023, arXiv 2310.10348).
 
@@ -2278,13 +2278,13 @@ def extract_circuit(
     all_edge_scores.sort(key=lambda c: abs(c["ap_recovery"]), reverse=True)
     top_cells = all_edge_scores[:top_k_candidates]
 
-    def node_of_writer(cell: Dict) -> Tuple[int, str, int]:
+    def node_of_writer(cell: dict) -> tuple[int, str, int]:
         return (cell["writer_layer"], cell["writer_unit"], cell["position"])
 
-    def node_of_reader(cell: Dict) -> Tuple[int, str, int]:
+    def node_of_reader(cell: dict) -> tuple[int, str, int]:
         return (cell["reader_layer"], cell["reader_unit"], cell["position"])
 
-    reverse_adj: Dict[Tuple[int, str, int], List[Tuple[int, str, int]]] = {}
+    reverse_adj: dict[tuple[int, str, int], list[tuple[int, str, int]]] = {}
     for cell in top_cells:
         if abs(cell["ap_recovery"]) < tau:
             continue
@@ -2292,8 +2292,8 @@ def extract_circuit(
         w_node = node_of_writer(cell)
         reverse_adj.setdefault(r_node, []).append(w_node)
 
-    visited: set[Tuple[int, str, int]] = set()
-    queue: List[Tuple[int, str, int]] = []
+    visited: set[tuple[int, str, int]] = set()
+    queue: list[tuple[int, str, int]] = []
     for node in reverse_adj.keys():
         if node[1] == "logits":
             visited.add(node)
