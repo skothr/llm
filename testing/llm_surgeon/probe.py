@@ -13,6 +13,18 @@ def _get_input_device(model) -> torch.device:
     return model.model.embed_tokens.weight.device
 
 
+def _unwrap_hook_output(
+    out: torch.Tensor | tuple[torch.Tensor, ...],
+) -> torch.Tensor:
+    """Return the primary tensor from a forward-hook ``output`` argument.
+
+    PyTorch's ``register_forward_hook`` delivers either a single Tensor or
+    a tuple whose first element is the primary activation (subsequent
+    elements are auxiliaries like attention weights or KV-cache state).
+    """
+    return out[0] if isinstance(out, tuple) else out
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
@@ -300,21 +312,29 @@ def _capture_residual_stream_with_grad(
 
         if "attn" in sublayers:
             def make_attn(idx: int):
-                def hook(_module: torch.nn.Module, _inp: Tuple, out: object) -> None:
-                    attn_out = out[0] if isinstance(out, tuple) else out  # type: ignore[index]
-                    if attn_out.requires_grad:  # type: ignore[union-attr]
-                        attn_out.retain_grad()  # type: ignore[union-attr]
-                    captured[(idx, "attn")] = attn_out  # type: ignore[assignment]
+                def hook(
+                    _module: torch.nn.Module,
+                    _inp: Tuple,
+                    out: torch.Tensor | tuple[torch.Tensor, ...],
+                ) -> None:
+                    attn_out = _unwrap_hook_output(out)
+                    if attn_out.requires_grad:
+                        attn_out.retain_grad()
+                    captured[(idx, "attn")] = attn_out
                 return hook
             hooks.append(model.model.layers[i].self_attn.register_forward_hook(make_attn(i)))
 
         if "ffn" in sublayers:
             def make_ffn(idx: int):
-                def hook(_module: torch.nn.Module, _inp: Tuple, out: object) -> None:
-                    hidden = out[0] if isinstance(out, tuple) else out  # type: ignore[index]
-                    if hidden.requires_grad:  # type: ignore[union-attr]
-                        hidden.retain_grad()  # type: ignore[union-attr]
-                    captured[(idx, "ffn")] = hidden  # type: ignore[assignment]
+                def hook(
+                    _module: torch.nn.Module,
+                    _inp: Tuple,
+                    out: torch.Tensor | tuple[torch.Tensor, ...],
+                ) -> None:
+                    hidden = _unwrap_hook_output(out)
+                    if hidden.requires_grad:
+                        hidden.retain_grad()
+                    captured[(idx, "ffn")] = hidden
                 return hook
             hooks.append(model.model.layers[i].register_forward_hook(make_ffn(i)))
 
@@ -334,11 +354,15 @@ def _capture_residual_stream_with_grad(
 
         if capture_ffn_out:
             def make_mlp_hook(idx: int):
-                def hook(_module: torch.nn.Module, _inp: Tuple, out: object) -> None:
-                    mlp_out = out[0] if isinstance(out, tuple) else out  # type: ignore[index]
-                    if mlp_out.requires_grad:  # type: ignore[union-attr]
-                        mlp_out.retain_grad()  # type: ignore[union-attr]
-                    captured[(idx, "ffn_out")] = mlp_out  # type: ignore[assignment]
+                def hook(
+                    _module: torch.nn.Module,
+                    _inp: Tuple,
+                    out: torch.Tensor | tuple[torch.Tensor, ...],
+                ) -> None:
+                    mlp_out = _unwrap_hook_output(out)
+                    if mlp_out.requires_grad:
+                        mlp_out.retain_grad()
+                    captured[(idx, "ffn_out")] = mlp_out
                 return hook
             hooks.append(model.model.layers[i].mlp.register_forward_hook(make_mlp_hook(i)))
 
