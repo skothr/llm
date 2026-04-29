@@ -779,7 +779,7 @@ ops = _Ops()
 # Activation patching — position-scoped replace for causal attribution
 # ---------------------------------------------------------------------------
 
-def _make_position_patch(pos: int, clean_vec: torch.Tensor) -> _Op:  # pyright: ignore[reportUnusedFunction]
+def _make_position_patch(pos: int, clean_vec: torch.Tensor) -> _Op:
     """Build an intervention op that replaces hidden_state[pos] with clean_vec,
     leaving all other positions untouched.
 
