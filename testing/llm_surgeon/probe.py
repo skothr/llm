@@ -25,6 +25,51 @@ def _unwrap_hook_output(
     return out[0] if isinstance(out, tuple) else out
 
 
+def _make_capture_output_hook(store, key, *, retain_grad: bool = False):
+    """Build a forward hook that stores the output tensor at ``store[key]``."""
+    def hook(_mod, _inp, out):
+        t = _unwrap_hook_output(out)
+        if retain_grad and t.requires_grad:
+            t.retain_grad()
+        store[key] = t
+    return hook
+
+
+def _make_capture_input_hook(store, key, *, retain_grad: bool = False):
+    """Build a pre-hook that stores ``args[0]`` (the module input) at ``store[key]``."""
+    def hook(_mod, args):
+        t = args[0]
+        if retain_grad and t.requires_grad:
+            t.retain_grad()
+        store[key] = t
+    return hook
+
+
+def _attach_reader_grad_hooks(model, store, layers=None):
+    """Register pre-hooks to capture pre-norm residual states with retain_grad.
+
+    Stores tensors at keys ``("attn_in", L)`` (input to layer-L's input_layernorm),
+    ``("ffn_in", L)`` (input to layer-L's post_attention_layernorm), and
+    ``("logits", N)`` (input to the final norm; ``N`` is the layer count).
+    Returns the list of hook handles for caller cleanup.
+    """
+    n = len(model.model.layers)
+    target = range(n) if layers is None else layers
+    hooks = []
+    for L in target:
+        layer = model.model.layers[L]
+        hooks.append(layer.input_layernorm.register_forward_pre_hook(
+            _make_capture_input_hook(store, ("attn_in", L), retain_grad=True)
+        ))
+        hooks.append(layer.post_attention_layernorm.register_forward_pre_hook(
+            _make_capture_input_hook(store, ("ffn_in", L), retain_grad=True)
+        ))
+    hooks.append(model.model.norm.register_forward_pre_hook(
+        _make_capture_input_hook(store, ("logits", n), retain_grad=True)
+    ))
+    return hooks
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
@@ -302,125 +347,35 @@ def _capture_residual_stream_with_grad(
     for i in range(num_layers):
         if i not in target_layers:
             continue
+        layer = model.model.layers[i]
 
         if capture_h_in:
-            def make_pre(idx: int):
-                def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                    h_ins[idx] = args[0]
-                return hook
-            hooks.append(model.model.layers[i].register_forward_pre_hook(make_pre(i)))
-
+            hooks.append(layer.register_forward_pre_hook(
+                _make_capture_input_hook(h_ins, i)
+            ))
         if "attn" in sublayers:
-            def make_attn(idx: int):
-                def hook(
-                    _module: torch.nn.Module,
-                    _inp: Tuple,
-                    out: torch.Tensor | tuple[torch.Tensor, ...],
-                ) -> None:
-                    attn_out = _unwrap_hook_output(out)
-                    if attn_out.requires_grad:
-                        attn_out.retain_grad()
-                    captured[(idx, "attn")] = attn_out
-                return hook
-            hooks.append(model.model.layers[i].self_attn.register_forward_hook(make_attn(i)))
-
+            hooks.append(layer.self_attn.register_forward_hook(
+                _make_capture_output_hook(captured, (i, "attn"), retain_grad=True)
+            ))
         if "ffn" in sublayers:
-            def make_ffn(idx: int):
-                def hook(
-                    _module: torch.nn.Module,
-                    _inp: Tuple,
-                    out: torch.Tensor | tuple[torch.Tensor, ...],
-                ) -> None:
-                    hidden = _unwrap_hook_output(out)
-                    if hidden.requires_grad:
-                        hidden.retain_grad()
-                    captured[(idx, "ffn")] = hidden
-                return hook
-            hooks.append(model.model.layers[i].register_forward_hook(make_ffn(i)))
-
+            hooks.append(layer.register_forward_hook(
+                _make_capture_output_hook(captured, (i, "ffn"), retain_grad=True)
+            ))
         if capture_concat_z and "attn" in sublayers:
-            def make_concat_z_hook(idx: int):
-                def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                    z = args[0]             # [batch, seq, hidden]
-                    if z.requires_grad:
-                        z.retain_grad()
-                    concat_z_captured[idx] = z
-                return hook
-            hooks.append(
-                model.model.layers[i].self_attn.o_proj.register_forward_pre_hook(
-                    make_concat_z_hook(i)
-                )
-            )
-
+            hooks.append(layer.self_attn.o_proj.register_forward_pre_hook(
+                _make_capture_input_hook(concat_z_captured, i, retain_grad=True)
+            ))
         if capture_ffn_out:
-            def make_mlp_hook(idx: int):
-                def hook(
-                    _module: torch.nn.Module,
-                    _inp: Tuple,
-                    out: torch.Tensor | tuple[torch.Tensor, ...],
-                ) -> None:
-                    mlp_out = _unwrap_hook_output(out)
-                    if mlp_out.requires_grad:
-                        mlp_out.retain_grad()
-                    captured[(idx, "ffn_out")] = mlp_out
-                return hook
-            hooks.append(model.model.layers[i].mlp.register_forward_hook(make_mlp_hook(i)))
-
+            hooks.append(layer.mlp.register_forward_hook(
+                _make_capture_output_hook(captured, (i, "ffn_out"), retain_grad=True)
+            ))
         if capture_ffn_act:
-            def make_ffn_act_hook(idx: int):
-                def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                    a = args[0]  # [batch, seq, intermediate]
-                    if a.requires_grad:
-                        a.retain_grad()
-                    ffn_acts[idx] = a
-                return hook
-            hooks.append(
-                model.model.layers[i].mlp.down_proj.register_forward_pre_hook(
-                    make_ffn_act_hook(i)
-                )
-            )
+            hooks.append(layer.mlp.down_proj.register_forward_pre_hook(
+                _make_capture_input_hook(ffn_acts, i, retain_grad=True)
+            ))
 
-        if capture_reader_grads:
-            def make_attn_in_hook(idx: int):
-                def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                    x = args[0]
-                    if x.requires_grad:
-                        x.retain_grad()
-                    reader_inputs[("attn_in", idx)] = x
-                return hook
-            hooks.append(
-                model.model.layers[i].input_layernorm.register_forward_pre_hook(
-                    make_attn_in_hook(i)
-                )
-            )
-
-            def make_ffn_in_hook(idx: int):
-                def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                    x = args[0]
-                    if x.requires_grad:
-                        x.retain_grad()
-                    reader_inputs[("ffn_in", idx)] = x
-                return hook
-            hooks.append(
-                model.model.layers[i].post_attention_layernorm.register_forward_pre_hook(
-                    make_ffn_in_hook(i)
-                )
-            )
-
-    n_layers_total = len(model.model.layers)
     if capture_reader_grads:
-        def make_logits_hook(n: int):
-            def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                x = args[0]
-                if x.requires_grad:
-                    x.retain_grad()
-                reader_inputs[("logits", n)] = x
-            return hook
-        hooks.append(
-            model.model.norm.register_forward_pre_hook(
-                make_logits_hook(n_layers_total)
-            )
-        )
+        hooks.extend(_attach_reader_grad_hooks(model, reader_inputs, layers=target_layers))
 
     try:
         if inputs_embeds is not None:
@@ -1260,46 +1215,7 @@ def _integrated_gradients_loop(
             )
 
         if capture_reader_grads:
-            def make_attn_in_hook(idx: int):
-                def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                    x = args[0]
-                    if x.requires_grad:
-                        x.retain_grad()
-                    step_readers[("attn_in", idx)] = x
-                return hook
-
-            def make_ffn_in_hook(idx: int):
-                def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                    x = args[0]
-                    if x.requires_grad:
-                        x.retain_grad()
-                    step_readers[("ffn_in", idx)] = x
-                return hook
-
-            def make_logits_hook(n: int):
-                def hook(_module: torch.nn.Module, args: Tuple) -> None:
-                    x = args[0]
-                    if x.requires_grad:
-                        x.retain_grad()
-                    step_readers[("logits", n)] = x
-                return hook
-
-            for L in range(num_layers):
-                hooks.append(
-                    model.model.layers[L].input_layernorm.register_forward_pre_hook(
-                        make_attn_in_hook(L)
-                    )
-                )
-                hooks.append(
-                    model.model.layers[L].post_attention_layernorm.register_forward_pre_hook(
-                        make_ffn_in_hook(L)
-                    )
-                )
-            hooks.append(
-                model.model.norm.register_forward_pre_hook(
-                    make_logits_hook(num_layers)
-                )
-            )
+            hooks.extend(_attach_reader_grad_hooks(model, step_readers))
 
         try:
             out = model(input_ids)
