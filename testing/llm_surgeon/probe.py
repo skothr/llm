@@ -70,9 +70,7 @@ def _attach_reader_grad_hooks(model, store, layers=None):
     return hooks
 
 
-# ---------------------------------------------------------------------------
 # Dataclasses
-# ---------------------------------------------------------------------------
 
 @dataclass
 class LogitLensResult:
@@ -168,9 +166,7 @@ class HiddenStates:
         return HiddenStates(states=states, prompt_tokens=data["prompt_tokens"])
 
 
-# ---------------------------------------------------------------------------
 # Hook infrastructure
-# ---------------------------------------------------------------------------
 
 def _capture_residual_stream(model, tokenizer, prompt, sublayers=("ffn",), layers=None):
     """Run a forward pass and capture residual stream states via hooks.
@@ -389,9 +385,7 @@ def _capture_residual_stream_with_grad(
     return captured, h_ins, model_output.logits[0], prompt_tokens, concat_z_captured, reader_inputs, ffn_acts
 
 
-# ---------------------------------------------------------------------------
 # Observation API
-# ---------------------------------------------------------------------------
 
 def extract_hidden_states(
     model,
@@ -666,9 +660,7 @@ def layer_predictions_table(result: LogitLensResult, position: int = -1) -> str:
     return result.summary(position=position)
 
 
-# ---------------------------------------------------------------------------
 # Predefined intervention operations
-# ---------------------------------------------------------------------------
 
 class _Op:
     """Callable wrapper with descriptive repr for experiment logging."""
@@ -730,9 +722,7 @@ class _Ops:
 ops = _Ops()
 
 
-# ---------------------------------------------------------------------------
 # Activation patching — position-scoped replace for causal attribution
-# ---------------------------------------------------------------------------
 
 def _make_position_patch(pos: int, clean_vec: torch.Tensor) -> _Op:
     """Build an intervention op that replaces hidden_state[pos] with clean_vec,
@@ -750,9 +740,7 @@ def _make_position_patch(pos: int, clean_vec: torch.Tensor) -> _Op:
     return _Op(fn, f"patch_pos({pos})")
 
 
-# ---------------------------------------------------------------------------
 # Intervention API
-# ---------------------------------------------------------------------------
 
 @dataclass
 class Intervention:
@@ -923,9 +911,7 @@ def intervene(
     )
 
 
-# ---------------------------------------------------------------------------
 # Activation patching — public API
-# ---------------------------------------------------------------------------
 
 @dataclass
 class PatchingResult:
@@ -1874,9 +1860,7 @@ def attribution_patch_per_neuron(
     )
 
 
-# ---------------------------------------------------------------------------
 # Edge attribution patching — valid-edge predicates (module-level helpers)
-# ---------------------------------------------------------------------------
 
 def _is_valid_attn_writer(L_w: int, reader_type: str, reader_L: int) -> bool:
     """True when attn writer at L_w can causally precede reader of type reader_type at reader_L."""
