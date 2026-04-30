@@ -145,23 +145,17 @@ test by hand until a mock-WS server is added.
 
 # Type Checking
 
-Zero errors, warnings, AND informations after every edit — for both pyright (Python) and tsc (TypeScript). The CLI is authoritative, not the IDE's `★` hints. `pyproject.toml [tool.pyright]` enables `reportUnusedImport/Variable/Function/Class/Expression = "warning"`; treat those as must-fix.
+Zero errors, warnings, AND informations after every edit — for both pyright (Python) and tsc (TypeScript). **The edit-time linter messages (the `<new-diagnostics>` system reminder attached to each edit response) are authoritative — trust them and do NOT run `pyright` via Bash to re-verify.** `pyproject.toml [tool.pyright]` is configured so the linter messages line up with what we want fixed; running pyright separately just costs time.
 
-## Tools
+## Tools (only when explicitly requested or for tsc)
 
 ```bash
-# Pyright — either works, both resolve to the same binary + config
-.venv/bin/python -m pyright <paths>          # venv-scoped
-~/.local/bin/pyright <paths>                 # pipx-scoped (matches LSP)
-
-# TypeScript
+# TypeScript still requires a manual run (no LSP-equivalent edit hook)
 cd testing/gui/frontend && ./node_modules/.bin/tsc --noEmit
 
-# Parity sanity check (CLI vs LSP)
-diff <(~/.local/bin/pyright path/to/file.py) <(.venv/bin/python -m pyright path/to/file.py)
+# Pyright manual run — only if the user asks, or you suspect a cache mismatch:
+.venv/bin/python -m pyright <paths>
 ```
-
-Avoid `/snap/bin/pyright` — can't run under the sandbox. If upgrading pyright, upgrade both the pipx and venv copies to avoid drift.
 
 ## Fix patterns
 
@@ -175,14 +169,16 @@ Avoid `/snap/bin/pyright` — can't run under the sandbox. If upgrading pyright,
 
 - Fully unstubbed packages: `llama_cpp`, `gguf`, `bitsandbytes`.
 - Torch stubs lag runtime for: `torch.OutOfMemoryError`, `with torch.device(...)`, `load_state_dict(assign=...)`.
+- `reportPrivateImportUsage` is muted in `~/.config/pyright/base.json` because torch's `__init__.pyi` doesn't re-export the bulk of its runtime surface (`torch.float32`, `torch.zeros`, `torch.tensor`, ...). With the rule on, every torch use fires a false positive with no fix in user code.
 
 ## Unused symbols — underscore-prefix behavior
 
 **Honored** (rename to `_name` suppresses the warning):
 - Local assignments, tuple unpacking (`_first, second, _ = triple`), `for _idx, val in enumerate(...)`, function parameters.
 
-**NOT honored** (rename to `_name` does NOT suppress — delete the symbol, or add to `__all__` for `__init__.py` re-exports):
-- `reportUnusedImport`, `reportUnusedClass`, `reportUnusedFunction`.
+**`reportUnusedFunction` and `reportUnusedClass` are muted in the global base config** — research code legitimately has scratch helpers, and the escape hatches (`# pyright: ignore`, adding to `__all__` solely to silence) are anti-patterns. Use grep / IDE for real dead-code sweeps.
+
+**`reportUnusedImport` is honored** (rename to `_name` does NOT suppress — delete the import, or add to `__all__` for `__init__.py` re-exports).
 
 IDE `★` dead-code hints flag *every* unused name regardless of prefix — that's a separate always-on channel, not tied to the `reportUnusedXxx` rules. When `<new-diagnostics>` shows only `★` items, verify against the CLI before editing — those are frequently IDE-only noise.
 
