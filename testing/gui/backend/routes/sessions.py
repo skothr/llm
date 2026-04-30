@@ -43,7 +43,7 @@ def _build_op_map():
     }
 
 
-def _apply_op_for_replay(model, op_name: str, params: dict) -> None:  # pyright: ignore[reportUnusedFunction]
+def _apply_op_for_replay(model, op_name: str, params: dict) -> None:
     """Used by persistence.restore to replay one committed op on a freshly-
     loaded model. Translates the persisted op spec into the same call the
     commit-surgery route would make for that op."""
@@ -91,7 +91,7 @@ def _free_vram_bytes_for_load() -> int | None:
     return max(0, free - _VRAM_HEADROOM_BYTES)
 
 
-async def _restore_register_one(mgr: SessionManager, name: str, model_id: str, mode: str):  # pyright: ignore[reportUnusedFunction]
+async def _restore_register_one(mgr: SessionManager, name: str, model_id: str, mode: str):
     """Load a model from cache and register it on the manager. Mirrors
     the POST /sessions route's load+register flow but without the
     HTTPException wrapping — used by persistence.restore on startup.

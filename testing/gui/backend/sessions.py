@@ -317,17 +317,17 @@ class SessionManager:
     @staticmethod
     def _is_bnb_model(info) -> bool:
         try:
-            import bitsandbytes as bnb  # pyright: ignore[reportMissingImports]
-            return any(isinstance(p, bnb.nn.Params4bit) or isinstance(p, bnb.nn.Int8Params)  # pyright: ignore[reportPrivateImportUsage]
+            import bitsandbytes as bnb
+            return any(isinstance(p, bnb.nn.Params4bit) or isinstance(p, bnb.nn.Int8Params)
                        for p in info.model.parameters())
         except ImportError:
             return False
 
     @staticmethod
     def _move_bnb_params(model, device: str) -> None:
-        import bitsandbytes as bnb  # pyright: ignore[reportMissingImports]
+        import bitsandbytes as bnb
         for param in model.parameters():
-            if isinstance(param, bnb.nn.Params4bit):  # pyright: ignore[reportPrivateImportUsage]
+            if isinstance(param, bnb.nn.Params4bit):
                 param.data = param.data.to(device)
                 if hasattr(param, "quant_state") and param.quant_state is not None:
                     qs = param.quant_state
@@ -335,7 +335,7 @@ class SessionManager:
                         qs.absmax = qs.absmax.to(device)
                     if hasattr(qs, "code") and qs.code is not None:
                         qs.code = qs.code.to(device)
-            elif isinstance(param, bnb.nn.Int8Params):  # pyright: ignore[reportPrivateImportUsage]
+            elif isinstance(param, bnb.nn.Int8Params):
                 param.data = param.data.to(device)
                 if hasattr(param, "SCB") and param.SCB is not None:
                     param.SCB = param.SCB.to(device)
