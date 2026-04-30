@@ -1,18 +1,17 @@
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple
 import torch
 
 class HiddenStateCache:
     def __init__(self, max_bytes: int = 500_000_000):
         self._max_bytes = max_bytes
-        self._cache: OrderedDict[Tuple[str, str], Dict[str, torch.Tensor]] = OrderedDict()
-        self._sizes: Dict[Tuple[str, str], int] = {}
+        self._cache: OrderedDict[tuple[str, str], dict[str, torch.Tensor]] = OrderedDict()
+        self._sizes: dict[tuple[str, str], int] = {}
         self._current_bytes = 0
 
-    def _entry_size(self, data: Dict[str, torch.Tensor]) -> int:
+    def _entry_size(self, data: dict[str, torch.Tensor]) -> int:
         return sum(t.nelement() * t.element_size() for t in data.values())
 
-    def put(self, session: str, prompt_hash: str, data: Dict[str, torch.Tensor]) -> None:
+    def put(self, session: str, prompt_hash: str, data: dict[str, torch.Tensor]) -> None:
         # Store on CPU so an eviction of the source session doesn't pin
         # GPU allocations via cached references. Consumers (ops.replace,
         # ops.project_out) move back to the target device at use time.
@@ -32,7 +31,7 @@ class HiddenStateCache:
         self._sizes[key] = size
         self._current_bytes += size
 
-    def get(self, session: str, prompt_hash: str) -> Optional[Dict[str, torch.Tensor]]:
+    def get(self, session: str, prompt_hash: str) -> dict[str, torch.Tensor] | None:
         key = (session, prompt_hash)
         if key not in self._cache:
             return None

@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -14,7 +13,7 @@ def get_manager() -> SessionManager:
     return manager
 
 class InfluenceRequest(BaseModel):
-    prompts: List[str]
+    prompts: list[str]
 
 class AttentionRequest(BaseModel):
     prompt: str

@@ -7,7 +7,7 @@ import tempfile
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 import torch
 
 if TYPE_CHECKING:
@@ -29,12 +29,12 @@ class SessionInfo:
     _op_history: list = field(default_factory=list, repr=False)
     _layer_map: list = field(default_factory=list, repr=False)
     _original_config: Any = field(default=None, repr=False)
-    llama: Optional["LlamaEngine"] = field(default=None, repr=False)
-    gguf_path: Optional[Path] = field(default=None, repr=False)
-    source_gguf_path: Optional[Path] = field(default=None, repr=False)
+    llama: "LlamaEngine | None" = field(default=None, repr=False)
+    gguf_path: Path | None = field(default=None, repr=False)
+    source_gguf_path: Path | None = field(default=None, repr=False)
     # Temp dir we created via re-export; we own cleanup of this one only
     # (source_gguf_path is user-supplied and left alone).
-    _owned_export_dir: Optional[Path] = field(default=None, repr=False)
+    _owned_export_dir: Path | None = field(default=None, repr=False)
     dirty: bool = field(default=False)
 
     @property
@@ -209,7 +209,7 @@ def validate_original_indices(operation: str, params: dict, num_original_layers:
 
 class SessionManager:
     def __init__(self):
-        self._sessions: Dict[str, SessionInfo] = {}
+        self._sessions: dict[str, SessionInfo] = {}
         # Serializes GPU move operations (ensure_on_gpu / to_cpu / register).
         # Without this, two handlers racing ensure_on_gpu can both decide to
         # evict the same peer, or both try to move onto GPU without accounting
