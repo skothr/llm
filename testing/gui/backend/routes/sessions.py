@@ -6,7 +6,6 @@ import re
 import types
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
@@ -82,10 +81,10 @@ def _free_vram_bytes_for_load() -> int | None:
         return None
     try:
         torch.cuda.empty_cache()
-        # torch stubs type mem_get_info as int but it returns Tuple[int, int]
+        # torch stubs type mem_get_info as int but it returns tuple[int, int]
         # at runtime — cast around the stub lag.
-        from typing import cast, Tuple
-        info = cast(Tuple[int, int], torch.cuda.mem_get_info())
+        from typing import cast
+        info = cast(tuple[int, int], torch.cuda.mem_get_info())
         free = int(info[0])
     except Exception:
         return None
@@ -445,7 +444,7 @@ def _session_info(info) -> dict:
         applied_ops=info.applied_ops,
     ).model_dump()
 
-@router.get("/sessions", response_model=List[dict])
+@router.get("/sessions", response_model=list[dict])
 async def list_sessions():
     mgr = get_manager()
     return [_session_summary(s) for s in mgr.list_sessions()]
@@ -608,7 +607,7 @@ async def tokenize_prompt(name: str, req: TokenizeRequest):
 
 
 class DecodeIdsRequest(BaseModel):
-    ids: List[int]
+    ids: list[int]
 
 
 _DECODE_IDS_MAX = 64  # pin-card tops out at ~10; 64 leaves headroom for batches

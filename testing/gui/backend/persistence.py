@@ -37,8 +37,9 @@ import json
 import logging
 import os
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 log = logging.getLogger("gui.backend.persistence")
 
