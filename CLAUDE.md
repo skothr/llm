@@ -170,12 +170,12 @@ Listed from "expresses intent best" to "suppresses signal":
 
 1. **`assert isinstance(x, T)`** — narrows for both runtime AND pyright. Best when you also want a runtime safety check.
 2. **`cast(T, expr)`** — narrows the *result* type with no runtime cost. Best when you know the expression's value is type T but pyright sees a wider Union.
-3. **`# pyright: ignore[reportXxx]`** — suppresses a specific rule on one line. Reserve for two cases where there's no static fix:
+3. **`# pyright: ignore[reportXxx]`** — last resort, suppresses a specific rule on one line. Reserve for two cases where there's no static fix:
    - **Mid-chain attribute access** on dynamic objects (e.g., `model.model.layers[L].mlp.down_proj.weight` on pytorch — `mlp` is in `Tensor | Module | Unknown`, no `cast` of the result reaches the `.down_proj` step).
    - **Stub lag** where the runtime API has a kwarg/method the stub doesn't enumerate (e.g., `Metaspace(prepend_scheme=...)` in `tokenizers`, `LlamaConfig(**kwargs)` in HuggingFace — no `cast` of the result reaches the call site).
-4. **Bare `# type: ignore`** — never. Always use the rule-scoped `# pyright: ignore[X]` form so future stub upgrades surface as actionable diagnostics rather than silently leaving the suppression in place.
+4. **Bare `# type: ignore`** — never. Always use the rule-scoped `# pyright: ignore[X]` form.
 
-Default to (1) or (2). If you find yourself reaching for (3), check whether the issue is mid-chain or stub-lag — those are the only honest cases.
+Default to (1) or (2). If you find yourself reaching for (3), check whether the issue is mid-chain or stub-lag — those are the only honest cases. **The base config has `reportUnnecessaryTypeIgnoreComment` ON**, so the moment a stub catches up and an ignore stops doing real work, pyright emits a diagnostic asking us to delete it. Treat every ignore as a temporary debt with a built-in expiry alarm — not a permanent suppression.
 
 ## Known stub lag in this repo
 
