@@ -3,12 +3,16 @@ This is a workspace for robust experimental LLM research using open source model
 
 ## Project Structure
 
-`theory/` — LLM theoretical framework (**GROUND TRUTH**): LLM architectures and math, historical progression/timeline, high-level explanations, and visualizations.
-  - `build/llm-core-architecture/` — LaTeX source and build artifacts
-  - `sources/` — WebSearch-based publication research for the theoretical/mathematical basis
-  - `visuals/` — visual materials
-  - `GLOSSARY.md` — every technical term used in this workspace must be defined here. If you encounter or use a term not in the glossary, add it immediately.
-  - `llm-core-architecture.pdf` — compiled output (kept at theory root)
+`theory/` — LLM theoretical-framework workspace (**GROUND TRUTH**) for theory, math, historical progression, and visualizations. KB-substrate layout (v2 from 2026-05-03):
+  - `kb/notes/<area>/<topic>.md` — digested synthesis, one file per topic
+  - `kb/excerpts/<paper-key>.md` — verbatim quoted passages from primary sources
+  - `kb/index/` — `papers.json` (paper metadata + KB cross-refs), `topics.md` (topic graph + status), `timeline.md` (chronological progression)
+  - `kb/glossary.md` — every technical term used in this workspace, with a citation. If you use a term not in the glossary, add it immediately.
+  - `sources/papers/` — PDFs of canonical papers (filename: `{paper-key}_{slug}.pdf`)
+  - `sources/forums/` — selectively archived blog/forum snapshots (discovery-path provenance only)
+  - `archive/2026-05-03-pre-expansion/` — v1 single-LaTeX-doc state preserved as a snapshot
+  - `series/` — placeholder for future LaTeX paper series (outlined after KB pass complete; see `theory/docs/superpowers/specs/2026-05-03-theory-expansion-design.md`)
+  - `plans/` — research/KB construction running plans
 `testing/` — experimental research on local LLMs; uses llama.cpp and ollama for inference
   - `llm_surgeon/` — Python toolkit for layer-level model surgery
   - `tests/` — pytest test suite for llm_surgeon
@@ -35,30 +39,62 @@ make -C theory all
 xdg-open theory/visuals/llm-architecture-diagram.html
 ```
 
-# Theory Document
+# Theory KB & citation discipline
 
-## Core Document
-`theory/build/llm-core-architecture/llm-core-architecture.tex` — LaTeX document covering Transformer architecture from original encoder-decoder through modern decoder-only (LLaMA). 10 sections: Transformer overview, Tokenization, Embeddings, Positional Encoding, Attention, FFN, Normalization/Residuals, Decoder-Only Shift, Output Head, Full Forward Pass.
+The theory workspace at `theory/` is now a knowledge-base substrate (v2,
+2026-05-03), not a single LaTeX doc. The previous v1 single-doc deliverable
+is archived at `theory/archive/2026-05-03-pre-expansion/`. The future
+LaTeX paper series under `theory/series/` is **deferred** until the KB
+reaches stable coverage — see
+`theory/docs/superpowers/specs/2026-05-03-theory-expansion-design.md`.
 
-### Custom LaTeX environments:
-- `\begin{implbox}` — green "Implementation Note" callouts
-- `\begin{evobox}` — blue "Architectural Evolution" callouts
-- `\dimtext{}` — inline dimension annotations
+## Citation rules — non-negotiable
 
-## HTML Companion
-`theory/visuals/llm-architecture-diagram.html` — standalone interactive diagram with clickable layers showing tensor shapes and data flow. Dark theme, self-contained (no build step).
+When making technical claims about LLM architecture, training, inference,
+interpretability, evaluation, alignment, or related theory:
 
-## Sources
+1. **Every load-bearing claim cites a source.** Either:
+   - `[paper-key §X, eq.Y]` — pointing to a paper in `theory/kb/index/papers.json`
+   - `[kb/notes/<area>/<file>#<anchor>]` — pointing into a synthesis note
+   - `[kb/excerpts/<paper-key>#<heading>]` — pointing into a verbatim excerpt
 
-All claims must be grounded in canonical papers.
-- `theory/sources/index.json` — master index (citation key, title, authors, year, URL, local file, summary)
-- `theory/sources/papers/` — local PDF copies, named `{key}_{slug}.pdf`
-When adding a new source: add entry to `theory/sources/index.json`, download PDF to `theory/sources/papers/`, use the citation key consistently in LaTeX `\cite{}` commands
+2. **Verify against the original PDF before propagating a KB-note claim**
+   into LaTeX, code, or commit messages. The KB is digested; the paper is
+   canonical.
 
-## Conventions/Rules
-- Define every variable in every equation, directly underneath it (brief is fine, but no undefined variables)
-- First formalize math, then describe technical aspects and practical use, then elaborate using accessible language and/or analogies
-- Ground all architectural claims in specific source papers from core document or original paper(s), with citation keys from `theory/sources/index.json`
+3. **Analogies and intuitions are tagged, never asserted as fact.** Use
+   `[ANALOGY]`, `[INTUITION]`, `[CONTRADICTION]`, `[FORUM-SIGNAL]`, or
+   `[SPECULATION]` so they cannot be laundered as formal claims. Analogies
+   must always return to the canonical symbolic form.
+
+4. **If a claim depends on something not in the KB, add it before continuing.**
+   Don't make claims you can't ground.
+
+5. **Forum/blog citations are valid as discovery signals only** (tier B/C
+   in `theory/sources/README.md`). They never solely back a hard technical
+   claim — only primary papers (tier A) can.
+
+## Source tiers
+
+- **Tier A (canonical):** arxiv, peer-reviewed venues, official tech reports
+  / model cards, reference github repos. Stored under
+  `theory/sources/papers/`. Backs hard claims.
+- **Tier B (high-signal commentary):** vendor research blogs, respected lab
+  blogs, named researchers' writeups. Cite alongside an underlying tier-A
+  source.
+- **Tier C (community signal):** Reddit/HN/X/HF community. Discovery only;
+  never the sole citation.
+
+## Writing-style rule (Feynman bar)
+
+Each topic note follows: formal definition (math + variables defined
+underneath) → mechanism (how it computes, with tensor shapes) →
+variants/lineage (cited list) → tagged `[INTUITION]` / `[ANALOGY]` (which
+always return to canonical symbolic form) → frontier and open questions
+(with `[CONTRADICTION]` markers where sources disagree).
+
+When introducing a new technical term in a note, add it to
+`theory/kb/glossary.md` with a citation.
 
 
 # TESTING
@@ -200,6 +236,37 @@ IDE `★` dead-code hints flag *every* unused name regardless of prefix — that
 - `80006` — function may be converted to async (use it)
 - `80001` — CommonJS import can be ES6
 - `7044` — parameter type could be inferred
+
+# C++ GUI frontend (`testing/gui_cpp/`)
+
+Native C++/Dear ImGui frontend, scaffolded in `testing/gui_cpp/`. Currently a skeleton — will absorb panels incrementally as the React frontend at `testing/gui/frontend/` is replaced.
+
+**Framework conventions live in `docs/skills/imgui-cpp-development/SKILL.md`** (with `references/porting-source-of-truth.md`). That skill is intentionally **project-agnostic** — generic ImGui C++ conventions to be reused across the user's other ImGui projects. When writing or planning C++/ImGui code, read that skill first.
+
+The skill is V0 and will iterate. Local `.claude/skills/` in this repo is bind-mounted to `/dev/null` (the user has a separate session unifying global skills/config); the skill lives in `docs/skills/` until that integration runs.
+
+## Project-specific layer (this section is the llm-surgeon GUI plan)
+
+**Scope policy**: skill = framework, this section = LLM-specific application of it.
+
+**Cross-reference**: the React frontend at `testing/gui/frontend/` is the feature inventory. Audit it for required panels (sessions list, layer view, logit lens, intervention editor, sample browser, capture history, etc.), not for design — the C++ side is the chance to redesign each panel with custom DrawList components.
+
+**Backend abstraction** (the skill's optional `Backend` interface, applied):
+- `HttpBackend` — talks to the existing FastAPI service at `testing/gui/backend/`. Default during transition.
+- `NativeBackend` — future, in-process integration with llama.cpp or libtorch. Skip until needed.
+- Panels never touch HTTP/WS directly. CLI flag selects backend at startup.
+- IPC format starts as JSON-over-WS (parity with current React frontend); consider MsgPack or Arrow IPC if streaming tensors becomes a bottleneck.
+
+**Domain-specific viz categories** to design as `inc/ui/viz/` components:
+- **Tensor heatmaps** — residual stream over layers (rows = positions, cols = layers), attention patterns (rows = query positions, cols = key positions), weight matrices
+- **Time-series** — residual stream evolution over generation steps, attention scores over positions, top-k logit evolution
+- **Distributions** — logit distributions, attention entropy histograms, activation magnitude per layer
+- **Token visualization** — tokens with hover-to-show-logits, click-to-pin, drag-to-edit; per-token attention/probe overlays
+- **Graph viz** — if going node-based for experiment chains: model-load → prompt → capture → intervene → eval
+
+**Node-graph option**: the skill flags astrolograph's `fluidsV1` node-graph engine as a strong fit for "experiment as graph." Direct conceptual parallel: `staticFieldNode` ≈ "loaded model layer," `fftNode` ≈ "spectral analysis of activations," etc. The execution engine, dependency tracking, and worker thread already exist; new node types are mostly what's needed. Consider after the basic panels are landed.
+
+**License**: llm_surgeon, astrolograph, and algo-syndesi are GPLv3; graphene-v2 and logos are zlib-style permissive. The user owns all sources. All ports into this project are license-clean.
 
 # Research Observations
 
