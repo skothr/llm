@@ -1,8 +1,34 @@
-# KB Topic Graph (v0 — taxonomy hypothesis)
+# KB Topic Graph (v1 — refined after Phase 1 landscape sweep)
 
-This is the starting taxonomy for the KB. It will be refined during Phase 1
-(landscape sweep) as actual current-state research surfaces topics that
-should be added, merged, or split.
+Refined 2026-05-03 from the v0 hypothesis using Phase 1 findings (see
+`theory/plans/2026-05-03-landscape-sweep-findings.md` for the full
+synthesis). Phase 2 may further refine as note files are written.
+
+## v0 → v1 changelog
+
+- **Split** `architecture/ffn-and-moe` → `architecture/ffn` + `architecture/moe`
+  (MoE is now its own subfield with routing, fine-grained experts, shared
+  experts, load balancing variants — universal at frontier).
+- **Split** `alignment/sycophancy-and-deception` → `alignment/sycophancy` +
+  `alignment/scheming-and-deceptive-alignment` (distinct threat models;
+  empirically demonstrated by Anthropic + Apollo Dec 2024).
+- **Renamed** `training/continued-pretraining` → `training/adaptation-and-merging`
+  (scope now equally covers CPT, domain adaptation, model merging).
+- **Added** `architecture/reasoning-architectures` (thinking-token / hybrid
+  think-non-think paradigm; architectural side of reasoning models).
+- **Added** `architecture/multi-token-prediction` (DeepSeek V3 architectural
+  feature; distinct from speculative decoding).
+- **Added** `scaling/inference-time-compute-scaling` (Snell 2024 + R1
+  paradigm; co-equal scaling axis with training compute).
+- **Added** `interpretability/circuit-tracing` (Anthropic 2025 attribution-
+  graph framework; operationally distinct from `activation-patching`).
+
+**Net change:** 9 areas, 48 → 53 leaf topics (+5).
+
+Held for Phase 2 review (not applied yet — may handle with sub-sections
+inside the note rather than splitting): SAE → 3 sub-leaves, SSM →
+pure+hybrid, agentic-benchmarks → 3, speculative-decoding → draft+model-free,
+rlvr-and-grpo → foundations + variants.
 
 ## Status legend
 
@@ -23,11 +49,14 @@ should be added, merged, or split.
 | embeddings-and-tying | pending | `kb/notes/architecture/embeddings-and-tying.md` |
 | position-encoding | pending | `kb/notes/architecture/position-encoding.md` |
 | attention-mechanism | pending | `kb/notes/architecture/attention-mechanism.md` |
-| ffn-and-moe | pending | `kb/notes/architecture/ffn-and-moe.md` |
+| ffn | pending | `kb/notes/architecture/ffn.md` |
+| moe | pending | `kb/notes/architecture/moe.md` |
 | normalization | pending | `kb/notes/architecture/normalization.md` |
 | state-space-models | pending | `kb/notes/architecture/state-space-models.md` |
 | long-context | pending | `kb/notes/architecture/long-context.md` |
 | multimodal-llm-extensions | pending | `kb/notes/architecture/multimodal-llm-extensions.md` |
+| reasoning-architectures | pending | `kb/notes/architecture/reasoning-architectures.md` |
+| multi-token-prediction | pending | `kb/notes/architecture/multi-token-prediction.md` |
 
 ### training/
 
@@ -38,7 +67,7 @@ should be added, merged, or split.
 | optimization | pending | `kb/notes/training/optimization.md` |
 | distributed-training | pending | `kb/notes/training/distributed-training.md` |
 | mixed-precision-and-stability | pending | `kb/notes/training/mixed-precision-and-stability.md` |
-| continued-pretraining | pending | `kb/notes/training/continued-pretraining.md` |
+| adaptation-and-merging | pending | `kb/notes/training/adaptation-and-merging.md` |
 
 ### post-training/
 
@@ -78,6 +107,7 @@ should be added, merged, or split.
 | chinchilla | pending | `kb/notes/scaling/chinchilla.md` |
 | mu-transfer | pending | `kb/notes/scaling/mu-transfer.md` |
 | scaling-frontier | pending | `kb/notes/scaling/scaling-frontier.md` |
+| inference-time-compute-scaling | pending | `kb/notes/scaling/inference-time-compute-scaling.md` |
 
 ### interpretability/
 
@@ -88,6 +118,7 @@ should be added, merged, or split.
 | sparse-autoencoders | pending | `kb/notes/interpretability/sparse-autoencoders.md` |
 | activation-patching | pending | `kb/notes/interpretability/activation-patching.md` |
 | probing | pending | `kb/notes/interpretability/probing.md` |
+| circuit-tracing | pending | `kb/notes/interpretability/circuit-tracing.md` |
 
 ### evaluation/
 
@@ -105,11 +136,18 @@ should be added, merged, or split.
 | safety-evaluation | pending | `kb/notes/alignment/safety-evaluation.md` |
 | watermarking-and-provenance | pending | `kb/notes/alignment/watermarking-and-provenance.md` |
 | oversight-and-scalable-alignment | pending | `kb/notes/alignment/oversight-and-scalable-alignment.md` |
-| sycophancy-and-deception | pending | `kb/notes/alignment/sycophancy-and-deception.md` |
+| sycophancy | pending | `kb/notes/alignment/sycophancy.md` |
+| scheming-and-deceptive-alignment | pending | `kb/notes/alignment/scheming-and-deceptive-alignment.md` |
 
 ## Total
 
 - 9 areas
-- 48 leaf topics
+- 53 leaf topics
 
-Phase 1 will refine this taxonomy before Phase 2 begins per-topic research.
+## Phase 2 input
+
+Per-topic deep research (Phase 2) will populate the corresponding
+`kb/notes/<area>/<topic>.md` for each leaf above. Candidate paper
+inventory is in `theory/kb/index/papers.json` (expanded post-Phase 1)
+and the per-area landscape reports under
+`theory/plans/landscape-sweep/`.
