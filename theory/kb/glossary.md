@@ -53,6 +53,27 @@ treated as `status: pre-expansion-seed` until re-validated during Phase 2.
 - **Cross-Attention** — Attention where Q comes from the decoder and K, V come from the encoder output. Removed in decoder-only models.
 - **Head Dimension ($d_k$, $d_v$)** — Dimensionality of query/key and value projections per attention head. Typically $d_{\text{model}} / h$.
 
+## Attention variants and KV-cache compression
+
+- **MHA (Multi-Head Attention)** — The Vaswani 2017 default: $h$ independent heads, each with its own $W_i^Q, W_i^K, W_i^V$. KV cache size per token per layer is $2 n_h d_h$ elements `[vaswani2017 §3.2.2]`.
+- **MQA (Multi-Query Attention)** — Variant where all heads share a single $W^K, W^V$ (only $W^Q$ remains per-head). KV cache shrinks by factor $h$. Cheaper per-token decode at the cost of capacity and stability `[shazeer2019 §2.4; kb/notes/architecture/attention-mechanism.md#sec-3-1]`.
+- **GQA (Grouped-Query Attention)** — Interpolation between MHA and MQA: query heads are partitioned into $g$ groups, each group shares one $W^K, W^V$. GQA-1 = MQA; GQA-$h$ = MHA. KV cache per token is $2 n_g d_h$ elements `[ainslie2023 §2.2]`.
+- **Uptraining** — The Ainslie 2023 recipe for converting an existing MHA checkpoint to GQA/MQA: mean-pool the $W^K, W^V$ matrices within each group, then continue pre-training for $\alpha \approx 5\%$ of the original budget `[ainslie2023 §2.1]`.
+- **MLA (Multi-Head Latent Attention)** — DeepSeek-V2's compression scheme. Rather than sharing K/V across heads, K and V are reconstructed at use time from a small latent $\mathbf{c}_t^{KV} = W^{DKV} \mathbf{h}_t \in \mathbb{R}^{d_c}$ via up-projections $W^{UK}, W^{UV}$. Cache holds only the latent. During inference $W^{UK}$ can be absorbed into $W^Q$ and $W^{UV}$ into $W^O$ `[deepseek-v2 §2.1.2]`.
+- **Decoupled RoPE** — The MLA add-on that splits each query/key into a content part (no RoPE, low-rank reconstructed) and a small shared RoPE-carrying part. Necessary because standard RoPE inserts a position-dependent rotation between $W^Q$ and $W^{UK}$ that prevents the cache-absorption optimization `[deepseek-v2 §2.1.3]`.
+- **KV Cache** — The buffer holding past keys and values during autoregressive decoding. One $(K_t, V_t)$ entry per token per layer per K/V-head. The dominant memory-bandwidth cost of inference `[shazeer2019 §1]`.
+
+## Attention implementation (hardware)
+
+- **FlashAttention** — Exact attention computed with re-organized memory access: tile $K, V$ into SRAM-resident blocks and use **online softmax** to combine block results, never materializing the $N \times N$ attention matrix in HBM. Forward + backward IO complexity $\Theta(N^2 d^2 M^{-1})$ vs.\ $\Theta(N d + N^2)$ for the standard implementation `[dao2022 §3]`.
+- **Online softmax** — Numerically stable streaming softmax: maintain running max $m$ and normalizer $\ell$ across blocks; when a new block arrives, rescale the existing partial sum by $e^{m_\text{old} - m_\text{new}}$ before adding the block's contribution. Enables block-wise softmax without seeing the full row `[dao2022 §3.1]`.
+- **IO-awareness** — Designing an algorithm with explicit accounting for reads and writes between memory hierarchy levels (HBM ↔ SRAM on a GPU). The principle behind FlashAttention `[dao2022 §1]`.
+- **Tiling** — Restructuring a computation to operate on sub-blocks that fit in fast memory. Used in FlashAttention to keep $Q, K, V$ blocks in SRAM `[dao2022 §3.1]`.
+- **Recomputation (selective gradient checkpointing)** — Storing only the output and softmax statistics from the forward pass and recomputing the attention matrix on-chip during the backward pass, trading FLOPs for memory `[dao2022 §3.1]`.
+- **HBM (High-Bandwidth Memory)** — The large, slow memory tier on a GPU (~40–80 GB on A100, 1.5–2.0 TB/s). Most operations in standard attention are HBM-bound `[dao2022 §2.1]`.
+- **SRAM (on-chip)** — The small, fast memory tier on a GPU (~192 KB per A100 SM, ~19 TB/s). FlashAttention restructures attention to keep working sets in SRAM `[dao2022 §2.1]`.
+- **NSA (Native Sparse Attention)** — Yuan et al.\ 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Aimed at long context. Treated in `kb/notes/architecture/long-context.md` `[yuan2025]`.
+
 ## Feed-Forward Network
 
 - **FFN (Feed-Forward Network)** — A position-wise two-layer (or three-layer for GLU variants) fully-connected network applied independently at each sequence position. Transforms representations within each position, complementing attention which mixes across positions.
