@@ -44,15 +44,14 @@ timeline entries because the timeline focuses on Transformer-era LLMs.
 
 - **Shift:** GPT-1 — pre-train a decoder-only Transformer with LM
   objective, fine-tune on downstream tasks.
-- **Sources:** `[radford2018-gpt1]`
+- **Sources:** `[radford2018]`
 - **Notes:** `kb/notes/architecture/transformer-overview.md`.
 
 ### 2018-H2 — Bidirectional encoder pre-training
 
 - **Shift:** BERT — masked LM + next-sentence-prediction; encoder-only.
   Sets the encoder track parallel to the GPT decoder track.
-- **Sources:** `[devlin2019-bert]` (if added in Phase 2.5; otherwise
-  referenced via Phase 1 sweep).
+- **Sources:** `[devlin2019-bert]`
 - **Notes:** `kb/notes/architecture/transformer-overview.md`.
 
 ## 2019
@@ -89,7 +88,7 @@ timeline entries because the timeline focuses on Transformer-era LLMs.
 
 - **Shift:** 175B parameter LM; few-shot in-context learning emerges
   without gradient updates.
-- **Sources:** `[brown2020-gpt3]`
+- **Sources:** `[brown2020]`
 - **Notes:** `kb/notes/architecture/transformer-overview.md`,
   `kb/notes/scaling/scaling-frontier.md`.
 
@@ -179,7 +178,7 @@ timeline entries because the timeline focuses on Transformer-era LLMs.
 - **Shift:** First broadly-available open-weights frontier-class
   models. Sets the open-source recipe (RoPE, RMSNorm, SwiGLU, GQA in
   LLaMA-2).
-- **Sources:** `[touvron2023-llama]`
+- **Sources:** `[touvron2023]`
 - **Notes:** `kb/notes/architecture/transformer-overview.md`.
 
 ### 2023-H1 — Process Reward Models (PRM800k)
@@ -246,8 +245,7 @@ timeline entries because the timeline focuses on Transformer-era LLMs.
 - **Shift:** Selective state-space models match Transformer perplexity
   with linear-in-N inference. Hybrid attention+SSM models (Jamba, Zamba)
   follow.
-- **Sources:** `[mamba2024]`, `[mamba2-2024]` (canonical keys per
-  Phase 2 architecture subagent).
+- **Sources:** `[gu2023-mamba]`, `[mamba2]`
 - **Notes:** `kb/notes/architecture/state-space-models.md`.
 
 ### 2024-H1 — Multi-Head Latent Attention (MLA)
@@ -261,8 +259,7 @@ timeline entries because the timeline focuses on Transformer-era LLMs.
 
 - **Shift:** MoE design with many small experts plus a shared expert per
   layer; reduces routing collapse and enables fine-grained specialization.
-- **Sources:** `[deepseek-v2]` (MoE part), `[dai2024-deepseekmoe]` if
-  added.
+- **Sources:** `[deepseek-v2]` (MoE part), `[deepseekmoe2024]`
 - **Notes:** `kb/notes/architecture/moe.md`.
 
 ### 2024-H2 — Test-time compute scaling
@@ -288,7 +285,7 @@ timeline entries because the timeline focuses on Transformer-era LLMs.
   Anthropic Gemma-Scope releases per-layer SAE artifacts.
 - **Sources:** `[rajamanoharan2024-jumprelu]`,
   `[gao2024-topk-saes]`,
-  `[lieberum2024-gemma-scope]`.
+  `[gemma-scope-2024]`.
 - **Notes:** `kb/notes/interpretability/sparse-autoencoders.md`.
 
 ### 2024-H2 — FineWeb / data-quality classifiers

@@ -3018,6 +3018,62 @@
       "summary": "Demonstrates unfaithful CoT on realistic prompts with no artificial bias: models often post-hoc-rationalize implicitly biased responses rather than letting reasoning lead. Reports per-model rationalization rates: GPT-4o-mini 13%, Haiku 3.5 7%; thinking models far better but never zero (Sonnet 3.7 thinking 0.04%, Gemini 2.5 Pro 0.14%, R1 0.37%). Also identifies Unfaithful Illogical Shortcuts on hard math problems."
     },
     {
+      "key": "devlin2019-bert",
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+      "authors": "Devlin, Chang, Lee, Toutanova",
+      "year": 2019,
+      "venue": "NAACL 2019",
+      "url": "https://arxiv.org/abs/1810.04805",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "architecture/transformer-overview"
+      ],
+      "topics": [
+        "transformer-overview"
+      ],
+      "category": "foundational",
+      "summary": "Encoder-only Transformer pre-trained with masked LM + next-sentence prediction. Establishes the encoder track parallel to the GPT decoder track and seeds the BERT-derivative line (RoBERTa, DeBERTa, etc.). Cited primarily here as a historical anchor for the bifurcation into encoder-only / decoder-only / encoder-decoder."
+    },
+    {
+      "key": "radford2019-gpt2",
+      "title": "Language Models are Unsupervised Multitask Learners",
+      "authors": "Radford, Wu, Child, Luan, Amodei, Sutskever",
+      "year": 2019,
+      "venue": "OpenAI tech report",
+      "url": "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "architecture/transformer-overview",
+        "scaling/scaling-frontier"
+      ],
+      "topics": [
+        "transformer-overview",
+        "scaling-frontier"
+      ],
+      "category": "foundational",
+      "summary": "GPT-2: 1.5B-parameter decoder-only LM trained on WebText. First strong evidence of zero-shot task transfer from a generative LM at scale, motivating the scaling-laws era that followed."
+    },
+    {
+      "key": "wang2024-mathshepherd",
+      "title": "Math-Shepherd: Verify and Reinforce LLMs Step-by-step without Human Annotations",
+      "authors": "Wang, Li, Shao, Xu, Dai, Li, Chen, Wu, Sui",
+      "year": 2024,
+      "venue": "ACL 2024",
+      "url": "https://arxiv.org/abs/2312.08935",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/process-supervision"
+      ],
+      "topics": [
+        "process-supervision"
+      ],
+      "category": "foundational",
+      "summary": "Process-reward training without human step labels: derives per-step rewards by Monte Carlo rollout completion rate. Enables PRM training at scale and becomes the baseline against which subsequent open-PRM work (EDU-PRM, R-PRM, ThinkPRM) is compared."
+    },
+    {
       "key": "she2025-r-prm",
       "title": "R-PRM: Reasoning-Driven Process Reward Modeling",
       "authors": "She, Liu, Liu, Chen, Huang, Huang",
