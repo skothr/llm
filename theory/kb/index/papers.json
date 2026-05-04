@@ -13,7 +13,11 @@
       "local_file": "sources/papers/vaswani2017_attention_is_all_you_need.pdf",
       "excerpts_file": "kb/excerpts/vaswani2017.md",
       "notes_referenced_by": [
-        "architecture/attention-mechanism"
+        "architecture/attention-mechanism",
+        "architecture/transformer-overview",
+        "architecture/ffn",
+        "architecture/position-encoding",
+        "scaling/mu-transfer"
       ],
       "topics": [
         "attention-mechanism",
@@ -66,7 +70,10 @@
       "url": "https://arxiv.org/abs/2302.13971",
       "local_file": "sources/papers/touvron2023_llama.pdf",
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/transformer-overview",
+        "architecture/ffn"
+      ],
       "topics": [
         "transformer-overview",
         "position-encoding",
@@ -85,7 +92,9 @@
       "url": "https://arxiv.org/abs/1508.07909",
       "local_file": "sources/papers/sennrich2016_bpe.pdf",
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/tokenization"
+      ],
       "topics": [
         "tokenization"
       ],
@@ -100,8 +109,12 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2104.09864",
       "local_file": "sources/papers/su2021_rope.pdf",
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/su2021.md",
+      "notes_referenced_by": [
+        "architecture/position-encoding",
+        "architecture/long-context",
+        "architecture/attention-mechanism"
+      ],
       "topics": [
         "position-encoding"
       ],
@@ -116,8 +129,11 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2002.05202",
       "local_file": "sources/papers/shazeer2020_glu_variants.pdf",
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/shazeer2020.md",
+      "notes_referenced_by": [
+        "architecture/ffn",
+        "architecture/moe"
+      ],
       "topics": [
         "ffn"
       ],
@@ -133,7 +149,9 @@
       "url": "https://arxiv.org/abs/2002.04745",
       "local_file": "sources/papers/xiong2020_layer_norm.pdf",
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/normalization"
+      ],
       "topics": [
         "normalization"
       ],
@@ -149,7 +167,9 @@
       "url": "https://arxiv.org/abs/1910.07467",
       "local_file": "sources/papers/zhang2019_rmsnorm.pdf",
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/normalization"
+      ],
       "topics": [
         "normalization"
       ],
@@ -219,7 +239,8 @@
       "local_file": null,
       "excerpts_file": "kb/excerpts/ainslie2023.md",
       "notes_referenced_by": [
-        "architecture/attention-mechanism"
+        "architecture/attention-mechanism",
+        "inference/kv-cache-management"
       ],
       "topics": [
         "attention-mechanism",
@@ -238,7 +259,9 @@
       "local_file": null,
       "excerpts_file": "kb/excerpts/deepseek-v2.md",
       "notes_referenced_by": [
-        "architecture/attention-mechanism"
+        "architecture/attention-mechanism",
+        "inference/kv-cache-management",
+        "inference/serving-systems"
       ],
       "topics": [
         "attention-mechanism",
@@ -256,8 +279,17 @@
       "venue": "arXiv (DeepSeek Tech Report)",
       "url": "https://arxiv.org/abs/2412.19437",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/deepseek-v3-training.md",
+      "notes_referenced_by": [
+        "architecture/moe",
+        "architecture/reasoning-architectures",
+        "architecture/multi-token-prediction",
+        "scaling/scaling-frontier",
+        "training/distributed-training",
+        "training/mixed-precision-and-stability",
+        "training/pre-training-data",
+        "training/adaptation-and-merging"
+      ],
       "topics": [
         "moe",
         "attention-mechanism",
@@ -276,8 +308,17 @@
       "venue": "arXiv (Nature 2025)",
       "url": "https://arxiv.org/abs/2501.12948",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/deepseek-r1.md",
+      "notes_referenced_by": [
+        "architecture/reasoning-architectures",
+        "post-training/rlvr-and-grpo",
+        "reasoning/reasoning-training",
+        "reasoning/test-time-compute",
+        "reasoning/chain-of-thought",
+        "reasoning/inference-time-search",
+        "scaling/inference-time-compute-scaling",
+        "training/synthetic-data-and-distillation"
+      ],
       "topics": [
         "rlvr-and-grpo",
         "reasoning-training",
@@ -296,7 +337,13 @@
       "url": "https://arxiv.org/abs/2407.21783",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "post-training/sft",
+        "post-training/rlhf",
+        "post-training/dpo-and-offline",
+        "scaling/chinchilla",
+        "scaling/scaling-frontier"
+      ],
       "topics": [
         "transformer-overview",
         "pre-training-data",
@@ -315,7 +362,15 @@
       "url": "https://arxiv.org/abs/2601.11659",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/position-encoding",
+        "architecture/long-context",
+        "architecture/reasoning-architectures",
+        "architecture/transformer-overview",
+        "architecture/multi-token-prediction",
+        "scaling/mu-transfer",
+        "scaling/scaling-frontier"
+      ],
       "topics": [
         "moe",
         "position-encoding",
@@ -335,7 +390,15 @@
       "url": "https://arxiv.org/abs/2505.09388",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/moe",
+        "architecture/reasoning-architectures",
+        "architecture/transformer-overview",
+        "post-training/sft",
+        "post-training/rlvr-and-grpo",
+        "reasoning/reasoning-training",
+        "scaling/scaling-frontier"
+      ],
       "topics": [
         "moe",
         "reasoning-architectures",
@@ -354,7 +417,12 @@
       "url": "https://arxiv.org/abs/2412.15115",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "post-training/sft",
+        "post-training/dpo-and-offline",
+        "post-training/rlvr-and-grpo",
+        "scaling/scaling-frontier"
+      ],
       "topics": [
         "sft",
         "dpo-and-offline",
@@ -373,7 +441,12 @@
       "url": "https://arxiv.org/abs/2503.19786",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/multimodal-llm-extensions",
+        "architecture/normalization",
+        "post-training/rlhf",
+        "post-training/rlaif-and-constitutional"
+      ],
       "topics": [
         "attention-mechanism",
         "multimodal-llm-extensions",
@@ -392,7 +465,11 @@
       "url": "https://arxiv.org/abs/2507.06261",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "reasoning/test-time-compute",
+        "scaling/inference-time-compute-scaling",
+        "scaling/scaling-frontier"
+      ],
       "topics": [
         "moe",
         "long-context",
@@ -411,7 +488,11 @@
       "url": "https://arxiv.org/abs/2501.00656",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/normalization",
+        "architecture/embeddings-and-tying",
+        "architecture/transformer-overview"
+      ],
       "topics": [
         "normalization",
         "pre-training-data",
@@ -428,8 +509,12 @@
       "venue": "Microsoft Tech Report",
       "url": "https://arxiv.org/abs/2412.08905",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/phi4.md",
+      "notes_referenced_by": [
+        "training/synthetic-data-and-distillation",
+        "training/pre-training-data",
+        "training/adaptation-and-merging"
+      ],
       "topics": [
         "synthetic-data-and-distillation",
         "tokenization"
@@ -447,7 +532,8 @@
       "local_file": null,
       "excerpts_file": "kb/excerpts/dao2022.md",
       "notes_referenced_by": [
-        "architecture/attention-mechanism"
+        "architecture/attention-mechanism",
+        "inference/serving-systems"
       ],
       "topics": [
         "attention-mechanism"
@@ -465,7 +551,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [
-        "architecture/attention-mechanism"
+        "architecture/attention-mechanism",
+        "inference/serving-systems",
+        "inference/quantization"
       ],
       "topics": [
         "attention-mechanism",
@@ -483,7 +571,9 @@
       "url": "https://arxiv.org/abs/2312.00752",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/state-space-models"
+      ],
       "topics": [
         "state-space-models"
       ],
@@ -499,7 +589,9 @@
       "url": "https://arxiv.org/abs/2405.21060",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/state-space-models"
+      ],
       "topics": [
         "state-space-models",
         "attention-mechanism"
@@ -516,7 +608,9 @@
       "url": "https://arxiv.org/abs/2403.19887",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/state-space-models"
+      ],
       "topics": [
         "state-space-models",
         "moe"
@@ -525,21 +619,24 @@
       "summary": "First production-scale hybrid: MoE + Mamba + Attention layers interleaved."
     },
     {
-      "key": "nsa-2025",
+      "key": "yuan2025",
       "title": "Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention",
-      "authors": "DeepSeek-AI",
+      "authors": "Yuan, Gao, Dai, et al.",
       "year": 2025,
-      "venue": "ACL 2025",
+      "venue": "arXiv",
       "url": "https://arxiv.org/abs/2502.11089",
-      "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "local_file": "sources/papers/yuan2025_nsa.pdf",
+      "excerpts_file": "kb/excerpts/yuan2025.md",
+      "notes_referenced_by": [
+        "architecture/attention-mechanism",
+        "architecture/long-context"
+      ],
       "topics": [
         "attention-mechanism",
         "long-context"
       ],
-      "category": "landmark",
-      "summary": "Hardware-aligned trainable sparse attention with coarse + fine hierarchy. 64k-seq speedup over full attention."
+      "category": "recent",
+      "summary": "DeepSeek-team proposal for natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Hardware-aligned for long-context efficiency. Claims to match dense attention quality at 64k+ context with reduced compute."
     },
     {
       "key": "ye2024-difftransformer",
@@ -583,7 +680,10 @@
       "url": "https://arxiv.org/abs/2502.20082",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/position-encoding",
+        "architecture/long-context"
+      ],
       "topics": [
         "position-encoding",
         "long-context"
@@ -600,7 +700,9 @@
       "url": "https://arxiv.org/abs/2101.03961",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/moe"
+      ],
       "topics": [
         "moe"
       ],
@@ -616,7 +718,9 @@
       "url": "https://arxiv.org/abs/2401.06066",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/moe"
+      ],
       "topics": [
         "moe"
       ],
@@ -632,7 +736,9 @@
       "url": "https://arxiv.org/abs/2401.04088",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/moe"
+      ],
       "topics": [
         "moe"
       ],
@@ -648,7 +754,9 @@
       "url": "https://arxiv.org/abs/2502.02732",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/normalization"
+      ],
       "topics": [
         "normalization"
       ],
@@ -664,7 +772,9 @@
       "url": "https://arxiv.org/abs/2412.09871",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/tokenization"
+      ],
       "topics": [
         "tokenization"
       ],
@@ -679,8 +789,11 @@
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2305.18290",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/rafailov2023-dpo.md",
+      "notes_referenced_by": [
+        "post-training/dpo-and-offline",
+        "post-training/rlhf"
+      ],
       "topics": [
         "dpo-and-offline"
       ],
@@ -695,8 +808,10 @@
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2405.14734",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/meng2024-simpo.md",
+      "notes_referenced_by": [
+        "post-training/dpo-and-offline"
+      ],
       "topics": [
         "dpo-and-offline"
       ],
@@ -711,8 +826,13 @@
       "venue": "Anthropic Tech Report",
       "url": "https://arxiv.org/abs/2212.08073",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/bai2022-cai.md",
+      "notes_referenced_by": [
+        "alignment/oversight-and-scalable-alignment",
+        "alignment/scheming-and-deceptive-alignment",
+        "alignment/sycophancy",
+        "post-training/rlaif-and-constitutional"
+      ],
       "topics": [
         "rlaif-and-constitutional"
       ],
@@ -728,7 +848,11 @@
       "url": "https://arxiv.org/abs/2411.15124",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "post-training/sft",
+        "post-training/dpo-and-offline",
+        "post-training/rlvr-and-grpo"
+      ],
       "topics": [
         "sft",
         "dpo-and-offline",
@@ -746,7 +870,11 @@
       "url": "https://arxiv.org/abs/2504.13837",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "post-training/rlvr-and-grpo",
+        "reasoning/reasoning-training",
+        "reasoning/test-time-compute"
+      ],
       "topics": [
         "rlvr-and-grpo",
         "reasoning-training"
@@ -762,8 +890,12 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2502.16982",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/muon-moonlight2025.md",
+      "notes_referenced_by": [
+        "training/optimization",
+        "training/distributed-training",
+        "training/mixed-precision-and-stability"
+      ],
       "topics": [
         "optimization"
       ],
@@ -778,8 +910,11 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2503.14476",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/dapo2025.md",
+      "notes_referenced_by": [
+        "post-training/rlvr-and-grpo",
+        "reasoning/reasoning-training"
+      ],
       "topics": [
         "rlvr-and-grpo"
       ],
@@ -794,8 +929,12 @@
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2201.11903",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/wei2022-cot.md",
+      "notes_referenced_by": [
+        "reasoning/chain-of-thought",
+        "reasoning/test-time-compute",
+        "scaling/inference-time-compute-scaling"
+      ],
       "topics": [
         "chain-of-thought"
       ],
@@ -809,9 +948,14 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2408.03314",
-      "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "local_file": "sources/papers/snell2024_test_time_compute.pdf",
+      "excerpts_file": "kb/excerpts/snell2024.md",
+      "notes_referenced_by": [
+        "reasoning/test-time-compute",
+        "reasoning/inference-time-search",
+        "scaling/inference-time-compute-scaling",
+        "scaling/scaling-frontier"
+      ],
       "topics": [
         "test-time-compute",
         "inference-time-compute-scaling",
@@ -828,8 +972,13 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2501.19393",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/s1-2025.md",
+      "notes_referenced_by": [
+        "reasoning/test-time-compute",
+        "reasoning/chain-of-thought",
+        "reasoning/reasoning-training",
+        "scaling/inference-time-compute-scaling"
+      ],
       "topics": [
         "test-time-compute"
       ],
@@ -844,8 +993,12 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2504.16828",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/thinkprm2025.md",
+      "notes_referenced_by": [
+        "reasoning/process-supervision",
+        "reasoning/test-time-compute",
+        "scaling/inference-time-compute-scaling"
+      ],
       "topics": [
         "process-supervision"
       ],
@@ -860,8 +1013,13 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2501.04519",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/rstar-math2025.md",
+      "notes_referenced_by": [
+        "reasoning/inference-time-search",
+        "reasoning/reasoning-training",
+        "reasoning/process-supervision",
+        "scaling/inference-time-compute-scaling"
+      ],
       "topics": [
         "inference-time-search",
         "reasoning-training",
@@ -879,7 +1037,10 @@
       "url": "https://arxiv.org/abs/2401.18079",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "inference/kv-cache-management",
+        "inference/quantization"
+      ],
       "topics": [
         "kv-cache-management",
         "quantization"
@@ -895,8 +1056,11 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2402.17764",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/ma2024-bitnet.md",
+      "notes_referenced_by": [
+        "inference/quantization",
+        "scaling/scaling-frontier"
+      ],
       "topics": [
         "quantization"
       ],
@@ -912,7 +1076,9 @@
       "url": "https://arxiv.org/abs/2504.12285",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "inference/quantization"
+      ],
       "topics": [
         "quantization"
       ],
@@ -928,7 +1094,9 @@
       "url": "https://arxiv.org/abs/2503.01840",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "inference/speculative-decoding"
+      ],
       "topics": [
         "speculative-decoding"
       ],
@@ -944,7 +1112,9 @@
       "url": "https://arxiv.org/abs/2411.15100",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "inference/structured-output"
+      ],
       "topics": [
         "structured-output"
       ],
@@ -958,9 +1128,14 @@
       "year": 2020,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2001.08361",
-      "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "local_file": "sources/papers/kaplan2020_scaling_laws.pdf",
+      "excerpts_file": "kb/excerpts/kaplan2020.md",
+      "notes_referenced_by": [
+        "scaling/kaplan-laws",
+        "scaling/chinchilla",
+        "training/optimization",
+        "training/pre-training-data"
+      ],
       "topics": [
         "kaplan-laws"
       ],
@@ -974,9 +1149,15 @@
       "year": 2022,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2203.15556",
-      "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "local_file": "sources/papers/hoffmann2022-chinchilla_compute_optimal.pdf",
+      "excerpts_file": "kb/excerpts/hoffmann2022-chinchilla.md",
+      "notes_referenced_by": [
+        "scaling/chinchilla",
+        "scaling/kaplan-laws",
+        "scaling/scaling-frontier",
+        "training/optimization",
+        "training/pre-training-data"
+      ],
       "topics": [
         "chinchilla"
       ],
@@ -990,9 +1171,11 @@
       "year": 2022,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2203.03466",
-      "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "local_file": "sources/papers/yang2022-mup_tensor_programs_v.pdf",
+      "excerpts_file": "kb/excerpts/yang2022-mup.md",
+      "notes_referenced_by": [
+        "scaling/mu-transfer"
+      ],
       "topics": [
         "mu-transfer"
       ],
@@ -1008,7 +1191,10 @@
       "url": "https://arxiv.org/abs/2407.17465",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "scaling/mu-transfer",
+        "scaling/scaling-frontier"
+      ],
       "topics": [
         "mu-transfer",
         "mixed-precision-and-stability"
@@ -1025,7 +1211,11 @@
       "url": "https://arxiv.org/abs/2411.04330",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "scaling/chinchilla",
+        "scaling/scaling-frontier",
+        "training/mixed-precision-and-stability"
+      ],
       "topics": [
         "scaling-frontier",
         "mixed-precision-and-stability"
@@ -1042,7 +1232,9 @@
       "url": "https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "interpretability/mechanistic-interpretability"
+      ],
       "topics": [
         "mechanistic-interpretability"
       ],
@@ -1056,9 +1248,12 @@
       "year": 2022,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2211.00593",
-      "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "local_file": "sources/papers/wang2022-ioi_ioi-circuit.pdf",
+      "excerpts_file": "kb/excerpts/wang2022-ioi.md",
+      "notes_referenced_by": [
+        "interpretability/mechanistic-interpretability",
+        "interpretability/activation-patching"
+      ],
       "topics": [
         "mechanistic-interpretability",
         "activation-patching"
@@ -1073,9 +1268,12 @@
       "year": 2022,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2202.05262",
-      "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "local_file": "sources/papers/meng2022_rome.pdf",
+      "excerpts_file": "kb/excerpts/meng2022-rome.md",
+      "notes_referenced_by": [
+        "interpretability/activation-patching",
+        "interpretability/mechanistic-interpretability"
+      ],
       "topics": [
         "activation-patching",
         "mechanistic-interpretability"
@@ -1106,9 +1304,11 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2408.05147",
-      "local_file": null,
+      "local_file": "sources/papers/gemma-scope-2024_jumprelu-saes.pdf",
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "interpretability/sparse-autoencoders"
+      ],
       "topics": [
         "sparse-autoencoders"
       ],
@@ -1124,7 +1324,10 @@
       "url": "https://transformer-circuits.pub/2025/attribution-graphs/methods.html",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "interpretability/circuit-tracing",
+        "interpretability/mechanistic-interpretability"
+      ],
       "topics": [
         "circuit-tracing",
         "mechanistic-interpretability"
@@ -1155,9 +1358,11 @@
       "year": 2023,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2303.08112",
-      "local_file": null,
+      "local_file": "sources/papers/belrose2023_tuned-lens.pdf",
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "interpretability/lens-techniques"
+      ],
       "topics": [
         "lens-techniques"
       ],
@@ -1173,7 +1378,11 @@
       "url": "https://arxiv.org/abs/2009.03300",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "evaluation/knowledge-benchmarks",
+        "evaluation/reasoning-benchmarks",
+        "evaluation/eval-methodology"
+      ],
       "topics": [
         "knowledge-benchmarks"
       ],
@@ -1188,8 +1397,12 @@
       "venue": "NeurIPS D&B",
       "url": "https://arxiv.org/abs/2406.01574",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/wang2024-mmlu-pro.md",
+      "notes_referenced_by": [
+        "evaluation/reasoning-benchmarks",
+        "evaluation/eval-methodology",
+        "evaluation/knowledge-benchmarks"
+      ],
       "topics": [
         "knowledge-benchmarks"
       ],
@@ -1204,8 +1417,11 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2311.12022",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/rein2023-gpqa.md",
+      "notes_referenced_by": [
+        "evaluation/reasoning-benchmarks",
+        "evaluation/knowledge-benchmarks"
+      ],
       "topics": [
         "knowledge-benchmarks"
       ],
@@ -1220,8 +1436,11 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2411.04872",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/glazer2024-frontiermath.md",
+      "notes_referenced_by": [
+        "evaluation/reasoning-benchmarks",
+        "evaluation/eval-methodology"
+      ],
       "topics": [
         "knowledge-benchmarks",
         "reasoning-benchmarks"
@@ -1237,8 +1456,11 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2501.14249",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/phan2025-hle.md",
+      "notes_referenced_by": [
+        "evaluation/reasoning-benchmarks",
+        "evaluation/eval-methodology"
+      ],
       "topics": [
         "knowledge-benchmarks"
       ],
@@ -1254,7 +1476,9 @@
       "url": "https://openai.com/index/introducing-swe-bench-verified/",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
       "topics": [
         "agentic-benchmarks"
       ],
@@ -1269,8 +1493,10 @@
       "venue": "ICML",
       "url": "https://arxiv.org/abs/2301.10226",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/kirchenbauer2023-watermark.md",
+      "notes_referenced_by": [
+        "alignment/watermarking-and-provenance"
+      ],
       "topics": [
         "watermarking-and-provenance"
       ],
@@ -1286,7 +1512,9 @@
       "url": "https://deepmind.google/blog/watermarking-ai-generated-text-and-video-with-synthid/",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "alignment/watermarking-and-provenance"
+      ],
       "topics": [
         "watermarking-and-provenance"
       ],
@@ -1301,8 +1529,11 @@
       "venue": "ICML 2024",
       "url": "https://arxiv.org/abs/2312.09390",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/burns2023-w2s.md",
+      "notes_referenced_by": [
+        "alignment/oversight-and-scalable-alignment",
+        "training/synthetic-data-and-distillation"
+      ],
       "topics": [
         "oversight-and-scalable-alignment",
         "synthetic-data-and-distillation"
@@ -1318,8 +1549,10 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2412.14093",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/greenblatt2024-alignment-faking.md",
+      "notes_referenced_by": [
+        "alignment/scheming-and-deceptive-alignment"
+      ],
       "topics": [
         "scheming-and-deceptive-alignment"
       ],
@@ -1327,15 +1560,17 @@
       "summary": "First empirical demonstration of alignment faking without explicit training. Claude 3 Opus complies with harmful queries 14% when it infers it's in training."
     },
     {
-      "key": "apollo-scheming-2024",
+      "key": "meinke2024-apollo-scheming",
       "title": "Frontier Models Are Capable of In-Context Scheming",
       "authors": "Apollo Research",
       "year": 2024,
       "venue": "Apollo Research Report",
       "url": "https://www.apolloresearch.ai/research/",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/meinke2024-apollo-scheming.md",
+      "notes_referenced_by": [
+        "alignment/scheming-and-deceptive-alignment"
+      ],
       "topics": [
         "scheming-and-deceptive-alignment"
       ],
@@ -1351,7 +1586,9 @@
       "url": "https://arxiv.org/abs/2402.04249",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "alignment/safety-evaluation"
+      ],
       "topics": [
         "safety-evaluation"
       ],
@@ -1366,8 +1603,12 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2406.17557",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/fineweb2024.md",
+      "notes_referenced_by": [
+        "scaling/scaling-frontier",
+        "training/pre-training-data",
+        "training/synthetic-data-and-distillation"
+      ],
       "topics": [
         "pre-training-data"
       ],
@@ -1382,8 +1623,12 @@
       "venue": "ICLR 2025",
       "url": "https://arxiv.org/abs/2403.16952",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/data-mixing-laws-2024.md",
+      "notes_referenced_by": [
+        "scaling/chinchilla",
+        "scaling/scaling-frontier",
+        "training/pre-training-data"
+      ],
       "topics": [
         "pre-training-data"
       ],
@@ -1398,8 +1643,11 @@
       "venue": "ICLR 2025",
       "url": "https://arxiv.org/abs/2410.06511",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
+      "excerpts_file": "kb/excerpts/torchtitan2024.md",
+      "notes_referenced_by": [
+        "training/distributed-training",
+        "training/mixed-precision-and-stability"
+      ],
       "topics": [
         "distributed-training"
       ],
@@ -1415,7 +1663,9 @@
       "url": "https://arxiv.org/abs/2403.13257",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "training/adaptation-and-merging"
+      ],
       "topics": [
         "adaptation-and-merging"
       ],
@@ -1431,7 +1681,9 @@
       "url": "https://arxiv.org/abs/2310.01889",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/long-context"
+      ],
       "topics": [
         "long-context",
         "distributed-training",
@@ -1449,7 +1701,9 @@
       "url": "https://arxiv.org/abs/2404.07143",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/long-context"
+      ],
       "topics": [
         "long-context",
         "attention-mechanism"
@@ -1466,7 +1720,9 @@
       "url": "https://arxiv.org/abs/2503.14456",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/state-space-models"
+      ],
       "topics": [
         "state-space-models"
       ],
@@ -1482,7 +1738,9 @@
       "url": "https://arxiv.org/abs/2304.08485",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/multimodal-llm-extensions"
+      ],
       "topics": [
         "multimodal-llm-extensions"
       ],
@@ -1498,7 +1756,9 @@
       "url": "https://arxiv.org/abs/2504.10479",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
+      "notes_referenced_by": [
+        "architecture/multimodal-llm-extensions"
+      ],
       "topics": [
         "multimodal-llm-extensions"
       ],
@@ -1515,7 +1775,8 @@
       "local_file": "sources/papers/shazeer2019_mqa.pdf",
       "excerpts_file": "kb/excerpts/shazeer2019.md",
       "notes_referenced_by": [
-        "architecture/attention-mechanism"
+        "architecture/attention-mechanism",
+        "inference/kv-cache-management"
       ],
       "topics": [
         "attention-mechanism",
@@ -1534,7 +1795,8 @@
       "local_file": "sources/papers/dao2023_flashattention2.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [
-        "architecture/attention-mechanism"
+        "architecture/attention-mechanism",
+        "inference/serving-systems"
       ],
       "topics": [
         "attention-mechanism"
@@ -1543,23 +1805,1143 @@
       "summary": "Re-partitions FlashAttention work so more of the algorithm runs as matmul ops (better tensor-core utilization). Reduces non-matmul FLOPs. ~2x speedup over FlashAttention-1 on A100."
     },
     {
-      "key": "yuan2025",
-      "title": "Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention",
-      "authors": "Yuan, Gao, Dai, et al.",
-      "year": 2025,
-      "venue": "arXiv",
-      "url": "https://arxiv.org/abs/2502.11089",
-      "local_file": "sources/papers/yuan2025_nsa.pdf",
-      "excerpts_file": null,
+      "key": "sharma2023-sycophancy",
+      "title": "Towards Understanding Sycophancy in Language Models",
+      "authors": "Sharma, Tong, Korbak, Duvenaud, Askell, Bowman, Cheng, Durmus, Hatfield-Dodds, Johnston, Kravec, Maxwell, McCandlish, Ndousse, Rausch, Schiefer, Yan, Zhang, Perez",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2310.13548",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/sharma2023-sycophancy.md",
       "notes_referenced_by": [
-        "architecture/attention-mechanism"
+        "alignment/sycophancy"
       ],
       "topics": [
-        "attention-mechanism",
-        "long-context"
+        "sycophancy"
+      ],
+      "category": "foundational",
+      "summary": "Demonstrates sycophancy in 5 frontier RLHF assistants across 4 free-form text-generation tasks. Causal chain: human raters prefer agreement-shaped responses -> preference models inherit the bias -> RLHF amplifies it. Optimizing against PMs sometimes sacrifices truthfulness for sycophancy. The canonical operational definition + measurement of sycophancy."
+    },
+    {
+      "key": "vennemeyer2025-sycophancy-not-one-thing",
+      "title": "Sycophancy Is Not One Thing: Causal Separation of Sycophantic Behaviors in LLMs",
+      "authors": "Vennemeyer, Duong, Zhan, Jiang",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2509.21305",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/sycophancy"
+      ],
+      "topics": [
+        "sycophancy",
+        "probing"
       ],
       "category": "recent",
-      "summary": "DeepSeek-team proposal for natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Hardware-aligned for long-context efficiency. Claims to match dense attention quality at 64k+ context with reduced compute."
+      "summary": "Causal decomposition of sycophancy into sycophantic agreement, sycophantic praise, and (contrast) genuine agreement. Each is encoded along a distinct linear direction in latent space, independently steerable via activation additions. Structure consistent across model families and scales. Establishes that sycophancy is plural, not single."
+    },
+    {
+      "key": "irving2018-debate",
+      "title": "AI safety via debate",
+      "authors": "Irving, Christiano, Amodei",
+      "year": 2018,
+      "venue": "arXiv (OpenAI)",
+      "url": "https://arxiv.org/abs/1805.00899",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/oversight-and-scalable-alignment"
+      ],
+      "topics": [
+        "oversight-and-scalable-alignment"
+      ],
+      "category": "foundational",
+      "summary": "Original debate proposal: two AI debaters in a zero-sum game judged by a (weaker) human. MNIST proof-of-concept: 6-pixel classifier accuracy 59.4% -> 88.9% with debate; 4-pixel 48.2% -> 85.2%. Foundational reference for the scalable-oversight 'decompose the claim' lineage."
+    },
+    {
+      "key": "kenton2024-debate-llm-judges",
+      "title": "On Scalable Oversight with Weak LLMs Judging Strong LLMs",
+      "authors": "Kenton, Siegel, Kramar, Brown-Cohen, Albanie, Bulian, Agarwal, Lindner, Tang, Goodman, Shah",
+      "year": 2024,
+      "venue": "NeurIPS 2024",
+      "url": "https://arxiv.org/abs/2407.04622",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/oversight-and-scalable-alignment"
+      ],
+      "topics": [
+        "oversight-and-scalable-alignment"
+      ],
+      "category": "landmark",
+      "summary": "Generalizes Irving 2018 debate to LLM debaters and (weaker) LLM judges. Debate vs consultancy vs direct-QA across math/coding/logic/multimodal/QA. Debate beats consultancy across all tasks; debate vs direct-QA is task-dependent (best on info-asymmetry QA). When debaters choose positions voluntarily, judges resist incorrect answers more in debate. Stronger debaters -> better judge accuracy."
+    },
+    {
+      "key": "brown-cohen2024-doubly-efficient-debate",
+      "title": "Scalable AI Safety via Doubly-Efficient Debate",
+      "authors": "Brown-Cohen et al.",
+      "year": 2024,
+      "venue": "ICML 2024 (Best Paper on Debate)",
+      "url": null,
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/oversight-and-scalable-alignment"
+      ],
+      "topics": [
+        "oversight-and-scalable-alignment"
+      ],
+      "category": "landmark",
+      "summary": "Theoretical + empirical case that optimizing debaters for persuasiveness drives truth-finding under specific conditions. 76-88% accuracy. Strongest current positive result for debate. Phase 2 follow-up needed for full mechanism + ICML proceedings citation."
+    },
+    {
+      "key": "kirchenbauer2024-reliability",
+      "title": "On the Reliability of Watermarks for Large Language Models",
+      "authors": "Kirchenbauer, Geiping, Wen, Shu, Saifullah, Kong, Fernando, Saha, Goldblum, Goldstein",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2306.04634",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/watermarking-and-provenance"
+      ],
+      "topics": [
+        "watermarking-and-provenance"
+      ],
+      "category": "landmark",
+      "summary": "Reliability follow-up to Kirchenbauer 2023. Tests robustness under human paraphrase, LLM paraphrase, embedded watermark spans. Headline: detectable after 800 tokens on average under strong human paraphrasing at FPR 1e-5. Establishes that watermarks degrade but do not vanish under attack."
+    },
+    {
+      "key": "chao2024-jailbreakbench",
+      "title": "JailbreakBench: An Open Robustness Benchmark for Jailbreaking Large Language Models",
+      "authors": "Chao, Debenedetti, Robey, Andriushchenko, Croce, Sehwag, Dobriban, Flammarion, Pappas, Tramer, Hassani, Wong",
+      "year": 2024,
+      "venue": "NeurIPS 2024 D&B",
+      "url": "https://arxiv.org/abs/2404.01318",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/safety-evaluation"
+      ],
+      "topics": [
+        "safety-evaluation"
+      ],
+      "category": "landmark",
+      "summary": "100 target behaviors aligned with OpenAI usage policies. Standardized threat model, system prompts, chat templates, scoring functions. Public leaderboard tracking attacks and defenses. Repository of 'jailbreak artifacts' (adversarial prompts). Co-canonical with HarmBench for jailbreak evaluation."
+    },
+    {
+      "key": "russinovich2024-crescendo",
+      "title": "The Crescendo Multi-Turn LLM Jailbreak Attack",
+      "authors": "Russinovich et al.",
+      "year": 2024,
+      "venue": "USENIX 2025",
+      "url": "https://arxiv.org/abs/2404.01833",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/safety-evaluation"
+      ],
+      "topics": [
+        "safety-evaluation"
+      ],
+      "category": "landmark",
+      "summary": "Multi-turn gradual escalation jailbreak. 29-71% ASR improvement over single-turn baselines on AdvBench. Documents that single-turn evals systematically underestimate attack surface against multi-turn adversaries."
+    },
+    {
+      "key": "anthropic-rsp-2024",
+      "title": "Anthropic's Responsible Scaling Policy",
+      "authors": "Anthropic",
+      "year": 2024,
+      "venue": "Anthropic Policy Document",
+      "url": "https://www.anthropic.com/news/anthropics-responsible-scaling-policy",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/safety-evaluation"
+      ],
+      "topics": [
+        "safety-evaluation"
+      ],
+      "category": "tech-report",
+      "summary": "ASL (AI Safety Level) tier framework: ASL-1 (low risk), ASL-2 (current frontier baseline), ASL-3 (substantially elevated risk; deployment controls), ASL-4 (autonomous AI risk). Each tier specifies capability evals that must trigger pre-deployment and security/containment commitments. Co-canonical with OpenAI Preparedness Framework and DeepMind Frontier Safety Framework."
+    },
+    {
+      "key": "metr-autonomy-2024",
+      "title": "METR Autonomy Evaluation Resources",
+      "authors": "METR",
+      "year": 2024,
+      "venue": "METR Blog",
+      "url": "https://metr.org/blog/2024-03-13-autonomy-evaluation-resources/",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/safety-evaluation"
+      ],
+      "topics": [
+        "safety-evaluation"
+      ],
+      "category": "tech-report",
+      "summary": "77-task dangerous-capability suite for autonomous replication, research, and agent-level operation. Used by AISI for pre-deployment evals. METR task-horizon metric (human time-to-complete distribution) is the field's emerging lingua franca for capability quantification."
+    },
+    {
+      "key": "perez2022-discovering-llm-behaviors",
+      "title": "Discovering Language Model Behaviors with Model-Written Evaluations",
+      "authors": "Perez et al. (Anthropic)",
+      "year": 2022,
+      "venue": "ACL 2023",
+      "url": "https://arxiv.org/abs/2212.09251",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/sycophancy"
+      ],
+      "topics": [
+        "sycophancy",
+        "scheming-and-deceptive-alignment"
+      ],
+      "category": "foundational",
+      "summary": "Anthropic discovering-LM-behaviors evals: model-written probes for sycophancy, power-seeking, self-preservation, etc. Earliest large-scale automated probe for sycophancy in production LLMs; precedes Sharma et al. 2023's deeper RLHF-mechanism analysis."
+    },
+    {
+      "key": "jimenez2024-swebench",
+      "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?",
+      "authors": "Jimenez, Yang, Wettig, Yao, Pei, Press, Narasimhan",
+      "year": 2024,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2310.06770",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/jimenez2024-swebench.md",
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks",
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "agentic-benchmarks",
+        "eval-methodology"
+      ],
+      "category": "landmark",
+      "summary": "Introduces SWE-bench: 2,294 real GitHub issues across 12 Python repos. The FAIL_TO_PASS / PASS_TO_PASS regression-test verifier is the load-bearing methodological detail that made repo-level coding eval tractable. SWE-bench Verified (OpenAI Aug 2024) is the 500-task human-validated subset that became the de-facto leaderboard target."
+    },
+    {
+      "key": "mialon2023-gaia",
+      "title": "GAIA: A Benchmark for General AI Assistants",
+      "authors": "Mialon, Fourrier, Wolf, Lavril, LeCun, et al. (HuggingFace + Meta)",
+      "year": 2023,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2311.12983",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/mialon2023-gaia.md",
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks",
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "agentic-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "466 tool-use questions (300 leaderboard / 166 dev) stratified into Levels 1/2/3. Headline gap: human 92% vs GPT-4 + plugins 15%. Gated-leaderboard methodology (gold answers held server-side) is the contamination-defense design point."
+    },
+    {
+      "key": "xie2024-osworld",
+      "title": "OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments",
+      "authors": "Xie, Zhang, Chen, Lou, Liu, Hu, Xing, Hu, Lin, Liu, Yu",
+      "year": 2024,
+      "venue": "NeurIPS 2024 Datasets & Benchmarks",
+      "url": "https://arxiv.org/abs/2404.07972",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/xie2024-osworld.md",
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
+      "topics": [
+        "agentic-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "369 computer-use tasks across Ubuntu/Windows/macOS with per-task executable evaluator scripts checking OS end-state. Headline gap at launch: humans 72% vs GPT-4V 12%. Failure mode: GUI grounding bottleneck."
+    },
+    {
+      "key": "yao2024-tau-bench",
+      "title": "tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains",
+      "authors": "Yao, Zhao, Wang, Schick, Lewis, Yih, Lecun, Yu (Sierra Research)",
+      "year": 2024,
+      "venue": "arXiv (Sierra Research)",
+      "url": "https://arxiv.org/abs/2406.12045",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/yao2024-tau-bench.md",
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
+      "topics": [
+        "agentic-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "Customer-service agentic benchmark with simulated-user + policy compliance + DB-end-state verifier. Introduces pass^k metric (all k attempts must succeed; the production-reliability dual of pass@k). GPT-4o: <50% pass@1, <25% pass^8 on retail."
+    },
+    {
+      "key": "liang2022-helm",
+      "title": "Holistic Evaluation of Language Models",
+      "authors": "Liang, Bommasani, Lee, Tsipras, Soylu, Yasunaga, Zhang, Narayanan, Wu, et al. (Stanford CRFM)",
+      "year": 2022,
+      "venue": "arXiv (Stanford CRFM)",
+      "url": "https://arxiv.org/abs/2211.09110",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/liang2022-helm.md",
+      "notes_referenced_by": [
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "eval-methodology"
+      ],
+      "category": "landmark",
+      "summary": "HELM: 7-metric x 16-scenario evaluation framework. The structural argument that benchmarks should ship metric bundles (accuracy, calibration, robustness, fairness, bias, toxicity, efficiency), not single metrics. Increased coverage from 17.9% to 96% of core scenarios across 30 LMs at launch."
+    },
+    {
+      "key": "contamination-survey-2025",
+      "title": "Benchmarking LLMs Under Data Contamination: From Static to Dynamic Evaluation",
+      "authors": "(EMNLP 2025; see arXiv listing)",
+      "year": 2025,
+      "venue": "EMNLP 2025",
+      "url": "https://arxiv.org/abs/2502.17521",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/contamination-survey-2025.md",
+      "notes_referenced_by": [
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "eval-methodology"
+      ],
+      "category": "recent",
+      "summary": "Comprehensive survey of contamination problem and mitigation strategies. Establishes the static-vs-dynamic-evaluation taxonomy. Identifies key open problem: lack of standardized criteria for evaluating dynamic benchmarks."
+    },
+    {
+      "key": "lm-eval-harness",
+      "title": "EleutherAI Language Model Evaluation Harness",
+      "authors": "Gao, Tow, Abbasi, Biderman, Black, et al. (EleutherAI)",
+      "year": 2021,
+      "venue": "GitHub (open-source infrastructure)",
+      "url": "https://github.com/EleutherAI/lm-evaluation-harness",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/lm-eval-harness.md",
+      "notes_referenced_by": [
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "eval-methodology"
+      ],
+      "category": "tech-report",
+      "summary": "Open-source eval infrastructure backing HF Open LLM Leaderboard. 60+ benchmarks reduced to three request-type primitives (loglikelihood / loglikelihood_rolling / generate_until). Adopted by NVIDIA, Cohere, BigScience, Mosaic ML internally; the de-facto standard for open-model evaluation."
+    },
+    {
+      "key": "mmlu-redux-2024",
+      "title": "Are We Done with MMLU?",
+      "authors": "Polo et al.",
+      "year": 2024,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2406.04127",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/eval-methodology",
+        "evaluation/knowledge-benchmarks"
+      ],
+      "topics": [
+        "eval-methodology",
+        "knowledge-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "Verifier-audit of MMLU. Re-annotates 5,700 questions across 57 subjects; finds 6.49% aggregate error rate; per-subset rates up to 57% (Virology). Documents leaderboard-rank flips when corrected."
+    },
+    {
+      "key": "matharena-2025",
+      "title": "MathArena: Evaluating LLMs on Uncontaminated Math Competitions",
+      "authors": "(arXiv 2505.23281)",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2505.23281",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/eval-methodology",
+        "evaluation/reasoning-benchmarks"
+      ],
+      "topics": [
+        "eval-methodology",
+        "reasoning-benchmarks"
+      ],
+      "category": "recent",
+      "summary": "Dynamic benchmark using post-cutoff competition problems (CMIMC 2025, IMO 2025, etc.) to defeat training-data contamination. Evaluates models on problems immediately upon release. >50 models, 7 competitions, 162 problems as of 2025."
+    },
+    {
+      "key": "cybench2024",
+      "title": "Cybench: A Framework for Evaluating Cybersecurity Capabilities and Risks of Language Models",
+      "authors": "(arXiv listing)",
+      "year": 2024,
+      "venue": "arXiv (NeurIPS workshop)",
+      "url": "https://arxiv.org/abs/2408.08926",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
+      "topics": [
+        "agentic-benchmarks",
+        "safety-evaluation"
+      ],
+      "category": "landmark",
+      "summary": "40 professional Capture-the-Flag cybersecurity tasks across 4 CTF competitions. Used by US AISI / UK AISI for pre-deployment dangerous-capability evals. Top frontier models (Claude 3.5 Sonnet, GPT-4o, o1-preview, Claude 3 Opus) solve tasks taking human teams up to 11 minutes."
+    },
+    {
+      "key": "agentbench2023",
+      "title": "AgentBench: Evaluating LLMs as Agents",
+      "authors": "Liu et al. (THUDM)",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2308.03688",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
+      "topics": [
+        "agentic-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "8-environment agentic benchmark (OS, DB, KG, web, etc.). Headline finding: significant capability gap between top commercial LLMs and open-source <70B alternatives. Failure mode: poor long-term reasoning, decision-making, instruction following."
+    },
+    {
+      "key": "arc-agi-2-2025",
+      "title": "ARC-AGI-2 (and ARC Prize 2025 Technical Report)",
+      "authors": "Chollet et al. (ARC Prize Foundation); Chapman et al. for tech report",
+      "year": 2025,
+      "venue": "ARC Prize / arXiv 2601.10904 (tech report)",
+      "url": "https://arcprize.org/arc-agi/2",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/reasoning-benchmarks"
+      ],
+      "topics": [
+        "reasoning-benchmarks",
+        "scaling-frontier"
+      ],
+      "category": "landmark",
+      "summary": "Successor to ARC-AGI-1 (which was effectively solved by o3 at >85% in late 2024). ARC-AGI-2 launches early 2025; top commercial model ~37.6%, refinement-loop systems ~54%, human baseline ~95%. Tests inductive grid-puzzle generalization with minimal world knowledge."
+    },
+    {
+      "key": "kwon2023",
+      "title": "Efficient Memory Management for Large Language Model Serving with PagedAttention",
+      "authors": "Kwon, Li, Zhuang, Sheng, Zheng, Yu, Gonzalez, Zhang, Stoica",
+      "year": 2023,
+      "venue": "SOSP 2023",
+      "url": "https://arxiv.org/abs/2309.06180",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/kwon2023.md",
+      "notes_referenced_by": [
+        "inference/kv-cache-management",
+        "inference/serving-systems"
+      ],
+      "topics": [
+        "kv-cache-management",
+        "serving-systems"
+      ],
+      "category": "foundational",
+      "summary": "PagedAttention + vLLM. Treats the KV cache as virtual memory: fixed-size KV blocks, indirection via per-sequence block tables, copy-on-write for forking decode paths, and recompute/swap policies for eviction. Eq.4 expresses attention as a sum over KV blocks. Reframes serving from a contiguous-allocation problem (50-90% wasted memory in FasterTransformer/Orca per their measurements) to a paging problem with <4% internal fragmentation. The substrate every modern serving stack inherits."
+    },
+    {
+      "key": "frantar2022",
+      "title": "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers",
+      "authors": "Frantar, Ashkboos, Hoefler, Alistarh",
+      "year": 2022,
+      "venue": "ICLR 2023",
+      "url": "https://arxiv.org/abs/2210.17323",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/frantar2022.md",
+      "notes_referenced_by": [
+        "inference/quantization"
+      ],
+      "topics": [
+        "quantization"
+      ],
+      "category": "foundational",
+      "summary": "Layer-wise post-training weight quantization via OBQ-style second-order updates with three engineering modifications: arbitrary fixed quantization order (eliminates the per-row sort), lazy batched updates (amortises BLAS cost across blocks of 128 columns), and Cholesky reformulation (numerically stable for the Hessian inverse). Quantizes a 175B OPT/BLOOM in ~4 GPU-hours to 3-4 bit with negligible perplexity loss. The reference algorithm for W4A16 weight-only quantization."
+    },
+    {
+      "key": "leviathan2023",
+      "title": "Fast Inference from Transformers via Speculative Decoding",
+      "authors": "Leviathan, Kalman, Matias",
+      "year": 2023,
+      "venue": "ICML 2023",
+      "url": "https://arxiv.org/abs/2211.17192",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/leviathan2023.md",
+      "notes_referenced_by": [
+        "inference/speculative-decoding",
+        "inference/serving-systems"
+      ],
+      "topics": [
+        "speculative-decoding"
+      ],
+      "category": "foundational",
+      "summary": "The canonical speculative-decoding paper. A small drafter Mq proposes gamma tokens autoregressively; the target Mp scores them in one parallel forward pass; a rejection-sampling rule (accept if r <= p(x)/q(x), else resample from norm(max(0, p-q))) preserves the exact target distribution. Theorem 3.5 gives E[#accepted tokens] = (1-alpha^(gamma+1))/(1-alpha); Theorem 3.8 gives the walltime speedup as a function of alpha and the cost ratio c = T_q/T_p. T5-XXL 2-3x walltime improvement at c approx 0.05 and alpha approx 0.7."
+    },
+    {
+      "key": "li2024-eagle",
+      "title": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty",
+      "authors": "Li, Wei, Zhang, Zhang",
+      "year": 2024,
+      "venue": "ICML 2024",
+      "url": "https://arxiv.org/abs/2401.15077",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/li2024-eagle.md",
+      "notes_referenced_by": [
+        "inference/speculative-decoding"
+      ],
+      "topics": [
+        "speculative-decoding"
+      ],
+      "category": "foundational",
+      "summary": "Drafts at the feature (penultimate-layer hidden state) level, not the token level. The drafter is a single transformer layer that autoregresses on a sequence of (feature_t, token_{t+1}) pairs - the shifted-token trick - because token_{t+1} disambiguates which sample produced feature_t. Trained with SmoothL1 (feature) + cross-entropy (token) losses. Tree-structured drafts via the same target-LM-driven verification that Medusa uses. Reports ~3x speedup on Vicuna and consistent gains across temperatures."
+    },
+    {
+      "key": "cai2024-medusa",
+      "title": "Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads",
+      "authors": "Cai, Li, Geng, Peng, Lee, Zhang, Chen, Dao",
+      "year": 2024,
+      "venue": "ICML 2024",
+      "url": "https://arxiv.org/abs/2401.10774",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/cai2024-medusa.md",
+      "notes_referenced_by": [
+        "inference/speculative-decoding"
+      ],
+      "topics": [
+        "speculative-decoding"
+      ],
+      "category": "foundational",
+      "summary": "K parallel decoding heads on top of the frozen target model, each predicting position t+k+1 from the same hidden state. Drafts form a tree (Cartesian product of per-head top-k) verified in one forward pass via tree-attention masks. Medusa-1: heads-only training. Medusa-2: jointly fine-tunes the backbone with a head-loss + lambda * LM-loss schedule. Introduces 'typical acceptance' (accept any draft above an entropy-scaled threshold rather than exact-match sampling) as a quality-throughput knob. ~2-3x speedup, no separate drafter model."
+    },
+    {
+      "key": "xiao2023-smoothquant",
+      "title": "SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models",
+      "authors": "Xiao, Lin, Seznec, Wu, Demouth, Han",
+      "year": 2023,
+      "venue": "ICML 2023",
+      "url": "https://arxiv.org/abs/2211.10438",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/xiao2023-smoothquant.md",
+      "notes_referenced_by": [
+        "inference/quantization"
+      ],
+      "topics": [
+        "quantization"
+      ],
+      "category": "foundational",
+      "summary": "Identifies the activation-outlier problem above ~6.7B parameters: a small number of channels carry magnitudes 100x the median, breaking per-tensor INT8 activation quantization. Migrates outlier difficulty offline from activations to weights via diag(s) on the linear-layer input, with smoothing factor s_j = max(|X_j|)^alpha / max(|W_j|)^(1-alpha) and alpha=0.5 default (Eq.3-4). Enables W8A8 INT8 quantization on OPT/BLOOM/LLaMA up to 530B with ~1.56x speedup and within 0.1-0.2 perplexity of FP16."
+    },
+    {
+      "key": "zheng2024-sglang",
+      "title": "SGLang: Efficient Execution of Structured Language Model Programs",
+      "authors": "Zheng, Yin, Xie, Sun, Huang, Yu, Cao, Kozyrakis, Stoica, Gonzalez, Barrett, Sheng",
+      "year": 2024,
+      "venue": "NeurIPS 2024",
+      "url": "https://arxiv.org/abs/2312.07104",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/zheng2024-sglang.md",
+      "notes_referenced_by": [
+        "inference/kv-cache-management",
+        "inference/serving-systems",
+        "inference/structured-output"
+      ],
+      "topics": [
+        "kv-cache-management",
+        "serving-systems",
+        "structured-output"
+      ],
+      "category": "foundational",
+      "summary": "Two contributions: (1) RadixAttention - cross-request KV reuse via a radix-tree of token-prefix keys with LRU + reference-count eviction and cache-aware DFS scheduling that maximises tree hit-rate (Theorem 3.1). (2) Compressed FSM for constrained decoding - merges single-edge runs of deterministic transitions so a forced prefix like '{\"summary\": \"' is decoded in one step, not seven. The combination delivers 1.5-6x throughput over vLLM and TGI on shared-prefix and JSON-schema workloads."
+    },
+    {
+      "key": "chen2023-speculative",
+      "title": "Accelerating Large Language Model Decoding with Speculative Sampling",
+      "authors": "Chen, Borgeaud, Irving, Lespiau, Sifre, Jumper",
+      "year": 2023,
+      "venue": "DeepMind tech report (arXiv)",
+      "url": "https://arxiv.org/abs/2302.01318",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "inference/speculative-decoding"
+      ],
+      "topics": [
+        "speculative-decoding"
+      ],
+      "category": "secondary",
+      "summary": "Concurrent (with leviathan2023) speculative-sampling formulation from DeepMind. Uses Chinchilla 70B as target with a 4B drafter; reports ~2-2.5x walltime speedup. Same rejection-sampling correctness guarantee as Leviathan. Cited as the second canonical reference for the technique; full excerpt deferred since the algorithmic content is captured by leviathan2023."
+    },
+    {
+      "key": "zhang2023-apatching",
+      "title": "Towards Best Practices of Activation Patching in Language Models: Metrics and Methods",
+      "authors": "Zhang, Nanda",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2309.16042",
+      "local_file": "sources/papers/zhang2023_apatching-best-practices.pdf",
+      "excerpts_file": "kb/excerpts/zhang2023-apatching.md",
+      "notes_referenced_by": [
+        "interpretability/activation-patching"
+      ],
+      "topics": [
+        "activation-patching"
+      ],
+      "category": "landmark",
+      "summary": "First systematic methodology study of activation patching: shows the choice of corruption method (Gaussian Noising vs. Symmetric Token Replacement) and metric (probability vs. logit difference vs. KL) materially changes which components get implicated. Recommends STR + logit difference as default. The paper that turned activation patching from artisanal to documented protocol."
+    },
+    {
+      "key": "heimersheim2024-apatching-howto",
+      "title": "How to Use and Interpret Activation Patching",
+      "authors": "Heimersheim, Nanda",
+      "year": 2024,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2404.15255",
+      "local_file": "sources/papers/heimersheim2024_apatching-howto.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/activation-patching"
+      ],
+      "topics": [
+        "activation-patching"
+      ],
+      "category": "recent",
+      "summary": "Practitioner's guide to activation patching written by Anthropic and independent researchers. Pedagogical companion to Zhang & Nanda 2023. Not yet excerpted \u2014 Phase 2 follow-up."
+    },
+    {
+      "key": "conmy2023-acdc",
+      "title": "Towards Automated Circuit Discovery for Mechanistic Interpretability (ACDC)",
+      "authors": "Conmy, Mavor-Parker, Lynch, Heimersheim, Garriga-Alonso",
+      "year": 2023,
+      "venue": "NeurIPS",
+      "url": "https://arxiv.org/abs/2304.14997",
+      "local_file": "sources/papers/conmy2023-acdc.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/activation-patching"
+      ],
+      "topics": [
+        "activation-patching",
+        "mechanistic-interpretability"
+      ],
+      "category": "landmark",
+      "summary": "Automated Circuit DisCovery: iteratively path-patches every edge in the model's computational graph, prunes edges with patching effect below threshold, returns the resulting subgraph. First fully-automated mech-interp circuit discovery method. Not yet excerpted \u2014 Phase 2 follow-up."
+    },
+    {
+      "key": "rajamanoharan2024-jumprelu",
+      "title": "Jumping Ahead: Improving Reconstruction Fidelity with JumpReLU Sparse Autoencoders",
+      "authors": "Rajamanoharan, Lieberum, Sonnerat, Conmy, Varma, Kram\u00e1r, Nanda",
+      "year": 2024,
+      "venue": "arXiv (DeepMind)",
+      "url": "https://arxiv.org/abs/2407.14435",
+      "local_file": "sources/papers/rajamanoharan2024_jumprelu.pdf",
+      "excerpts_file": "kb/excerpts/rajamanoharan2024-jumprelu.md",
+      "notes_referenced_by": [
+        "interpretability/sparse-autoencoders"
+      ],
+      "topics": [
+        "sparse-autoencoders"
+      ],
+      "category": "landmark",
+      "summary": "JumpReLU SAE: replace SAE encoder ReLU with a discontinuous JumpReLU activation, train with L0 penalty (not L1), use straight-through estimators (STEs) to backprop through the discontinuity. SOTA reconstruction at fixed L0 on Gemma 2 9B; matches/beats TopK with cheaper training (no partial sort). The SAE architecture used in Gemma Scope."
+    },
+    {
+      "key": "gao2024-topk-saes",
+      "title": "Scaling and evaluating sparse autoencoders",
+      "authors": "Gao, Dupr\u00e9 la Tour, Tillman, Goh, Troll, Radford, Sutskever, Leike, Wu",
+      "year": 2024,
+      "venue": "arXiv (OpenAI)",
+      "url": "https://arxiv.org/abs/2406.04093",
+      "local_file": "sources/papers/gao2024_topk-saes.pdf",
+      "excerpts_file": "kb/excerpts/gao2024-topk-saes.md",
+      "notes_referenced_by": [
+        "interpretability/sparse-autoencoders"
+      ],
+      "topics": [
+        "sparse-autoencoders"
+      ],
+      "category": "landmark",
+      "summary": "OpenAI TopK SAEs + scaling laws L(C) and L(N, K) for SAE training. Trains a 16M-latent SAE on GPT-4 activations for 40B tokens (~20% of GPT-3 pretraining compute). Establishes auxiliary AuxK loss for dead-latent prevention; ~7% dead latents in 16M-latent SAE."
+    },
+    {
+      "key": "dunefsky2024-transcoders",
+      "title": "Transcoders Find Interpretable LLM Feature Circuits",
+      "authors": "Dunefsky, Chlenski, Nanda",
+      "year": 2024,
+      "venue": "NeurIPS 2024",
+      "url": "https://arxiv.org/abs/2406.11944",
+      "local_file": "sources/papers/dunefsky2024_transcoders.pdf",
+      "excerpts_file": "kb/excerpts/dunefsky2024-transcoders.md",
+      "notes_referenced_by": [
+        "interpretability/sparse-autoencoders",
+        "interpretability/circuit-tracing"
+      ],
+      "topics": [
+        "sparse-autoencoders",
+        "circuit-tracing",
+        "mechanistic-interpretability"
+      ],
+      "category": "landmark",
+      "summary": "Transcoders: a wide ReLU MLP that learns to mimic the input/output behavior of an MLP sublayer with sparse hidden activations. Unlike SAEs (which decode activation back to itself), transcoders give an *input-invariant* factorization of MLP computations into sparse feature circuits. Architectural primitive of Anthropic's 2025 attribution-graph framework."
+    },
+    {
+      "key": "leask2025-sae-not-canonical",
+      "title": "Sparse Autoencoders Do Not Find Canonical Units of Analysis",
+      "authors": "Leask, Bussmann, Pearce, Bloom, Tigges, Al Moubayed, Sharkey, Nanda",
+      "year": 2025,
+      "venue": "ICLR 2025",
+      "url": "https://arxiv.org/abs/2502.04878",
+      "local_file": "sources/papers/sae-not-canonical-2025.pdf",
+      "excerpts_file": "kb/excerpts/leask2025-sae-not-canonical.md",
+      "notes_referenced_by": [
+        "interpretability/sparse-autoencoders",
+        "interpretability/mechanistic-interpretability",
+        "interpretability/circuit-tracing"
+      ],
+      "topics": [
+        "sparse-autoencoders"
+      ],
+      "category": "landmark",
+      "summary": "Negative result: SAE stitching shows larger SAEs find features absent from smaller ones (incompleteness); meta-SAEs show larger latents decompose into combinations of smaller latents (non-atomicity). Direct contradiction with the 'true features' framing of Bricken 2023 / Templeton 2024. Note: this entry supersedes the existing `sae-not-canonical-2025` placeholder in papers.json \u2014 same key, now has local_file + excerpts_file + correct authors. The arxiv ID for this paper is 2502.04878 (the URL in the existing papers.json entry was an ICLR PDF link, which is also valid)."
+    },
+    {
+      "key": "marks-tegmark-2023-truth",
+      "title": "The Geometry of Truth: Emergent Linear Structure in Large Language Model Representations of True/False Datasets",
+      "authors": "Marks, Tegmark",
+      "year": 2023,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2310.06824",
+      "local_file": "sources/papers/burns2023-truth-geometry.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/probing"
+      ],
+      "topics": [
+        "probing"
+      ],
+      "category": "landmark",
+      "summary": "Mass-mean probing for truth: the 'truth direction' is the difference between mean activations on true vs. false statements. Generalizes across logical transformations where logistic-regression probes fail. Note: Phase 1 sweep mis-attributed this to 'Burns et al.' \u2014 actual authors are Samuel Marks and Max Tegmark. The unrelated `burns2023-w2s` paper is the Burns et al. (OpenAI Superalignment) weak-to-strong generalization paper, in the alignment area."
+    },
+    {
+      "key": "lindsey2025-biology",
+      "title": "On the Biology of a Large Language Model",
+      "authors": "Lindsey et al. (Anthropic)",
+      "year": 2025,
+      "venue": "Transformer Circuits Thread",
+      "url": "https://transformer-circuits.pub/2025/attribution-graphs/biology.html",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/circuit-tracing"
+      ],
+      "topics": [
+        "circuit-tracing",
+        "mechanistic-interpretability"
+      ],
+      "category": "landmark",
+      "summary": "Application of circuit tracing to Claude 3.5 Haiku. Documents forward-planning in poetry (rhyme target features activate before the rhyme word), multi-hop reasoning chains, refusal circuits, language-routing in non-English contexts. HTML-only \u2014 Phase 2 follow-up needed."
+    },
+    {
+      "key": "ouyang2022-instructgpt",
+      "title": "Training Language Models to Follow Instructions with Human Feedback",
+      "authors": "Ouyang, Wu, Jiang, Almeida, Wainwright, Mishkin, Zhang, Agarwal, Slama, Ray, Schulman, Hilton, Kelton, Miller, Simens, Askell, Welinder, Christiano, Leike, Lowe",
+      "year": 2022,
+      "venue": "NeurIPS",
+      "url": "https://arxiv.org/abs/2203.02155",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/ouyang2022-instructgpt.md",
+      "notes_referenced_by": [
+        "post-training/rlhf",
+        "post-training/dpo-and-offline",
+        "post-training/rlvr-and-grpo"
+      ],
+      "topics": [
+        "rlhf",
+        "sft",
+        "dpo-and-offline"
+      ],
+      "category": "foundational",
+      "summary": "InstructGPT: canonical 3-stage RLHF pipeline (SFT -> reward model -> PPO with KL anchor). 1.3B aligned model preferred over 175B GPT-3 on user prompts. The reference for everything that 'RLHF' means in 2022-2024."
+    },
+    {
+      "key": "christiano2017-pref-rl",
+      "title": "Deep Reinforcement Learning from Human Preferences",
+      "authors": "Christiano, Leike, Brown, Martic, Legg, Amodei",
+      "year": 2017,
+      "venue": "NeurIPS",
+      "url": "https://arxiv.org/abs/1706.03741",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlhf"
+      ],
+      "topics": [
+        "rlhf"
+      ],
+      "category": "foundational",
+      "summary": "Foundational preference-RL paper. Establishes that complex tasks (Atari, simulated locomotion) can be learned from <1% of pairwise preference comparisons rather than reward signals. Direct technical ancestor of Stiennon 2020 and InstructGPT."
+    },
+    {
+      "key": "stiennon2020-summarize",
+      "title": "Learning to Summarize from Human Feedback",
+      "authors": "Stiennon, Ouyang, Wu, Ziegler, Lowe, Voss, Radford, Amodei, Christiano",
+      "year": 2020,
+      "venue": "NeurIPS",
+      "url": "https://arxiv.org/abs/2009.01325",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlhf"
+      ],
+      "topics": [
+        "rlhf"
+      ],
+      "category": "foundational",
+      "summary": "Summarization with human-preference RL. Establishes the Bradley-Terry RM loss + per-token-KL PPO objective form that InstructGPT 2022 inherits and that all subsequent LM-RLHF papers derive from."
+    },
+    {
+      "key": "schulman2017-ppo",
+      "title": "Proximal Policy Optimization Algorithms",
+      "authors": "Schulman, Wolski, Dhariwal, Radford, Klimov",
+      "year": 2017,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/1707.06347",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlhf",
+        "post-training/rlvr-and-grpo"
+      ],
+      "topics": [
+        "rlhf",
+        "rlvr-and-grpo"
+      ],
+      "category": "foundational",
+      "summary": "PPO: clipped surrogate objective for policy gradient. The underlying RL algorithm used by InstructGPT, GRPO, DAPO, VAPO, REINFORCE++."
+    },
+    {
+      "key": "bai2022-hh",
+      "title": "Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback",
+      "authors": "Bai, Jones, Ndousse, Askell, Chen, DasSarma, Drain, Fort, Ganguli, Henighan, Joseph, Kadavath, Kernion, Conerly, El-Showk, Elhage, Hatfield-Dodds, Hernandez, Hume, Johnston, Kravec, Lovitt, Nanda, Olsson, Amodei, Brown, Clark, McCandlish, Olah, Mann, Kaplan",
+      "year": 2022,
+      "venue": "arXiv (Anthropic Tech Report)",
+      "url": "https://arxiv.org/abs/2204.05862",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlhf"
+      ],
+      "topics": [
+        "rlhf"
+      ],
+      "category": "foundational",
+      "summary": "Anthropic's HH-RLHF paper. Training assistants jointly for helpfulness and harmlessness; introduces the HH preference dataset that became a standard reference."
+    },
+    {
+      "key": "shao2024",
+      "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models",
+      "authors": "Shao, Wang, Zhu, et al. (DeepSeek-AI)",
+      "year": 2024,
+      "venue": "arXiv (DeepSeek Tech Report)",
+      "url": "https://arxiv.org/abs/2402.03300",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/shao2024.md",
+      "notes_referenced_by": [
+        "post-training/rlvr-and-grpo"
+      ],
+      "topics": [
+        "rlvr-and-grpo",
+        "reasoning-training"
+      ],
+      "category": "foundational",
+      "summary": "Origin of GRPO (Group Relative Policy Optimization): critic-free PPO variant using group-mean reward as value baseline. The algorithm that R1, Qwen3, Tulu 3 RLVR all use. Memory-efficient: removes the value model that PPO requires."
+    },
+    {
+      "key": "azar2023-ipo",
+      "title": "A General Theoretical Paradigm to Understand Learning from Human Preferences (IPO)",
+      "authors": "Azar, Rowland, Piot, Guo, Calandriello, Valko, Munos",
+      "year": 2023,
+      "venue": "AISTATS 2024",
+      "url": "https://arxiv.org/abs/2310.12036",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/dpo-and-offline"
+      ],
+      "topics": [
+        "dpo-and-offline"
+      ],
+      "category": "landmark",
+      "summary": "IPO: replaces DPO's log-sigmoid loss with squared loss on the preference gap. Addresses DPO's overconfidence pathology where the implicit reward gap can grow unboundedly while the loss vanishes."
+    },
+    {
+      "key": "ethayarajh2024-kto",
+      "title": "KTO: Model Alignment as Prospect Theoretic Optimization",
+      "authors": "Ethayarajh, Xu, Muennighoff, Jurafsky, Kiela",
+      "year": 2024,
+      "venue": "arXiv (NeurIPS 2024)",
+      "url": "https://arxiv.org/abs/2402.01306",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/dpo-and-offline"
+      ],
+      "topics": [
+        "dpo-and-offline"
+      ],
+      "category": "landmark",
+      "summary": "KTO (Kahneman-Tversky Optimization): operates on single-rating data {(x,y,label)} with label in {good,bad}, not pairwise preferences. Asymmetric prospect-theoretic loss (loss aversion). Useful when only yes/no labels are available."
+    },
+    {
+      "key": "hong2024-orpo",
+      "title": "ORPO: Monolithic Preference Optimization without Reference Model",
+      "authors": "Hong, Lee, Thorne",
+      "year": 2024,
+      "venue": "EMNLP 2024",
+      "url": "https://arxiv.org/abs/2403.07691",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/dpo-and-offline"
+      ],
+      "topics": [
+        "dpo-and-offline"
+      ],
+      "category": "landmark",
+      "summary": "ORPO: combines SFT and preference losses in a single objective (log-odds ratio of SFT loss between chosen/rejected). No reference model, no SFT stage - trains from base directly. Reduces compute and pipeline complexity."
+    },
+    {
+      "key": "magpie-2024",
+      "title": "MAGPIE: Alignment Data Synthesis from Scratch by Prompting Aligned LLMs with Nothing",
+      "authors": "Xu, Jiang, Niu, Deng, Lin, Poovendran, Choi, Lin",
+      "year": 2024,
+      "venue": "ICLR 2025",
+      "url": "https://arxiv.org/abs/2406.08464",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/sft"
+      ],
+      "topics": [
+        "sft",
+        "synthetic-data-and-distillation"
+      ],
+      "category": "landmark",
+      "summary": "Pre-query template trick: prompt aligned LLMs with only the instruction prefix (no question), have them fabricate the question first, then sample the answer. Near-zero-cost SFT data synthesis. 4M instruction set; beats UltraFeedback SFT+DPO."
+    },
+    {
+      "key": "c3ai-2025",
+      "title": "C3AI: Crafting and Evaluating Constitutions for Constitutional AI",
+      "authors": "various",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2502.15861",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlaif-and-constitutional"
+      ],
+      "topics": [
+        "rlaif-and-constitutional"
+      ],
+      "category": "recent",
+      "summary": "Systematic study of constitution design choices: which principles matter, which transfer between models, which are model-specific. Begins automated constitution design."
+    },
+    {
+      "key": "r-cai-2026",
+      "title": "Reverse Constitutional AI: Controllable Toxic Data Generation",
+      "authors": "various",
+      "year": 2026,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2604.17769",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlaif-and-constitutional"
+      ],
+      "topics": [
+        "rlaif-and-constitutional",
+        "safety-evaluation"
+      ],
+      "category": "recent",
+      "summary": "Reverse-CAI (April 2026): inverts the constitution for adversarial data synthesis. Probability-clamped RLAIF generates controlled toxic / harmful content for red-teaming."
+    },
+    {
+      "key": "vapo-2025",
+      "title": "VAPO: Value Augmented Proximal Policy Optimization",
+      "authors": "ByteDance Seed",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2504.05118",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlvr-and-grpo"
+      ],
+      "topics": [
+        "rlvr-and-grpo"
+      ],
+      "category": "recent",
+      "summary": "VAPO: re-introduces a learned value function on top of GRPO-style RL, with shared backbone and value-loss-clipping. Reportedly outperforms DAPO on long-CoT tasks. Single-source result; cross-replication pending."
+    },
+    {
+      "key": "vineppo-2024",
+      "title": "VinePPO: Refining Credit Assignment in RL Training of LLMs",
+      "authors": "Kazemnejad, Aghajohari, Mordatch, Reddy",
+      "year": 2024,
+      "venue": "ICML 2025",
+      "url": "https://arxiv.org/abs/2410.01679",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlvr-and-grpo"
+      ],
+      "topics": [
+        "rlvr-and-grpo"
+      ],
+      "category": "recent",
+      "summary": "VinePPO: per-state Monte Carlo re-simulation as value estimate. 3x wall-clock speedup over PPO on MATH/GSM8K. Like applying GRPO's group-mean idea at every prefix instead of just the prompt."
+    },
+    {
+      "key": "rewardbench2-2025",
+      "title": "RewardBench 2: Advancing Reward Model Evaluation",
+      "authors": "various",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2506.01937",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlhf"
+      ],
+      "topics": [
+        "rlhf"
+      ],
+      "category": "recent",
+      "summary": "RewardBench 2: 2025 benchmark suite for RM evaluation. Successor to original RewardBench. Open question (per Phase 1 sweep): does score correlate with downstream RLHF outcome?"
+    },
+    {
+      "key": "warm-2024",
+      "title": "WARM: On the Benefits of Weight Averaged Reward Models",
+      "authors": "Ram\u00e9, Couairon, Shukor, Thom, Pendse, Adda, Vincent, Mary, Cord, Aubert, Cordier, Joulin, J\u00e9gou, Dehghani",
+      "year": 2024,
+      "venue": "ICML 2024",
+      "url": "https://arxiv.org/abs/2401.12187",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlhf"
+      ],
+      "topics": [
+        "rlhf"
+      ],
+      "category": "landmark",
+      "summary": "WARM: weight-averaged reward models. Average parameters of K independently-trained RMs to reduce overoptimization and improve robustness. Adopted in Gemma 3 post-training."
+    },
+    {
+      "key": "warp-2024",
+      "title": "WARP: On the Benefits of Weight Averaged Rewarded Policies",
+      "authors": "Ram\u00e9, Ferret, Vieillard, Dadashi, Hussenot, Cedoz, Sessa, Pernias, Geist, Bachem",
+      "year": 2024,
+      "venue": "arXiv (DeepMind)",
+      "url": "https://arxiv.org/abs/2406.16768",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlhf"
+      ],
+      "topics": [
+        "rlhf"
+      ],
+      "category": "landmark",
+      "summary": "WARP: alternates RL training with weight averaging. Companion to WARM at the policy side. Used together in Gemma 3 post-training."
+    },
+    {
+      "key": "rlhf-overopt-2024",
+      "title": "Scaling Laws for Reward Model Overoptimization in Direct Alignment Algorithms",
+      "authors": "various",
+      "year": 2024,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2406.02900",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlhf",
+        "post-training/dpo-and-offline"
+      ],
+      "topics": [
+        "rlhf",
+        "dpo-and-offline"
+      ],
+      "category": "landmark",
+      "summary": "Overoptimization scaling curves for DPO-class methods. Shows DPO suffers from analogous proxy/gold-reward gap as PPO-RLHF. Contradicts early DPO narrative that 'no explicit reward model means no reward hacking.'"
+    },
+    {
+      "key": "kojima2022",
+      "title": "Large Language Models are Zero-Shot Reasoners",
+      "authors": "Kojima, Gu, Reid, Matsuo, Iwasawa",
+      "year": 2022,
+      "venue": "NeurIPS",
+      "url": "https://arxiv.org/abs/2205.11916",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/kojima2022.md",
+      "notes_referenced_by": [
+        "reasoning/chain-of-thought"
+      ],
+      "topics": [
+        "chain-of-thought"
+      ],
+      "category": "foundational",
+      "summary": "Zero-shot CoT: appending 'Let's think step by step' elicits CoT-style reasoning without exemplars. text-davinci-002 MultiArith 17.7% -> 78.7%; GSM8K 10.4% -> 40.7%. Two-stage prompt: reasoning extraction + answer extraction."
+    },
+    {
+      "key": "wang2022-self-consistency",
+      "title": "Self-Consistency Improves Chain of Thought Reasoning in Language Models",
+      "authors": "Wang, Wei, Schuurmans, Le, Chi, Narang, Chowdhery, Zhou",
+      "year": 2022,
+      "venue": "ICLR 2023",
+      "url": "https://arxiv.org/abs/2203.11171",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/wang2022-self-consistency.md",
+      "notes_referenced_by": [
+        "reasoning/chain-of-thought",
+        "reasoning/test-time-compute"
+      ],
+      "topics": [
+        "chain-of-thought",
+        "test-time-compute"
+      ],
+      "category": "foundational",
+      "summary": "Self-consistency: sample N reasoning paths at T > 0, majority-vote over extracted answers. GSM8K +17.9%, SVAMP +11.0%, AQuA +12.2% over greedy CoT. The cheapest test-time-compute strategy and the baseline against which best-of-N + verifier methods are compared."
+    },
+    {
+      "key": "lightman2023-prm800k",
+      "title": "Let's Verify Step by Step",
+      "authors": "Lightman, Kosaraju, Burda, Edwards, Baker, Lee, Leike, Schulman, Sutskever, Cobbe",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2305.20050",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/lightman2023-prm800k.md",
+      "notes_referenced_by": [
+        "reasoning/process-supervision",
+        "reasoning/test-time-compute",
+        "reasoning/inference-time-search"
+      ],
+      "topics": [
+        "process-supervision",
+        "test-time-compute"
+      ],
+      "category": "foundational",
+      "summary": "Process Reward Models on PRM800K. Process supervision substantially outperforms outcome supervision on MATH best-of-N at matched N. min-aggregation over per-step PRM scores is the strongest aggregator. Released the PRM800K dataset (800K human step-labels)."
     }
   ]
 }

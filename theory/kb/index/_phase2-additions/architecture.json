@@ -1,0 +1,207 @@
+{
+  "area": "architecture",
+  "phase": 2,
+  "subagent": "architecture-area-2026-05-04",
+  "new_papers": [],
+  "note_on_new_papers": "All three excerpt-target papers (su2021, shazeer2020, yuan2025) were already present in papers.json prior to this Phase 2 pass. The new contribution here is excerpt files (kb/excerpts/{su2021,shazeer2020,yuan2025}.md) and additional notes_referenced_by entries — see existing_paper_updates below for set_excerpts_file additions.",
+  "existing_paper_updates": [
+    {
+      "key": "su2021",
+      "set_excerpts_file": "kb/excerpts/su2021.md",
+      "add_notes_referenced_by": [
+        "architecture/position-encoding",
+        "architecture/long-context",
+        "architecture/attention-mechanism"
+      ]
+    },
+    {
+      "key": "shazeer2020",
+      "set_excerpts_file": "kb/excerpts/shazeer2020.md",
+      "add_notes_referenced_by": [
+        "architecture/ffn",
+        "architecture/moe"
+      ]
+    },
+    {
+      "key": "yuan2025",
+      "set_excerpts_file": "kb/excerpts/yuan2025.md",
+      "add_notes_referenced_by": [
+        "architecture/long-context",
+        "architecture/attention-mechanism"
+      ],
+      "note": "yuan2025 may duplicate the existing nsa-2025 record. Recommend orchestrator pick yuan2025 as canonical key (matches author-year convention used elsewhere e.g. dao2022, su2021, shazeer2020) and remove or alias nsa-2025."
+    },
+    {
+      "key": "deepseek-v3",
+      "add_notes_referenced_by": [
+        "architecture/moe",
+        "architecture/reasoning-architectures",
+        "architecture/multi-token-prediction"
+      ]
+    },
+    {
+      "key": "deepseek-r1",
+      "add_notes_referenced_by": [
+        "architecture/reasoning-architectures"
+      ]
+    },
+    {
+      "key": "meta-llama4",
+      "add_notes_referenced_by": [
+        "architecture/position-encoding",
+        "architecture/long-context",
+        "architecture/reasoning-architectures",
+        "architecture/transformer-overview",
+        "architecture/multi-token-prediction"
+      ]
+    },
+    {
+      "key": "qwen3",
+      "add_notes_referenced_by": [
+        "architecture/moe",
+        "architecture/reasoning-architectures",
+        "architecture/transformer-overview"
+      ]
+    },
+    {
+      "key": "fedus2021-switch",
+      "add_notes_referenced_by": [
+        "architecture/moe"
+      ]
+    },
+    {
+      "key": "mixtral2024",
+      "add_notes_referenced_by": [
+        "architecture/moe"
+      ]
+    },
+    {
+      "key": "deepseekmoe2024",
+      "add_notes_referenced_by": [
+        "architecture/moe"
+      ]
+    },
+    {
+      "key": "gu2023-mamba",
+      "add_notes_referenced_by": [
+        "architecture/state-space-models"
+      ]
+    },
+    {
+      "key": "mamba2",
+      "add_notes_referenced_by": [
+        "architecture/state-space-models"
+      ]
+    },
+    {
+      "key": "lieber2024-jamba",
+      "add_notes_referenced_by": [
+        "architecture/state-space-models"
+      ]
+    },
+    {
+      "key": "rwkv7-2025",
+      "add_notes_referenced_by": [
+        "architecture/state-space-models"
+      ]
+    },
+    {
+      "key": "ring-attention-2023",
+      "add_notes_referenced_by": [
+        "architecture/long-context"
+      ]
+    },
+    {
+      "key": "infini-attention-2024",
+      "add_notes_referenced_by": [
+        "architecture/long-context"
+      ]
+    },
+    {
+      "key": "longrope2-2025",
+      "add_notes_referenced_by": [
+        "architecture/position-encoding",
+        "architecture/long-context"
+      ]
+    },
+    {
+      "key": "peri-ln2025",
+      "add_notes_referenced_by": [
+        "architecture/normalization"
+      ]
+    },
+    {
+      "key": "zhang2019",
+      "add_notes_referenced_by": [
+        "architecture/normalization"
+      ]
+    },
+    {
+      "key": "xiong2020",
+      "add_notes_referenced_by": [
+        "architecture/normalization"
+      ]
+    },
+    {
+      "key": "blt2024",
+      "add_notes_referenced_by": [
+        "architecture/tokenization"
+      ]
+    },
+    {
+      "key": "sennrich2016",
+      "add_notes_referenced_by": [
+        "architecture/tokenization"
+      ]
+    },
+    {
+      "key": "llava2023",
+      "add_notes_referenced_by": [
+        "architecture/multimodal-llm-extensions"
+      ]
+    },
+    {
+      "key": "internvl3-2025",
+      "add_notes_referenced_by": [
+        "architecture/multimodal-llm-extensions"
+      ]
+    },
+    {
+      "key": "gemma3",
+      "add_notes_referenced_by": [
+        "architecture/multimodal-llm-extensions",
+        "architecture/normalization"
+      ]
+    },
+    {
+      "key": "olmo2",
+      "add_notes_referenced_by": [
+        "architecture/normalization",
+        "architecture/embeddings-and-tying",
+        "architecture/transformer-overview"
+      ]
+    },
+    {
+      "key": "touvron2023",
+      "add_notes_referenced_by": [
+        "architecture/transformer-overview",
+        "architecture/ffn"
+      ]
+    },
+    {
+      "key": "vaswani2017",
+      "add_notes_referenced_by": [
+        "architecture/transformer-overview",
+        "architecture/ffn",
+        "architecture/position-encoding"
+      ]
+    },
+    {
+      "key": "press2017-tying",
+      "add_notes_referenced_by": [
+        "architecture/embeddings-and-tying"
+      ],
+      "note": "If not yet in papers.json — Press & Wolf 2017 'Using the Output Embedding to Improve Language Models' (1608.05859). Add to papers.json if missing; planned source for embeddings-and-tying when promoted from stub."
+    }
+  ]
+}
