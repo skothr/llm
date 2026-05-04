@@ -8,9 +8,9 @@ primary_sources:
   - kojima2022
   - wang2022-self-consistency
 secondary_sources:
-  - lyu2025-cot-faithfulness
-  - chen2025-faithcot-bench
-  - chen2026-decoupling
+  - arcuschin2025-cot-wild
+  - shen2025-faithcot-bench
+  - mehta2026-faithfulness-scaling
 related_topics:
   - reasoning/test-time-compute
   - reasoning/process-supervision
@@ -191,15 +191,15 @@ $z$ generated as post-hoc rationalization?
 
 ### 4.1 Empirical signal
 
-Recent measurements `[lyu2025-cot-faithfulness, arXiv 2503.08679]`,
-`[chen2026-faithfulness-scaling, arXiv 2601.06423]` find a striking
+Recent measurements `[arcuschin2025-cot-wild, arXiv 2503.08679]`,
+`[mehta2026-faithfulness-scaling, arXiv 2601.06423]` find a striking
 asymmetry:
 
 - Production non-thinking models (GPT-4o-mini, Haiku 3.5) exhibit
   post-hoc rationalization rates on the order of $7\text{–}13\%$.
 - Thinking models (Sonnet 3.7 with thinking on, Gemini 2.5 Pro)
   exhibit rates on the order of $0.04\text{–}0.14\%$
-  `[chen2026-faithfulness-scaling §4]`.
+  `[mehta2026-faithfulness-scaling §4]`.
 
 [CONTRADICTION] Whether this gap is causally produced by *thinking
 training* (long-CoT SFT + RL), by general scale, or by RLVR
@@ -225,7 +225,7 @@ but should not be treated as established `[chen2025-decoupling]`.
 
 ### 4.3 FaithCoT-Bench
 
-A new instance-level benchmark `[chen2025-faithcot-bench, arXiv
+A new instance-level benchmark `[shen2025-faithcot-bench, arXiv
 2510.04040]` measures, per problem, whether a perturbation to $z$ that
 should change $y$ in fact does. The metric is mechanistic — it does not
 rely on holistic plausibility scoring of traces — and is now the
@@ -258,7 +258,7 @@ a discovered reasoning module `[kojima2022 §5]`.
 often confabulate plausible justifications for decisions made on other
 grounds — is suggestive but not load-bearing here; the canonical
 mechanistic question is whether perturbations to $z$ propagate to $y$
-under counterfactual decoding `[chen2025-faithcot-bench §3]`.
+under counterfactual decoding `[shen2025-faithcot-bench §3]`.
 
 ## 6. Frontier and open questions (as of 2026-05)
 

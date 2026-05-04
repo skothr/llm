@@ -7,10 +7,9 @@ primary_sources:
   - rstar-math2025
   - lightman2023-prm800k
 secondary_sources:
-  - rest-mcts-2024
-  - tree-search-survey-2025
-  - inference-scaling-survey-2025
-  - mcts-rag-2025
+  - zhang2024-rest-mcts
+  - wei2025-tree-search-survey
+  - hu2025-mcts-rag
   - snell2024
 related_topics:
   - reasoning/test-time-compute
@@ -104,7 +103,7 @@ trace per simulation step), which dominates expansion cost.
 
 ### 2.3 ReST-MCTS* (training-data generation)
 
-`[rest-mcts-2024]` uses MCTS not just for inference but for **iterative
+`[zhang2024-rest-mcts]` uses MCTS not just for inference but for **iterative
 self-training**:
 
 1. Run MCTS with current policy + PRM.
@@ -155,17 +154,17 @@ o1-mini-class performance on competition math `[rstar-math2025 §4]`.
 | Tree-of-Thoughts | 2023 | BFS / DFS / beam over thought nodes | Heuristic LLM-rater | Established the "thought tree" framing `[arXiv 2305.10601]` |
 | Graph-of-Thoughts | 2023 | Generalised graph allowing merges | LLM-rater | Niche `[arXiv 2308.09687]` |
 | Lookahead beam (Snell) | 2024 | Beam over partial steps with PRM rollout-scoring | PRM | Compute-optimal mix of beam vs sampling `[snell2024 §4]` |
-| ReST-MCTS* | 2024 | MCTS + iterative self-training | PRM | NeurIPS 2024; bootstrap data via search `[rest-mcts-2024]` |
+| ReST-MCTS* | 2024 | MCTS + iterative self-training | PRM | NeurIPS 2024; bootstrap data via search `[zhang2024-rest-mcts]` |
 | rStar / rStar-Math | 2024–25 | MCTS with policy-SLM + reward-SLM | PRM (trained alongside) | 90% MATH at 7B `[rstar-math2025 §4]` |
 | AGoT (Adaptive GoT) | 2025 | Single framework adaptively chooses chain / tree / graph | LLM-rater | Open whether competitive with trained long-CoT `[arXiv 2502.05078]` |
-| MCTS-RAG | 2025 | MCTS over retrieval + reasoning decisions | Hybrid | Bridges search and RAG `[mcts-rag-2025, arXiv 2503.20757]` |
+| MCTS-RAG | 2025 | MCTS over retrieval + reasoning decisions | Hybrid | Bridges search and RAG `[hu2025-mcts-rag, arXiv 2503.20757]` |
 
 [CONTRADICTION] The 2025 question is whether explicit search **adds
 value over** a long-CoT trained model that internally simulates many
 branches via its trained trace. Some 2026 measurements suggest at
 matched compute budget, R1-distill + budget forcing matches MCTS +
 PRM on competition math `[arXiv 2510.10787]`; others find search
-still wins on the hardest tail. The taxonomy `tree-search-survey-2025`
+still wins on the hardest tail. The taxonomy `wei2025-tree-search-survey`
 catalogues the disagreement without resolving it.
 
 ## 5. The search-vs-trained-CoT debate
@@ -196,7 +195,7 @@ finding: search dominates on hard problems
   reasoning-MCTS work focuses on math (and some code). Step-level
   reward signals are easy there. Whether MCTS over reasoning steps
   helps in factual QA, agent planning, or open-ended reasoning is
-  largely open `[tree-search-survey-2025 §5 future]`.
+  largely open `[wei2025-tree-search-survey §5 future]`.
 - **Search budget vs trace budget.** [CONTRADICTION] Reports vary on
   whether MCTS-with-rollouts uses fewer total tokens than budget-
   forced long CoT for the same accuracy. Likely policy- and benchmark-
@@ -205,7 +204,7 @@ finding: search dominates on hard problems
   trajectories can be cached and used for related problems (transfer
   via SFT or in-context retrieval). This is exploited by ReST-MCTS*
   for training but not yet systematically exploited at inference time.
-- **Search for tool-using agents.** MCTS-RAG `[mcts-rag-2025]` extends
+- **Search for tool-using agents.** MCTS-RAG `[hu2025-mcts-rag]` extends
   search to retrieval decisions. Generalising to arbitrary tool calls
   (compute, web, code execution) is an active direction; the value
   function must score tool-use plans, not just text.
@@ -224,7 +223,7 @@ returns to canonical form via the UCT formula in §2.2 — same equation,
 different domain. This analogy is load-bearing: it explains why
 co-training the PRM (value head) with the policy-via-search-SFT loop
 is effective, mirroring AlphaZero's self-play
-`[rest-mcts-2024 §3]`.
+`[zhang2024-rest-mcts §3]`.
 
 [INTUITION] Beam search and MCTS exchange **anytime** for **target
 quality**: MCTS gets better with more rollouts, beam gets better with
