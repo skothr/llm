@@ -1,0 +1,262 @@
+{
+  "area": "evaluation",
+  "new_papers": [
+    {
+      "key": "jimenez2024-swebench",
+      "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?",
+      "authors": "Jimenez, Yang, Wettig, Yao, Pei, Press, Narasimhan",
+      "year": 2024,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2310.06770",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/jimenez2024-swebench.md",
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks",
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "agentic-benchmarks",
+        "eval-methodology"
+      ],
+      "category": "landmark",
+      "summary": "Introduces SWE-bench: 2,294 real GitHub issues across 12 Python repos. The FAIL_TO_PASS / PASS_TO_PASS regression-test verifier is the load-bearing methodological detail that made repo-level coding eval tractable. SWE-bench Verified (OpenAI Aug 2024) is the 500-task human-validated subset that became the de-facto leaderboard target."
+    },
+    {
+      "key": "mialon2023-gaia",
+      "title": "GAIA: A Benchmark for General AI Assistants",
+      "authors": "Mialon, Fourrier, Wolf, Lavril, LeCun, et al. (HuggingFace + Meta)",
+      "year": 2023,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2311.12983",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/mialon2023-gaia.md",
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks",
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "agentic-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "466 tool-use questions (300 leaderboard / 166 dev) stratified into Levels 1/2/3. Headline gap: human 92% vs GPT-4 + plugins 15%. Gated-leaderboard methodology (gold answers held server-side) is the contamination-defense design point."
+    },
+    {
+      "key": "xie2024-osworld",
+      "title": "OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments",
+      "authors": "Xie, Zhang, Chen, Lou, Liu, Hu, Xing, Hu, Lin, Liu, Yu",
+      "year": 2024,
+      "venue": "NeurIPS 2024 Datasets & Benchmarks",
+      "url": "https://arxiv.org/abs/2404.07972",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/xie2024-osworld.md",
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
+      "topics": [
+        "agentic-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "369 computer-use tasks across Ubuntu/Windows/macOS with per-task executable evaluator scripts checking OS end-state. Headline gap at launch: humans 72% vs GPT-4V 12%. Failure mode: GUI grounding bottleneck."
+    },
+    {
+      "key": "yao2024-tau-bench",
+      "title": "tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains",
+      "authors": "Yao, Zhao, Wang, Schick, Lewis, Yih, Lecun, Yu (Sierra Research)",
+      "year": 2024,
+      "venue": "arXiv (Sierra Research)",
+      "url": "https://arxiv.org/abs/2406.12045",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/yao2024-tau-bench.md",
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
+      "topics": [
+        "agentic-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "Customer-service agentic benchmark with simulated-user + policy compliance + DB-end-state verifier. Introduces pass^k metric (all k attempts must succeed; the production-reliability dual of pass@k). GPT-4o: <50% pass@1, <25% pass^8 on retail."
+    },
+    {
+      "key": "liang2022-helm",
+      "title": "Holistic Evaluation of Language Models",
+      "authors": "Liang, Bommasani, Lee, Tsipras, Soylu, Yasunaga, Zhang, Narayanan, Wu, et al. (Stanford CRFM)",
+      "year": 2022,
+      "venue": "arXiv (Stanford CRFM)",
+      "url": "https://arxiv.org/abs/2211.09110",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/liang2022-helm.md",
+      "notes_referenced_by": [
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "eval-methodology"
+      ],
+      "category": "landmark",
+      "summary": "HELM: 7-metric x 16-scenario evaluation framework. The structural argument that benchmarks should ship metric bundles (accuracy, calibration, robustness, fairness, bias, toxicity, efficiency), not single metrics. Increased coverage from 17.9% to 96% of core scenarios across 30 LMs at launch."
+    },
+    {
+      "key": "contamination-survey-2025",
+      "title": "Benchmarking LLMs Under Data Contamination: From Static to Dynamic Evaluation",
+      "authors": "(EMNLP 2025; see arXiv listing)",
+      "year": 2025,
+      "venue": "EMNLP 2025",
+      "url": "https://arxiv.org/abs/2502.17521",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/contamination-survey-2025.md",
+      "notes_referenced_by": [
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "eval-methodology"
+      ],
+      "category": "recent",
+      "summary": "Comprehensive survey of contamination problem and mitigation strategies. Establishes the static-vs-dynamic-evaluation taxonomy. Identifies key open problem: lack of standardized criteria for evaluating dynamic benchmarks."
+    },
+    {
+      "key": "lm-eval-harness",
+      "title": "EleutherAI Language Model Evaluation Harness",
+      "authors": "Gao, Tow, Abbasi, Biderman, Black, et al. (EleutherAI)",
+      "year": 2021,
+      "venue": "GitHub (open-source infrastructure)",
+      "url": "https://github.com/EleutherAI/lm-evaluation-harness",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/lm-eval-harness.md",
+      "notes_referenced_by": [
+        "evaluation/eval-methodology"
+      ],
+      "topics": [
+        "eval-methodology"
+      ],
+      "category": "tech-report",
+      "summary": "Open-source eval infrastructure backing HF Open LLM Leaderboard. 60+ benchmarks reduced to three request-type primitives (loglikelihood / loglikelihood_rolling / generate_until). Adopted by NVIDIA, Cohere, BigScience, Mosaic ML internally; the de-facto standard for open-model evaluation."
+    },
+    {
+      "key": "mmlu-redux-2024",
+      "title": "Are We Done with MMLU?",
+      "authors": "Polo et al.",
+      "year": 2024,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2406.04127",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/eval-methodology",
+        "evaluation/knowledge-benchmarks"
+      ],
+      "topics": [
+        "eval-methodology",
+        "knowledge-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "Verifier-audit of MMLU. Re-annotates 5,700 questions across 57 subjects; finds 6.49% aggregate error rate; per-subset rates up to 57% (Virology). Documents leaderboard-rank flips when corrected."
+    },
+    {
+      "key": "matharena-2025",
+      "title": "MathArena: Evaluating LLMs on Uncontaminated Math Competitions",
+      "authors": "(arXiv 2505.23281)",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2505.23281",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/eval-methodology",
+        "evaluation/reasoning-benchmarks"
+      ],
+      "topics": [
+        "eval-methodology",
+        "reasoning-benchmarks"
+      ],
+      "category": "recent",
+      "summary": "Dynamic benchmark using post-cutoff competition problems (CMIMC 2025, IMO 2025, etc.) to defeat training-data contamination. Evaluates models on problems immediately upon release. >50 models, 7 competitions, 162 problems as of 2025."
+    },
+    {
+      "key": "cybench2024",
+      "title": "Cybench: A Framework for Evaluating Cybersecurity Capabilities and Risks of Language Models",
+      "authors": "(arXiv listing)",
+      "year": 2024,
+      "venue": "arXiv (NeurIPS workshop)",
+      "url": "https://arxiv.org/abs/2408.08926",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
+      "topics": [
+        "agentic-benchmarks",
+        "safety-evaluation"
+      ],
+      "category": "landmark",
+      "summary": "40 professional Capture-the-Flag cybersecurity tasks across 4 CTF competitions. Used by US AISI / UK AISI for pre-deployment dangerous-capability evals. Top frontier models (Claude 3.5 Sonnet, GPT-4o, o1-preview, Claude 3 Opus) solve tasks taking human teams up to 11 minutes."
+    },
+    {
+      "key": "agentbench2023",
+      "title": "AgentBench: Evaluating LLMs as Agents",
+      "authors": "Liu et al. (THUDM)",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2308.03688",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/agentic-benchmarks"
+      ],
+      "topics": [
+        "agentic-benchmarks"
+      ],
+      "category": "landmark",
+      "summary": "8-environment agentic benchmark (OS, DB, KG, web, etc.). Headline finding: significant capability gap between top commercial LLMs and open-source <70B alternatives. Failure mode: poor long-term reasoning, decision-making, instruction following."
+    },
+    {
+      "key": "arc-agi-2-2025",
+      "title": "ARC-AGI-2 (and ARC Prize 2025 Technical Report)",
+      "authors": "Chollet et al. (ARC Prize Foundation); Chapman et al. for tech report",
+      "year": 2025,
+      "venue": "ARC Prize / arXiv 2601.10904 (tech report)",
+      "url": "https://arcprize.org/arc-agi/2",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "evaluation/reasoning-benchmarks"
+      ],
+      "topics": [
+        "reasoning-benchmarks",
+        "scaling-frontier"
+      ],
+      "category": "landmark",
+      "summary": "Successor to ARC-AGI-1 (which was effectively solved by o3 at >85% in late 2024). ARC-AGI-2 launches early 2025; top commercial model ~37.6%, refinement-loop systems ~54%, human baseline ~95%. Tests inductive grid-puzzle generalization with minimal world knowledge."
+    }
+  ],
+  "existing_paper_updates": [
+    {
+      "key": "hendrycks2021-mmlu",
+      "set_excerpts_file": null,
+      "add_notes_referenced_by": ["evaluation/knowledge-benchmarks", "evaluation/reasoning-benchmarks", "evaluation/eval-methodology"]
+    },
+    {
+      "key": "wang2024-mmlu-pro",
+      "set_excerpts_file": "kb/excerpts/wang2024-mmlu-pro.md",
+      "add_notes_referenced_by": ["evaluation/reasoning-benchmarks", "evaluation/eval-methodology", "evaluation/knowledge-benchmarks"]
+    },
+    {
+      "key": "rein2023-gpqa",
+      "set_excerpts_file": "kb/excerpts/rein2023-gpqa.md",
+      "add_notes_referenced_by": ["evaluation/reasoning-benchmarks", "evaluation/knowledge-benchmarks"]
+    },
+    {
+      "key": "glazer2024-frontiermath",
+      "set_excerpts_file": "kb/excerpts/glazer2024-frontiermath.md",
+      "add_notes_referenced_by": ["evaluation/reasoning-benchmarks", "evaluation/eval-methodology"]
+    },
+    {
+      "key": "phan2025-hle",
+      "set_excerpts_file": "kb/excerpts/phan2025-hle.md",
+      "add_notes_referenced_by": ["evaluation/reasoning-benchmarks", "evaluation/eval-methodology"]
+    },
+    {
+      "key": "swe-bench-verified",
+      "set_excerpts_file": null,
+      "add_notes_referenced_by": ["evaluation/agentic-benchmarks"]
+    }
+  ]
+}

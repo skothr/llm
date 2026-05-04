@@ -1,0 +1,299 @@
+{
+  "area": "interpretability",
+  "new_papers": [
+    {
+      "key": "meng2022-rome",
+      "title": "Locating and Editing Factual Associations in GPT (ROME)",
+      "authors": "Meng, Bau, Andonian, Belinkov",
+      "year": 2022,
+      "venue": "NeurIPS",
+      "url": "https://arxiv.org/abs/2202.05262",
+      "local_file": "sources/papers/meng2022_rome.pdf",
+      "excerpts_file": "kb/excerpts/meng2022-rome.md",
+      "notes_referenced_by": [
+        "interpretability/activation-patching",
+        "interpretability/mechanistic-interpretability"
+      ],
+      "topics": ["activation-patching", "mechanistic-interpretability"],
+      "category": "foundational",
+      "summary": "Causal tracing localizes factual recall to mid-layer MLPs at the last subject token in GPT-2 XL. Introduces the three-run (clean / corrupted / corrupted-with-restoration) activation-patching protocol that became standard. Validates localization with Rank-One Model Editing (ROME): closed-form rank-one MLP weight update achieves 99.8% efficacy / 88% paraphrase on zsRE editing. Note: this entry supersedes the existing `meng2022-rome` placeholder in papers.json — same key, now has local_file + excerpts_file."
+    },
+    {
+      "key": "wang2022-ioi",
+      "title": "Interpretability in the Wild: a Circuit for Indirect Object Identification in GPT-2 Small",
+      "authors": "Wang, Variengien, Conmy, Shlegeris, Steinhardt",
+      "year": 2022,
+      "venue": "ICLR 2023",
+      "url": "https://arxiv.org/abs/2211.00593",
+      "local_file": "sources/papers/wang2022-ioi_ioi-circuit.pdf",
+      "excerpts_file": "kb/excerpts/wang2022-ioi.md",
+      "notes_referenced_by": [
+        "interpretability/mechanistic-interpretability",
+        "interpretability/activation-patching"
+      ],
+      "topics": ["mechanistic-interpretability", "activation-patching"],
+      "category": "foundational",
+      "summary": "Reverse-engineers the IOI task in GPT-2 small to a 26-head circuit in 7 functional classes (Duplicate Token, Previous Token, S-Inhibition, Name Mover, Negative Name Mover, Backup Name Mover, Induction). Introduces *path patching* and the faithfulness/completeness/minimality criteria for circuit validity. Note: this entry supersedes the existing `wang2022-ioi` placeholder in papers.json — same key, now has local_file + excerpts_file + topics."
+    },
+    {
+      "key": "zhang2023-apatching",
+      "title": "Towards Best Practices of Activation Patching in Language Models: Metrics and Methods",
+      "authors": "Zhang, Nanda",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2309.16042",
+      "local_file": "sources/papers/zhang2023_apatching-best-practices.pdf",
+      "excerpts_file": "kb/excerpts/zhang2023-apatching.md",
+      "notes_referenced_by": ["interpretability/activation-patching"],
+      "topics": ["activation-patching"],
+      "category": "landmark",
+      "summary": "First systematic methodology study of activation patching: shows the choice of corruption method (Gaussian Noising vs. Symmetric Token Replacement) and metric (probability vs. logit difference vs. KL) materially changes which components get implicated. Recommends STR + logit difference as default. The paper that turned activation patching from artisanal to documented protocol."
+    },
+    {
+      "key": "heimersheim2024-apatching-howto",
+      "title": "How to Use and Interpret Activation Patching",
+      "authors": "Heimersheim, Nanda",
+      "year": 2024,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2404.15255",
+      "local_file": "sources/papers/heimersheim2024_apatching-howto.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": ["interpretability/activation-patching"],
+      "topics": ["activation-patching"],
+      "category": "recent",
+      "summary": "Practitioner's guide to activation patching written by Anthropic and independent researchers. Pedagogical companion to Zhang & Nanda 2023. Not yet excerpted — Phase 2 follow-up."
+    },
+    {
+      "key": "conmy2023-acdc",
+      "title": "Towards Automated Circuit Discovery for Mechanistic Interpretability (ACDC)",
+      "authors": "Conmy, Mavor-Parker, Lynch, Heimersheim, Garriga-Alonso",
+      "year": 2023,
+      "venue": "NeurIPS",
+      "url": "https://arxiv.org/abs/2304.14997",
+      "local_file": "sources/papers/conmy2023-acdc.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": ["interpretability/activation-patching"],
+      "topics": ["activation-patching", "mechanistic-interpretability"],
+      "category": "landmark",
+      "summary": "Automated Circuit DisCovery: iteratively path-patches every edge in the model's computational graph, prunes edges with patching effect below threshold, returns the resulting subgraph. First fully-automated mech-interp circuit discovery method. Not yet excerpted — Phase 2 follow-up."
+    },
+    {
+      "key": "rajamanoharan2024-jumprelu",
+      "title": "Jumping Ahead: Improving Reconstruction Fidelity with JumpReLU Sparse Autoencoders",
+      "authors": "Rajamanoharan, Lieberum, Sonnerat, Conmy, Varma, Kramár, Nanda",
+      "year": 2024,
+      "venue": "arXiv (DeepMind)",
+      "url": "https://arxiv.org/abs/2407.14435",
+      "local_file": "sources/papers/rajamanoharan2024_jumprelu.pdf",
+      "excerpts_file": "kb/excerpts/rajamanoharan2024-jumprelu.md",
+      "notes_referenced_by": ["interpretability/sparse-autoencoders"],
+      "topics": ["sparse-autoencoders"],
+      "category": "landmark",
+      "summary": "JumpReLU SAE: replace SAE encoder ReLU with a discontinuous JumpReLU activation, train with L0 penalty (not L1), use straight-through estimators (STEs) to backprop through the discontinuity. SOTA reconstruction at fixed L0 on Gemma 2 9B; matches/beats TopK with cheaper training (no partial sort). The SAE architecture used in Gemma Scope."
+    },
+    {
+      "key": "gao2024-topk-saes",
+      "title": "Scaling and evaluating sparse autoencoders",
+      "authors": "Gao, Dupré la Tour, Tillman, Goh, Troll, Radford, Sutskever, Leike, Wu",
+      "year": 2024,
+      "venue": "arXiv (OpenAI)",
+      "url": "https://arxiv.org/abs/2406.04093",
+      "local_file": "sources/papers/gao2024_topk-saes.pdf",
+      "excerpts_file": "kb/excerpts/gao2024-topk-saes.md",
+      "notes_referenced_by": ["interpretability/sparse-autoencoders"],
+      "topics": ["sparse-autoencoders"],
+      "category": "landmark",
+      "summary": "OpenAI TopK SAEs + scaling laws L(C) and L(N, K) for SAE training. Trains a 16M-latent SAE on GPT-4 activations for 40B tokens (~20% of GPT-3 pretraining compute). Establishes auxiliary AuxK loss for dead-latent prevention; ~7% dead latents in 16M-latent SAE."
+    },
+    {
+      "key": "gemma-scope-2024",
+      "title": "Gemma Scope: Open Sparse Autoencoders Everywhere All At Once on Gemma 2",
+      "authors": "Lieberum, Rajamanoharan, Conmy, Smith, Sonnerat, Varma, Kramár, Dragan, Shah, Nanda",
+      "year": 2024,
+      "venue": "arXiv (DeepMind)",
+      "url": "https://arxiv.org/abs/2408.05147",
+      "local_file": "sources/papers/gemma-scope-2024_jumprelu-saes.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": ["interpretability/sparse-autoencoders"],
+      "topics": ["sparse-autoencoders"],
+      "category": "landmark",
+      "summary": "Open release of >2,000 JumpReLU SAEs covering all layers and sublayers (residual, MLP-out, attn-out) of Gemma 2 2B and 9B + select layers of 27B. >30M total learned features; trained on 4-16B tokens each. Includes one suite of transcoders. Note: this entry partially overlaps with the existing `gemma-scope-2024` key in papers.json — same key, now has local_file. Not yet excerpted in this pass — quoted via the JumpReLU companion paper."
+    },
+    {
+      "key": "dunefsky2024-transcoders",
+      "title": "Transcoders Find Interpretable LLM Feature Circuits",
+      "authors": "Dunefsky, Chlenski, Nanda",
+      "year": 2024,
+      "venue": "NeurIPS 2024",
+      "url": "https://arxiv.org/abs/2406.11944",
+      "local_file": "sources/papers/dunefsky2024_transcoders.pdf",
+      "excerpts_file": "kb/excerpts/dunefsky2024-transcoders.md",
+      "notes_referenced_by": [
+        "interpretability/sparse-autoencoders",
+        "interpretability/circuit-tracing"
+      ],
+      "topics": ["sparse-autoencoders", "circuit-tracing", "mechanistic-interpretability"],
+      "category": "landmark",
+      "summary": "Transcoders: a wide ReLU MLP that learns to mimic the input/output behavior of an MLP sublayer with sparse hidden activations. Unlike SAEs (which decode activation back to itself), transcoders give an *input-invariant* factorization of MLP computations into sparse feature circuits. Architectural primitive of Anthropic's 2025 attribution-graph framework."
+    },
+    {
+      "key": "leask2025-sae-not-canonical",
+      "title": "Sparse Autoencoders Do Not Find Canonical Units of Analysis",
+      "authors": "Leask, Bussmann, Pearce, Bloom, Tigges, Al Moubayed, Sharkey, Nanda",
+      "year": 2025,
+      "venue": "ICLR 2025",
+      "url": "https://arxiv.org/abs/2502.04878",
+      "local_file": "sources/papers/sae-not-canonical-2025.pdf",
+      "excerpts_file": "kb/excerpts/leask2025-sae-not-canonical.md",
+      "notes_referenced_by": [
+        "interpretability/sparse-autoencoders",
+        "interpretability/mechanistic-interpretability",
+        "interpretability/circuit-tracing"
+      ],
+      "topics": ["sparse-autoencoders"],
+      "category": "landmark",
+      "summary": "Negative result: SAE stitching shows larger SAEs find features absent from smaller ones (incompleteness); meta-SAEs show larger latents decompose into combinations of smaller latents (non-atomicity). Direct contradiction with the 'true features' framing of Bricken 2023 / Templeton 2024. Note: this entry supersedes the existing `sae-not-canonical-2025` placeholder in papers.json — same key, now has local_file + excerpts_file + correct authors. The arxiv ID for this paper is 2502.04878 (the URL in the existing papers.json entry was an ICLR PDF link, which is also valid)."
+    },
+    {
+      "key": "belrose2023-tuned-lens",
+      "title": "Eliciting Latent Predictions from Transformers with the Tuned Lens",
+      "authors": "Belrose, Furman, McKinney, Halawi, Smith, Biderman, Steinhardt, Ostrovsky",
+      "year": 2023,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2303.08112",
+      "local_file": "sources/papers/belrose2023_tuned-lens.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": ["interpretability/lens-techniques"],
+      "topics": ["lens-techniques"],
+      "category": "landmark",
+      "summary": "Trained affine 'translators' per layer that map intermediate activations into the basis the unembedding expects. More reliable than the raw logit lens, especially on BLOOM/GPT-Neo. Introduces Causal Basis Extraction (CBE) for finding influential residual-stream directions. Note: this entry supersedes the existing `belrose2023-tuned-lens` placeholder in papers.json — same key, now has local_file."
+    },
+    {
+      "key": "marks-tegmark-2023-truth",
+      "title": "The Geometry of Truth: Emergent Linear Structure in Large Language Model Representations of True/False Datasets",
+      "authors": "Marks, Tegmark",
+      "year": 2023,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2310.06824",
+      "local_file": "sources/papers/burns2023-truth-geometry.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": ["interpretability/probing"],
+      "topics": ["probing"],
+      "category": "landmark",
+      "summary": "Mass-mean probing for truth: the 'truth direction' is the difference between mean activations on true vs. false statements. Generalizes across logical transformations where logistic-regression probes fail. Note: Phase 1 sweep mis-attributed this to 'Burns et al.' — actual authors are Samuel Marks and Max Tegmark. The unrelated `burns2023-w2s` paper is the Burns et al. (OpenAI Superalignment) weak-to-strong generalization paper, in the alignment area."
+    },
+    {
+      "key": "olsson2022-induction-heads",
+      "title": "In-context Learning and Induction Heads",
+      "authors": "Olsson, Elhage, Nanda, Joseph, DasSarma, Henighan, Mann, Askell, Bai, Chen, Conerly, Drain, Ganguli, Hatfield-Dodds, Hernandez, Johnston, Jones, Kernion, Lovitt, Ndousse, Amodei, Brown, Clark, Kaplan, McCandlish, Olah",
+      "year": 2022,
+      "venue": "Transformer Circuits Thread",
+      "url": "https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["interpretability/mechanistic-interpretability"],
+      "topics": ["mechanistic-interpretability"],
+      "category": "foundational",
+      "summary": "Induction heads as core ICL mechanism. Six lines of evidence (phase change in loss aligned with phase change in induction-head formation; ablation removes ICL; etc.). HTML-only at transformer-circuits.pub — Phase 2 follow-up: manual transcription or off-sandbox fetch needed for verbatim excerpts."
+    },
+    {
+      "key": "lindsey2025-circuit-tracing",
+      "title": "Circuit Tracing: Revealing Computational Graphs in Language Models",
+      "authors": "Lindsey et al. (Anthropic)",
+      "year": 2025,
+      "venue": "Transformer Circuits Thread",
+      "url": "https://transformer-circuits.pub/2025/attribution-graphs/methods.html",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/circuit-tracing",
+        "interpretability/mechanistic-interpretability"
+      ],
+      "topics": ["circuit-tracing", "mechanistic-interpretability"],
+      "category": "landmark",
+      "summary": "Cross-layer transcoders + Jacobian-based attribution graphs. End-to-end automated circuit discovery on production Claude 3.5 Haiku. Synthesis of SAEs (features) + activation patching (causal intervention). HTML-only at transformer-circuits.pub — Phase 2 follow-up needed for verbatim excerpts. Note: this supersedes the existing `lindsey2025-circuit-tracing` placeholder in papers.json — same key, marked HTML-only."
+    },
+    {
+      "key": "lindsey2025-biology",
+      "title": "On the Biology of a Large Language Model",
+      "authors": "Lindsey et al. (Anthropic)",
+      "year": 2025,
+      "venue": "Transformer Circuits Thread",
+      "url": "https://transformer-circuits.pub/2025/attribution-graphs/biology.html",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["interpretability/circuit-tracing"],
+      "topics": ["circuit-tracing", "mechanistic-interpretability"],
+      "category": "landmark",
+      "summary": "Application of circuit tracing to Claude 3.5 Haiku. Documents forward-planning in poetry (rhyme target features activate before the rhyme word), multi-hop reasoning chains, refusal circuits, language-routing in non-English contexts. HTML-only — Phase 2 follow-up needed."
+    }
+  ],
+  "existing_paper_updates": [
+    {
+      "key": "olsson2022-induction-heads",
+      "comment": "Existing key in papers.json. Confirmed primary source for mechanistic-interpretability note. Still HTML-only; no local_file; no excerpts."
+    },
+    {
+      "key": "wang2022-ioi",
+      "comment": "Existing key in papers.json. Phase 2: now has local_file = sources/papers/wang2022-ioi_ioi-circuit.pdf and excerpts_file = kb/excerpts/wang2022-ioi.md. Add notes_referenced_by entries for interpretability/mechanistic-interpretability and interpretability/activation-patching."
+    },
+    {
+      "key": "meng2022-rome",
+      "comment": "Existing key in papers.json. Phase 2: now has local_file = sources/papers/meng2022_rome.pdf and excerpts_file = kb/excerpts/meng2022-rome.md. Add notes_referenced_by entries."
+    },
+    {
+      "key": "templeton2024-scaling-monosemanticity",
+      "comment": "Existing key in papers.json. Confirmed primary source for sparse-autoencoders + mechanistic-interpretability notes. Still HTML-only; cite as Tier A but no excerpts in this pass."
+    },
+    {
+      "key": "gemma-scope-2024",
+      "comment": "Existing key in papers.json. Phase 2: now has local_file = sources/papers/gemma-scope-2024_jumprelu-saes.pdf. Authors should be expanded to full list (Lieberum et al.). Not yet excerpted."
+    },
+    {
+      "key": "lindsey2025-circuit-tracing",
+      "comment": "Existing key in papers.json. Add HTML-only flag; add a sibling key `lindsey2025-biology` for the application paper. Both still need verbatim excerpts via off-sandbox fetch."
+    },
+    {
+      "key": "sae-not-canonical-2025",
+      "comment": "Existing key in papers.json. Phase 2: now has local_file = sources/papers/sae-not-canonical-2025.pdf and excerpts_file = kb/excerpts/leask2025-sae-not-canonical.md. Authors should be expanded to full list (Leask et al.)."
+    },
+    {
+      "key": "belrose2023-tuned-lens",
+      "comment": "Existing key in papers.json. Phase 2: now has local_file = sources/papers/belrose2023_tuned-lens.pdf. Not yet excerpted — stub note only."
+    }
+  ],
+  "phase1_corrections": [
+    {
+      "topic": "probing",
+      "issue": "Phase 1 landscape sweep cited 'Burns et al. (NYU/Columbia)' as authors of 'The Geometry of Truth'. The actual authors are Samuel Marks (NYU) and Max Tegmark (MIT) — there is no overlap with the OpenAI Superalignment 'Burns et al.' weak-to-strong paper (`burns2023-w2s`).",
+      "resolution": "New paper key proposed: `marks-tegmark-2023-truth`. The Phase 1 entry `burns2023-truth-geometry` should not be promoted to papers.json; use the new key instead."
+    },
+    {
+      "topic": "sparse-autoencoders",
+      "issue": "Phase 1 landscape report flagged the SAE-canonicality contradiction; Phase 2 confirms it but adds nuance — the field has largely moved to a 'pragmatic' position (use SAEs as a useful, basis-dependent tool) rather than abandoning them. Lindsey 2025 explicitly takes this stance.",
+      "resolution": "Documented in `kb/notes/interpretability/sparse-autoencoders.md` §6 with the [CONTRADICTION] tag."
+    }
+  ],
+  "phase2_followups": [
+    {
+      "topic": "lens-techniques",
+      "action": "Promote stub to draft. Belrose tuned-lens PDF is on disk; needs full excerpt + Feynman-bar treatment. Also fetch DoLa (Chuang 2023, arxiv 2309.03883) and LogitLens4LLMs (2025, arxiv 2503.11667)."
+    },
+    {
+      "topic": "probing",
+      "action": "Promote stub to draft. Marks & Tegmark truth-geometry PDF is on disk; needs full excerpt. Fetch Alain & Bengio 2017 (arxiv 1610.01644) for foundational probing methodology."
+    },
+    {
+      "topic": "mechanistic-interpretability + circuit-tracing + sparse-autoencoders",
+      "action": "Manually transcribe excerpts from transformer-circuits.pub HTML pages (induction-heads / Towards Monosemanticity / Scaling Monosemanticity / Circuit Tracing methods + biology). The sandbox cannot fetch transformer-circuits.pub but the pages are short enough to manually excerpt off-sandbox."
+    },
+    {
+      "topic": "activation-patching",
+      "action": "Excerpt the ACDC paper (Conmy 2023) and the Heimersheim 2024 howto. Both PDFs on disk."
+    },
+    {
+      "topic": "sparse-autoencoders",
+      "action": "Excerpt the Gemma Scope paper itself (PDF on disk). Currently quoted via the JumpReLU companion paper, which is sufficient but suboptimal."
+    }
+  ]
+}

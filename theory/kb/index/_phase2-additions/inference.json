@@ -1,0 +1,245 @@
+{
+  "area": "inference",
+  "phase": 2,
+  "subagent": "inference-area-2026-05-04",
+  "_note": "Phase 2 pass over the inference/ area. Bash was blocked for downloads in this thread; primary PDFs were fetched via WebFetch and then read page-by-page via the Read tool's `pages` parameter. Excerpts are from those PDF pages; `local_file` is null for the new papers (no PDF ended up in theory/sources/papers/), but every excerpt is anchored to a section/equation number transcribed from the official PDF. Four DRAFT notes (kv-cache-management, quantization, speculative-decoding, serving-systems) were produced; structured-output remains a STUB pending Phase 2-followup.",
+  "new_papers": [
+    {
+      "key": "kwon2023",
+      "title": "Efficient Memory Management for Large Language Model Serving with PagedAttention",
+      "authors": "Kwon, Li, Zhuang, Sheng, Zheng, Yu, Gonzalez, Zhang, Stoica",
+      "year": 2023,
+      "venue": "SOSP 2023",
+      "url": "https://arxiv.org/abs/2309.06180",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/kwon2023.md",
+      "notes_referenced_by": [
+        "inference/kv-cache-management",
+        "inference/serving-systems"
+      ],
+      "topics": ["kv-cache-management", "serving-systems"],
+      "category": "foundational",
+      "summary": "PagedAttention + vLLM. Treats the KV cache as virtual memory: fixed-size KV blocks, indirection via per-sequence block tables, copy-on-write for forking decode paths, and recompute/swap policies for eviction. Eq.4 expresses attention as a sum over KV blocks. Reframes serving from a contiguous-allocation problem (50-90% wasted memory in FasterTransformer/Orca per their measurements) to a paging problem with <4% internal fragmentation. The substrate every modern serving stack inherits."
+    },
+    {
+      "key": "frantar2022",
+      "title": "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers",
+      "authors": "Frantar, Ashkboos, Hoefler, Alistarh",
+      "year": 2022,
+      "venue": "ICLR 2023",
+      "url": "https://arxiv.org/abs/2210.17323",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/frantar2022.md",
+      "notes_referenced_by": [
+        "inference/quantization"
+      ],
+      "topics": ["quantization"],
+      "category": "foundational",
+      "summary": "Layer-wise post-training weight quantization via OBQ-style second-order updates with three engineering modifications: arbitrary fixed quantization order (eliminates the per-row sort), lazy batched updates (amortises BLAS cost across blocks of 128 columns), and Cholesky reformulation (numerically stable for the Hessian inverse). Quantizes a 175B OPT/BLOOM in ~4 GPU-hours to 3-4 bit with negligible perplexity loss. The reference algorithm for W4A16 weight-only quantization."
+    },
+    {
+      "key": "leviathan2023",
+      "title": "Fast Inference from Transformers via Speculative Decoding",
+      "authors": "Leviathan, Kalman, Matias",
+      "year": 2023,
+      "venue": "ICML 2023",
+      "url": "https://arxiv.org/abs/2211.17192",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/leviathan2023.md",
+      "notes_referenced_by": [
+        "inference/speculative-decoding",
+        "inference/serving-systems"
+      ],
+      "topics": ["speculative-decoding"],
+      "category": "foundational",
+      "summary": "The canonical speculative-decoding paper. A small drafter Mq proposes gamma tokens autoregressively; the target Mp scores them in one parallel forward pass; a rejection-sampling rule (accept if r <= p(x)/q(x), else resample from norm(max(0, p-q))) preserves the exact target distribution. Theorem 3.5 gives E[#accepted tokens] = (1-alpha^(gamma+1))/(1-alpha); Theorem 3.8 gives the walltime speedup as a function of alpha and the cost ratio c = T_q/T_p. T5-XXL 2-3x walltime improvement at c approx 0.05 and alpha approx 0.7."
+    },
+    {
+      "key": "li2024-eagle",
+      "title": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty",
+      "authors": "Li, Wei, Zhang, Zhang",
+      "year": 2024,
+      "venue": "ICML 2024",
+      "url": "https://arxiv.org/abs/2401.15077",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/li2024-eagle.md",
+      "notes_referenced_by": [
+        "inference/speculative-decoding"
+      ],
+      "topics": ["speculative-decoding"],
+      "category": "foundational",
+      "summary": "Drafts at the feature (penultimate-layer hidden state) level, not the token level. The drafter is a single transformer layer that autoregresses on a sequence of (feature_t, token_{t+1}) pairs - the shifted-token trick - because token_{t+1} disambiguates which sample produced feature_t. Trained with SmoothL1 (feature) + cross-entropy (token) losses. Tree-structured drafts via the same target-LM-driven verification that Medusa uses. Reports ~3x speedup on Vicuna and consistent gains across temperatures."
+    },
+    {
+      "key": "cai2024-medusa",
+      "title": "Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads",
+      "authors": "Cai, Li, Geng, Peng, Lee, Zhang, Chen, Dao",
+      "year": 2024,
+      "venue": "ICML 2024",
+      "url": "https://arxiv.org/abs/2401.10774",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/cai2024-medusa.md",
+      "notes_referenced_by": [
+        "inference/speculative-decoding"
+      ],
+      "topics": ["speculative-decoding"],
+      "category": "foundational",
+      "summary": "K parallel decoding heads on top of the frozen target model, each predicting position t+k+1 from the same hidden state. Drafts form a tree (Cartesian product of per-head top-k) verified in one forward pass via tree-attention masks. Medusa-1: heads-only training. Medusa-2: jointly fine-tunes the backbone with a head-loss + lambda * LM-loss schedule. Introduces 'typical acceptance' (accept any draft above an entropy-scaled threshold rather than exact-match sampling) as a quality-throughput knob. ~2-3x speedup, no separate drafter model."
+    },
+    {
+      "key": "xiao2023-smoothquant",
+      "title": "SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models",
+      "authors": "Xiao, Lin, Seznec, Wu, Demouth, Han",
+      "year": 2023,
+      "venue": "ICML 2023",
+      "url": "https://arxiv.org/abs/2211.10438",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/xiao2023-smoothquant.md",
+      "notes_referenced_by": [
+        "inference/quantization"
+      ],
+      "topics": ["quantization"],
+      "category": "foundational",
+      "summary": "Identifies the activation-outlier problem above ~6.7B parameters: a small number of channels carry magnitudes 100x the median, breaking per-tensor INT8 activation quantization. Migrates outlier difficulty offline from activations to weights via diag(s) on the linear-layer input, with smoothing factor s_j = max(|X_j|)^alpha / max(|W_j|)^(1-alpha) and alpha=0.5 default (Eq.3-4). Enables W8A8 INT8 quantization on OPT/BLOOM/LLaMA up to 530B with ~1.56x speedup and within 0.1-0.2 perplexity of FP16."
+    },
+    {
+      "key": "zheng2024-sglang",
+      "title": "SGLang: Efficient Execution of Structured Language Model Programs",
+      "authors": "Zheng, Yin, Xie, Sun, Huang, Yu, Cao, Kozyrakis, Stoica, Gonzalez, Barrett, Sheng",
+      "year": 2024,
+      "venue": "NeurIPS 2024",
+      "url": "https://arxiv.org/abs/2312.07104",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/zheng2024-sglang.md",
+      "notes_referenced_by": [
+        "inference/kv-cache-management",
+        "inference/serving-systems",
+        "inference/structured-output"
+      ],
+      "topics": ["kv-cache-management", "serving-systems", "structured-output"],
+      "category": "foundational",
+      "summary": "Two contributions: (1) RadixAttention - cross-request KV reuse via a radix-tree of token-prefix keys with LRU + reference-count eviction and cache-aware DFS scheduling that maximises tree hit-rate (Theorem 3.1). (2) Compressed FSM for constrained decoding - merges single-edge runs of deterministic transitions so a forced prefix like '{\"summary\": \"' is decoded in one step, not seven. The combination delivers 1.5-6x throughput over vLLM and TGI on shared-prefix and JSON-schema workloads."
+    },
+    {
+      "key": "chen2023-speculative",
+      "title": "Accelerating Large Language Model Decoding with Speculative Sampling",
+      "authors": "Chen, Borgeaud, Irving, Lespiau, Sifre, Jumper",
+      "year": 2023,
+      "venue": "DeepMind tech report (arXiv)",
+      "url": "https://arxiv.org/abs/2302.01318",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "inference/speculative-decoding"
+      ],
+      "topics": ["speculative-decoding"],
+      "category": "secondary",
+      "summary": "Concurrent (with leviathan2023) speculative-sampling formulation from DeepMind. Uses Chinchilla 70B as target with a 4B drafter; reports ~2-2.5x walltime speedup. Same rejection-sampling correctness guarantee as Leviathan. Cited as the second canonical reference for the technique; full excerpt deferred since the algorithmic content is captured by leviathan2023."
+    }
+  ],
+  "existing_paper_updates": [
+    {
+      "key": "shazeer2019",
+      "add_notes_referenced_by": [
+        "inference/kv-cache-management"
+      ],
+      "note": "MQA / single write-head. Cited as the first KV-cache-shape compression technique upstream of the runtime layout problem PagedAttention solves."
+    },
+    {
+      "key": "ainslie2023",
+      "add_notes_referenced_by": [
+        "inference/kv-cache-management"
+      ],
+      "note": "GQA. Cited as the production sweet-spot between MHA fidelity and MQA cache-shrink (Llama 2/3, Mistral)."
+    },
+    {
+      "key": "deepseek-v2",
+      "add_notes_referenced_by": [
+        "inference/kv-cache-management",
+        "inference/serving-systems"
+      ],
+      "note": "MLA (Multi-head Latent Attention). Cited as the most aggressive KV-shape compression in production (~93% cache reduction vs MHA at deepseek-v2 dimensions)."
+    },
+    {
+      "key": "dao2022",
+      "add_notes_referenced_by": [
+        "inference/serving-systems"
+      ],
+      "note": "FlashAttention. Cited as the kernel substrate every serving stack inherits underneath PagedAttention/RadixAttention."
+    },
+    {
+      "key": "dao2023",
+      "add_notes_referenced_by": [
+        "inference/serving-systems"
+      ],
+      "note": "FlashAttention-2. The decode-phase kernel default in vLLM/SGLang."
+    },
+    {
+      "key": "shah2024",
+      "add_notes_referenced_by": [
+        "inference/serving-systems",
+        "inference/quantization"
+      ],
+      "note": "FlashAttention-3. Adds Hopper-specific async + FP8 paths; cited for the FP8-attention production line."
+    },
+    {
+      "key": "kvquant2024",
+      "set_excerpts_file": null,
+      "add_notes_referenced_by": [
+        "inference/kv-cache-management",
+        "inference/quantization"
+      ],
+      "note": "KVQuant. Cited as the key result that K and V have different statistics: K should be quantised per-channel (channel-aligned outliers), V per-token. Excerpts file pending Phase 2 follow-up."
+    },
+    {
+      "key": "ma2024-bitnet",
+      "set_excerpts_file": "kb/excerpts/ma2024-bitnet.md",
+      "add_notes_referenced_by": [
+        "inference/quantization"
+      ]
+    },
+    {
+      "key": "bitnet-2b4t-2025",
+      "add_notes_referenced_by": [
+        "inference/quantization"
+      ],
+      "note": "BitNet b1.58 2B4T. The follow-up showing ternary training scales to 4T tokens at 2B params."
+    },
+    {
+      "key": "eagle3-2025",
+      "add_notes_referenced_by": [
+        "inference/speculative-decoding"
+      ],
+      "note": "EAGLE-3. Training-time test for speculative drafters; cited as the late-2025 frontier point on the EAGLE lineage."
+    },
+    {
+      "key": "xgrammar2024",
+      "add_notes_referenced_by": [
+        "inference/structured-output"
+      ],
+      "note": "XGrammar. Canonical structured-output engine; primary source for the structured-output topic when it advances from STUB to DRAFT."
+    }
+  ],
+  "papers_planned_but_not_excerpted": [
+    {
+      "topic": "structured-output",
+      "keys": ["xgrammar2024", "xgrammar2-2026", "jsonschemabench-2025", "willard2023-outlines"],
+      "reason": "Topic is STUB; full Feynman-bar treatment deferred."
+    },
+    {
+      "topic": "quantization",
+      "keys": ["lin2023-awq", "dettmers2022-llm-int8", "dettmers2023-qlora"],
+      "reason": "Cited by the quantization note but excerpts not produced this pass; AWQ in particular merits its own excerpt for the salient-channel argument."
+    },
+    {
+      "topic": "serving-systems",
+      "keys": ["yu2022-orca", "agrawal2024-sarathi", "splitwise2024", "distserve2024"],
+      "reason": "Cited for continuous batching (Orca) and prefill/decode disaggregation; excerpts deferred."
+    },
+    {
+      "topic": "speculative-decoding",
+      "keys": ["fu2024-lookahead", "specinfer-2024"],
+      "reason": "Cited as design-space alternatives but excerpts deferred."
+    }
+  ]
+}

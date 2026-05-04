@@ -1,0 +1,96 @@
+{
+  "area": "reasoning",
+  "_note": "Phase 2 additions for the reasoning/ area. Sandbox/curl was denied during this pass, so primary PDFs for newly-added papers were NOT downloaded; their `local_file` is null, and `excerpts_file` points to a skeleton with verbatim abstracts but body-section quotes pending follow-up. The deepseek-r1 and snell2024 excerpts were populated by parallel subagents during Phase 2 and are full-quality.",
+  "new_papers": [
+    {
+      "key": "kojima2022",
+      "title": "Large Language Models are Zero-Shot Reasoners",
+      "authors": "Kojima, Gu, Reid, Matsuo, Iwasawa",
+      "year": 2022,
+      "venue": "NeurIPS",
+      "url": "https://arxiv.org/abs/2205.11916",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/kojima2022.md",
+      "notes_referenced_by": ["reasoning/chain-of-thought"],
+      "topics": ["chain-of-thought"],
+      "category": "foundational",
+      "summary": "Zero-shot CoT: appending 'Let's think step by step' elicits CoT-style reasoning without exemplars. text-davinci-002 MultiArith 17.7% -> 78.7%; GSM8K 10.4% -> 40.7%. Two-stage prompt: reasoning extraction + answer extraction."
+    },
+    {
+      "key": "wang2022-self-consistency",
+      "title": "Self-Consistency Improves Chain of Thought Reasoning in Language Models",
+      "authors": "Wang, Wei, Schuurmans, Le, Chi, Narang, Chowdhery, Zhou",
+      "year": 2022,
+      "venue": "ICLR 2023",
+      "url": "https://arxiv.org/abs/2203.11171",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/wang2022-self-consistency.md",
+      "notes_referenced_by": ["reasoning/chain-of-thought", "reasoning/test-time-compute"],
+      "topics": ["chain-of-thought", "test-time-compute"],
+      "category": "foundational",
+      "summary": "Self-consistency: sample N reasoning paths at T > 0, majority-vote over extracted answers. GSM8K +17.9%, SVAMP +11.0%, AQuA +12.2% over greedy CoT. The cheapest test-time-compute strategy and the baseline against which best-of-N + verifier methods are compared."
+    },
+    {
+      "key": "lightman2023-prm800k",
+      "title": "Let's Verify Step by Step",
+      "authors": "Lightman, Kosaraju, Burda, Edwards, Baker, Lee, Leike, Schulman, Sutskever, Cobbe",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2305.20050",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/lightman2023-prm800k.md",
+      "notes_referenced_by": ["reasoning/process-supervision", "reasoning/test-time-compute", "reasoning/inference-time-search"],
+      "topics": ["process-supervision", "test-time-compute"],
+      "category": "foundational",
+      "summary": "Process Reward Models on PRM800K. Process supervision substantially outperforms outcome supervision on MATH best-of-N at matched N. min-aggregation over per-step PRM scores is the strongest aggregator. Released the PRM800K dataset (800K human step-labels)."
+    }
+  ],
+  "existing_paper_updates": [
+    {
+      "key": "wei2022-cot",
+      "set_excerpts_file": "kb/excerpts/wei2022-cot.md",
+      "add_notes_referenced_by": ["reasoning/chain-of-thought", "reasoning/test-time-compute"]
+    },
+    {
+      "key": "snell2024",
+      "set_excerpts_file": "kb/excerpts/snell2024.md",
+      "add_notes_referenced_by": ["reasoning/test-time-compute", "reasoning/inference-time-search"]
+    },
+    {
+      "key": "s1-2025",
+      "set_excerpts_file": "kb/excerpts/s1-2025.md",
+      "add_notes_referenced_by": ["reasoning/test-time-compute", "reasoning/chain-of-thought", "reasoning/reasoning-training"]
+    },
+    {
+      "key": "deepseek-r1",
+      "set_excerpts_file": "kb/excerpts/deepseek-r1.md",
+      "add_notes_referenced_by": ["reasoning/reasoning-training", "reasoning/test-time-compute", "reasoning/chain-of-thought", "reasoning/inference-time-search"]
+    },
+    {
+      "key": "thinkprm2025",
+      "set_excerpts_file": "kb/excerpts/thinkprm2025.md",
+      "add_notes_referenced_by": ["reasoning/process-supervision", "reasoning/test-time-compute"]
+    },
+    {
+      "key": "rstar-math2025",
+      "set_excerpts_file": "kb/excerpts/rstar-math2025.md",
+      "add_notes_referenced_by": ["reasoning/inference-time-search", "reasoning/reasoning-training", "reasoning/process-supervision"]
+    },
+    {
+      "key": "dapo2025",
+      "add_notes_referenced_by": ["reasoning/reasoning-training"]
+    },
+    {
+      "key": "rlvr-limits-2025",
+      "add_notes_referenced_by": ["reasoning/reasoning-training", "reasoning/test-time-compute"]
+    },
+    {
+      "key": "qwen3",
+      "add_notes_referenced_by": ["reasoning/reasoning-training"]
+    },
+    {
+      "key": "gemini2-5",
+      "add_notes_referenced_by": ["reasoning/test-time-compute"]
+    }
+  ]
+}

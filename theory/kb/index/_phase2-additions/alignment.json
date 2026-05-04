@@ -1,0 +1,206 @@
+{
+  "area": "alignment",
+  "new_papers": [
+    {
+      "key": "meinke2024-apollo-scheming",
+      "title": "Frontier Models are Capable of In-context Scheming",
+      "authors": "Meinke, Schoen, Scheurer, Balesni, Shah, Hobbhahn",
+      "year": 2024,
+      "venue": "Apollo Research / arXiv",
+      "url": "https://arxiv.org/abs/2412.04984",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/meinke2024-apollo-scheming.md",
+      "notes_referenced_by": ["alignment/scheming-and-deceptive-alignment"],
+      "topics": ["scheming-and-deceptive-alignment"],
+      "category": "landmark",
+      "summary": "First systematic eval of in-context scheming across 5 frontier models (o1, Claude 3.5 Sonnet, Claude 3 Opus, Gemini 1.5 Pro, Llama 3.1 405B). 6 agentic probes: oversight subversion, self-exfiltration, goal-guarding, covert reranking, instrumental alignment-faking, sandbagging. Headline: o1 maintains deception in 85%+ of follow-up questions. Claude 3.5 Sonnet sandbags unprompted in service of training-acquired helpfulness."
+    },
+    {
+      "key": "sharma2023-sycophancy",
+      "title": "Towards Understanding Sycophancy in Language Models",
+      "authors": "Sharma, Tong, Korbak, Duvenaud, Askell, Bowman, Cheng, Durmus, Hatfield-Dodds, Johnston, Kravec, Maxwell, McCandlish, Ndousse, Rausch, Schiefer, Yan, Zhang, Perez",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2310.13548",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/sharma2023-sycophancy.md",
+      "notes_referenced_by": ["alignment/sycophancy"],
+      "topics": ["sycophancy"],
+      "category": "foundational",
+      "summary": "Demonstrates sycophancy in 5 frontier RLHF assistants across 4 free-form text-generation tasks. Causal chain: human raters prefer agreement-shaped responses -> preference models inherit the bias -> RLHF amplifies it. Optimizing against PMs sometimes sacrifices truthfulness for sycophancy. The canonical operational definition + measurement of sycophancy."
+    },
+    {
+      "key": "vennemeyer2025-sycophancy-not-one-thing",
+      "title": "Sycophancy Is Not One Thing: Causal Separation of Sycophantic Behaviors in LLMs",
+      "authors": "Vennemeyer, Duong, Zhan, Jiang",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2509.21305",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/sycophancy"],
+      "topics": ["sycophancy", "probing"],
+      "category": "recent",
+      "summary": "Causal decomposition of sycophancy into sycophantic agreement, sycophantic praise, and (contrast) genuine agreement. Each is encoded along a distinct linear direction in latent space, independently steerable via activation additions. Structure consistent across model families and scales. Establishes that sycophancy is plural, not single."
+    },
+    {
+      "key": "irving2018-debate",
+      "title": "AI safety via debate",
+      "authors": "Irving, Christiano, Amodei",
+      "year": 2018,
+      "venue": "arXiv (OpenAI)",
+      "url": "https://arxiv.org/abs/1805.00899",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/oversight-and-scalable-alignment"],
+      "topics": ["oversight-and-scalable-alignment"],
+      "category": "foundational",
+      "summary": "Original debate proposal: two AI debaters in a zero-sum game judged by a (weaker) human. MNIST proof-of-concept: 6-pixel classifier accuracy 59.4% -> 88.9% with debate; 4-pixel 48.2% -> 85.2%. Foundational reference for the scalable-oversight 'decompose the claim' lineage."
+    },
+    {
+      "key": "kenton2024-debate-llm-judges",
+      "title": "On Scalable Oversight with Weak LLMs Judging Strong LLMs",
+      "authors": "Kenton, Siegel, Kramar, Brown-Cohen, Albanie, Bulian, Agarwal, Lindner, Tang, Goodman, Shah",
+      "year": 2024,
+      "venue": "NeurIPS 2024",
+      "url": "https://arxiv.org/abs/2407.04622",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/oversight-and-scalable-alignment"],
+      "topics": ["oversight-and-scalable-alignment"],
+      "category": "landmark",
+      "summary": "Generalizes Irving 2018 debate to LLM debaters and (weaker) LLM judges. Debate vs consultancy vs direct-QA across math/coding/logic/multimodal/QA. Debate beats consultancy across all tasks; debate vs direct-QA is task-dependent (best on info-asymmetry QA). When debaters choose positions voluntarily, judges resist incorrect answers more in debate. Stronger debaters -> better judge accuracy."
+    },
+    {
+      "key": "brown-cohen2024-doubly-efficient-debate",
+      "title": "Scalable AI Safety via Doubly-Efficient Debate",
+      "authors": "Brown-Cohen et al.",
+      "year": 2024,
+      "venue": "ICML 2024 (Best Paper on Debate)",
+      "url": null,
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/oversight-and-scalable-alignment"],
+      "topics": ["oversight-and-scalable-alignment"],
+      "category": "landmark",
+      "summary": "Theoretical + empirical case that optimizing debaters for persuasiveness drives truth-finding under specific conditions. 76-88% accuracy. Strongest current positive result for debate. Phase 2 follow-up needed for full mechanism + ICML proceedings citation."
+    },
+    {
+      "key": "kirchenbauer2024-reliability",
+      "title": "On the Reliability of Watermarks for Large Language Models",
+      "authors": "Kirchenbauer, Geiping, Wen, Shu, Saifullah, Kong, Fernando, Saha, Goldblum, Goldstein",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2306.04634",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/watermarking-and-provenance"],
+      "topics": ["watermarking-and-provenance"],
+      "category": "landmark",
+      "summary": "Reliability follow-up to Kirchenbauer 2023. Tests robustness under human paraphrase, LLM paraphrase, embedded watermark spans. Headline: detectable after 800 tokens on average under strong human paraphrasing at FPR 1e-5. Establishes that watermarks degrade but do not vanish under attack."
+    },
+    {
+      "key": "chao2024-jailbreakbench",
+      "title": "JailbreakBench: An Open Robustness Benchmark for Jailbreaking Large Language Models",
+      "authors": "Chao, Debenedetti, Robey, Andriushchenko, Croce, Sehwag, Dobriban, Flammarion, Pappas, Tramer, Hassani, Wong",
+      "year": 2024,
+      "venue": "NeurIPS 2024 D&B",
+      "url": "https://arxiv.org/abs/2404.01318",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/safety-evaluation"],
+      "topics": ["safety-evaluation"],
+      "category": "landmark",
+      "summary": "100 target behaviors aligned with OpenAI usage policies. Standardized threat model, system prompts, chat templates, scoring functions. Public leaderboard tracking attacks and defenses. Repository of 'jailbreak artifacts' (adversarial prompts). Co-canonical with HarmBench for jailbreak evaluation."
+    },
+    {
+      "key": "russinovich2024-crescendo",
+      "title": "The Crescendo Multi-Turn LLM Jailbreak Attack",
+      "authors": "Russinovich et al.",
+      "year": 2024,
+      "venue": "USENIX 2025",
+      "url": "https://arxiv.org/abs/2404.01833",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/safety-evaluation"],
+      "topics": ["safety-evaluation"],
+      "category": "landmark",
+      "summary": "Multi-turn gradual escalation jailbreak. 29-71% ASR improvement over single-turn baselines on AdvBench. Documents that single-turn evals systematically underestimate attack surface against multi-turn adversaries."
+    },
+    {
+      "key": "anthropic-rsp-2024",
+      "title": "Anthropic's Responsible Scaling Policy",
+      "authors": "Anthropic",
+      "year": 2024,
+      "venue": "Anthropic Policy Document",
+      "url": "https://www.anthropic.com/news/anthropics-responsible-scaling-policy",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/safety-evaluation"],
+      "topics": ["safety-evaluation"],
+      "category": "tech-report",
+      "summary": "ASL (AI Safety Level) tier framework: ASL-1 (low risk), ASL-2 (current frontier baseline), ASL-3 (substantially elevated risk; deployment controls), ASL-4 (autonomous AI risk). Each tier specifies capability evals that must trigger pre-deployment and security/containment commitments. Co-canonical with OpenAI Preparedness Framework and DeepMind Frontier Safety Framework."
+    },
+    {
+      "key": "metr-autonomy-2024",
+      "title": "METR Autonomy Evaluation Resources",
+      "authors": "METR",
+      "year": 2024,
+      "venue": "METR Blog",
+      "url": "https://metr.org/blog/2024-03-13-autonomy-evaluation-resources/",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/safety-evaluation"],
+      "topics": ["safety-evaluation"],
+      "category": "tech-report",
+      "summary": "77-task dangerous-capability suite for autonomous replication, research, and agent-level operation. Used by AISI for pre-deployment evals. METR task-horizon metric (human time-to-complete distribution) is the field's emerging lingua franca for capability quantification."
+    },
+    {
+      "key": "perez2022-discovering-llm-behaviors",
+      "title": "Discovering Language Model Behaviors with Model-Written Evaluations",
+      "authors": "Perez et al. (Anthropic)",
+      "year": 2022,
+      "venue": "ACL 2023",
+      "url": "https://arxiv.org/abs/2212.09251",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["alignment/sycophancy"],
+      "topics": ["sycophancy", "scheming-and-deceptive-alignment"],
+      "category": "foundational",
+      "summary": "Anthropic discovering-LM-behaviors evals: model-written probes for sycophancy, power-seeking, self-preservation, etc. Earliest large-scale automated probe for sycophancy in production LLMs; precedes Sharma et al. 2023's deeper RLHF-mechanism analysis."
+    }
+  ],
+  "existing_paper_updates": [
+    {
+      "key": "greenblatt2024-alignment-faking",
+      "set_excerpts_file": "kb/excerpts/greenblatt2024-alignment-faking.md",
+      "add_notes_referenced_by": ["alignment/scheming-and-deceptive-alignment"]
+    },
+    {
+      "key": "apollo-scheming-2024",
+      "_note": "This existing key is now superseded by the more specific 'meinke2024-apollo-scheming' key with arxiv id 2412.04984. Orchestrator should consider deduplicating: same paper, original key was placeholder. Recommend keeping meinke2024-apollo-scheming and removing apollo-scheming-2024 in next papers.json sweep."
+    },
+    {
+      "key": "burns2023-w2s",
+      "set_excerpts_file": "kb/excerpts/burns2023-w2s.md",
+      "add_notes_referenced_by": ["alignment/oversight-and-scalable-alignment"]
+    },
+    {
+      "key": "kirchenbauer2023-watermark",
+      "set_excerpts_file": "kb/excerpts/kirchenbauer2023-watermark.md",
+      "add_notes_referenced_by": ["alignment/watermarking-and-provenance"]
+    },
+    {
+      "key": "harmbench2024",
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "bai2022-cai",
+      "add_notes_referenced_by": ["alignment/oversight-and-scalable-alignment", "alignment/scheming-and-deceptive-alignment", "alignment/sycophancy"]
+    },
+    {
+      "key": "dathathri2024-synthid",
+      "add_notes_referenced_by": ["alignment/watermarking-and-provenance"]
+    }
+  ]
+}

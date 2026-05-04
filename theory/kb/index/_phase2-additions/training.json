@@ -1,0 +1,118 @@
+{
+  "area": "training",
+  "phase": 2,
+  "subagent": "training-area-2026-05-04",
+  "new_papers": [],
+  "note_on_new_papers": "All six excerpt-target papers (phi4, muon-moonlight2025, fineweb2024, data-mixing-laws-2024, torchtitan2024, deepseek-v3) were already present in papers.json prior to this Phase 2 pass. The new contribution here is excerpt files under kb/excerpts/ and additional notes_referenced_by entries — see existing_paper_updates below for set_excerpts_file additions.",
+  "existing_paper_updates": [
+    {
+      "key": "phi4",
+      "set_excerpts_file": "kb/excerpts/phi4.md",
+      "add_notes_referenced_by": [
+        "training/synthetic-data-and-distillation",
+        "training/pre-training-data",
+        "training/adaptation-and-merging"
+      ]
+    },
+    {
+      "key": "muon-moonlight2025",
+      "set_excerpts_file": "kb/excerpts/muon-moonlight2025.md",
+      "add_notes_referenced_by": [
+        "training/optimization",
+        "training/distributed-training",
+        "training/mixed-precision-and-stability"
+      ]
+    },
+    {
+      "key": "fineweb2024",
+      "set_excerpts_file": "kb/excerpts/fineweb2024.md",
+      "add_notes_referenced_by": [
+        "training/pre-training-data",
+        "training/synthetic-data-and-distillation"
+      ]
+    },
+    {
+      "key": "data-mixing-laws-2024",
+      "set_excerpts_file": "kb/excerpts/data-mixing-laws-2024.md",
+      "add_notes_referenced_by": [
+        "training/pre-training-data"
+      ]
+    },
+    {
+      "key": "torchtitan2024",
+      "set_excerpts_file": "kb/excerpts/torchtitan2024.md",
+      "add_notes_referenced_by": [
+        "training/distributed-training",
+        "training/mixed-precision-and-stability"
+      ]
+    },
+    {
+      "key": "deepseek-v3",
+      "set_excerpts_file": "kb/excerpts/deepseek-v3-training.md",
+      "add_notes_referenced_by": [
+        "training/distributed-training",
+        "training/mixed-precision-and-stability",
+        "training/pre-training-data",
+        "training/adaptation-and-merging"
+      ],
+      "note": "Excerpt file is named deepseek-v3-training.md (not deepseek-v3.md) because the training-side excerpts cover the FP8/DualPipe/all-to-all infrastructure half; the architecture-side (MLA, DeepSeekMoE, MTP) is excerpted in the V2 file kb/excerpts/deepseek-v2.md. This keeps the V3 paper key as canonical with two excerpt files: the architecture-area subagent's pending file and this training-side file."
+    },
+    {
+      "key": "deepseek-r1",
+      "add_notes_referenced_by": [
+        "training/synthetic-data-and-distillation"
+      ],
+      "note": "kb/excerpts/deepseek-r1.md was created by the post-training subagent and edited by this subagent to add training-side anchors (#sec-2-1-grpo, #sec-2-1-hp, #sec-2-2-reward, #sec-2-3-aime, #sec-2-3-aha, #sec-3-pipeline). The training-side note synthetic-data-and-distillation cites the §3 distillation pipeline anchor."
+    },
+    {
+      "key": "burns2023-w2s",
+      "add_notes_referenced_by": [
+        "training/synthetic-data-and-distillation"
+      ]
+    },
+    {
+      "key": "kaplan2020",
+      "add_notes_referenced_by": [
+        "training/optimization",
+        "training/pre-training-data"
+      ]
+    },
+    {
+      "key": "hoffmann2022-chinchilla",
+      "add_notes_referenced_by": [
+        "training/optimization",
+        "training/pre-training-data"
+      ]
+    },
+    {
+      "key": "scaling-laws-precision-2024",
+      "add_notes_referenced_by": [
+        "training/mixed-precision-and-stability"
+      ],
+      "note": "Cited in mixed-precision-and-stability STUB as a pending excerpt target — not yet excerpted."
+    },
+    {
+      "key": "mergekit2024",
+      "add_notes_referenced_by": [
+        "training/adaptation-and-merging"
+      ],
+      "note": "Cited in adaptation-and-merging STUB as a pending excerpt target — not yet excerpted."
+    }
+  ],
+  "excerpt_files_added": [
+    "kb/excerpts/phi4.md",
+    "kb/excerpts/muon-moonlight2025.md",
+    "kb/excerpts/fineweb2024.md",
+    "kb/excerpts/data-mixing-laws-2024.md",
+    "kb/excerpts/torchtitan2024.md",
+    "kb/excerpts/deepseek-v3-training.md"
+  ],
+  "notes_added": [
+    {"path": "kb/notes/training/synthetic-data-and-distillation.md", "status": "DRAFT"},
+    {"path": "kb/notes/training/optimization.md", "status": "DRAFT"},
+    {"path": "kb/notes/training/pre-training-data.md", "status": "DRAFT"},
+    {"path": "kb/notes/training/distributed-training.md", "status": "DRAFT"},
+    {"path": "kb/notes/training/mixed-precision-and-stability.md", "status": "STUB"},
+    {"path": "kb/notes/training/adaptation-and-merging.md", "status": "STUB"}
+  ]
+}

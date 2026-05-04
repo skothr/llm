@@ -44,100 +44,100 @@ rlvr-and-grpo → foundations + variants.
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| transformer-overview | pending | `kb/notes/architecture/transformer-overview.md` |
-| tokenization | pending | `kb/notes/architecture/tokenization.md` |
-| embeddings-and-tying | pending | `kb/notes/architecture/embeddings-and-tying.md` |
-| position-encoding | pending | `kb/notes/architecture/position-encoding.md` |
+| transformer-overview | stub | `kb/notes/architecture/transformer-overview.md` |
+| tokenization | stub | `kb/notes/architecture/tokenization.md` |
+| embeddings-and-tying | stub | `kb/notes/architecture/embeddings-and-tying.md` |
+| position-encoding | draft | `kb/notes/architecture/position-encoding.md` |
 | attention-mechanism | draft | `kb/notes/architecture/attention-mechanism.md` |
-| ffn | pending | `kb/notes/architecture/ffn.md` |
-| moe | pending | `kb/notes/architecture/moe.md` |
-| normalization | pending | `kb/notes/architecture/normalization.md` |
-| state-space-models | pending | `kb/notes/architecture/state-space-models.md` |
-| long-context | pending | `kb/notes/architecture/long-context.md` |
-| multimodal-llm-extensions | pending | `kb/notes/architecture/multimodal-llm-extensions.md` |
-| reasoning-architectures | pending | `kb/notes/architecture/reasoning-architectures.md` |
-| multi-token-prediction | pending | `kb/notes/architecture/multi-token-prediction.md` |
+| ffn | stub | `kb/notes/architecture/ffn.md` |
+| moe | draft | `kb/notes/architecture/moe.md` |
+| normalization | stub | `kb/notes/architecture/normalization.md` |
+| state-space-models | draft | `kb/notes/architecture/state-space-models.md` |
+| long-context | draft | `kb/notes/architecture/long-context.md` |
+| multimodal-llm-extensions | stub | `kb/notes/architecture/multimodal-llm-extensions.md` |
+| reasoning-architectures | draft | `kb/notes/architecture/reasoning-architectures.md` |
+| multi-token-prediction | stub | `kb/notes/architecture/multi-token-prediction.md` |
 
 ### training/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| pre-training-data | pending | `kb/notes/training/pre-training-data.md` |
-| synthetic-data-and-distillation | pending | `kb/notes/training/synthetic-data-and-distillation.md` |
-| optimization | pending | `kb/notes/training/optimization.md` |
-| distributed-training | pending | `kb/notes/training/distributed-training.md` |
-| mixed-precision-and-stability | pending | `kb/notes/training/mixed-precision-and-stability.md` |
-| adaptation-and-merging | pending | `kb/notes/training/adaptation-and-merging.md` |
+| pre-training-data | draft | `kb/notes/training/pre-training-data.md` |
+| synthetic-data-and-distillation | draft | `kb/notes/training/synthetic-data-and-distillation.md` |
+| optimization | draft | `kb/notes/training/optimization.md` |
+| distributed-training | draft | `kb/notes/training/distributed-training.md` |
+| mixed-precision-and-stability | stub | `kb/notes/training/mixed-precision-and-stability.md` |
+| adaptation-and-merging | stub | `kb/notes/training/adaptation-and-merging.md` |
 
 ### post-training/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| sft | pending | `kb/notes/post-training/sft.md` |
-| rlhf | pending | `kb/notes/post-training/rlhf.md` |
-| dpo-and-offline | pending | `kb/notes/post-training/dpo-and-offline.md` |
-| rlaif-and-constitutional | pending | `kb/notes/post-training/rlaif-and-constitutional.md` |
-| rlvr-and-grpo | pending | `kb/notes/post-training/rlvr-and-grpo.md` |
+| sft | stub | `kb/notes/post-training/sft.md` |
+| rlhf | draft | `kb/notes/post-training/rlhf.md` |
+| dpo-and-offline | draft | `kb/notes/post-training/dpo-and-offline.md` |
+| rlaif-and-constitutional | stub | `kb/notes/post-training/rlaif-and-constitutional.md` |
+| rlvr-and-grpo | draft | `kb/notes/post-training/rlvr-and-grpo.md` |
 
 ### reasoning/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| chain-of-thought | pending | `kb/notes/reasoning/chain-of-thought.md` |
-| process-supervision | pending | `kb/notes/reasoning/process-supervision.md` |
-| test-time-compute | pending | `kb/notes/reasoning/test-time-compute.md` |
-| reasoning-training | pending | `kb/notes/reasoning/reasoning-training.md` |
-| inference-time-search | pending | `kb/notes/reasoning/inference-time-search.md` |
+| chain-of-thought | draft | `kb/notes/reasoning/chain-of-thought.md` |
+| process-supervision | draft | `kb/notes/reasoning/process-supervision.md` |
+| test-time-compute | draft | `kb/notes/reasoning/test-time-compute.md` |
+| reasoning-training | draft | `kb/notes/reasoning/reasoning-training.md` |
+| inference-time-search | draft | `kb/notes/reasoning/inference-time-search.md` |
 
 ### inference/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| kv-cache-management | pending | `kb/notes/inference/kv-cache-management.md` |
-| quantization | pending | `kb/notes/inference/quantization.md` |
-| speculative-decoding | pending | `kb/notes/inference/speculative-decoding.md` |
-| serving-systems | pending | `kb/notes/inference/serving-systems.md` |
-| structured-output | pending | `kb/notes/inference/structured-output.md` |
+| kv-cache-management | draft | `kb/notes/inference/kv-cache-management.md` |
+| quantization | draft | `kb/notes/inference/quantization.md` |
+| speculative-decoding | draft | `kb/notes/inference/speculative-decoding.md` |
+| serving-systems | draft | `kb/notes/inference/serving-systems.md` |
+| structured-output | stub | `kb/notes/inference/structured-output.md` |
 
 ### scaling/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| kaplan-laws | pending | `kb/notes/scaling/kaplan-laws.md` |
-| chinchilla | pending | `kb/notes/scaling/chinchilla.md` |
-| mu-transfer | pending | `kb/notes/scaling/mu-transfer.md` |
-| scaling-frontier | pending | `kb/notes/scaling/scaling-frontier.md` |
-| inference-time-compute-scaling | pending | `kb/notes/scaling/inference-time-compute-scaling.md` |
+| kaplan-laws | draft | `kb/notes/scaling/kaplan-laws.md` |
+| chinchilla | draft | `kb/notes/scaling/chinchilla.md` |
+| mu-transfer | draft | `kb/notes/scaling/mu-transfer.md` |
+| scaling-frontier | draft | `kb/notes/scaling/scaling-frontier.md` |
+| inference-time-compute-scaling | draft | `kb/notes/scaling/inference-time-compute-scaling.md` |
 
 ### interpretability/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| lens-techniques | pending | `kb/notes/interpretability/lens-techniques.md` |
-| mechanistic-interpretability | pending | `kb/notes/interpretability/mechanistic-interpretability.md` |
-| sparse-autoencoders | pending | `kb/notes/interpretability/sparse-autoencoders.md` |
-| activation-patching | pending | `kb/notes/interpretability/activation-patching.md` |
-| probing | pending | `kb/notes/interpretability/probing.md` |
-| circuit-tracing | pending | `kb/notes/interpretability/circuit-tracing.md` |
+| lens-techniques | stub | `kb/notes/interpretability/lens-techniques.md` |
+| mechanistic-interpretability | draft | `kb/notes/interpretability/mechanistic-interpretability.md` |
+| sparse-autoencoders | draft | `kb/notes/interpretability/sparse-autoencoders.md` |
+| activation-patching | draft | `kb/notes/interpretability/activation-patching.md` |
+| probing | stub | `kb/notes/interpretability/probing.md` |
+| circuit-tracing | draft | `kb/notes/interpretability/circuit-tracing.md` |
 
 ### evaluation/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| knowledge-benchmarks | pending | `kb/notes/evaluation/knowledge-benchmarks.md` |
-| reasoning-benchmarks | pending | `kb/notes/evaluation/reasoning-benchmarks.md` |
-| agentic-benchmarks | pending | `kb/notes/evaluation/agentic-benchmarks.md` |
-| eval-methodology | pending | `kb/notes/evaluation/eval-methodology.md` |
+| knowledge-benchmarks | stub | `kb/notes/evaluation/knowledge-benchmarks.md` |
+| reasoning-benchmarks | draft | `kb/notes/evaluation/reasoning-benchmarks.md` |
+| agentic-benchmarks | draft | `kb/notes/evaluation/agentic-benchmarks.md` |
+| eval-methodology | draft | `kb/notes/evaluation/eval-methodology.md` |
 
 ### alignment/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| safety-evaluation | pending | `kb/notes/alignment/safety-evaluation.md` |
-| watermarking-and-provenance | pending | `kb/notes/alignment/watermarking-and-provenance.md` |
-| oversight-and-scalable-alignment | pending | `kb/notes/alignment/oversight-and-scalable-alignment.md` |
-| sycophancy | pending | `kb/notes/alignment/sycophancy.md` |
-| scheming-and-deceptive-alignment | pending | `kb/notes/alignment/scheming-and-deceptive-alignment.md` |
+| safety-evaluation | stub | `kb/notes/alignment/safety-evaluation.md` |
+| watermarking-and-provenance | draft | `kb/notes/alignment/watermarking-and-provenance.md` |
+| oversight-and-scalable-alignment | draft | `kb/notes/alignment/oversight-and-scalable-alignment.md` |
+| sycophancy | draft | `kb/notes/alignment/sycophancy.md` |
+| scheming-and-deceptive-alignment | draft | `kb/notes/alignment/scheming-and-deceptive-alignment.md` |
 
 ## Total
 

@@ -1,0 +1,158 @@
+{
+  "area": "scaling",
+  "schema_version": "2026-05-03",
+  "last_updated": "2026-05-04",
+  "subagent": "Phase 2 scaling/ area subagent",
+  "note": "Four DRAFT notes produced (chinchilla, kaplan-laws, mu-transfer, inference-time-compute-scaling). One synthesis-style draft for scaling-frontier. Excerpts produced for the four primary papers cited heavily in the drafts. PDFs successfully downloaded and verified for hoffmann2022-chinchilla and yang2022-mup; kaplan2020 and snell2024 excerpts were verified against PDF page extracts via WebFetch saved-binary path.",
+  "new_papers": [],
+  "existing_paper_updates": [
+    {
+      "key": "kaplan2020",
+      "set_excerpts_file": "kb/excerpts/kaplan2020.md",
+      "add_notes_referenced_by": [
+        "scaling/kaplan-laws",
+        "scaling/chinchilla"
+      ],
+      "set_local_file": "sources/papers/kaplan2020_scaling_laws.pdf",
+      "note": "PDF downloaded via WebFetch chain (saved binary at tool-results path). The 'sources/papers/...' path here is the canonical location; subagent could not write to that path due to sandbox, so orchestrator should move/copy from the WebFetch saved binary OR re-download via curl. Excerpts verified against pages 3-7 of the PDF."
+    },
+    {
+      "key": "hoffmann2022-chinchilla",
+      "set_excerpts_file": "kb/excerpts/hoffmann2022-chinchilla.md",
+      "add_notes_referenced_by": [
+        "scaling/chinchilla",
+        "scaling/kaplan-laws",
+        "scaling/scaling-frontier"
+      ],
+      "set_local_file": "sources/papers/hoffmann2022-chinchilla_compute_optimal.pdf",
+      "note": "PDF downloaded via WebFetch saved-binary path. Pages 3-10 verified for excerpts (§2 disagreement-with-Kaplan, §3 three approaches, §3 Tables 2-3, §4.1 Chinchilla architecture). Like kaplan2020, orchestrator may need to formally curl/copy to canonical sources/papers/ path."
+    },
+    {
+      "key": "yang2022-mup",
+      "set_excerpts_file": "kb/excerpts/yang2022-mup.md",
+      "add_notes_referenced_by": [
+        "scaling/mu-transfer"
+      ],
+      "set_local_file": "sources/papers/yang2022-mup_tensor_programs_v.pdf",
+      "note": "PDF pages 3-8 verified for excerpts. Table 3 (μP scaling rules), Definition 4.1 (1/d attention for Transformer), §5 logit-blowup empirical evidence all confirmed against PDF."
+    },
+    {
+      "key": "snell2024",
+      "set_excerpts_file": "kb/excerpts/snell2024.md",
+      "add_notes_referenced_by": [
+        "scaling/inference-time-compute-scaling",
+        "scaling/scaling-frontier"
+      ],
+      "set_local_file": "sources/papers/snell2024_test_time_compute.pdf",
+      "note": "PDF pages 3-7 verified for excerpts. Eq. (1) compute-optimal formal definition, §3.2 question-difficulty taxonomy, §5.2 search-method definitions (best-of-N-weighted, beam, lookahead) all confirmed."
+    },
+    {
+      "key": "deepseek-r1",
+      "add_notes_referenced_by": [
+        "scaling/inference-time-compute-scaling"
+      ]
+    },
+    {
+      "key": "s1-2025",
+      "add_notes_referenced_by": [
+        "scaling/inference-time-compute-scaling"
+      ]
+    },
+    {
+      "key": "wei2022-cot",
+      "add_notes_referenced_by": [
+        "scaling/inference-time-compute-scaling"
+      ]
+    },
+    {
+      "key": "rstar-math2025",
+      "add_notes_referenced_by": [
+        "scaling/inference-time-compute-scaling"
+      ]
+    },
+    {
+      "key": "thinkprm2025",
+      "add_notes_referenced_by": [
+        "scaling/inference-time-compute-scaling"
+      ]
+    },
+    {
+      "key": "gemini2-5",
+      "add_notes_referenced_by": [
+        "scaling/inference-time-compute-scaling",
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "u-mup2024",
+      "add_notes_referenced_by": [
+        "scaling/mu-transfer",
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "scaling-laws-precision-2024",
+      "add_notes_referenced_by": [
+        "scaling/chinchilla",
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "meta-llama3",
+      "add_notes_referenced_by": [
+        "scaling/chinchilla",
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "meta-llama4",
+      "add_notes_referenced_by": [
+        "scaling/mu-transfer",
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "deepseek-v3",
+      "add_notes_referenced_by": [
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "qwen3",
+      "add_notes_referenced_by": [
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "qwen2-5",
+      "add_notes_referenced_by": [
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "data-mixing-laws-2024",
+      "add_notes_referenced_by": [
+        "scaling/chinchilla",
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "fineweb2024",
+      "add_notes_referenced_by": [
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "ma2024-bitnet",
+      "add_notes_referenced_by": [
+        "scaling/scaling-frontier"
+      ]
+    },
+    {
+      "key": "vaswani2017",
+      "add_notes_referenced_by": [
+        "scaling/mu-transfer"
+      ]
+    }
+  ]
+}
