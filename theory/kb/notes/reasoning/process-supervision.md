@@ -8,9 +8,9 @@ primary_sources:
   - thinkprm2025
 secondary_sources:
   - rstar-math2025
-  - edu-prm-2025
-  - r-prm-2025
-  - prm-survey-2025
+  - cao2025-edu-prm
+  - she2025-r-prm
+  - zheng2025-prm-survey
 related_topics:
   - reasoning/test-time-compute
   - reasoning/inference-time-search
@@ -167,8 +167,8 @@ tuned LLM backbone; cheaper than the policy model.
 | OpenAI PRM | 2023 | PRM800K (human labels) | Foundational benchmark `[lightman2023-prm800k]` |
 | Math-Shepherd | 2024 | Automatic labels via outcome supervision | Removes need for human step-labels at scale `[arXiv 2312.08935]` |
 | OmegaPRM | 2024 | Large-scale automated PRM data | Scales `[Rewarding Progress, 2024]` |
-| R-PRM | 2025 | Adds reasoning step before scoring | Generalises better `[r-prm-2025, arXiv 2503.21295]` |
-| EDU-PRM | 2025 | Entropy-driven step boundaries; 1.5% data | Beats Math-Shepherd at small budget `[edu-prm-2025, arXiv 2503.22233]` |
+| R-PRM | 2025 | Adds reasoning step before scoring | Generalises better `[she2025-r-prm, arXiv 2503.21295]` |
+| EDU-PRM | 2025 | Entropy-driven step boundaries; 1.5% data | Beats Math-Shepherd at small budget `[cao2025-edu-prm, arXiv 2503.22233]` |
 
 ### 3.2 Generative PRMs (the 2025 shift)
 
@@ -193,7 +193,7 @@ to evaluate. The cost asymmetry is real — best-of-$N$ with a
 generative PRM costs $O(N \times L_\text{verify})$ tokens; with a
 discriminative PRM, $O(N)$ classifier passes.
 
-[CONTRADICTION] The 2025 PRM survey `[prm-survey-2025, arXiv
+[CONTRADICTION] The 2025 PRM survey `[zheng2025-prm-survey, arXiv
 2510.08049]` argues the discriminative-vs-generative split is
 problem-dependent: generative PRMs win on competition math where each
 step has a verifiable certificate; discriminative PRMs are competitive
@@ -223,7 +223,8 @@ since late 2024.
 The 2025 literature reports a tension: as base models get better at
 long-CoT (post-R1), the marginal value of an external PRM at test
 time decreases — the model's own internal verification approaches the
-PRM's signal `[thinkprm2025 §5 discussion, arXiv 2510.08049]`.
+PRM's signal `[thinkprm2025 §5 discussion]`, a tension also surfaced by
+the 2025 PRM survey `[zheng2025-prm-survey]`.
 
 [CONTRADICTION] Whether PRMs remain useful for the strongest
 reasoning-trained models is contested. Some 2026 measurements show
@@ -251,7 +252,7 @@ outcome-hacking problem `[arXiv 2505.00551]`.
 ## 5. Frontier and open questions (as of 2026-05)
 
 - **Discriminative vs generative PRM scope.** [CONTRADICTION] Open as
-  of 2026 `[prm-survey-2025]`. Strongest discriminative PRMs trained on
+  of 2026 `[zheng2025-prm-survey]`. Strongest discriminative PRMs trained on
   1.5% data (EDU-PRM) compete with generative ThinkPRM on
   ProcessBench; the comparison flips on harder distributions.
 - **Self-PRM.** Can a single LLM serve as both policy and verifier

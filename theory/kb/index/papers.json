@@ -2942,6 +2942,171 @@
       ],
       "category": "foundational",
       "summary": "Process Reward Models on PRM800K. Process supervision substantially outperforms outcome supervision on MATH best-of-N at matched N. min-aggregation over per-step PRM scores is the strongest aggregator. Released the PRM800K dataset (800K human step-labels)."
+    },
+    {
+      "key": "zhang2024-rest-mcts",
+      "title": "ReST-MCTS*: LLM Self-Training via Process Reward Guided Tree Search",
+      "authors": "Zhang, Zhoubian, Hu, Yue, Dong, Tang",
+      "year": 2024,
+      "venue": "NeurIPS 2024",
+      "url": "https://arxiv.org/abs/2406.03816",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/inference-time-search"
+      ],
+      "topics": [
+        "inference-time-search",
+        "process-supervision"
+      ],
+      "category": "foundational",
+      "summary": "Reinforced self-training that integrates MCTS with process-reward guidance. Inferred process rewards (from oracle final answer probability) are used both as PRM training targets and as trace-quality signals for policy self-training. Outperforms Best-of-N and Tree-of-Thought at matched search budget."
+    },
+    {
+      "key": "wei2025-tree-search-survey",
+      "title": "Unifying Tree Search Algorithm and Reward Design for LLM Reasoning: A Survey",
+      "authors": "Wei et al.",
+      "year": 2025,
+      "venue": "arXiv 2510.09988",
+      "url": "https://arxiv.org/abs/2510.09988",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/inference-time-search"
+      ],
+      "topics": [
+        "inference-time-search",
+        "test-time-compute"
+      ],
+      "category": "survey",
+      "summary": "Survey unifying classical tree-search principles (BFS/DFS/A*/MCTS) with their modern application to LLM reasoning under the Test-Time Scaling framework. Covers MCTS-family methods (selection-expansion-simulation-backprop) and informed-search variants; relates search budget, reward design, and reasoning quality."
+    },
+    {
+      "key": "shen2025-faithcot-bench",
+      "title": "FaithCoT-Bench: Benchmarking Instance-Level Faithfulness of Chain-of-Thought Reasoning",
+      "authors": "Shen et al.",
+      "year": 2025,
+      "venue": "arXiv 2510.04040",
+      "url": "https://arxiv.org/abs/2510.04040",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/chain-of-thought"
+      ],
+      "topics": [
+        "chain-of-thought"
+      ],
+      "category": "benchmark",
+      "summary": "First instance-level CoT-faithfulness benchmark. Formulates unfaithfulness detection as a discriminative task and provides FINE-CoT, an expert-annotated set of >1000 trajectories from four LLMs across four domains (>300 unfaithful). Evaluates 11 detectors spanning counterfactual, logit-based, and LLM-as-judge paradigms; finds detection harder in knowledge-intensive domains and on more advanced models."
+    },
+    {
+      "key": "arcuschin2025-cot-wild",
+      "title": "Chain-of-Thought Reasoning In The Wild Is Not Always Faithful",
+      "authors": "Arcuschin, Janiak, Krzyzanowski, Rajamanoharan, Nanda, Conmy",
+      "year": 2025,
+      "venue": "arXiv 2503.08679 (v4 Jun 2025)",
+      "url": "https://arxiv.org/abs/2503.08679",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/chain-of-thought"
+      ],
+      "topics": [
+        "chain-of-thought"
+      ],
+      "category": "frontier",
+      "summary": "Demonstrates unfaithful CoT on realistic prompts with no artificial bias: models often post-hoc-rationalize implicitly biased responses rather than letting reasoning lead. Reports per-model rationalization rates: GPT-4o-mini 13%, Haiku 3.5 7%; thinking models far better but never zero (Sonnet 3.7 thinking 0.04%, Gemini 2.5 Pro 0.14%, R1 0.37%). Also identifies Unfaithful Illogical Shortcuts on hard math problems."
+    },
+    {
+      "key": "she2025-r-prm",
+      "title": "R-PRM: Reasoning-Driven Process Reward Modeling",
+      "authors": "She, Liu, Liu, Chen, Huang, Huang",
+      "year": 2025,
+      "venue": "arXiv 2503.21295",
+      "url": "https://arxiv.org/abs/2503.21295",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/process-supervision"
+      ],
+      "topics": [
+        "process-supervision"
+      ],
+      "category": "frontier",
+      "summary": "PRM that emits a reasoning trace before scoring each step rather than scoring directly. Bootstraps from limited annotations via stronger-LLM seed data, refines via preference optimization, and applies inference-time scaling at scoring time. +11.9 / +8.5 F1 on ProcessBench / PRMBench over baselines; +8.5 acc on six math-reasoning suites when used as guide."
+    },
+    {
+      "key": "cao2025-edu-prm",
+      "title": "More Bang for the Buck: Process Reward Modeling with Entropy-Driven Uncertainty",
+      "authors": "Cao et al. (Huawei)",
+      "year": 2025,
+      "venue": "arXiv 2503.22233",
+      "url": "https://arxiv.org/abs/2503.22233",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/process-supervision"
+      ],
+      "topics": [
+        "process-supervision"
+      ],
+      "category": "frontier",
+      "summary": "Anchors PRM step boundaries at high-predictive-entropy tokens rather than fixed/manual partitioning. Trains on 1.5% of usual data and beats Math-Shepherd / Omega-PRM on ProcessBench; EDU sampling raises generative-reasoning acc 64.7%->67.3% with -32% tokens."
+    },
+    {
+      "key": "zheng2025-prm-survey",
+      "title": "A Survey of Process Reward Models: From Outcome Signals to Process Supervisions for Large Language Models",
+      "authors": "Zheng et al.",
+      "year": 2025,
+      "venue": "arXiv 2510.08049",
+      "url": "https://arxiv.org/abs/2510.08049",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/process-supervision"
+      ],
+      "topics": [
+        "process-supervision"
+      ],
+      "category": "survey",
+      "summary": "Systematic survey of PRMs across the full loop: process-data generation, PRM training, and downstream use for test-time scaling and RL. Taxonomizes generative-vs-discriminative PRMs and tracks the field's progression from outcome-only signals (ORMs) to step-level process supervision."
+    },
+    {
+      "key": "hu2025-mcts-rag",
+      "title": "MCTS-RAG: Enhancing Retrieval-Augmented Generation with Monte Carlo Tree Search",
+      "authors": "Hu, Zhao, Zhao, Cohan",
+      "year": 2025,
+      "venue": "EMNLP Findings 2025",
+      "url": "https://arxiv.org/abs/2503.20757",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/inference-time-search"
+      ],
+      "topics": [
+        "inference-time-search"
+      ],
+      "category": "frontier",
+      "summary": "Integrates MCTS with RAG: search expands over reasoning + retrieval decisions jointly rather than treating retrieval as a static prefix. Lets small LMs match GPT-4o-class performance on ComplexWebQA / GPQA / FoolMeTwice by scaling inference-time compute over a hybrid search-retrieve tree."
+    },
+    {
+      "key": "mehta2026-faithfulness-scaling",
+      "title": "Does Inference Scaling Improve Reasoning Faithfulness? A Multi-Model Analysis of Self-Consistency Tradeoffs",
+      "authors": "Mehta et al.",
+      "year": 2026,
+      "venue": "arXiv 2601.06423",
+      "url": "https://arxiv.org/abs/2601.06423",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/chain-of-thought"
+      ],
+      "topics": [
+        "chain-of-thought",
+        "test-time-compute"
+      ],
+      "category": "frontier",
+      "summary": "Empirical study of self-consistency tradeoffs across four frontier models (GPT-5.2, Claude Opus 4.5, Gemini-3-flash-preview, DeepSeek-v3.2) on 100 GSM8K problems. Finds inference scaling does not uniformly improve faithfulness: e.g., Claude Opus 4.5 accuracy 78% -> 74.3% while measured faithfulness rises 0.270 -> 0.891 at N=5. Self-consistency must be tested per-model before deployment."
     }
   ]
 }
