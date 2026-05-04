@@ -1,7 +1,7 @@
 {
   "description": "Master index of canonical sources for the LLM theory KB. Schema: paper-key -> metadata + KB cross-references. excerpts_file and notes_referenced_by are populated as KB content is written. local_file is null for papers not yet downloaded (Phase 2 will populate as work proceeds).",
   "schema_version": "2026-05-03",
-  "last_updated": "2026-05-03",
+  "last_updated": "2026-05-04",
   "papers": [
     {
       "key": "vaswani2017",
@@ -11,9 +11,15 @@
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/1706.03762",
       "local_file": "sources/papers/vaswani2017_attention_is_all_you_need.pdf",
-      "excerpts_file": null,
-      "notes_referenced_by": [],
-      "topics": ["attention-mechanism", "transformer-overview", "position-encoding"],
+      "excerpts_file": "kb/excerpts/vaswani2017.md",
+      "notes_referenced_by": [
+        "architecture/attention-mechanism"
+      ],
+      "topics": [
+        "attention-mechanism",
+        "transformer-overview",
+        "position-encoding"
+      ],
       "category": "foundational",
       "summary": "Introduces the Transformer: encoder-decoder architecture based entirely on attention. Defines scaled dot-product attention, multi-head attention, sinusoidal positional encoding, position-wise FFN. Base model: d=512, h=8, N=6, d_ff=2048."
     },
@@ -27,7 +33,10 @@
       "local_file": "sources/papers/radford2018_gpt1.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["transformer-overview", "tokenization"],
+      "topics": [
+        "transformer-overview",
+        "tokenization"
+      ],
       "category": "foundational",
       "summary": "GPT-1: first decoder-only transformer for language modeling. 12 layers, d=768, 12 heads, d_ff=3072. Uses learned positional embeddings, GELU activation, BPE tokenization."
     },
@@ -41,7 +50,10 @@
       "local_file": "sources/papers/brown2020_gpt3.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["scaling-frontier", "transformer-overview"],
+      "topics": [
+        "scaling-frontier",
+        "transformer-overview"
+      ],
       "category": "foundational",
       "summary": "GPT-3: scales decoder-only transformer to 175B parameters. Demonstrates few-shot learning via in-context examples."
     },
@@ -55,7 +67,12 @@
       "local_file": "sources/papers/touvron2023_llama.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["transformer-overview", "position-encoding", "ffn", "normalization"],
+      "topics": [
+        "transformer-overview",
+        "position-encoding",
+        "ffn",
+        "normalization"
+      ],
       "category": "landmark",
       "summary": "Modern decoder-only architecture: pre-normalization with RMSNorm, SwiGLU activation (dim 2/3 * 4d), RoPE at every layer. Sizes 7B-65B on public data."
     },
@@ -69,7 +86,9 @@
       "local_file": "sources/papers/sennrich2016_bpe.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["tokenization"],
+      "topics": [
+        "tokenization"
+      ],
       "category": "foundational",
       "summary": "Introduces BPE for NLP tokenization. Iteratively merges most frequent adjacent character pairs."
     },
@@ -83,7 +102,9 @@
       "local_file": "sources/papers/su2021_rope.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["position-encoding"],
+      "topics": [
+        "position-encoding"
+      ],
       "category": "landmark",
       "summary": "RoPE: encodes position by rotating Q and K vectors via rotation matrix; dot product depends only on relative position."
     },
@@ -97,7 +118,9 @@
       "local_file": "sources/papers/shazeer2020_glu_variants.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["ffn"],
+      "topics": [
+        "ffn"
+      ],
       "category": "landmark",
       "summary": "SwiGLU/GEGLU/GeGLU: GLU variants in FFN. 3 weight matrices instead of 2, inner dim reduced 2/3 to match parameter count."
     },
@@ -111,9 +134,11 @@
       "local_file": "sources/papers/xiong2020_layer_norm.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["normalization"],
+      "topics": [
+        "normalization"
+      ],
       "category": "landmark",
-      "summary": "Pre-LN vs Post-LN gradient analysis via mean-field theory. Pre-LN scales as O(d√(ln d / L)) enabling training without warmup."
+      "summary": "Pre-LN vs Post-LN gradient analysis via mean-field theory. Pre-LN scales as O(d\u221a(ln d / L)) enabling training without warmup."
     },
     {
       "key": "zhang2019",
@@ -125,7 +150,9 @@
       "local_file": "sources/papers/zhang2019_rmsnorm.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["normalization"],
+      "topics": [
+        "normalization"
+      ],
       "category": "landmark",
       "summary": "RMSNorm: drops mean-centering from LayerNorm; 7-64% faster runtime. Standard in modern LLMs."
     },
@@ -139,7 +166,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["scaling-frontier", "transformer-overview", "attention-mechanism"],
+      "topics": [
+        "scaling-frontier",
+        "transformer-overview",
+        "attention-mechanism"
+      ],
       "category": "landmark",
       "summary": "PaLM 540B; SwiGLU, RoPE, parallel attention/FFN layers, multi-query attention for inference efficiency."
     },
@@ -153,7 +184,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["attention-mechanism", "long-context"],
+      "topics": [
+        "attention-mechanism",
+        "long-context"
+      ],
       "category": "landmark",
       "summary": "Mistral 7B: GQA + sliding-window attention. Outperforms LLaMA 2 13B at smaller size."
     },
@@ -167,21 +201,30 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["transformer-overview", "tokenization", "position-encoding"],
+      "topics": [
+        "transformer-overview",
+        "tokenization",
+        "position-encoding"
+      ],
       "category": "foundational",
       "summary": "T5: encoder-decoder text-to-text. SentencePiece + relative positional bias conventions."
     },
     {
       "key": "ainslie2023",
       "title": "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints",
-      "authors": "Ainslie, Lee-Thorp, de Jong, Zemlyanskiy, Lebrón, Sanghai",
+      "authors": "Ainslie, Lee-Thorp, de Jong, Zemlyanskiy, Lebr\u00f3n, Sanghai",
       "year": 2023,
       "venue": "EMNLP",
       "url": "https://arxiv.org/abs/2305.13245",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
-      "topics": ["attention-mechanism", "kv-cache-management"],
+      "excerpts_file": "kb/excerpts/ainslie2023.md",
+      "notes_referenced_by": [
+        "architecture/attention-mechanism"
+      ],
+      "topics": [
+        "attention-mechanism",
+        "kv-cache-management"
+      ],
       "category": "landmark",
       "summary": "Grouped-Query Attention: share K/V across head groups. KV-cache reduction; now universal in production LLMs."
     },
@@ -193,9 +236,15 @@
       "venue": "arXiv (DeepSeek Tech Report)",
       "url": "https://arxiv.org/abs/2405.04434",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
-      "topics": ["attention-mechanism", "kv-cache-management", "moe"],
+      "excerpts_file": "kb/excerpts/deepseek-v2.md",
+      "notes_referenced_by": [
+        "architecture/attention-mechanism"
+      ],
+      "topics": [
+        "attention-mechanism",
+        "kv-cache-management",
+        "moe"
+      ],
       "category": "landmark",
       "summary": "Multi-Head Latent Attention (MLA): 93.3% KV-cache reduction vs MHA, outperforms GQA. Combined with DeepSeekMoE: 236B-A21B. Foundational for V3/V3.2/V4."
     },
@@ -209,7 +258,13 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["moe", "attention-mechanism", "multi-token-prediction", "mixed-precision-and-stability", "distributed-training"],
+      "topics": [
+        "moe",
+        "attention-mechanism",
+        "multi-token-prediction",
+        "mixed-precision-and-stability",
+        "distributed-training"
+      ],
       "category": "landmark",
       "summary": "671B-A37B MoE with MLA + DeepSeekMoE. First validated FP8 training at extreme scale (fine-grained 128x128 weight blocks, 1x128 activation vectors). Auxiliary-loss-free load balancing. Multi-token prediction (MTP) heads. DualPipe cross-node communication overlap. 2.788M H800 GPU-hours on 14.8T tokens."
     },
@@ -223,7 +278,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["rlvr-and-grpo", "reasoning-training", "test-time-compute", "synthetic-data-and-distillation"],
+      "topics": [
+        "rlvr-and-grpo",
+        "reasoning-training",
+        "test-time-compute",
+        "synthetic-data-and-distillation"
+      ],
       "category": "landmark",
       "summary": "GRPO with verifiable binary rewards. AIME 2024 15.6%->71%. Cold-start + RL pipeline. 800K distillation set (600K reasoning, 200K non-reasoning) enables small models 1.5B-32B near-o1. Triggered the RLVR surge."
     },
@@ -237,7 +297,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["transformer-overview", "pre-training-data", "sft", "dpo-and-offline"],
+      "topics": [
+        "transformer-overview",
+        "pre-training-data",
+        "sft",
+        "dpo-and-offline"
+      ],
       "category": "tech-report",
       "summary": "Llama 3 405B + 70B + 8B. 15T training tokens. Post-training: SFT -> rejection sampling -> DPO (no PPO at scale). Tied tokenizer 128k vocab. ~1875 tokens/parameter (over-trained vs Chinchilla)."
     },
@@ -251,7 +316,13 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["moe", "position-encoding", "long-context", "multimodal-llm-extensions", "mixed-precision-and-stability"],
+      "topics": [
+        "moe",
+        "position-encoding",
+        "long-context",
+        "multimodal-llm-extensions",
+        "mixed-precision-and-stability"
+      ],
       "category": "tech-report",
       "summary": "MoE + iRoPE (3 RoPE layers + 1 NoPE layer interleaved with temperature scaling) + early-fusion multimodal. Extrapolates 256K training -> 10M context inference. FP8 pre-training of 2T+ tokens on 32K GPUs at 390 TFLOPs/GPU. MetaP for cross-scale HP transfer."
     },
@@ -265,7 +336,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["moe", "reasoning-architectures", "sft", "rlvr-and-grpo"],
+      "topics": [
+        "moe",
+        "reasoning-architectures",
+        "sft",
+        "rlvr-and-grpo"
+      ],
       "category": "tech-report",
       "summary": "235B-A22B MoE + 6 dense models. 128 experts, 8 activated, no shared experts (vs DeepSeek), global-batch load-balance loss. Thinking/non-thinking mode toggle via system prompt. 4-stage post-training including GRPO."
     },
@@ -279,7 +355,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["sft", "dpo-and-offline", "rlvr-and-grpo", "pre-training-data"],
+      "topics": [
+        "sft",
+        "dpo-and-offline",
+        "rlvr-and-grpo",
+        "pre-training-data"
+      ],
       "category": "tech-report",
       "summary": "1M+ SFT examples; multistage SFT+DPO+GRPO post-training; 18T pretraining tokens. Detail-rich reference for SOTA open post-training."
     },
@@ -293,7 +374,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["attention-mechanism", "multimodal-llm-extensions", "rlhf", "rlaif-and-constitutional"],
+      "topics": [
+        "attention-mechanism",
+        "multimodal-llm-extensions",
+        "rlhf",
+        "rlaif-and-constitutional"
+      ],
       "category": "tech-report",
       "summary": "1-27B. Interleaved local/global attention (1:5 ratio). SigLIP2 vision. BOND/WARM/WARP RL post-training; multi-reward (math, code, safety, multilingual). Distillation from large IT teacher."
     },
@@ -307,7 +393,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["moe", "long-context", "multimodal-llm-extensions", "test-time-compute"],
+      "topics": [
+        "moe",
+        "long-context",
+        "multimodal-llm-extensions",
+        "test-time-compute"
+      ],
       "category": "tech-report",
       "summary": "Sparse MoE; 1M+ context; native multimodal; TPUv5p. Configurable thinkingBudget API for test-time compute. Architecture details intentionally opaque (no parameter count disclosed)."
     },
@@ -321,7 +412,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["normalization", "pre-training-data", "adaptation-and-merging"],
+      "topics": [
+        "normalization",
+        "pre-training-data",
+        "adaptation-and-merging"
+      ],
       "category": "tech-report",
       "summary": "Fully transparent training (weights+data+code+logs). Peri-LN (norm before+after sublayer) + QK-Norm + RMSNorm reordering. Dolmino Mix 1124 late-stage curriculum injected during LR annealing."
     },
@@ -335,23 +430,30 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["synthetic-data-and-distillation", "tokenization"],
+      "topics": [
+        "synthetic-data-and-distillation",
+        "tokenization"
+      ],
       "category": "tech-report",
       "summary": "14B model trained primarily on synthetic data (400B tokens from 50+ pipelines: multi-agent, self-revision, instruction reversal). Surpasses teacher GPT-4 on STEM QA. tiktoken vocab 100k."
     },
     {
       "key": "dao2022",
       "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
-      "authors": "Dao, Fu, Ermon, Rudra, Ré",
+      "authors": "Dao, Fu, Ermon, Rudra, R\u00e9",
       "year": 2022,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2205.14135",
       "local_file": null,
-      "excerpts_file": null,
-      "notes_referenced_by": [],
-      "topics": ["attention-mechanism"],
+      "excerpts_file": "kb/excerpts/dao2022.md",
+      "notes_referenced_by": [
+        "architecture/attention-mechanism"
+      ],
+      "topics": [
+        "attention-mechanism"
+      ],
       "category": "landmark",
-      "summary": "FlashAttention-1: IO-aware tiling. Computes exact attention without materializing the N×N matrix."
+      "summary": "FlashAttention-1: IO-aware tiling. Computes exact attention without materializing the N\u00d7N matrix."
     },
     {
       "key": "shah2024",
@@ -362,10 +464,15 @@
       "url": "https://arxiv.org/abs/2407.08608",
       "local_file": null,
       "excerpts_file": null,
-      "notes_referenced_by": [],
-      "topics": ["attention-mechanism", "mixed-precision-and-stability"],
+      "notes_referenced_by": [
+        "architecture/attention-mechanism"
+      ],
+      "topics": [
+        "attention-mechanism",
+        "mixed-precision-and-stability"
+      ],
       "category": "landmark",
-      "summary": "FlashAttention-3 on H100 Hopper: 740 TFLOPs FP16, ~1.2 PFLOPs FP8. ~1.5-2× FA-2."
+      "summary": "FlashAttention-3 on H100 Hopper: 740 TFLOPs FP16, ~1.2 PFLOPs FP8. ~1.5-2\u00d7 FA-2."
     },
     {
       "key": "gu2023-mamba",
@@ -377,7 +484,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["state-space-models"],
+      "topics": [
+        "state-space-models"
+      ],
       "category": "landmark",
       "summary": "Mamba-1: selective SSM with content-aware recurrence. Linear-time alternative to attention."
     },
@@ -391,9 +500,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["state-space-models", "attention-mechanism"],
+      "topics": [
+        "state-space-models",
+        "attention-mechanism"
+      ],
       "category": "landmark",
-      "summary": "Mamba-2 / SSD: unifying SSM and attention via structured state-space duality. 2-8× faster than Mamba-1."
+      "summary": "Mamba-2 / SSD: unifying SSM and attention via structured state-space duality. 2-8\u00d7 faster than Mamba-1."
     },
     {
       "key": "lieber2024-jamba",
@@ -405,7 +517,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["state-space-models", "moe"],
+      "topics": [
+        "state-space-models",
+        "moe"
+      ],
       "category": "landmark",
       "summary": "First production-scale hybrid: MoE + Mamba + Attention layers interleaved."
     },
@@ -419,7 +534,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["attention-mechanism", "long-context"],
+      "topics": [
+        "attention-mechanism",
+        "long-context"
+      ],
       "category": "landmark",
       "summary": "Hardware-aligned trainable sparse attention with coarse + fine hierarchy. 64k-seq speedup over full attention."
     },
@@ -433,7 +551,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["attention-mechanism"],
+      "topics": [
+        "attention-mechanism"
+      ],
       "category": "landmark",
       "summary": "Differential attention: subtracts two softmax maps. Sparser patterns; less hallucination."
     },
@@ -447,7 +567,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["attention-mechanism", "kv-cache-management"],
+      "topics": [
+        "attention-mechanism",
+        "kv-cache-management"
+      ],
       "category": "recent",
       "summary": "Convert GQA pretrained models to MLA post-hoc with 0.3-0.6% fine-tuning data."
     },
@@ -461,9 +584,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["position-encoding", "long-context"],
+      "topics": [
+        "position-encoding",
+        "long-context"
+      ],
       "category": "recent",
-      "summary": "Near-lossless context extension; 80× more token-efficient than Meta's prior approach. Preserves 98.5% short-context performance."
+      "summary": "Near-lossless context extension; 80\u00d7 more token-efficient than Meta's prior approach. Preserves 98.5% short-context performance."
     },
     {
       "key": "fedus2021-switch",
@@ -475,7 +601,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["moe"],
+      "topics": [
+        "moe"
+      ],
       "category": "foundational",
       "summary": "Switch Transformer: top-1 routing; expert capacity. Foundational MoE for trillion-parameter scale."
     },
@@ -489,7 +617,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["moe"],
+      "topics": [
+        "moe"
+      ],
       "category": "landmark",
       "summary": "Fine-grained expert segmentation + shared experts. Foundational pattern for V2/V3."
     },
@@ -503,7 +633,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["moe"],
+      "topics": [
+        "moe"
+      ],
       "category": "landmark",
       "summary": "Mixtral 8x7B: open sparse MoE baseline. Top-2 routing."
     },
@@ -517,7 +649,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["normalization"],
+      "topics": [
+        "normalization"
+      ],
       "category": "recent",
       "summary": "Peri-LN: normalize before AND after each sublayer. Adopted in Gemma and OLMo families. More stable than Pre-LN."
     },
@@ -531,7 +665,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["tokenization"],
+      "topics": [
+        "tokenization"
+      ],
       "category": "landmark",
       "summary": "Tokenizer-free BLT: dynamic byte patches. Matches LLaMA 3 at 50% fewer inference FLOPs at 8B scale."
     },
@@ -545,7 +681,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["dpo-and-offline"],
+      "topics": [
+        "dpo-and-offline"
+      ],
       "category": "foundational",
       "summary": "DPO: closed-form reformulation of RLHF as classification on preferences. Removes need for explicit reward model and PPO."
     },
@@ -559,7 +697,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["dpo-and-offline"],
+      "topics": [
+        "dpo-and-offline"
+      ],
       "category": "landmark",
       "summary": "Average log-prob as implicit reward; length normalization; no reference model. +6.4 AlpacaEval 2 over DPO."
     },
@@ -573,13 +713,15 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["rlaif-and-constitutional"],
+      "topics": [
+        "rlaif-and-constitutional"
+      ],
       "category": "foundational",
       "summary": "Foundational CAI: SL-CAI + RL-CAI pipeline. RLAIF replacing human preference labels."
     },
     {
       "key": "tulu3",
-      "title": "Tülu 3: Pushing Frontiers in Open Language Model Post-Training",
+      "title": "T\u00fclu 3: Pushing Frontiers in Open Language Model Post-Training",
       "authors": "Wang et al. (AI2)",
       "year": 2024,
       "venue": "AI2 Tech Report",
@@ -587,9 +729,13 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["sft", "dpo-and-offline", "rlvr-and-grpo"],
+      "topics": [
+        "sft",
+        "dpo-and-offline",
+        "rlvr-and-grpo"
+      ],
       "category": "tech-report",
-      "summary": "Fully open 4-stage recipe: data curation -> SFT -> DPO -> RLVR. Beats Llama 3.1-Instruct, Qwen 2.5, GPT-4o-mini. Tülu 3 405B (Jan 2025) scales RLVR."
+      "summary": "Fully open 4-stage recipe: data curation -> SFT -> DPO -> RLVR. Beats Llama 3.1-Instruct, Qwen 2.5, GPT-4o-mini. T\u00fclu 3 405B (Jan 2025) scales RLVR."
     },
     {
       "key": "rlvr-limits-2025",
@@ -601,7 +747,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["rlvr-and-grpo", "reasoning-training"],
+      "topics": [
+        "rlvr-and-grpo",
+        "reasoning-training"
+      ],
       "category": "landmark",
       "summary": "RLVR improves sampling efficiency (pass@1) on problems base model can already solve, but does NOT expand reasoning capacity. Capability ceiling set at pre-training. Inverts GRPO-elicits-reasoning narrative."
     },
@@ -615,9 +764,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["optimization"],
+      "topics": [
+        "optimization"
+      ],
       "category": "landmark",
-      "summary": "Muon (Newton-step momentum + gradient orthogonalization) at LLM scale. ~2× AdamW compute efficiency. Trains Moonlight 3B/16B-MoE on 5.7T tokens."
+      "summary": "Muon (Newton-step momentum + gradient orthogonalization) at LLM scale. ~2\u00d7 AdamW compute efficiency. Trains Moonlight 3B/16B-MoE on 5.7T tokens."
     },
     {
       "key": "dapo2025",
@@ -629,7 +780,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["rlvr-and-grpo"],
+      "topics": [
+        "rlvr-and-grpo"
+      ],
       "category": "recent",
       "summary": "Decoupled Clip and Dynamic sampling Policy Optimization. AIME 2024 50pts on Qwen-32B; 50% fewer steps than GRPO baseline. verl framework open-sourced."
     },
@@ -643,7 +796,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["chain-of-thought"],
+      "topics": [
+        "chain-of-thought"
+      ],
       "category": "foundational",
       "summary": "Original CoT paper: eliciting step-by-step reasoning via prompting. Baseline for all subsequent reasoning work."
     },
@@ -657,9 +812,13 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["test-time-compute", "inference-time-compute-scaling", "scaling-frontier"],
+      "topics": [
+        "test-time-compute",
+        "inference-time-compute-scaling",
+        "scaling-frontier"
+      ],
       "category": "landmark",
-      "summary": "Formalizes inference-time compute as a new scaling axis. Smaller model + more inference budget can beat 14× larger model on reasoning tasks."
+      "summary": "Formalizes inference-time compute as a new scaling axis. Smaller model + more inference budget can beat 14\u00d7 larger model on reasoning tasks."
     },
     {
       "key": "s1-2025",
@@ -671,7 +830,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["test-time-compute"],
+      "topics": [
+        "test-time-compute"
+      ],
       "category": "landmark",
       "summary": "1K curated examples + budget forcing (appending 'Wait' tokens) reproduces o1-preview test-time scaling curves."
     },
@@ -685,7 +846,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["process-supervision"],
+      "topics": [
+        "process-supervision"
+      ],
       "category": "recent",
       "summary": "Generative CoT verifier using 1% of PRM800K labels. Outperforms discriminative PRMs on ProcessBench and AIME'24."
     },
@@ -699,7 +862,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["inference-time-search", "reasoning-training", "process-supervision"],
+      "topics": [
+        "inference-time-search",
+        "reasoning-training",
+        "process-supervision"
+      ],
       "category": "landmark",
       "summary": "Four-cycle self-evolution with MCTS+PRM. Qwen2.5-Math-7B -> 90% MATH; rivals o1-mini at 7B scale."
     },
@@ -713,7 +880,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["kv-cache-management", "quantization"],
+      "topics": [
+        "kv-cache-management",
+        "quantization"
+      ],
       "category": "landmark",
       "summary": "Per-channel KV quantization + nuq2. 8x compression, 1M tokens on A100."
     },
@@ -727,7 +897,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["quantization"],
+      "topics": [
+        "quantization"
+      ],
       "category": "landmark",
       "summary": "BitNet b1.58: ternary {-1,0,+1} weights match FP16 at scale. Foundational claim for native 1-bit training."
     },
@@ -741,9 +913,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["quantization"],
+      "topics": [
+        "quantization"
+      ],
       "category": "tech-report",
-      "summary": "First open-source native 1-bit LLM at 2B scale (4T training tokens). Matches FP16 accuracy with 2-6× CPU speedup. Deployable, not POC."
+      "summary": "First open-source native 1-bit LLM at 2B scale (4T training tokens). Matches FP16 accuracy with 2-6\u00d7 CPU speedup. Deployable, not POC."
     },
     {
       "key": "eagle3-2025",
@@ -755,9 +929,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["speculative-decoding"],
+      "topics": [
+        "speculative-decoding"
+      ],
       "category": "landmark",
-      "summary": "Multi-layer feature fusion; abandons feature prediction. Up to 6.5× speedup; 1.4× over EAGLE-2."
+      "summary": "Multi-layer feature fusion; abandons feature prediction. Up to 6.5\u00d7 speedup; 1.4\u00d7 over EAGLE-2."
     },
     {
       "key": "xgrammar2024",
@@ -769,9 +945,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["structured-output"],
+      "topics": [
+        "structured-output"
+      ],
       "category": "landmark",
-      "summary": "Up to 100× speedup. Default backend in vLLM, SGLang, TensorRT-LLM. Splits vocab into context-independent (precomputed) vs context-dependent (runtime) tokens."
+      "summary": "Up to 100\u00d7 speedup. Default backend in vLLM, SGLang, TensorRT-LLM. Splits vocab into context-independent (precomputed) vs context-dependent (runtime) tokens."
     },
     {
       "key": "kaplan2020",
@@ -783,7 +961,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["kaplan-laws"],
+      "topics": [
+        "kaplan-laws"
+      ],
       "category": "foundational",
       "summary": "Foundational power-law scaling: loss vs params, data, compute. Spawned the entire scaling-law literature."
     },
@@ -797,9 +977,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["chinchilla"],
+      "topics": [
+        "chinchilla"
+      ],
       "category": "foundational",
-      "summary": "Chinchilla: tokens ≈ 20× params at compute-optimum. Overthrew Kaplan's model-size bias."
+      "summary": "Chinchilla: tokens \u2248 20\u00d7 params at compute-optimum. Overthrew Kaplan's model-size bias."
     },
     {
       "key": "yang2022-mup",
@@ -811,13 +993,15 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["mu-transfer"],
+      "topics": [
+        "mu-transfer"
+      ],
       "category": "foundational",
-      "summary": "μP: maximal-update parametrization for zero-shot HP transfer across model sizes."
+      "summary": "\u03bcP: maximal-update parametrization for zero-shot HP transfer across model sizes."
     },
     {
       "key": "u-mup2024",
-      "title": "u-μP: The Unit-Scaled Maximal Update Parametrization",
+      "title": "u-\u03bcP: The Unit-Scaled Maximal Update Parametrization",
       "authors": "Graphcore",
       "year": 2024,
       "venue": "ICLR 2025 Spotlight",
@@ -825,9 +1009,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["mu-transfer", "mixed-precision-and-stability"],
+      "topics": [
+        "mu-transfer",
+        "mixed-precision-and-stability"
+      ],
       "category": "landmark",
-      "summary": "Combines μP with unit-scaling. Enables native FP8 training without dynamic rescaling."
+      "summary": "Combines \u03bcP with unit-scaling. Enables native FP8 training without dynamic rescaling."
     },
     {
       "key": "scaling-laws-precision-2024",
@@ -839,9 +1026,12 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["scaling-frontier", "mixed-precision-and-stability"],
+      "topics": [
+        "scaling-frontier",
+        "mixed-precision-and-stability"
+      ],
       "category": "landmark",
-      "summary": "Precision-aware scaling laws. Post-training quantization has increasing cost as training extends — actively harmful past a threshold."
+      "summary": "Precision-aware scaling laws. Post-training quantization has increasing cost as training extends \u2014 actively harmful past a threshold."
     },
     {
       "key": "olsson2022-induction-heads",
@@ -853,7 +1043,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["mechanistic-interpretability"],
+      "topics": [
+        "mechanistic-interpretability"
+      ],
       "category": "foundational",
       "summary": "Induction heads as core ICL mechanism. Canonical Transformer Circuits Thread paper."
     },
@@ -867,7 +1059,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["mechanistic-interpretability", "activation-patching"],
+      "topics": [
+        "mechanistic-interpretability",
+        "activation-patching"
+      ],
       "category": "foundational",
       "summary": "IOI circuit: 26 attention heads with functional roles. Mech-interp case study."
     },
@@ -881,7 +1076,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["activation-patching", "mechanistic-interpretability"],
+      "topics": [
+        "activation-patching",
+        "mechanistic-interpretability"
+      ],
       "category": "foundational",
       "summary": "Causal tracing localizes facts in MLP layers. Introduced activation patching to broader community."
     },
@@ -895,7 +1093,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["sparse-autoencoders"],
+      "topics": [
+        "sparse-autoencoders"
+      ],
       "category": "landmark",
       "summary": "SAEs scaled to production Claude 3 Sonnet. Discovers abstract, safety-relevant features."
     },
@@ -909,7 +1109,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["sparse-autoencoders"],
+      "topics": [
+        "sparse-autoencoders"
+      ],
       "category": "landmark",
       "summary": "Open SAE release: 400+ SAEs across all layers of Gemma 2 2B/9B/27B. Introduces JumpReLU."
     },
@@ -923,7 +1125,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["circuit-tracing", "mechanistic-interpretability"],
+      "topics": [
+        "circuit-tracing",
+        "mechanistic-interpretability"
+      ],
       "category": "landmark",
       "summary": "Cross-layer transcoders + attribution graphs. Applied to production Claude 3.5 Haiku."
     },
@@ -937,7 +1142,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["sparse-autoencoders"],
+      "topics": [
+        "sparse-autoencoders"
+      ],
       "category": "landmark",
       "summary": "Critical paper: different SAE training runs find different bases. Challenges monosemanticity assumption. Active debate."
     },
@@ -951,7 +1158,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["lens-techniques"],
+      "topics": [
+        "lens-techniques"
+      ],
       "category": "landmark",
       "summary": "Trained affine translators per layer. More reliable than raw logit lens."
     },
@@ -965,7 +1174,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["knowledge-benchmarks"],
+      "topics": [
+        "knowledge-benchmarks"
+      ],
       "category": "foundational",
       "summary": "Original MMLU. Now near-saturated (frontier models ~90%+)."
     },
@@ -979,7 +1190,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["knowledge-benchmarks"],
+      "topics": [
+        "knowledge-benchmarks"
+      ],
       "category": "landmark",
       "summary": "12k graduate-level questions, 10-answer MCQ. Better discriminates frontier models than MMLU."
     },
@@ -993,7 +1206,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["knowledge-benchmarks"],
+      "topics": [
+        "knowledge-benchmarks"
+      ],
       "category": "landmark",
       "summary": "GPQA Diamond: 198 PhD-expert ~65% questions. Now surpassed by frontier AI by large margin."
     },
@@ -1007,7 +1222,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["knowledge-benchmarks", "reasoning-benchmarks"],
+      "topics": [
+        "knowledge-benchmarks",
+        "reasoning-benchmarks"
+      ],
       "category": "landmark",
       "summary": "Novel research-grade math; <2% AI solve rate at launch. 60+ expert mathematicians."
     },
@@ -1021,7 +1239,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["knowledge-benchmarks"],
+      "topics": [
+        "knowledge-benchmarks"
+      ],
       "category": "landmark",
       "summary": "2,500 expert-vetted cross-domain questions; multimodal. Current SOTA ~65%."
     },
@@ -1035,7 +1255,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["agentic-benchmarks"],
+      "topics": [
+        "agentic-benchmarks"
+      ],
       "category": "landmark",
       "summary": "500 human-validated GitHub issue resolution tasks. Current SOTA Claude Sonnet 4.5 at 77.2%."
     },
@@ -1049,7 +1271,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["watermarking-and-provenance"],
+      "topics": [
+        "watermarking-and-provenance"
+      ],
       "category": "foundational",
       "summary": "Green/red token list watermarking. Canonical LLM watermarking paper."
     },
@@ -1063,7 +1287,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["watermarking-and-provenance"],
+      "topics": [
+        "watermarking-and-provenance"
+      ],
       "category": "landmark",
       "summary": "Tournament-sampling watermark; open-sourced; deployed in Gemini App. Nature publication 2024."
     },
@@ -1077,7 +1303,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["oversight-and-scalable-alignment", "synthetic-data-and-distillation"],
+      "topics": [
+        "oversight-and-scalable-alignment",
+        "synthetic-data-and-distillation"
+      ],
       "category": "foundational",
       "summary": "Core scalable oversight question: GPT-2 supervisor recovers near GPT-3.5 performance."
     },
@@ -1091,7 +1320,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["scheming-and-deceptive-alignment"],
+      "topics": [
+        "scheming-and-deceptive-alignment"
+      ],
       "category": "landmark",
       "summary": "First empirical demonstration of alignment faking without explicit training. Claude 3 Opus complies with harmful queries 14% when it infers it's in training."
     },
@@ -1105,7 +1336,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["scheming-and-deceptive-alignment"],
+      "topics": [
+        "scheming-and-deceptive-alignment"
+      ],
       "category": "landmark",
       "summary": "o1, Claude 3.5 Sonnet, Gemini 1.5 Pro, Llama 3.1 405B all exhibit scheming. First systematic eval."
     },
@@ -1119,7 +1352,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["safety-evaluation"],
+      "topics": [
+        "safety-evaluation"
+      ],
       "category": "landmark",
       "summary": "510 behaviors, 18 attack methods, 33 models. Standard red-teaming benchmark; used by AISI."
     },
@@ -1133,7 +1368,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["pre-training-data"],
+      "topics": [
+        "pre-training-data"
+      ],
       "category": "landmark",
       "summary": "15T-token CC-derived dataset; proxy-model validation for filter selection. Spawned FineWeb-Edu educational classifier."
     },
@@ -1147,7 +1384,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["pre-training-data"],
+      "topics": [
+        "pre-training-data"
+      ],
       "category": "landmark",
       "summary": "Predictable functional relationship between domain proportions and loss. 48% step savings from optimized mixture."
     },
@@ -1161,7 +1400,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["distributed-training"],
+      "topics": [
+        "distributed-training"
+      ],
       "category": "landmark",
       "summary": "Reference implementation for 4D parallelism (FSDP2 + TP + PP + Context Parallel). Ring Attention for 1M-sequence training. 65% speedup on Llama 3.1 8B."
     },
@@ -1175,7 +1416,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["adaptation-and-merging"],
+      "topics": [
+        "adaptation-and-merging"
+      ],
       "category": "landmark",
       "summary": "Open-source toolkit: TIES, DARE, Task Arithmetic, SLERP, Frankenmerge. Backbone of community model merging."
     },
@@ -1189,7 +1432,11 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["long-context", "distributed-training", "attention-mechanism"],
+      "topics": [
+        "long-context",
+        "distributed-training",
+        "attention-mechanism"
+      ],
       "category": "landmark",
       "summary": "Ring attention: distribute attention across devices for sequence length scaling."
     },
@@ -1203,7 +1450,10 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["long-context", "attention-mechanism"],
+      "topics": [
+        "long-context",
+        "attention-mechanism"
+      ],
       "category": "recent",
       "summary": "Compressive memory + local + linear attention in single block. 1M-passkey."
     },
@@ -1217,7 +1467,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["state-space-models"],
+      "topics": [
+        "state-space-models"
+      ],
       "category": "recent",
       "summary": "Generalized delta rule with vector-valued gating. Claims state-tracking expressiveness beyond Transformers under standard complexity assumptions."
     },
@@ -1231,7 +1483,9 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["multimodal-llm-extensions"],
+      "topics": [
+        "multimodal-llm-extensions"
+      ],
       "category": "foundational",
       "summary": "LLaVA: vision encoder + MLP projector + LLM paradigm. Foundational adapter-based MLLM."
     },
@@ -1245,9 +1499,67 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [],
-      "topics": ["multimodal-llm-extensions"],
+      "topics": [
+        "multimodal-llm-extensions"
+      ],
       "category": "landmark",
       "summary": "Native multimodal pretraining (joint image+text from scratch). SOTA open MLLM."
+    },
+    {
+      "key": "shazeer2019",
+      "title": "Fast Transformer Decoding: One Write-Head is All You Need",
+      "authors": "Shazeer",
+      "year": 2019,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/1911.02150",
+      "local_file": "sources/papers/shazeer2019_mqa.pdf",
+      "excerpts_file": "kb/excerpts/shazeer2019.md",
+      "notes_referenced_by": [
+        "architecture/attention-mechanism"
+      ],
+      "topics": [
+        "attention-mechanism",
+        "kv-cache-management"
+      ],
+      "category": "landmark",
+      "summary": "Introduces Multi-Query Attention (MQA): all heads share a single K, V projection, only Q is per-head. Identifies KV-cache bandwidth as the dominant cost of incremental Transformer decoding (memory/compute ratio Theta(n/d + 1/b)). Cuts KV cache by factor h with minor quality cost."
+    },
+    {
+      "key": "dao2023",
+      "title": "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning",
+      "authors": "Dao",
+      "year": 2023,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2307.08691",
+      "local_file": "sources/papers/dao2023_flashattention2.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "architecture/attention-mechanism"
+      ],
+      "topics": [
+        "attention-mechanism"
+      ],
+      "category": "landmark",
+      "summary": "Re-partitions FlashAttention work so more of the algorithm runs as matmul ops (better tensor-core utilization). Reduces non-matmul FLOPs. ~2x speedup over FlashAttention-1 on A100."
+    },
+    {
+      "key": "yuan2025",
+      "title": "Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention",
+      "authors": "Yuan, Gao, Dai, et al.",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2502.11089",
+      "local_file": "sources/papers/yuan2025_nsa.pdf",
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "architecture/attention-mechanism"
+      ],
+      "topics": [
+        "attention-mechanism",
+        "long-context"
+      ],
+      "category": "recent",
+      "summary": "DeepSeek-team proposal for natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Hardware-aligned for long-context efficiency. Claims to match dense attention quality at 64k+ context with reduced compute."
     }
   ]
 }

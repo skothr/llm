@@ -48,7 +48,7 @@ rlvr-and-grpo → foundations + variants.
 | tokenization | pending | `kb/notes/architecture/tokenization.md` |
 | embeddings-and-tying | pending | `kb/notes/architecture/embeddings-and-tying.md` |
 | position-encoding | pending | `kb/notes/architecture/position-encoding.md` |
-| attention-mechanism | pending | `kb/notes/architecture/attention-mechanism.md` |
+| attention-mechanism | draft | `kb/notes/architecture/attention-mechanism.md` |
 | ffn | pending | `kb/notes/architecture/ffn.md` |
 | moe | pending | `kb/notes/architecture/moe.md` |
 | normalization | pending | `kb/notes/architecture/normalization.md` |
