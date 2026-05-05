@@ -77,7 +77,9 @@ def check_topics():
 
 
 PAPER_CITE_RE = re.compile(r"\[([a-z0-9-]+(?:\.\d+)?(?:/[a-z0-9-]+)*)\s*§")
-EXCERPT_CITE_RE = re.compile(r"\[(kb/excerpts/[a-z0-9-]+)#([a-z0-9-]+)\]")
+# Match excerpt anchors anywhere in citation brackets (hybrid form
+# `[paper-key §X; kb/excerpts/key#anchor]` is dominant in practice).
+EXCERPT_CITE_RE = re.compile(r"(kb/excerpts/[a-z0-9-]+)#([a-z0-9-]+)")
 TAG_RE = re.compile(r"\[(INTUITION|ANALOGY|CONTRADICTION|FORUM-SIGNAL|SPECULATION)\]")
 
 

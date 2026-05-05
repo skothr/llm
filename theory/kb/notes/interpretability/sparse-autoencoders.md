@@ -144,7 +144,7 @@ attention activations, while training as fast as a vanilla ReLU SAE
 stream, MLP output, attention output) of Gemma 2 2B, 9B, and select
 layers of 27B; releases >2,000 SAEs covering >30M total learned features,
 trained on 4–16B tokens each
-`[gemma-scope-2024 §1; kb/excerpts/gemma-scope-2024-jumprelu-saes#sec-1]`.
+`[gemma-scope-2024 §1; kb/excerpts/gemma-scope-2024#sec-1]`.
 Compute used: ~20% of GPT-3 pretraining budget. Practical impact: until
 2024, SAE work was largely Anthropic-internal; Gemma Scope made open
 SAE-based interpretability tractable for academic and independent
@@ -160,7 +160,7 @@ researchers.
 | **JumpReLU** (Rajamanoharan 2024) | learned-threshold step | $\lambda \|\mathbf{f}\|_0$ via STE | strongest | low | as cheap as ReLU |
 | **BatchTopK** (Bussmann 2024) | TopK across the batch | none | claimed > TopK / JumpReLU | similar to TopK | partial sort + batch op |
 
-`[gemma-scope-2024 §2.1; kb/excerpts/gemma-scope-2024-jumprelu-saes]`,
+`[gemma-scope-2024 §2.1; kb/excerpts/gemma-scope-2024]`,
 `[gao2024-topk-saes §2.3]`,
 `[rajamanoharan2024-jumprelu §1, §2.2]`.
 
@@ -212,7 +212,7 @@ Transcoders are the architectural primitive used by Anthropic's 2025
 - **2024-07** — Rajamanoharan et al. (DeepMind): JumpReLU SAEs.
 - **2024-08** — Lieberum et al. (DeepMind): Gemma Scope — JumpReLU SAEs
   released openly across Gemma 2 2B/9B/27B
-  `[gemma-scope-2024 §1, §2.2; kb/excerpts/gemma-scope-2024-jumprelu-saes#sec-2]`.
+  `[gemma-scope-2024 §1, §2.2; kb/excerpts/gemma-scope-2024#sec-2]`.
 - **2024-11** — Dunefsky et al. (NeurIPS): transcoders for input-invariant
   circuit analysis.
 - **2024-12** — Bussmann: BatchTopK SAEs (variant of TopK that picks the
