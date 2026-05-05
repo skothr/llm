@@ -82,7 +82,8 @@ maximum-length reservation that produced the $\sim 70$\% waste.
 
 The architectural pressure runs the other way too: PagedAttention's
 block-decomposed kernel is what enables the cross-request prefix sharing
-of RadixAttention \citep[\S 3]{zheng2024-sglang}, the
+of RadixAttention \citep[\S 3]{zheng2024-sglang}\footnote{KB excerpt:
+\texttt{kb/excerpts/zheng2024-sglang.md\#sec-3}.}, the
 training-time KV compression of MQA / GQA / MLA in
 \cref{sec:kv-sharing} (which act on the per-token block size), and the
 KV-quantization regimes below (which change the element width $b$ but
