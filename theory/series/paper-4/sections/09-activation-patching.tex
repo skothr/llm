@@ -1,0 +1,456 @@
+% Paper 4, §9 — Activation patching: the causal-intervention spine
+% Thesis: activation patching is the canonical *causal* intervention
+% method in mechanistic interpretability. The three-run protocol
+% (clean / corrupted / patched) plus the indirect-effect statistic give
+% the field its only direct causal handle on internal computation. Every
+% subsequent intervention method (path patching, attribution patching,
+% ACDC, attribution graphs) is a refinement of this protocol along one
+% of three methodological axes — corruption method, metric, and
+% granularity — that Zhang & Nanda 2023 systematize.
+
+\section{Activation patching}
+\label{sec:patching}
+
+The lens and probe of \S\ref{sec:logit-lens-family}--\S\ref{sec:probing}
+read the residual stream; they tell us what intermediate states
+\emph{contain}. They do not tell us what the model \emph{uses}. A
+high-accuracy probe at layer $\ell$ is consistent with the property
+being computed at $\ell$ and consumed by the unembed, with the property
+being computed at $\ell$ and ignored by the unembed (\emph{vestigial
+information}), or with a confound entirely outside the model
+\citep{belinkov2022-probing-survey}. Closing that gap requires an
+\emph{intervention}: change the activation at $\ell$, hold everything
+else fixed, observe the output. Activation patching is the canonical
+form of that intervention. The three-run protocol of
+\citet{meng2022-rome}, generalized and named by
+\citet{zhang2023-apatching}, gives the field its workhorse causal
+estimator and the heatmap that ROME made famous; the variant zoo of
+path patching \citep{wang2022-ioi}, attribution patching, and ACDC
+\citep{conmy2023-acdc} are all refinements of the same protocol along
+three methodological axes that this section names explicitly.
+
+\subsection{The three-run protocol}
+\label{sec:patching-protocol}
+
+\citet{meng2022-rome} fix the protocol as three forward
+passes\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2022-rome.md\#sec-2}.}, restated by
+\citet[\S 2.1]{zhang2023-apatching} as the now-standard
+recipe\footnote{KB excerpt:
+\texttt{kb/excerpts/zhang2023-apatching.md\#sec-2-1}.}. Fix a clean
+prompt $X_{\text{cl}}$ with target answer $r$ (e.g.,
+``\textit{The Eiffel Tower is in}'' $\to$ ``\textit{Paris}'') and a
+corrupted prompt $X_{*}$ that changes the answer (e.g.,
+``\textit{The Colosseum is in}'' $\to$ ``\textit{Rome}''). Let
+$\mathbf{h}_i^{(\ell)}$ denote the model's residual-stream activation
+at sequence position $i$ and layer $\ell$, and $C$ a candidate
+\emph{component} indexing some collection of these activations
+(a single hidden state, an MLP output, an attention-head output,
+or a subspace; see \S\ref{sec:patching-granularity}).
+
+\begin{enumerate}
+  \item \textbf{Clean run.} Run $\mathcal{M}$ on $X_{\text{cl}}$ and
+    cache every internal activation
+    $\{\mathbf{h}_i^{(\ell)}\}_{i,\ell}$. Record the model's output
+    distribution $\mathbb{P}_{\text{cl}}$.
+  \item \textbf{Corrupted run.} Run $\mathcal{M}$ on $X_{*}$ and record
+    the corrupted output distribution $\mathbb{P}_{*}$ and a target
+    metric $m_{*}$ (probability, logit difference, or KL --- see
+    \S\ref{sec:patching-metric}).
+  \item \textbf{Patched run.} Run $\mathcal{M}$ on $X_{*}$, but at
+    component $C$ overwrite the activation with the cached clean value
+    from step~(1). Record the patched output distribution
+    $\mathbb{P}_{\text{pt}}$ and the metric $m_{\text{pt}}$.
+\end{enumerate}
+
+The \emph{indirect effect} of component $C$ on this prompt pair is the
+metric difference between the patched and corrupted runs
+\citep[\S 2]{meng2022-rome}\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2022-rome.md\#sec-2-effects}.}:
+\begin{equation}
+  \mathrm{IE}_C(X_{\text{cl}}, X_{*}) \;:=\; m_{\text{pt}} \;-\; m_{*}.
+  \label{eq:ie-definition}
+\end{equation}
+Averaging over a dataset $\{(X_{\text{cl}}^{(n)}, X_{*}^{(n)})\}_{n=1}^{N}$
+of paired counterfactuals gives the \emph{average indirect effect}
+\citep[\S 2]{meng2022-rome},
+\begin{equation}
+  \mathrm{AIE}_C \;:=\;
+  \frac{1}{N} \sum_{n=1}^{N} \mathrm{IE}_C(X_{\text{cl}}^{(n)}, X_{*}^{(n)}),
+  \label{eq:aie}
+\end{equation}
+which is the statistic the field actually reports: a single
+$\mathrm{IE}_C$ on one prompt is noisy, $\mathrm{AIE}_C$ on a
+counterfactual benchmark is the population-level localization signal.
+A large $\mathrm{AIE}_C$ means substituting $C$'s clean activation back
+into the corrupted run \emph{recovers} the clean behavior, so $C$ is a
+sufficient causal mediator for the metric on this task.
+
+Iterating $C$ over every (component, token, layer) cell of the
+residual-stream grid produces the \emph{causal trace heatmap} of
+\citet[Fig.~1]{meng2022-rome}: rows are token positions, columns are
+layers, cells are $\mathrm{AIE}_C$. Bright cells localize the behavior;
+dark cells are causally inert. The heatmap is the visual signature of
+patching, and the substantive output of \S\ref{sec:rome} is what its
+peaks revealed for factual recall.
+
+\paragraph{Tensor-shape ledger.} A residual-stream activation at one
+$(B, S)$ position is $\mathbf{h}^{(\ell, t)} \in \mathbb{R}^{D}$; the
+batched tensor is $\mathsf{B}\!\times\!\mathsf{S}\!\times\!D$. A
+component $C$ identifies a subset of this grid: ``MLP output at
+$(\ell, t)$'' is one $\mathbb{R}^{D}$ vector; ``attention-head $h$
+output at $(\ell, t)$'' is one $\mathbb{R}^{d_h}$ vector before the
+$W^O$ projection; ``head $h$ contribution to the residual stream'' is
+the $\mathbb{R}^{D}$ vector after $W^O$. A subspace patch replaces only
+the projection
+$\mathbf{h}^{(\ell, t)} \mapsto \mathbf{h}^{(\ell, t)} -
+(\mathbf{h}^{(\ell, t)})^{\top}\hat{\mathbf{d}}\;\hat{\mathbf{d}} +
+(\mathbf{h}_{\text{cl}}^{(\ell, t)})^{\top}\hat{\mathbf{d}}\;
+\hat{\mathbf{d}}$ along a probe direction $\hat{\mathbf{d}}$, leaving
+the orthogonal complement unchanged --- the natural granularity for
+``patch the truth direction'' or ``patch the Paris feature.''
+
+\subsection{The metric: logit difference is the default}
+\label{sec:patching-metric}
+
+The metric $m$ in Eq.~\eqref{eq:ie-definition} is a free choice with
+real consequences. \citet[\S 2.1]{zhang2023-apatching} catalog three
+options\footnote{KB excerpt:
+\texttt{kb/excerpts/zhang2023-apatching.md\#sec-2-1-metrics}.}.
+Probability, $m^{\mathrm{P}} = \mathbb{P}(r)$, gives a unitless
+patching effect $\mathbb{P}_{\text{pt}}(r) - \mathbb{P}_{*}(r)$; it is
+the metric of \citet{meng2022-rome}. Logit difference, with $r'$ the
+corrupted-prompt answer, is
+\begin{equation}
+  \mathrm{LD}(r, r') \;:=\; \mathrm{logit}(r) - \mathrm{logit}(r'),
+  \label{eq:logit-diff}
+\end{equation}
+and the canonical normalized patching effect is
+\citep[\S 2.1]{zhang2023-apatching}
+\begin{equation}
+  m^{\mathrm{LD}}_{\text{pt}} \;:=\;
+  \frac{\mathrm{LD}_{\text{pt}}(r, r') - \mathrm{LD}_{*}(r, r')}{
+        \mathrm{LD}_{\text{cl}}(r, r') - \mathrm{LD}_{*}(r, r')},
+  \label{eq:logit-diff-normalized}
+\end{equation}
+typically in $[0, 1]$ (where $1$ is fully restored, $0$ is corrupted).
+KL is
+$D_{\mathrm{KL}}(\mathbb{P}_{\text{cl}} \,\|\, \mathbb{P}_{*}) -
+ D_{\mathrm{KL}}(\mathbb{P}_{\text{cl}} \,\|\, \mathbb{P}_{\text{pt}})$.
+
+The methodological case for logit difference as the default is made by
+\citet[\S 4.1]{heimersheim2024-apatching-howto}\footnote{KB excerpt:
+\texttt{kb/excerpts/heimersheim2024.md\#sec-4-1}.}: it is a
+``mostly linear function of the residual stream (unlike
+probability-based metrics) which makes it easy to directly attribute
+logit difference to individual components,'' and it is ``a `softer'
+metric, allowing us to see partial effects on the model even if they
+don't change the rank of the output tokens.''
+\citet[\S 4.2]{heimersheim2024-apatching-howto} catalog the failure
+modes of the alternatives\footnote{KB excerpt:
+\texttt{kb/excerpts/heimersheim2024.md\#sec-4-2}.}: probability is
+``non-linear, in the sense that [it] track[s] the logits exponentially.
+For example, a model component adding $+2$ to a given logit can create
+a $1$ or $40$ percentage point probability increase, just depending on
+what the baseline was''; log-probabilities saturate (``once the correct
+answer becomes the model's top guess, the logprob stops increasing
+meaningfully''); rank- and accuracy-based metrics ``round off each
+input to a discrete metric.'' The single most important consequence of
+choosing probability over logit difference is invisibility of negative
+components: the IOI Negative Name Mover heads
+\citep[\S 3]{wang2022-ioi}\footnote{KB excerpt:
+\texttt{kb/excerpts/wang2022-ioi.md\#sec-3-circuit}.} push \emph{against}
+the correct answer, and a probability metric near $\mathbb{P}(r) \in
+\{0, 1\}$ saturates exactly the regime in which their effect is
+detectable. Logit difference does not.
+
+\subsection{The corruption: STR over GN}
+\label{sec:patching-corruption}
+
+The second methodological axis is how $X_{*}$ is generated from
+$X_{\text{cl}}$. \citet[\S 2.1]{zhang2023-apatching} fix two
+canonical choices\footnote{KB excerpt:
+\texttt{kb/excerpts/zhang2023-apatching.md\#sec-2-1-corruption}.}.
+\textbf{Gaussian Noising} (GN), used by \citet{meng2022-rome}, ``adds
+Gaussian noise $\mathcal{N}(0, \nu)$ to the embeddings of certain key
+tokens, where $\nu$ is 3 times the standard deviation of the token
+embeddings from the textset.'' \textbf{Symmetric Token Replacement}
+(STR), used by \citet{wang2022-ioi}, ``replaces the key tokens by
+similar ones with equal sequence length''; ``Eiffel Tower'' becomes
+``Colosseum'', ``Mary'' becomes ``Alice''. STR's defining property is
+that ``$X_{\mathrm{corrupt}}$ is identically distributed as a fresh
+draw of a clean prompt'' \citep[\S 2.1]{zhang2023-apatching}.
+
+\begin{contradiction}
+\textbf{GN can mis-localize relative to STR.}
+\citet[\S 1]{zhang2023-apatching} report that ``GN and STR can lead to
+inconsistent localization and circuit discovery outcomes (Section
+3.1)'' on the same task. The conjectured mechanism: ``GN breaks
+model's internal mechanisms by putting it off
+distribution''\footnote{KB excerpt:
+\texttt{kb/excerpts/zhang2023-apatching.md\#sec-findings}.} ---
+in-distribution prompts that the model knows how to process produce
+clean signals about which components matter; out-of-distribution noise
+produces signals about which components fail under noise, which need
+not coincide. \citet[\S 1]{zhang2023-apatching} ``advocate for STR, as
+it supplies in-distribution corrupted prompts that help to preserve
+consistent model behavior.'' Concrete consequence:
+\citet{meng2022-rome}'s GN-derived AIE peak at GPT-2-XL layer $15$
+broadly survives STR re-validation \citep[\S 3]{zhang2023-apatching},
+but the precise per-layer peak shifts, and downstream uses of ROME's
+exact layer-of-edit recommendation inherit that sensitivity. The
+strongest form of the methodology claim --- ``GN-derived localizations
+should be re-validated under STR before being treated as canonical
+for a new task'' --- is the field's current default.
+\end{contradiction}
+
+A practical refinement, due to
+\citet[\S 2.3]{heimersheim2024-apatching-howto}, is the
+\emph{denoising vs.\ noising} distinction\footnote{KB excerpt:
+\texttt{kb/excerpts/heimersheim2024.md\#sec-2-3}.}. The protocol
+above is \emph{denoising} (clean $\to$ corrupted): the patched run
+inserts a clean activation into a corrupted run and asks
+\emph{which patches were sufficient to restore the behavior}. The
+inverse protocol, \emph{noising} (corrupted $\to$ clean), inserts a
+corrupted activation into a clean run and asks
+\emph{which patches were necessary to maintain the behavior}.
+\citet[\S 2.4]{heimersheim2024-apatching-howto} show with a worked
+AND/OR-gate example that the two directions are not symmetric: an AND
+circuit ($C = A \wedge B$) has both $A$ and $B$ as necessary, so
+noising flags both; denoising of either alone leaves the other at the
+corrupted baseline and finds nothing. An OR circuit ($C = A \vee B$)
+has either alone as sufficient, so denoising of either restores
+behavior; noising of either alone leaves the other operative. The
+practical recommendation is to choose direction by the suspected
+circuit topology, or to run both.
+
+\subsection{Granularity: from hidden states to subspaces}
+\label{sec:patching-granularity}
+
+The third axis is what counts as $C$. The granularities used in the
+literature \citep[\S 2.1]{zhang2023-apatching} form a coarse-to-fine
+ladder, summarized in Table~\ref{tab:patching-granularity}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Granularity & Component $C$ & Used by \\
+\midrule
+Hidden state & $\mathbf{h}_i^{(\ell)} \in \mathbb{R}^{D}$ & \citet{meng2022-rome} \\
+MLP output & $\mathrm{MLP}^{(\ell)}(\mathbf{h}_i^{(\ell)}) \in \mathbb{R}^{D}$ & \citet{meng2022-rome} \\
+Attention-layer output & $\mathrm{Attn}^{(\ell)}(\mathbf{h}_i^{(\ell)}) \in \mathbb{R}^{D}$ & \citet{meng2022-rome} \\
+Single attention head & $h_{j}^{(\ell)} \in \mathbb{R}^{d_h}$ before $W^{O}$ & \citet{wang2022-ioi} \\
+Subspace & $\mathbf{P}_{\hat{\mathbf{d}}}\,\mathbf{h}_i^{(\ell)}$ & probe-direction patches \\
+\bottomrule
+\end{tabular}
+\caption{Patching granularities. \citet{meng2022-rome} patch hidden
+states, MLPs, and attention layers separately to attribute factual
+recall to MLPs over attention; \citet{wang2022-ioi} patch individual
+heads to recover the seven-class IOI circuit; subspace patching
+along a probe direction $\hat{\mathbf{d}}$ tests whether a specific
+\emph{property} encoded by a probe is causally used.}
+\label{tab:patching-granularity}
+\end{table}
+
+The headline trade-off: granularity governs the strength of the claim
+the experiment can support. Hidden-state patching localizes
+\emph{layers} and \emph{token positions}; MLP-vs-attention patching
+splits the contribution by sublayer; head-level patching localizes
+specific attention heads and is the granularity needed for circuit
+claims; subspace patching localizes specific representational
+directions. Coarse patching that finds ``MLPs at layer 15 matter''
+does not yet justify ``the \texttt{Paris} direction in those MLPs
+matters,'' even if both are true --- the latter requires either
+finer-grained patching at the subspace level or a downstream probe-on-%
+patched-states design \citep[\S 2.3]{zhang2023-apatching}.
+
+\subsection{Path patching: isolating direct effects}
+\label{sec:patching-path}
+
+Standard activation patching gives the \emph{total} effect of a
+component on the metric: any influence routed through $C$ is captured,
+including effects mediated by downstream components. Circuits with
+multiple parallel paths --- which is most circuits --- need a finer
+estimate. \citet[\S 3.1]{wang2022-ioi}'s \emph{path
+patching}\footnote{KB excerpt:
+\texttt{kb/excerpts/wang2022-ioi.md\#sec-3-1-path-patching}.} is the
+partial-derivative analogue: it isolates the direct effect of a head
+$h$ on a downstream component $R$ by patching only along the residual
+and MLP paths from $h$ to $R$, holding indirect routes through other
+attention heads at their corrupted values. Verbatim from
+\citet[\S 3.1]{wang2022-ioi}:
+
+\begin{quote}
+Given inputs $x_{\text{orig}}$ and $x_{\text{new}}$, and a set of paths
+$\mathcal{P}$ emanating from a node $h$, path patching runs a forward
+pass on $x_{\text{orig}}$, but for the paths in $\mathcal{P}$ it
+replaces the activations for $h$ with those from $x_{\text{new}}$. In
+our case, $h$ will be a fixed attention head and $\mathcal{P}$
+consists of all direct paths from $h$ to a set of components $R$, i.e.\
+paths through residual connections and MLPs (but not through other
+attention heads); this measures the counterfactual effect of $h$ on
+the members of $R$.
+\end{quote}
+
+The methodological gain is exactly what makes the seven-class IOI
+decomposition (\S\ref{sec:circuits}) legible: full activation patching
+attributes ``Name Mover Heads matter,'' but only path patching can
+attribute ``S-Inhibition Heads write into the queries of the Name
+Mover Heads,'' i.e., a directed effect $h \to R$ via a specific
+projection. Without path patching the IOI circuit collapses into a
+flat ranked list of important heads; with it, it is a wiring diagram.
+
+\begin{intuition}
+Activation patching is counterfactual surgery on the residual-stream
+graph. The clean run is the patient who knows the answer; the
+corrupted run is the patient who lost it; the patched run grafts one
+specific tissue from the clean patient into the corrupted patient. If
+the corrupted patient recovers, that tissue carried the answer.
+Returning to canonical math: the recovery measure is exactly
+$\mathrm{IE}_C = m_{\text{pt}} - m_{*}$ from
+Eq.~\eqref{eq:ie-definition}, with $C$ the grafted tissue and $m$ a
+behaviorally meaningful metric (logit difference, by default). Path
+patching extends the surgery to grafting along specific
+\emph{conduits} between tissues rather than the tissues themselves;
+the canonical math is the same Eq.~\eqref{eq:ie-definition} restricted
+to a path set $\mathcal{P}$.
+\end{intuition}
+
+\subsection{Attribution patching: the linearization}
+\label{sec:patching-attribution}
+
+The cost of full activation patching is one forward pass per component:
+sweeping every (component, token, layer) cell of the heatmap costs
+$O(N_{\text{components}})$ forward passes per (clean, corrupted) pair,
+and path patching at depth-$k$ costs $O(N_{\text{components}}^{k})$.
+On GPT-2 small this is feasible; on production-scale models it is not.
+\emph{Attribution patching} replaces the substitution by its first-order
+Taylor approximation: write
+$\Delta\mathbf{h}_C := \mathbf{h}_{C,\text{cl}} -
+\mathbf{h}_{C,*}$ for the clean-minus-corrupted activation difference at
+component $C$, and approximate the indirect effect of patching $C$ as
+\begin{equation}
+  \mathrm{IE}_C
+  \;\approx\;
+  \big\langle \nabla_{\mathbf{h}_C} m \,\big|_{\mathbf{h}_C =
+  \mathbf{h}_{C,*}},\;
+  \Delta\mathbf{h}_C \big\rangle,
+  \label{eq:attribution-patching}
+\end{equation}
+where the gradient is taken at the corrupted activation. The cost is
+one forward and one backward pass on the corrupted prompt to obtain
+$\nabla_{\mathbf{h}} m$ at \emph{every} component simultaneously, plus
+one cached clean forward pass for $\Delta\mathbf{h}$; this collapses
+$O(N_{\text{components}})$ patch-forward-passes into $O(1)$
+forward+backward passes, an asymptotic win that scales the technique
+to production models.
+
+\begin{forumsignal}
+The attribution-patching approximation in
+Eq.~\eqref{eq:attribution-patching} was popularized by Nanda's
+``Attribution Patching: Activation Patching at Industrial Scale''
+LessWrong post (2023), which is the canonical reference for the
+technique \deepencite{nanda2023-attribution-patching:
+LessWrong / Tier B; awaiting peer-reviewed citation}. Subsequent
+peer-reviewed venues (notably \citealt{conmy2023-acdc} and the
+Anthropic attribution-graph line of \S\ref{sec:circuits}) build on
+the linearization, but the original write-up is a forum post and
+should be flagged as such. Hard claims about attribution-patching's
+\emph{accuracy} relative to full patching back to
+\citet[\S 1]{zhang2023-apatching}, who note the approximation
+``is known to fail in non-linear regions''\footnote{KB excerpt:
+\texttt{kb/excerpts/zhang2023-apatching.md\#sec-1}.} ---
+attention-softmax saturation and ReLU/GeLU dead zones being the
+canonical failure cases.
+\end{forumsignal}
+
+The mediation-analysis lineage of activation patching, predating its
+mech-interp adoption, traces to causal-mediation work in
+NLP \deepencite{vig2020-causal-mediation §3:
+awaiting peer-reviewed bibtex entry}. \citet[\S 1]{meng2022-rome} cite
+this lineage explicitly when introducing the three-run causal-tracing
+protocol; \citet[\S 1]{zhang2023-apatching} list ``causal mediation
+analysis'' as one of the synonyms under which activation patching
+appears in the literature. The genealogy matters because it locates
+patching in a pre-existing statistical-causal vocabulary
+(total/indirect effect, mediation, intervention) that the
+mech-interp community then specialized to neural-network
+computational graphs.
+
+\subsection{Recommendations and pitfalls}
+\label{sec:patching-recommendations}
+
+The methodology of \citet{zhang2023-apatching} and
+\citet{heimersheim2024-apatching-howto} converges on a default recipe.
+Table~\ref{tab:patching-recommendations} summarizes.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Choice & Default & Source \\
+\midrule
+Corruption & STR (in-distribution) & \citet[\S 1]{zhang2023-apatching} \\
+Direction & Denoising; noising for AND-circuits & \citet[\S 2.4]{heimersheim2024-apatching-howto} \\
+Metric & Logit difference (normalized) & \citet[\S 4.1]{heimersheim2024-apatching-howto} \\
+Granularity & Head-level for circuits; subspace for features & \citet[\S 2.3]{zhang2023-apatching} \\
+Validation & Pair patching with a complementary ablation test & \citet[\S 4]{wang2022-ioi} \\
+\bottomrule
+\end{tabular}
+\caption{Default activation-patching recipe consolidated from the
+methodology literature. Each row has at least one peer-reviewed
+recommendation; the validation row reflects the
+faithfulness/completeness/minimality discipline of
+\citet[\S 4]{wang2022-ioi}, which patching alone does not enforce.}
+\label{tab:patching-recommendations}
+\end{table}
+
+Three pitfalls deserve naming, lifted from
+\citet[\S 4.2]{heimersheim2024-apatching-howto} and
+\citet[\S 2.1]{zhang2023-apatching}. \emph{Logit-difference
+false-positives}: because logit difference is a difference, ``it may
+be driven by either getting better at the correct answer or worse at
+the incorrect answer''\footnote{KB excerpt:
+\texttt{kb/excerpts/heimersheim2024.md\#sec-4-2}.} --- a patch that
+indiscriminately damages the model toward uniform output reduces the
+incorrect-answer logit and inflates the apparent patching effect,
+without localizing anything specific. The fix is sanity-checking
+against an absolute-probability metric and against unrelated control
+metrics, not abandoning logit difference. \emph{Probability
+saturation}: when $\mathbb{P}(r) \in \{0, 1\}$ at either endpoint, the
+patching effect on probability is artificially compressed; logit
+difference is the explicit fix. \emph{Coarse-granularity sleights of
+hand}: a heatmap showing AIE concentrated at ``MLP layer 15, last
+subject token'' is consistent with the model storing the fact in that
+MLP, with the model storing the fact upstream and reading it at that
+MLP, with the model storing the fact in a feature subspace within
+that MLP, and with the model storing the fact partly there and partly
+in a redundant location whose AIE is masked by backup
+\citep[\S 3]{wang2022-ioi}. Each of these claims requires a
+finer-grained or causally complementary experiment to distinguish.
+
+\subsection{Forward link}
+\label{sec:patching-forward}
+
+Activation patching is the method that turns the lens-and-probe
+correlational reading of the residual stream
+(\S\ref{sec:logit-lens-family}--\S\ref{sec:probing}) into causal claims
+the field can adjudicate. The next two sections deploy it.
+Section~\ref{sec:rome} follows the heatmap of
+\citet[Fig.~1]{meng2022-rome} from a localization claim
+(``mid-layer MLPs at the last subject token mediate factual recall'')
+to a weight-level intervention (the rank-one MLP edit) that turns
+patching's diagnostic output into capability surgery; this is the
+bridge from interpretability-method to model-editing
+methodology. Section~\ref{sec:circuits} consumes patching as one of two
+methods that produce the IOI circuit and the ACDC subgraph: Wang et
+al.'s manual path-patching reverse-engineering and Conmy et al.'s
+KL-thresholded automated edge-pruning are both refinements of the
+three-run protocol, and the cross-method evidence with SAE features
+and the tuned lens (\S\ref{sec:cross-method}) is what gives the IOI
+picture its load-bearing status. Activation patching is, in this
+sense, the spine: every causal interpretability claim downstream of
+this section either uses it directly or refines it.

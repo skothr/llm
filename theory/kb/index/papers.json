@@ -3739,6 +3739,60 @@
       ],
       "category": "landmark",
       "summary": "Argues that under recursive paraphrasing, even watermark- and statistical-detector-based AI-text detectors converge toward random performance. Establishes the paraphrase-attack vector as a fundamental robustness limit on generation-time watermarking. Often cited as the 'cannot be reliably detected' counter-claim to the watermark-feasibility line."
+    },
+    {
+      "key": "rajbhandari2020-zero",
+      "title": "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models",
+      "authors": "Rajbhandari, Rasley, Ruwase, He",
+      "year": 2020,
+      "venue": "SC20",
+      "url": "https://arxiv.org/abs/1910.02054",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "training/distributed-training"
+      ],
+      "topics": [
+        "distributed-training"
+      ],
+      "category": "foundational",
+      "summary": "Original ZeRO (Zero Redundancy Optimizer) paper from DeepSpeed. Three stages: ZeRO-1 partitions optimizer state, ZeRO-2 also partitions gradients, ZeRO-3 also partitions parameters across DP ranks. Foundation for FSDP and the entire 'shard the data-parallel state' family that 2024-26 frontier training relies on."
+    },
+    {
+      "key": "narayanan2021-megatron-3d",
+      "title": "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM",
+      "authors": "Narayanan, Shoeybi, Casper, LeGresley, Patwary, Korthikanti, Vainbrand, Kashinkunti, Bernauer, Catanzaro, Phanishayee, Zaharia",
+      "year": 2021,
+      "venue": "SC21",
+      "url": "https://arxiv.org/abs/2104.04473",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "training/distributed-training"
+      ],
+      "topics": [
+        "distributed-training"
+      ],
+      "category": "foundational",
+      "summary": "The 3D-parallelism Megatron paper: composes data-parallelism, tensor-parallelism, and pipeline-parallelism on a single device mesh. Introduces interleaved 1F1B scheduling. Establishes the cost analysis (per-step communication, per-microbatch activation, in-flight microbatches) that 2024-26 frontier-scale training plans (DeepSeek-V3, Llama-3 405B) extend with CP and EP."
+    },
+    {
+      "key": "zhao2023-fsdp",
+      "title": "PyTorch FSDP: Experiences on Scaling Fully Sharded Data Parallel",
+      "authors": "Zhao, Gu, Varma, Luo, Huang, Xu, Wright, Shojanazeri, Ott, Shleifer, Desmaison, Balioglu, Damania, Nguyen, Chauhan, Hao, Mathews, Li",
+      "year": 2023,
+      "venue": "VLDB 2023",
+      "url": "https://arxiv.org/abs/2304.11277",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "training/distributed-training"
+      ],
+      "topics": [
+        "distributed-training"
+      ],
+      "category": "foundational",
+      "summary": "PyTorch's production FSDP implementation. Describes the all-gather + reduce-scatter primitive at the core of ZeRO-3-style data parallelism in PyTorch's user-facing API. Foundation for FSDP2-DTensor, which TorchTitan builds on for 2024-26 frontier-scale training composition with TP, PP, CP, EP."
     }
   ]
 }
