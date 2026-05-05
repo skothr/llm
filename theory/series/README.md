@@ -42,27 +42,15 @@ cd theory/series/paper-1 && latexmk -pdf main.tex
 
 | Paper | Title | Outline | LaTeX sections | Pages drafted |
 |------:|-------|:-------:|:--------------:|---------------:|
-| 1 | The modern Transformer is a small set of choices | done | 13/14 | ~66 of 80 |
-| 2 | Training is a multi-stage pipeline | done | 13/14 | ~84 of 100 |
-| 3 | Reasoning is compute, search, and verification | done | 13/14 | ~79 of 80 |
-| 4 | The internal computation can be partially read | done | 12/14 | ~61 of 70 |
-| 5 | What we measure and what slips through | done | 13/14 | ~76 of 70 |
-|   |                                                  |        | **64/70** | **~366 of 400** |
+| 1 | The modern Transformer is a small set of choices | done | 14/14 | ~70 of 80 |
+| 2 | Training is a multi-stage pipeline | done | 14/14 | ~88 of 100 |
+| 3 | Reasoning is compute, search, and verification | done | 14/14 | ~83 of 80 |
+| 4 | The internal computation can be partially read | done | 14/14 | ~69 of 70 |
+| 5 | What we measure and what slips through | done | 14/14 | ~80 of 70 |
+|   |                                                  |        | **70/70** | **~390 of 400** |
 
-### Sections completed (64)
-
-- Paper 1: §1 §2 §3 §4 §5 §6 §7 §8 §9 §10 §11 §12 §13
-- Paper 2: §1 §2 §3 §4 §5 §6 §7 §8 §9 §10 §11 §12 §13
-- Paper 3: §1 §2 §3 §4 §5 §6 §7 §8 §9 §10 §11 §12 §13
-- Paper 4: §1 §2 §3 §4 §5 §6 §7 §8 §9 §10 §11 §13
-- Paper 5: §1 §2 §3 §4 §5 §6 §7 §8 §9 §10 §11 §12 §13
-
-### Sections remaining (6) — wave 10
-
-- Paper 1: §14 (1)
-- Paper 2: §14 (1)
-- Paper 3: §14 (1)
-- Paper 4: §12 §14 (2)
-- Paper 5: §14 (1)
+All section files are written. Remaining work is final-build:
+regenerate `references.bib`, write each `paper-N/main.tex`,
+resolve cross-paper `\cref` labels, run `latexmk -pdf` per paper.
 
 After all 70 sections land: bibliography sync, cross-ref resolution, build, polish.
