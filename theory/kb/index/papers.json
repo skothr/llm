@@ -3793,6 +3793,60 @@
       ],
       "category": "foundational",
       "summary": "PyTorch's production FSDP implementation. Describes the all-gather + reduce-scatter primitive at the core of ZeRO-3-style data parallelism in PyTorch's user-facing API. Foundation for FSDP2-DTensor, which TorchTitan builds on for 2024-26 frontier-scale training composition with TP, PP, CP, EP."
+    },
+    {
+      "key": "bricken2023-monosemanticity",
+      "title": "Towards Monosemanticity: Decomposing Language Models with Dictionary Learning",
+      "authors": "Bricken, Templeton, Batson, Chen, Jermyn, Conerly, Turner, Anil, Denison, Askell, Lasenby, Wu, Kravec, Schiefer, Maxwell, Joseph, Hatfield-Dodds, Tamkin, Nguyen, McLean, Burke, Hume, Carter, Henighan, Olah",
+      "year": 2023,
+      "venue": "Anthropic transformer-circuits.pub",
+      "url": "https://transformer-circuits.pub/2023/monosemantic-features/index.html",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/sparse-autoencoders"
+      ],
+      "topics": [
+        "sparse-autoencoders"
+      ],
+      "category": "landmark",
+      "summary": "Anthropic's foundational SAE paper introducing the 'true features' framing: sparse autoencoders trained on a 1L Transformer's MLP activations recover monosemantic features that the network does not internally use as basis directions. Establishes the 'features as a privileged decomposition' position that Leask 2025 later contests as non-canonical."
+    },
+    {
+      "key": "kohonen1972-associative",
+      "title": "Correlation Matrix Memories",
+      "authors": "Teuvo Kohonen",
+      "year": 1972,
+      "venue": "IEEE Transactions on Computers",
+      "url": "https://ieeexplore.ieee.org/document/1672070",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/activation-patching"
+      ],
+      "topics": [
+        "activation-patching"
+      ],
+      "category": "foundational",
+      "summary": "Foundational associative-memory paper. The rank-one outer-product update $\\Delta W = \\alpha v k^\\top$ that ROME (Meng 2022) uses to insert factual associations into transformer MLPs traces directly to this 1972 construction; the 'key-value' framing of MLP layers in modern interpretability inherits the same algebraic structure."
+    },
+    {
+      "key": "khan2024-debating-llms",
+      "title": "Debating with More Persuasive LLMs Leads to More Truthful Answers",
+      "authors": "Khan, Hughes, Valentine, Ruis, Sachan, Radhakrishnan, Grefenstette, Bowman, Rocktaschel, Perez",
+      "year": 2024,
+      "venue": "ICML 2024",
+      "url": "https://arxiv.org/abs/2402.06782",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/oversight-and-scalable-alignment"
+      ],
+      "topics": [
+        "oversight-and-scalable-alignment"
+      ],
+      "category": "landmark",
+      "summary": "Empirical evaluation of Irving 2018-style debate with LLM debaters and weaker-judge LLMs / non-expert humans. Reports that pitting two more-persuasive LLMs against each other and judging with a weaker model recovers truth on QuALITY-style reading-comprehension tasks better than direct consultation. Partial-and-domain-bounded support for the debate equilibrium hypothesis; counterpoint to the open question whether equilibrium honesty holds in practice."
     }
   ]
 }

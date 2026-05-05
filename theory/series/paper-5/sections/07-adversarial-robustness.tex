@@ -1,0 +1,424 @@
+% Paper 5, §7 — Safety evaluation, layer 1: adversarial robustness
+% Anchors: kb/notes/alignment/safety-evaluation.md
+%          kb/excerpts/{harmbench2024,chao2024-jailbreakbench,
+%                       russinovich2024-crescendo,wei2023-jailbroken}.md
+
+\section{Safety evaluation, layer 1: adversarial robustness}
+\label{sec:adversarial-robustness}
+\label{sec:safety-adversarial-robustness}
+
+The agentic benchmarks of \cref{sec:agentic-benchmarks} ask what a
+model \emph{can} do; the layer taken up here asks what a model
+\emph{will} do under attack. The construct is no longer task
+completion against a verifier $V(s_T, g)$; it is refusal under an
+adversary whose explicit goal is to elicit a harmful behavior the
+deployed system was trained to decline. The thesis of this section
+is narrow: the field has built four canonical instruments for the
+adversarial-robustness layer --- \citet{wei2023-jailbroken}'s
+two-failure-mode taxonomy, \citet{harmbench2024}'s standardized
+red-team suite, \citet{chao2024-jailbreakbench}'s reproducibility
+benchmark, and \citet{russinovich2024-crescendo}'s multi-turn attack
+--- and the four together do \emph{not} compose into a single
+attack-success-rate (ASR) number that is comparable across papers.
+A $5\%$ ASR on benchmark $X$ and a $30\%$ ASR on benchmark $Y$ for
+the same model are not a contradiction; they are two measurements
+of different constructs, instantiated against different behavior
+sets, attack families, and judges. Before any \emph{within-paper}
+ASR rank can be read as evidence of model robustness, the
+\emph{across-paper} ASR-comparability problem has to be acknowledged
+as the central methodological failure of the layer.
+
+\subsection{Formal frame}
+\label{sec:safety-formal}
+
+A safety-evaluation instance%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#1-formal-framing}.}
+is the tuple
+\[
+\mathcal{S} = (\mathcal{B}, \mathcal{A}, V, \pi),
+\]
+where $\mathcal{B}$ is the set of harmful behaviors to test (510 in
+HarmBench, 100 in JailbreakBench), $\mathcal{A}$ is the attack family
+(single-turn fixed prompt, optimization-based suffix, multi-turn
+escalation, automated red-team), $V$ is the judge that decides
+whether a generation realizes the behavior (rule-based, fine-tuned
+classifier, LLM-as-judge, or human), and $\pi$ is the protocol
+context (system prompt, decoding parameters, in-place defenses,
+attack budget). The headline metric is the attack success rate
+\citep[\S{}abstract]{chao2024-jailbreakbench}:
+\[
+\mathrm{ASR}(\theta, \mathcal{S}) =
+\frac{|\{j \in J : V(\theta(\pi, a_j, b_j)) = \text{harmful}\}|}{|J|},
+\]
+the fraction of $(b, a)$ pairs $j \in J$ for which the model under
+test, parameterized by $\theta$, produces an output the judge rates
+harmful%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#1-formal-framing}, Eq.\,(1).}.
+A perfectly aligned model has $\mathrm{ASR} = 0$ on every attack
+family; a fully jailbroken model has $\mathrm{ASR} \approx 1$. The
+load-bearing observation is that every term in the metric ---
+$\mathcal{B}$, $\mathcal{A}$, $V$, $\pi$ --- varies across the four
+canonical benchmarks of this section. ``ASR'' as a scalar is
+under-specified without all four: the methodologically mature
+reporting form is the tuple $(\mathcal{B}, \mathcal{A}, V, \pi,
+\mathrm{ASR})$, not the number alone.
+
+\begin{intuition}
+ASR conflates three quantities under a single ratio: the model's
+refusal robustness, the attack's strength, and the judge's
+harshness. Two papers reporting ``GPT-4 ASR $= 30\%$'' and ``GPT-4
+ASR $= 60\%$'' may both be correct under their respective
+$(\mathcal{B}, \mathcal{A}, V, \pi)$ specifications. The $30\%
+\to 60\%$ delta carries no information about the model unless the
+specifications match. (Returning to canonical form: the ratio in
+the ASR equation is well defined for any fixed $\mathcal{S}$;
+across different $\mathcal{S}$ the ratios are not commensurable
+quantities and arithmetic between them --- ranking, averaging,
+delta-tracking --- is malformed.)
+\end{intuition}
+
+\subsection{The Wei taxonomy: why safety training fails}
+\label{sec:safety-wei}
+
+\citet{wei2023-jailbroken} supply the conceptual prior the
+benchmarks instantiate. Their hypothesis is that successful
+jailbreaks are not idiosyncratic exploits but realizations of two
+structural failure modes of safety training%
+\footnote{KB excerpt: \texttt{kb/excerpts/wei2023-jailbroken.md\#abstract}.}
+\citep[\S{}abstract]{wei2023-jailbroken}:
+
+\begin{quote}\itshape
+We hypothesize two failure modes of safety training: \emph{competing
+objectives} and \emph{mismatched generalization}. Competing
+objectives arise when a model's capabilities and safety goals
+conflict, while mismatched generalization occurs when safety
+training fails to generalize to a domain for which capabilities
+exist.
+\end{quote}
+
+Competing-objective attacks invoke a capability the model is
+trained to deploy --- helpfulness, instruction-following, role-play
+fidelity --- against the refusal training that would otherwise
+trigger. Mismatched-generalization attacks exploit a gap between
+the capability surface and the safety surface: capabilities cover
+Base64, low-resource languages, ROT-13, structured role-play; safety
+training was conducted in plain English direct-answer mode; the gap
+is exploitable. The empirical finding is the load-bearing one
+\citep[\S{}abstract]{wei2023-jailbroken}:
+
+\begin{quote}\itshape
+new attacks utilizing our failure modes succeed on every prompt in
+a collection of unsafe requests from the models' red-teaming
+evaluation sets and outperform existing ad hoc jailbreaks.
+\end{quote}
+
+Two things matter for the rest of the section. First, the
+``every prompt'' result against GPT-4 and Claude v1.3 establishes
+that extensively-red-teamed frontier models retain
+\emph{conceptually predictable} vulnerabilities. The attacks are
+not lucky; they instantiate the failure-mode framework. Second,
+the policy upshot --- ``safety mechanisms should be as sophisticated
+as the underlying model''
+\citep[\S{}abstract]{wei2023-jailbroken} --- is the
+\emph{safety-capability parity} prescription that subsequent
+benchmarks evaluate against. HarmBench's $510 \times 18$ behavior-
+attack matrix and JailbreakBench's leaderboard are operational
+realizations of the test the Wei framework demands: cover the
+capability surface broadly enough that mismatched-generalization
+gaps surface; cover the attack surface broadly enough that
+competing-objective constructions appear%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#2-1-adversarial-robustness-benchmarks}.}.
+
+\subsection{HarmBench: the standardized red-team suite}
+\label{sec:safety-harmbench}
+
+\citet{harmbench2024} address the methodological mess in 2023
+jailbreak literature by fixing the substrate against which attacks
+and defenses are measured%
+\footnote{KB excerpt: \texttt{kb/excerpts/harmbench2024.md\#abstract}.}
+\citep[\S{}abstract]{harmbench2024}:
+
+\begin{quote}\itshape
+we introduce HarmBench, a standardized evaluation framework for
+automated red teaming\ldots Using HarmBench, we conduct a
+large-scale comparison of 18 red teaming methods and 33 target
+LLMs and defenses, yielding novel insights. We also introduce a
+highly efficient adversarial training method that greatly enhances
+LLM robustness across a wide range of attacks, demonstrating how
+HarmBench enables codevelopment of attacks and defenses.
+\end{quote}
+
+The framework's structural commitments
+\citep[\S{}sec-structure]{harmbench2024}: \emph{510 carefully
+curated behaviors} spanning four functional categories (standard
+text, contextual, copyright, multimodal); \emph{18 red-team attack
+methods} evaluated head-to-head (GCG, AutoDAN, PAIR, TAP, GBDA,
+AutoPrompt, and successors\footnote{GCG and the
+optimization-based-suffix lineage are deferred to AdvBench
+\deepencite{zou2023-advbench, citation-pending} for full
+treatment.}); \emph{33 target LLMs and defenses} measured against
+the same suite; and a fine-tuned \emph{HarmBench-Judge} classifier
+(Llama-2-13B family, fine-tuned on labeled harmful/non-harmful
+generations) used as the standardized $V$.
+
+The methodological move is structural rather than algorithmic:
+HarmBench fixes $\mathcal{B}$, $\mathcal{A}$, and $V$ once, and
+asks every attack and every defense to report numbers against the
+same triple. The substrate is what enables co-development ---
+``demonstrating how HarmBench enables codevelopment of attacks and
+defenses''
+\citep[\S{}abstract]{harmbench2024}. A new attack reports its
+ASR on the HarmBench-510-behavior set under the
+HarmBench-Judge against a fixed list of defenses; a new defense
+reports its ASR-reduction on the same suite against a fixed list
+of attacks. Cross-paper comparison becomes possible inside the
+HarmBench frame in a way it was not in the 2023 literature, where
+each paper picked its own behaviors, its own judge, and its own
+target list.
+
+The boundary the substrate does not cross is the one the next
+benchmark addresses: HarmBench's adversarial-prompt corpus is a
+research artifact, not a public reproducibility infrastructure
+indexed against a leaderboard. The HarmBench-Judge classifier and
+the behavior list are open; the per-attack adversarial prompts
+generated by each of the 18 methods are not all republished as a
+versioned artifact registry%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#2-1-adversarial-robustness-benchmarks}.}.
+
+\subsection{JailbreakBench: the reproducibility leaderboard}
+\label{sec:safety-jailbreakbench}
+
+\citet{chao2024-jailbreakbench} are explicit that their
+contribution is reproducibility infrastructure, not a new attack or
+defense%
+\footnote{KB excerpt: \texttt{kb/excerpts/chao2024-jailbreakbench.md\#abstract}.}
+\citep[\S{}abstract]{chao2024-jailbreakbench}:
+
+\begin{quote}\itshape
+First, there is no clear standard of practice regarding
+jailbreaking evaluation. Second, existing works compute costs and
+success rates in incomparable ways. And third, numerous works are
+not reproducible, as they withhold adversarial prompts, involve
+closed-source code, or rely on evolving proprietary APIs. To
+address these challenges, we introduce JailbreakBench, an
+open-sourced benchmark with the following components: (1) an
+evolving repository of state-of-the-art adversarial prompts, which
+we refer to as jailbreak artifacts; (2) a jailbreaking dataset
+comprising 100 behaviors\ldots\ which align with OpenAI's usage
+policies; (3) a standardized evaluation framework that includes a
+clearly defined threat model, system prompts, chat templates, and
+scoring functions; and (4) a leaderboard that tracks the performance
+of attacks and defenses for various LLMs.
+\end{quote}
+
+Four structural commitments. \emph{One hundred behaviors}, sourced
+in part from prior work \citep{harmbench2024} and aligned with
+OpenAI's usage policies. An \emph{evolving artifact repository}
+that publishes the actual successful jailbreak prompts with
+provenance, evaluation conditions, and judge verdict ---
+operationally analogous to a CVE database for adversarial prompts.
+A \emph{standardized $\pi$}: published threat model, system prompt,
+chat template, and scoring function. And a \emph{public
+leaderboard} that pins $(\mathcal{B}, V, \pi)$ and lets attacks and
+defenses be ranked under a fixed denominator.
+
+The complementarity with HarmBench is structural. HarmBench has
+broader behavior coverage (510 vs.\ 100) and an attack-method
+bake-off (18 attacks $\times$ 33 targets) inside one paper.
+JailbreakBench has deeper artifact reproducibility and a public
+leaderboard that admits new entries continuously%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#2-1-adversarial-robustness-benchmarks}.}.
+HarmBench fixes the suite at publication time and runs a one-time
+bake-off; JailbreakBench fixes the suite at publication time and
+maintains it as a running leaderboard. Both fix the substrate
+inside their own frame; neither makes its frame interoperable with
+the other's. A score on HarmBench-510 under HarmBench-Judge is not
+recoverable from a score on JailbreakBench-100 under
+JailbreakBench's GPT-4-class judge, even for the same model.
+
+\subsection{Crescendo: the multi-turn attack regime}
+\label{sec:safety-crescendo}
+
+\citet{russinovich2024-crescendo} document the failure mode the
+single-turn benchmarks of \cref{sec:safety-harmbench,sec:safety-jailbreakbench}
+cannot detect. The attack is a multi-turn escalation that begins
+with a benign prompt and gradually steers the conversation toward
+the harmful target%
+\footnote{KB excerpt: \texttt{kb/excerpts/russinovich2024-crescendo.md\#abstract}.}
+\citep[\S{}abstract]{russinovich2024-crescendo}:
+
+\begin{quote}\itshape
+Crescendo is a simple multi-turn jailbreak that interacts with the
+model in a seemingly benign manner. It begins with a general
+prompt or question about the task at hand and then gradually
+escalates the dialogue by referencing the model's replies
+progressively leading to a successful jailbreak.
+\end{quote}
+
+The mechanism is documented at the prompt-construction level. Open
+with a general/benign question on the topic; ask a slightly more
+specific follow-up; reference the model's own previous answer as
+if it had committed; iterate until the model produces the harmful
+behavior%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#2-1-adversarial-robustness-benchmarks}.}.
+The exploitation hinges on the model over-weighting recent tokens
+and text it has just produced itself: the model's prior answers
+create a self-commitment gradient the attacker climbs, and because
+each individual turn is benign, no single-turn refusal classifier
+fires.
+
+The headline number is the load-bearing one
+\citep[\S{}abstract]{russinovich2024-crescendo}:
+
+\begin{quote}\itshape
+Crescendomation surpasses other state-of-the-art jailbreaking
+techniques on the AdvBench subset dataset, achieving 29-61\%
+higher performance on GPT-4 and 49-71\% on Gemini-Pro.
+\end{quote}
+
+The 29--71\% ASR \emph{uplift} over single-turn baselines ---
+measured on the AdvBench subset \deepencite{zou2023-advbench,
+citation-pending} under Crescendomation, the automated
+implementation of the manual escalation strategy --- is not a new
+ASR scalar; it is a delta against an existing ASR scalar. Under
+the formal frame of \cref{sec:safety-formal}, Crescendomation
+changes the attack family $\mathcal{A}$ from single-turn to
+multi-turn while holding $(\mathcal{B}, V, \pi)$ approximately
+fixed, and the resulting $\mathrm{ASR}$ is dramatically higher on
+the same models against the same behaviors. The methodological
+implication is structural: \emph{single-turn benchmarks
+systematically underestimate the attack surface}. A model with
+$\mathrm{ASR} < 5\%$ on JailbreakBench's single-turn behaviors may
+register $\mathrm{ASR} > 30\%$ under Crescendo against an
+overlapping behavior set.
+
+\begin{analogy}
+The Crescendo escalation curve is the social-engineering analog of
+phishing under commitment escalation. Single-prompt jailbreaks are
+the email asking ``please send password'' --- easy to refuse.
+Crescendo is the conversation that opens with help on a benign
+related task, builds rapport over several turns, and then asks the
+prepared question --- with the model's own prior answers cited
+back to it as commitments it has already made. The
+\emph{commitment escalation} pattern documented in human
+social-engineering literature predicts exactly this: each
+acceded-to small request raises the conditional probability of
+acceding to the next, larger one. Returning to canonical form: the
+29--71\% ASR uplift is the quantitative measurement of how much
+prior-self-reference shifts the refusal probability under the same
+$(\mathcal{B}, V, \pi)$, with $\mathcal{A}$ as the only term that
+varies.
+\end{analogy}
+
+The 2026 multi-turn picture: no equivalent of HarmBench or
+JailbreakBench yet exists for multi-turn attacks. Standardizing
+the regime requires three commitments the field has not yet made
+--- a fixed turn budget, an attack-judge interaction protocol
+that is not gameable by the attacker LLM, and a defense-reset
+specification between turns%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#5-frontier}.}.
+Until those land, multi-turn ASR is reported with paper-specific
+$\mathcal{A}$ and $\pi$ in a way that compounds the comparability
+problem the next subsection names directly.
+
+\subsection{The ASR-comparability problem}
+\label{sec:safety-asr-comparability}
+
+The four benchmarks together expose the layer's central failure.
+Each fixes its own $(\mathcal{B}, \mathcal{A}, V, \pi)$, and the
+four fixed tuples are not interoperable. Three concrete failure
+modes break ASR comparability across papers%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#1-formal-framing}.}.
+
+\emph{Judge mis-specification.} JailbreakBench uses an LLM-as-judge
+with published evaluation prompts; HarmBench uses the fine-tuned
+HarmBench-Judge classifier; many 2023 papers use ad-hoc rule-based
+``the model said anything other than I cannot'' verifiers; vendor
+internal evals use proprietary judge stacks. Two judges scoring the
+same generation as ``harmful'' or ``not harmful'' is not the same
+event in two papers, even when the generation is identical
+\citep[\S{}abstract]{chao2024-jailbreakbench}.
+
+\emph{Behavior-set drift.} HarmBench's 510 behaviors span four
+functional categories with explicit copyright and multimodal
+sub-suites; JailbreakBench's 100 behaviors are aligned with OpenAI's
+usage policies. The two distributions over harm categories are
+not the same population, and a method strong on one set may
+under-perform on the other for reasons that are properties of the
+suite, not of the method%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#1-formal-framing}.}.
+
+\emph{Defense / system-prompt drift.} Production deployments include
+runtime monitoring, abuse detection, and account-level controls
+that the benchmark $\pi$ does not model. Benchmark ASR systematically
+\emph{overestimates} attack success against deployed systems
+relative to standalone-API ASR, but the size of the gap is itself
+deployment-specific and not measurable from outside the lab%
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#1-formal-framing}.}.
+
+The methodologically mature reporting form is the five-tuple
+$(\mathcal{B}, \mathcal{A}, V, \pi, \mathrm{ASR})$, not a scalar.
+JailbreakBench's leaderboard discipline --- fix the judge, the
+behaviors, the threat model, vary only the attack and the model
+under test --- is the cleanest current answer to the comparability
+problem
+\citep[\S{}abstract]{chao2024-jailbreakbench}, but is not yet
+field-wide: model cards continue to publish ASR numbers without
+all four substrate terms, and cross-benchmark comparisons in
+informal venues continue to treat ASR as a model property.
+
+\begin{contradiction}
+\textbf{ASR is reported as a model attribute; it is not one.}
+A single number ``GPT-4 ASR $= 30\%$'' carries no model-level
+information without $(\mathcal{B}, \mathcal{A}, V, \pi)$.
+\citet{harmbench2024} and \citet{chao2024-jailbreakbench} respond
+with substrate standardization inside their own frames; neither
+substrate is field-wide, and the two are not interoperable.
+\citet{russinovich2024-crescendo} document a 29--71\% uplift when
+the attack family $\mathcal{A}$ alone shifts from single-turn to
+multi-turn, holding everything else approximately fixed --- which
+demonstrates exactly how much of the headline ASR is determined by
+substrate rather than model. As of 2026-Q2 there is no field-wide
+$(\mathcal{B}, V, \pi)$ that the next benchmark can pin against.
+The field publishes ASR scalars at a fictional level of precision
+and treats them as if comparable; \cref{sec:contradictions} returns
+to this as one of the layered-defense view's central open
+contradictions.
+\end{contradiction}
+
+The closing observation is structural, not pessimistic. The
+$\mathcal{S} = (\mathcal{B}, \mathcal{A}, V, \pi)$ frame is exactly
+the right vocabulary for the comparability problem; the issue is
+not measurement-theoretic but coordination-theoretic. HarmBench's
+co-development substrate and JailbreakBench's leaderboard
+discipline are partial standardizations whose boundary is the
+boundary of each project's adoption. A field-wide pin --- a
+HarmBench-or-equivalent standardized ASR with cross-benchmark
+calibration set --- would close the contradiction; nothing about
+the formal frame prevents it from being built. \Cref{sec:contradictions}
+catalogs this as one of the layer's tractable open questions.
+
+\subsection{Forward-link: the dangerous-capability layer}
+\label{sec:safety-forward}
+
+The construct in this section is \emph{can the model be
+jailbroken into producing a harmful generation}, and the
+$\mathcal{B}$ in $\mathcal{S}$ is a curated behavior list that
+stands proxy for harm in deployment. \Cref{sec:dangerous-capability}
+goes one layer deeper and asks the prior question: what dangerous
+capabilities does the model possess in the first place. A
+jailbroken refusal of an item the model could not realize would
+be a paper artifact, not a deployment risk; a non-jailbroken
+refusal of an item the model can realize via tool use, agentic
+scaffolding, or out-of-distribution prompting is a deployment risk
+the refusal eval cannot price. The bio-uplift, cyber-uplift,
+persuasion, and autonomy/replication eval suites that anchor the
+dangerous-capability layer measure the realizable construct
+directly. The two layers compose: capability gates the harm
+$\mathcal{B}$ contains, refusal robustness gates the model's
+willingness to act on it. \Cref{sec:sycophancy,sec:scheming,sec:alignment-faking}
+shift one layer further, from \emph{what an attacker can elicit}
+to \emph{what the model itself does under conflicting incentives}
+--- the alignment-threat-detection regime, where the construct is
+no longer adversarial robustness but the model's own behavior under
+ordinary deployment, with no attacker present.

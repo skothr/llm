@@ -1,0 +1,318 @@
+% Paper 4, §10 — ROME and direct edits
+% Thesis: Meng 2022 ROME bridges causal interpretability and weight-level
+% model surgery. Causal tracing on GPT-2 XL localizes factual recall to
+% mid-layer MLPs at the last subject token; rank-one MLP weight edits at
+% exactly that locus install new (s, r, o) associations with 99.8% efficacy.
+% Hase 2023 critique: locating != editing-target. The locus survives STR
+% re-validation; the precise per-layer recommendation is corruption-sensitive.
+
+\section{ROME and direct edits}
+\label{sec:rome}
+
+The activation-patching protocol of \S\ref{sec:patching} is a diagnostic:
+its output is a heatmap of which $(\text{component}, \text{token},
+\text{layer})$ cells are causal mediators for a behavior. ROME
+\citep{meng2022-rome} is the first paper to take that diagnostic and
+turn it into \emph{capability surgery} on the model's weights. The
+argument has two halves. The first half \emph{localizes} factual recall
+in GPT-2 XL with the three-run protocol of \S\ref{sec:patching-protocol}
+and reports a sharp pair of peaks: an early site at mid-layer MLPs at
+the last subject token, and a late site at the final-layer attention.
+The second half \emph{intervenes}: treating the localized MLP as a
+linear associative memory, ROME computes a closed-form rank-one weight
+update that inserts a new $(s, r, o)$ triple --- ``the Eiffel Tower is
+in Paris'' becomes ``the Eiffel Tower is in Rome'' --- with 99.8\%
+efficacy and 88\% paraphrase robustness on the zsRE editing benchmark.
+The methodological move is to use causal interpretability to identify
+the locus, then weight-level surgery to validate the localization by
+\emph{constructing} the predicted edit. The follow-up critique
+\citep[Hase et al.\ 2023, ``Does Localization Inform Editing,''
+forthcoming]{} \deepencite{hase2023-localization-editing §4,
+citation-pending} complicates that move: the layers ROME's tracing
+identifies are not always the layers where editing performs best.
+
+\subsection{Causal tracing localizes factual recall}
+\label{sec:rome-tracing}
+
+\citet{meng2022-rome} apply the three-run protocol of
+\S\ref{sec:patching-protocol} to factual prompts on GPT-2 XL,
+sweeping the patched component $C$ over every $(\text{token}, \text{layer})$
+cell of the residual-stream grid and computing the average indirect
+effect $\mathrm{AIE}_C$ from
+Eq.~\eqref{eq:aie}\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2022-rome.md\#sec-2-effects}.}. On 1000 factual
+statements, two peaks dominate the
+heatmap\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2022-rome.md\#sec-2-2}.}: a \emph{late site}
+near the final-layer prediction (unsurprising; the model commits to
+the answer there), and an \emph{early site} ``at the last token of
+the subject name'' \citep[\S 2.2]{meng2022-rome}, which the authors
+flag as ``a new discovery.'' Decomposing the early-site cells into
+sublayer contributions sharpens the picture further: at the
+last-subject-token early site, $\mathrm{AIE}_{\mathrm{MLP}} = 6.6\%$
+versus $\mathrm{AIE}_{\mathrm{attn}} = 1.6\%$, with the AIE peak
+across hidden states at $8.7\%$ at layer
+$15$~\citep[\S 2.2]{meng2022-rome}. The hidden-state grid's strongest
+mediators are MLPs in the middle of the stack, processing the last
+subject token, well before any attention head has copied the answer
+forward.
+
+That localization motivates the paper's central conjecture, the
+\emph{Localized Factual Association Hypothesis}~\citep[\S
+2.3]{meng2022-rome}\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2022-rome.md\#sec-2-3}.}:
+
+\begin{quote}
+\itshape
+each midlayer MLP module accepts inputs that encode a subject, then
+produces outputs that recall memorized properties about that subject.
+Middle layer MLP outputs accumulate information, then the summed
+information is copied to the last token by attention at high layers.
+\end{quote}
+
+\noindent
+The hypothesis localizes factual recall along three axes simultaneously
+\citep[\S 2.3]{meng2022-rome}: (i) in the MLP sublayers, not the
+attention sublayers; (ii) at specific middle layers; (iii) at the
+processing of the subject's last token. It is the strongest-form
+factual-localization claim the field has fielded, and the second half
+of the paper validates it by intervention.
+
+\subsection{The associative-memory view of MLPs}
+\label{sec:rome-memory}
+
+ROME's intervention rests on a specific reading of the MLP
+sublayer~\citep[\S 3.1]{meng2022-rome}\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2022-rome.md\#sec-3-1}.}: the second linear
+layer of an MLP, $W^{(\ell)}_{\mathrm{proj}}$, is a \emph{linear
+associative memory} in the sense of \citet{kohonen1972-associative}
+and Anderson 1972. Any linear map $W$ can act as a key--value store for
+keys $K = [k_1 \mid k_2 \mid \ldots]$ and values $V = [v_1 \mid v_2 \mid
+\ldots]$ by solving $W K \approx V$, with the Moore--Penrose
+pseudoinverse minimizing squared error: $\hat{W} = V K^{+}$. In the MLP
+context, $k$ is the gated activation produced by the first linear
+layer (so $k$ is the MLP's encoded query for ``what subject is this''),
+and $v = W^{(\ell)}_{\mathrm{proj}} k$ is the MLP output written into
+the residual stream (so $v$ is the recalled information about the
+subject).
+
+Inserting a new association $(k_*, v_*)$ then has a closed-form
+solution. Constrain the new map $\tilde{W}$ to satisfy
+$\tilde{W} k_* = v_*$ exactly while leaving other key--value pairs
+minimally perturbed. The closed-form rank-one update
+\citep[\S 3.1, Eq.~2]{meng2022-rome} is
+\begin{equation}
+  \min_{\tilde{W}} \|\tilde{W} K - V\|
+  \quad \text{such that} \quad
+  \tilde{W} k_* = v_*,
+  \quad
+  \hat{W} = W + \Lambda (C^{-1} k_*)^\top,
+  \label{eq:rome-edit}
+\end{equation}
+where $C = K K^\top$ is the uncentered covariance of keys (pre-cached
+on a Wikipedia sample), and $\Lambda = (v_* - W k_*) / (C^{-1}
+k_*)^{\top} k_*$ is a vector proportional to the residual error of the
+new pair on the original memory~\citep[\S 3.1]{meng2022-rome}. The
+update is rank one because $\Lambda (C^{-1} k_*)^{\top}$ is the outer
+product of two vectors; it is closed-form because $C$ is a fixed
+data-side statistic and $\Lambda$ is determined by the constraint.
+Inserting any new fact reduces to (i) computing the key $k_*$ for the
+target subject by running the model up to the chosen MLP layer,
+(ii) computing the value $v_*$ that would produce the target object
+$o$ at the unembed by gradient-descending against the LM loss with
+the rest of the model frozen, and (iii) applying
+Eq.~\eqref{eq:rome-edit}.
+
+\begin{intuition}
+The associative-memory view says: the MLP at the localized layer is
+running the matrix multiply $v = W k$ as a literal lookup, with the
+key $k$ being the model's internal representation of the subject and
+the value $v$ being the residual-stream contribution that pushes the
+unembed toward the correct object. ROME's edit replaces one row of the
+lookup table without touching the rest. Returning to canonical math:
+the constraint $\tilde{W} k_* = v_*$ in Eq.~\eqref{eq:rome-edit}
+\emph{is} ``write a new row,'' and the rank-one structure
+$\Lambda (C^{-1} k_*)^{\top}$ is the cheapest perturbation to $W$ that
+satisfies that constraint without smashing the other rows --- the
+$C^{-1}$ term reweights the update by which directions in key-space
+are already crowded with existing associations, so the perturbation
+prefers under-used directions.
+\end{intuition}
+
+\subsection{Empirical headline: editing zsRE}
+\label{sec:rome-zsre}
+
+The closed-form edit
+of Eq.~\eqref{eq:rome-edit}, applied at GPT-2 XL's localized layer
+$\ell^* = 15$ at the last subject token, achieves the editing
+results in
+Table~\ref{tab:rome-zsre}~\citep[\S 3.2]{meng2022-rome}\footnote{KB
+excerpt: \texttt{kb/excerpts/meng2022-rome.md\#sec-3-2}.}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Editor & Efficacy & Paraphrase & Specificity \\
+\midrule
+GPT-2 XL (no edit)  & 22.2 (\(\pm\)0.5) & 21.3 (\(\pm\)0.5) & 24.2 (\(\pm\)0.5) \\
+Fine-tuning (FT)    & 99.6 (\(\pm\)0.1) & 82.1 (\(\pm\)0.6) & 23.2 (\(\pm\)0.5) \\
+FT+L                & 92.3 (\(\pm\)0.4) & 47.2 (\(\pm\)0.7) & 23.4 (\(\pm\)0.5) \\
+MEND                & 75.9 (\(\pm\)0.5) & 65.3 (\(\pm\)0.6) & 24.1 (\(\pm\)0.5) \\
+\textbf{ROME}       & \textbf{99.8 (\(\pm\)0.0)} & \textbf{88.1 (\(\pm\)0.5)} & \textbf{24.2 (\(\pm\)0.5)} \\
+\bottomrule
+\end{tabular}
+\caption{ROME on the zsRE editing benchmark, GPT-2 XL, replicated from
+\citet[\S 3.2]{meng2022-rome}. \emph{Efficacy}: the edited model
+produces the new $o$ on the exact training prompt. \emph{Paraphrase}:
+the edited model produces $o$ on rephrased queries about the same
+$(s, r)$. \emph{Specificity}: the edit does not contaminate predictions
+on unrelated $(s', r)$ pairs.}
+\label{tab:rome-zsre}
+\end{table}
+
+The methodological reading is what matters. ROME beats fine-tuning at
+both efficacy (99.8 vs.\ 99.6) and paraphrase robustness (88.1 vs.\
+82.1) while preserving specificity, with no gradient steps on the
+broader model and no held-out training data --- only one rank-one
+matrix update at the localized layer. That a closed-form,
+parameter-frugal edit at the layer the patching diagnostic flagged
+beats general-purpose fine-tuning is the substantive validation of
+the Localized Factual Association Hypothesis: if the fact is stored
+as a key--value pair at MLP layer $15$, you should be able to rewrite
+it by rewriting that pair, and you can.
+
+\subsection{Hase 2023: locating is not editing-target}
+\label{sec:rome-hase-critique}
+
+The headline that ``causal tracing localizes the layer to edit''
+collapses in a more careful follow-up.
+\deepencite{hase2023-localization-editing §1, citation-pending}
+\emph{Does Localization Inform Editing} runs ROME-style edits at every
+layer of GPT-J and GPT-2 XL, not only at the layer the tracing
+diagnostic peaks at, and reports that the editing performance is
+\emph{not monotonic} in the AIE peak: layers with substantially lower
+$\mathrm{AIE}_{\mathrm{MLP}}$ frequently match or exceed the
+editing performance at the tracing-localized layer, and the layer of
+best edit is task-dependent in ways the tracing heatmap does not
+predict. The methodological consequence is that \emph{causal tracing
+identifies layers that are causal mediators of the behavior}, but
+\emph{editing exploits a different property of the layer} --- something
+closer to ``which layer's MLP, when perturbed, produces a residual-%
+stream change that the rest of the network propagates faithfully to
+the unembed for that fact.'' The two need not coincide, and on
+Hase et al.'s benchmarks they often don't.
+
+This is a falsification of the strong-form coupling claim --- causal
+locus equals best edit-target --- but not of either half taken alone.
+The localization claim survives: the tracing peak at GPT-2-XL layer
+$15$ at the last subject token is robust, and we discuss its survival
+under STR re-validation in \S\ref{sec:rome-corruption-sensitivity}.
+The editing claim survives: rank-one edits at \emph{some} layer near
+the localized band insert facts at 99.8\% efficacy. What does not
+survive is the prescriptive coupling: ``compute the AIE heatmap, edit
+at the peak.'' A more careful protocol selects the editing layer by
+end-to-end editing performance on a held-out set, with the tracing
+heatmap as a strong prior rather than a determinant.
+
+\begin{contradiction}
+\textbf{The ROME locus is robust; the layer-of-edit recommendation is
+corruption-sensitive.} Two distinct claims travel together in the
+ROME paper. The \emph{locus} claim --- ``mid-layer MLPs at the last
+subject token are causal mediators of factual recall in GPT-2 XL''
+--- survives STR re-validation: \citet[\S
+3]{zhang2023-apatching}\footnote{KB excerpt:
+\texttt{kb/excerpts/zhang2023-apatching.md\#sec-findings}.} report that
+GN- and STR-derived heatmaps disagree on per-layer details but agree
+on the broad early-site / late-site decomposition that the
+hypothesis~\citep[\S 2.3]{meng2022-rome} rests on. The \emph{layer-of-edit}
+claim --- ``edit at exactly the AIE peak, layer~15, for GPT-2 XL''
+--- is more fragile. \citet[\S 1]{zhang2023-apatching} document that
+GN-derived per-layer peaks shift under STR, and
+\deepencite{hase2023-localization-editing §3, citation-pending}
+document that editing performance does not track AIE peaks across
+layers. The strongest defensible form of ROME's prescription, after
+both critiques, is: \emph{causal tracing identifies a layer band where
+factual recall is mediated; within that band, layer-of-edit should be
+selected on a held-out editing benchmark, not by AIE peak alone}. The
+locus is robust; the prescription is methodology-sensitive. Returning
+to canonical math: the AIE statistic of Eq.~\eqref{eq:aie} is the
+correct estimator for ``which components mediate the behavior''
+\citep[\S 2.1]{zhang2023-apatching}, but it is not, by itself, an
+estimator for ``which components, when perturbed by
+Eq.~\eqref{eq:rome-edit}, produce edits that propagate
+faithfully''---those are different objects and the field's experience
+shows they decouple.
+\end{contradiction}
+
+\subsection{Frontier note: ROME at frontier-2026 architectures}
+\label{sec:rome-frontier}
+
+The ROME causal-tracing diagnostic and the rank-one edit of
+Eq.~\eqref{eq:rome-edit} were developed on dense transformer MLPs in
+GPT-2 / GPT-J. Whether the Localized Factual Association Hypothesis
+extends to frontier-2026 architectures is partially open. Two
+architectural shifts complicate the picture. First, MLA-compressed-KV
+attention (DeepSeek-V2/V3) and grouped-query attention (Llama 3 family)
+change the attention sublayer's computational structure, but the MLP
+sublayers remain dense linear maps in those architectures, so the
+associative-memory framing of \S\ref{sec:rome-memory} should carry
+over by direct analogy. Second, fine-grained mixture-of-experts MLPs
+(DeepSeek-V3 with 256 routed experts; Llama 4 MoE variants; Qwen 2.5
+MoE) replace each MLP sublayer with a routing function over expert
+modules, each of which is itself a dense linear map. The
+associative-memory view applies per-expert, but the localization claim
+splits: a fact is now stored across some subset of experts at the
+localized layer, indexed by which experts the subject token routes to.
+The closed-form rank-one edit of Eq.~\eqref{eq:rome-edit} would have
+to be applied to the expert(s) the localized subject-token routes
+through, with the routing distribution itself becoming a methodology
+parameter. \deepencite{rome-on-frontier-2026 §full,
+citation-pending}: a systematic causal-tracing study of factual recall
+on Llama 3 / DeepSeek-V3 / Llama 4 with comparable benchmarks to
+\citet{meng2022-rome} is, to our knowledge, not yet published; whether
+the hypothesis survives the MoE / MLA architectural shifts is open
+empirical.
+
+\subsection{Cross-paper thread: editing as an alternative to fine-tuning}
+\label{sec:rome-vs-finetune}
+
+ROME's success makes weight-level editing a methodologically distinct
+tool from fine-tuning for surgical knowledge updates. Paper~2's SFT
+and preference-RL sections treat gradient-based fine-tuning (SFT,
+RLHF, DPO) as the standard recipe for installing new behaviors and
+knowledge; both update many or all parameters under a loss.
+ROME-style editing is closed-form and updates a rank-one slice of one
+matrix under a constraint. The trade-off is sharp: fine-tuning
+generalizes to multi-fact updates and behavioral distributions; ROME
+is cheap and surgical but, in its 2022 form, restricted to factual
+$(s, r, o)$ triples and inherits the layer-of-edit fragility of
+\S\ref{sec:rome-hase-critique}. LoRA/QLoRA adapter merging
+\citep[Paper 2 §parameter-efficient-finetuning]{} is methodologically
+adjacent --- a rank-$k$ update across many layers, gradient-trained
+against a loss, where ROME is rank-one at one layer, closed-form
+against a constraint. A unified axis (gradient-based vs.\ closed-form;
+many-layer vs.\ one-layer; loss-driven vs.\ constraint-driven) is the
+cross-paper synthesis; the substantive choice is task-dependent and
+ROME-vs-fine-tuning at production scale is an open 2026 question.
+
+\subsection{Forward link}
+\label{sec:rome-forward}
+
+ROME is the bridge between activation patching's diagnostic output
+(\S\ref{sec:patching}) and the model-editing literature; it is also a
+case study in the broader cross-method convergence picture
+(\S\ref{sec:cross-method}). Section~\ref{sec:circuits} takes up the
+generalization from a single localized component (mid-layer MLPs at
+the last subject token) to a full circuit subgraph: where ROME's
+factual-recall picture is essentially component-level (which sublayer,
+at which token, at which layer), the circuit picture is
+edge-level (which downstream component reads from which upstream
+component, along which projection). Section~\ref{sec:cross-method}
+returns to factual recall as a four-method convergence case ---
+patching localizes the MLP; the tuned lens shows the predicted-object
+probability rising across the localized layer band; SAE features on
+those MLPs include subject-entity features; ROME's rank-one edit
+succeeds at the localized layer --- treating it as the second canonical
+\emph{positive} cross-method evidence after the IOI circuit.
