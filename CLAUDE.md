@@ -241,9 +241,9 @@ IDE `★` dead-code hints flag *every* unused name regardless of prefix — that
 
 Native C++/Dear ImGui frontend, scaffolded in `testing/gui_cpp/`. Currently a skeleton — will absorb panels incrementally as the React frontend at `testing/gui/frontend/` is replaced.
 
-**Framework conventions live in `docs/skills/imgui-cpp-development/SKILL.md`** (with `references/porting-source-of-truth.md`). That skill is intentionally **project-agnostic** — generic ImGui C++ conventions to be reused across the user's other ImGui projects. When writing or planning C++/ImGui code, read that skill first.
+**Framework conventions live in the imgui-toolkit repo at `/home/ai/ai-projects/imgui-toolkit/skill/SKILL.md`.** The toolkit (sibling project) provides both the foundation library (`ImTool::` namespace — `Application`, `CommandQueue`, `ScopedX`, `Setting<T>`, `KeyBindingManager`, custom widgets, viz atoms) and the host-side conventions skill that describes how to use it. When writing or planning C++/ImGui code in `testing/gui_cpp/`, read that skill first.
 
-The skill is V0 and will iterate. Local `.claude/skills/` in this repo is bind-mounted to `/dev/null` (the user has a separate session unifying global skills/config); the skill lives in `docs/skills/` until that integration runs.
+The skill is V0 and iterates alongside the toolkit's API. The toolkit also ships its own `docs/CONTRIBUTING.md` (extender disciplines for the toolkit itself) and `docs/DESIGN.md` (full API surface). For host-side work in this project (writing panels, commands, project-specific viz on top of the toolkit), the skill is authoritative. For toolkit-internal work (extending the toolkit), CONTRIBUTING.md is authoritative — but that's done over in the toolkit repo, not here.
 
 ## Project-specific layer (this section is the llm-surgeon GUI plan)
 
