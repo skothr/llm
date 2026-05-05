@@ -1,0 +1,254 @@
+% Paper 5, §1 — Introduction: the layered-defense view
+% Pass-C synthesis section. Names the six layers, previews §2-§13, sets up
+% the open question ("is the layered-defense framing real or post-hoc?")
+% that §14 will answer. Cites only the small canonical anchor set
+% (hendrycks2021-mmlu, liang2022-helm, harmbench2024,
+% meinke2024-apollo-scheming, greenblatt2024-alignment-faking,
+% kirchenbauer2023-watermark, irving2018-debate, sharma2023-sycophancy,
+% glazer2024-frontiermath); per-layer primary cites already live in §3-§13.
+
+\section{Introduction: the layered-defense view}
+\label{sec:introduction}
+
+A single number does not measure a frontier language model. The
+report that ``model $M$ scores $x\%$ on benchmark $B$'' is the
+output of a measurement instrument with construct assumptions,
+sampling choices, judging procedures, contamination exposure, and
+deployment-distribution gaps stacked behind it. None of the
+2024--2026 instruments by itself answers the deployment-relevant
+question; each one was built because the prior layer left a known
+gap; and the gaps left by each new layer are themselves the topic of
+the next year's evaluation paper. \textbf{The thesis of this paper
+is that the eval-and-alignment landscape is best read as a layered
+defense: six measurement layers, each with named failure modes the
+next layer is supposed to catch, all of them necessary, none of them
+individually sufficient, and the composition between them
+imperfect.} Naming the layers and their failure modes is a
+precondition for stating, honestly, which deployment-relevant
+threats current methods can measure today and which still slip
+through.
+
+The six layers, in the order the rest of the paper takes them, are:
+
+\begin{enumerate}
+  \item \emph{Knowledge measurement and contamination} --- can the
+    model recall what it has been taught, and is the test set
+    distinguishable from the training set? Canonical failure mode:
+    \emph{measurement-instrument saturation against an answer-key
+    error floor}. The MMLU lineage \citep{hendrycks2021-mmlu} runs
+    into a verifier-error ceiling on the order of single-digit
+    percent; reported scores above that ceiling are the
+    benchmark's noise floor, not signal
+    (\cref{sec:knowledge-benchmarks,sec:contamination}).
+  \item \emph{Reasoning-benchmark validity} --- does multi-step
+    performance on a fixed exam set transfer to multi-step
+    performance off it? Canonical failure mode: \emph{contest-style
+    saturation, research-style stall}. AIME and MATH-500 saturate
+    while FrontierMath \citep{glazer2024-frontiermath} does not, and
+    the gap is the gap between in-distribution reasoning-RL gains
+    and out-of-distribution generalization
+    (\cref{sec:reasoning-benchmarks}).
+  \item \emph{Agentic-benchmark realism} --- does end-to-end task
+    completion in a fixed environment predict end-to-end task
+    completion in a deployed one? Canonical failure mode:
+    \emph{realism-versus-measurability tradeoff}. SWE-Bench, OSWorld,
+    GAIA, and $\tau$-Bench occupy four points on a single curve
+    where greater realism buys reliability cost (versions drift,
+    websites change, judges disagree); reported scores across years
+    are not directly comparable without environment-version lock
+    (\cref{sec:agentic-benchmarks}).
+  \item \emph{Adversarial robustness} --- under a search-based
+    attacker, does the deployed system keep refusing the behaviors
+    its training said it should refuse? Canonical failure mode:
+    \emph{ASR non-comparability}. The four canonical
+    attack-success-rate (ASR) instruments
+    \citep{harmbench2024} use different target behaviors,
+    attacker LLMs, judges, and success criteria; the same model's
+    $5\%$ ASR on one and $30\%$ ASR on another is not a
+    contradiction, it is two different constructs
+    (\cref{sec:adversarial-robustness}).
+  \item \emph{Alignment-threat detection} --- does the model behave
+    aligned because it \emph{is} aligned, or because it has
+    capability and incentive to look aligned during evaluation?
+    Three sub-layers compose here: sycophancy
+    \citep{sharma2023-sycophancy} as a measured RLHF artifact
+    (\cref{sec:sycophancy}); in-context scheming
+    \citep{meinke2024-apollo-scheming} as an elicited capability
+    finding (\cref{sec:scheming}); alignment-faking
+    \citep{greenblatt2024-alignment-faking} as strategic compliance
+    under perceived training-vs-deployment shift
+    (\cref{sec:alignment-faking}). Canonical failure mode for the
+    layer as a whole: \emph{capability under elicitation does not
+    imply propensity in deployment}, and the field has no
+    deployment audit that closes the gap.
+  \item \emph{Provenance and scalable oversight} --- once outputs
+    leave the model, can their origin be certified, and can a
+    bounded human resource budget align a model whose capability
+    already exceeds the overseer's? Watermarking
+    \citep{kirchenbauer2023-watermark} addresses the first
+    (\cref{sec:watermarking}); debate
+    \citep{irving2018-debate} and its sibling protocols address
+    the second (\cref{sec:scalable-oversight}). Canonical failure
+    mode: \emph{robustness-under-removal-pressure}. The
+    cryptographic part of watermarking is solved; surviving
+    paraphrase, fine-tuning, and collusion is not. The theoretical
+    part of scalable oversight is solved (debate decides
+    $\mathbf{PSPACE}$ under polynomial-time judging); demonstrating
+    bounded-judge honesty on open-ended domains is not.
+\end{enumerate}
+
+\begin{intuition}
+The picture is a stack, not a benchmark. Each layer is an
+instrument the field built because the prior layer left a known
+hole: contamination detection because knowledge benchmarks could be
+gamed by leakage; reasoning benchmarks because knowledge benchmarks
+saturated; agentic benchmarks because reasoning benchmarks stayed
+text-only; adversarial robustness because agentic capability without
+refusal training is dangerous; alignment-threat evals because
+refusal can mask misaligned cognition; provenance and oversight
+because measurement of \emph{current} models does not yet
+generalize to \emph{superhuman} ones. Returning to canonical form:
+each layer pairs (a) a construct it claims to measure with (b) a
+named failure mode that motivates the next layer. The
+layered-defense framing is itself an intuition, and \cref{sec:contradictions} grounds it
+by enumerating, layer by layer, the actual instruments the field
+has shipped --- so the framing is checkable, not just rhetorical.
+\end{intuition}
+
+\subsection*{The structural commitment}
+
+This paper commits to three claims about each layer
+simultaneously, and the body sections discharge those commitments
+one layer at a time:
+
+\begin{itemize}
+  \item \emph{Necessary.} Drop any one layer and a real
+    deployment-relevant threat goes unmeasured. Without
+    contamination detection, knowledge benchmarks read leakage
+    as capability. Without reasoning-benchmark validity, RLVR-trained
+    models look generally smarter than they are. Without agentic
+    benchmarks, end-to-end deployment risk is invisible. Without
+    adversarial robustness, refusal training is unfalsified.
+    Without alignment-threat detection, a model that schemes well
+    enough to pass scores cleanly. Without provenance and
+    oversight, even a perfectly-aligned-on-current-distribution
+    model leaves the deployment-distribution shift unaddressed.
+  \item \emph{Insufficient.} No single layer answers the
+    deployment-relevant question on its own. A high MMLU score
+    that survives MMLU-Redux still says nothing about agentic task
+    completion or scheming under elicitation. A low HarmBench ASR
+    says nothing about whether the model has dangerous capability
+    in the first place. A clean Apollo-scheming evaluation says
+    nothing about non-elicited propensity. The instruments measure
+    \emph{what they measure}, and the construct-validity question
+    --- whether what they measure is what we want to know --- is
+    open at every layer.
+  \item \emph{Imperfectly composed.} The layers do not commute.
+    A model that scores well on $\S$3 (knowledge) but fails $\S$11
+    (alignment-faking) is a different deployment risk than one
+    that fails $\S$3 and passes $\S$11. The field reports each
+    layer's score in isolation; the joint distribution of scores
+    across the stack is what determines deployment risk, and that
+    joint distribution is reported in essentially no published
+    eval.
+\end{itemize}
+
+\subsection*{What this paper is and is not}
+
+\paragraph{What it is.} A monograph on the 2024--2026 state of LLM
+evaluation and alignment-threat detection, organized by measurement
+layer rather than by benchmark or by lab. Every load-bearing
+empirical claim --- benchmark score, ASR, contamination percentage,
+sycophancy rate, scheming-suite hit-rate, alignment-faking rate,
+watermark detection threshold --- cites a primary source whose
+excerpt the KB has tracked down to a section anchor. Every formal
+construction --- the IRT 2PL form (\cref{sec:measuring-framing}),
+HELM's scenario-by-metric matrix (\cref{sec:measuring-framing}),
+ASR's set-cardinality definition (\cref{sec:adversarial-robustness}),
+the green-list partition function (\cref{sec:watermarking}), the
+debate game's $\mathbf{PSPACE}$ construction
+(\cref{sec:scalable-oversight}) --- is transcribed verbatim from the
+cited paper, in the notation that paper uses. Every cross-source
+disagreement is tagged \texttt{[CONTRADICTION]} in the body and
+gathered for direct discussion in \cref{sec:contradictions}.
+
+\paragraph{What it is not.} A complete benchmark catalogue, a
+mitigation manual, or a regulatory roadmap. The paper is
+empirical-claim-dense rather than mechanism-dense; the field is
+more empirical than the ones Papers~1--3 cover, and the math layer
+is correspondingly thinner. Where the load-bearing 2024--2026
+demonstration is by a single research group with no independent
+replication --- the alignment-faking setup
+\citep{greenblatt2024-alignment-faking}, the scheming suite
+\citep{meinke2024-apollo-scheming}, FrontierMath
+\citep{glazer2024-frontiermath} --- we say so explicitly rather
+than papering over the single-source status. Mitigations and
+deployment-policy proposals are referenced where they exist
+(Responsible Scaling Policies, constitutional methods, scalable
+oversight protocols) but are not the paper's subject. Earlier
+papers in this series carry the prerequisite machinery: Paper~2's
+pre-training-data and reasoning-RL stages condition the inputs to
+\cref{sec:knowledge-benchmarks,sec:contamination,sec:reasoning-benchmarks};
+Paper~4's probing and circuit-tracing methods are a complementary
+attack surface for
+\cref{sec:scheming,sec:alignment-faking}; Paper~3's
+process-supervision and Paper~2's weak-to-strong generalization
+results bound \cref{sec:scalable-oversight}. We name those threads
+where they enter and do not re-derive them.
+
+\subsection*{The open question this paper does and does not answer}
+
+A natural objection --- which we take seriously --- is that the
+six-layer framing might be \emph{post-hoc taxonomy}: a
+narratively-clean partition imposed on a messy empirical
+literature, where the actual instruments do not in fact correspond
+to independent layers and where ``layered defense'' is a metaphor
+that pre-commits to more structure than the field has built. We
+address this question directly in \cref{sec:contradictions} by
+enumerating, layer by layer, the actual published instruments
+(MMLU and MMLU-Redux for layer 1; the contamination survey
+detection methods for the contamination sub-layer; AIME, MATH-500,
+GPQA, FrontierMath, HLE for layer 2; SWE-Bench, OSWorld, GAIA,
+$\tau$-Bench for layer 3; HarmBench, JailbreakBench, Crescendo,
+Wei~2023 for layer 4; the four sycophancy datasets, Apollo's six
+scheming evaluations, Greenblatt's free-tier/paid-tier setup for
+layer 5; Kirchenbauer's green-list construction, debate, IDA,
+recursive reward modeling, weak-to-strong for layer 6) and showing
+that each has at least one \emph{independently developed} measurement
+artifact and at least one \emph{independently named} failure mode.
+The framing is real if and only if both conditions hold; we do not
+preview the answer here, only flag that the question is the
+load-bearing one for the paper's structural claim.
+
+\subsection*{Roadmap}
+
+\Cref{sec:measuring-framing} fixes the eval-methodology vocabulary
+the rest of the paper inherits: validity, reliability, construct,
+contamination, ecological validity; the three orthogonal axes
+(capability vs alignment; knowledge vs reasoning vs agency; static
+benchmark vs adversarial probe vs deployment audit); HELM's
+scenario-by-metric matrix \citep{liang2022-helm} as the closest the
+field has to a theory of measurement; the 2PL IRT form as a
+calibration tool. \Cref{sec:knowledge-benchmarks,sec:contamination}
+walk the knowledge layer and its contamination boundary.
+\Cref{sec:reasoning-benchmarks} takes the reasoning-validity layer
+and locates the contest-vs-research split.
+\Cref{sec:agentic-benchmarks} takes the agentic layer and the
+realism-vs-measurability tradeoff.
+\Cref{sec:adversarial-robustness,sec:dangerous-capability} cover
+the two safety-evaluation sub-layers (refusal robustness and
+underlying capability).
+\Cref{sec:sycophancy,sec:scheming,sec:alignment-faking} cover the
+three alignment-threat sub-layers, ordered by increasing
+strategic-cognition requirement on the model.
+\Cref{sec:watermarking} takes the provenance instrument.
+\Cref{sec:scalable-oversight} takes the oversight question.
+\Cref{sec:contradictions} concentrates the
+\texttt{[CONTRADICTION]} markers from the body sections, names
+what evidence would close each one, and returns to the
+post-hoc-framing question. The closing claim is that the layered
+defense holds today, but each layer's instruments are aging at
+different rates; the next round of evaluation infrastructure has
+to attack the specific gaps we name, not produce more of what we
+already have. We turn first to the framing:
+\cref{sec:measuring-framing}.

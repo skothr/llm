@@ -1,0 +1,285 @@
+% Paper 2, §1 — Introduction
+% Pass-C synthesis: previews §2-§14, all of which (except §2/§13/§14) are written.
+% Anchors: kb/notes/training/, kb/notes/post-training/, brainstorm in
+%          theory/series/SHAPE-C-decision.md §"Paper 2".
+
+\section{Introduction}
+\label{sec:introduction}
+
+Training a frontier language model is not the optimization of a single
+objective. It is a pipeline of objectives, each with its own loss form,
+data distribution, optimizer, KL anchor, and stopping criterion. The
+pre-training cross-entropy that fits a base model on $\sim\!15$T tokens
+\citep[\S 3.2]{deepseek-v3} is not the same kind of object as the
+classification loss on a curated $\sim\!10^4$-pair preference set
+\citep{rafailov2023-dpo}, which is not the same kind of object as the
+sparse $\{0,1\}$ verifier signal that drives a $30$K-sample GRPO run on
+math contest problems
+\citep{shao2024,deepseek-r1}. They live on different data, optimize
+different functionals, anchor against different reference policies, and
+stop on different criteria. Treating ``training'' as one optimization
+collapses these distinctions and produces a class of empirics that has
+genuinely confused the field for half a decade: the
+Kaplan-vs-Chinchilla compute-allocation flip
+\citep{kaplan2020,hoffmann2022-chinchilla}, the
+DPO-vs-PPO-vs-GRPO debate, and the recurrent claim that ``RLVR creates
+new reasoning capability'' are all, on inspection, artefacts of mixing
+two stages' invariants. The thesis of this paper is that they
+disentangle once the pipeline is named:
+\begin{enumerate}
+\item \textbf{Pre-training data.} What goes into the corpus, how it is
+  filtered and mixed, how many tokens per parameter
+  (\cref{sec:pre-training-data}).
+\item \textbf{Scaling and optimization.} How loss falls with $(N, D, C)$
+  and how to spend a fixed compute budget; what optimizer spends those
+  FLOPs (\cref{sec:scaling-laws}, \cref{sec:optimization}).
+\item \textbf{Distributed and mixed-precision scaffolding.} How the
+  training step is laid out across thousands of accelerators, and at
+  what numerical precision (\cref{sec:distributed-training},
+  \cref{sec:mixed-precision}).
+\item \textbf{Supervised fine-tuning.} The first post-training stage:
+  cross-entropy on curated prompt-response pairs, producing the
+  instruction-following starting point $\pi^{\mathrm{SFT}}$
+  (\cref{sec:sft}).
+\item \textbf{Preference-RL.} RLHF, RLAIF / Constitutional AI, DPO and
+  the offline-preference variant family: aligning the policy against
+  pairwise preference data, with a KL anchor to $\pi^{\mathrm{SFT}}$
+  (\cref{sec:rlhf}, \cref{sec:dpo}, \cref{sec:rlaif-cai}).
+\item \textbf{Reasoning-RL and adaptation.} RL on verifiable rewards
+  (RLVR / GRPO / DAPO) for math, code, and proof, plus the weight-space
+  operations (LoRA / QLoRA / model soups / TIES) that compose
+  adapt-and-merge late in the pipeline
+  (\cref{sec:rlvr-grpo}, \cref{sec:adaptation-and-merging}).
+\end{enumerate}
+Each stage has its own canonical lineage, its own load-bearing
+variables, its own resolved questions, and its own live frontiers. The
+pipeline composes; the stages are not interchangeable; and the
+``confused empirics'' resolve as soon as we identify which stage's
+invariant is being measured.
+
+\subsection{What the pipeline framing buys}
+\label{sec:intro-buy}
+
+Three persistent debates in the 2020--2026 literature are stage-
+boundary artefacts. We name them here because they motivate the rest of
+the paper.
+
+\paragraph{Kaplan vs. Chinchilla.} \citet{kaplan2020} fitted three
+power laws on small-to-medium decoder-only LMs and recommended scaling
+$N$ much faster than $D$ at fixed compute --- ``train very large models,
+stop well short of convergence.'' \citet{hoffmann2022-chinchilla}
+re-fit on a re-instrumented set of $400+$ runs whose LR schedules
+matched their actual token horizons (Kaplan's cosine schedule decayed
+to a fixed horizon biased short-data runs upward), found
+$N \propto C^{0.5},\, D \propto C^{0.5}$, and produced the famous
+$D \approx 20N$ rule along with the Chinchilla-70B-beats-Gopher-280B
+headline at matched FLOPs. The two papers' \emph{functional forms}
+agree; the \emph{compute-allocation prescription} flipped on the
+strength of one methodological correction. The 2024--2026 frontier
+sits an order of magnitude beyond Chinchilla on tokens-per-parameter
+(Llama-3 8B at $D/N \approx 1875$, two orders past the
+Chinchilla-optimal point), which is \emph{not} a refutation of
+Chinchilla but a re-objective: pre-training cost has been displaced by
+inference cost as the dominant economic axis
+\citep[\S 3.2]{deepseek-v3}. \cref{sec:scaling-laws} treats this
+in full.
+
+\paragraph{RLHF vs. DPO vs. PPO.} \citet{rafailov2023-dpo} read the
+RLHF closed-form RL optimum
+$\pi^*(y \mid x) \propto \pi^{\mathrm{ref}}(y \mid x)\,\exp(r(x,y)/\beta)$
+not as the \emph{target} of a PPO loop \citep{ouyang2022-instructgpt}
+but as the \emph{definition} of a reward that can be inverted ---
+yielding a closed-form classification loss on the same preference data,
+without an explicit reward model, without on-policy sampling, without
+a value head. Same fixed point, two-orders-cheaper per step. The 2023
+narrative ``DPO replaces PPO'' was overstated: at frontier scale the
+two coexist (Llama-3 and T\"ulu-3 ship DPO; DeepMind / Gemma-3 keep
+PPO with weight-averaged reward models), and \citet{meng2024-simpo}
+reframes the DPO family as a small organized lattice with three
+knobs (loss shape, reference dependence, length normalization).
+\cref{sec:rlhf} and \cref{sec:dpo} treat this in full.
+
+\paragraph{``RLVR creates new capability.'' } The DeepSeek-R1
+\citep{deepseek-r1} headline --- pass@1 on AIME 2024 climbing from
+$15.6\%$ to $77.9\%$ over a single GRPO run, with the model emitting a
+\texttt{wait}-token ``aha-moment'' partway through --- was widely read
+as RL conjuring reasoning capability out of a base LM. The 2025
+follow-up literature, including a NeurIPS 2025 oral, substantially
+narrowed that claim: RLVR sharpens pass@1 on problems already solvable
+at some pass@$K$, but does not expand the set of problems solvable at
+any $K$; the capability ceiling is set by pre-training. RLVR is
+sampling-efficient sharpening, not capability expansion --- a
+distinction that only comes into focus once the stages are named.
+\cref{sec:rlvr-grpo} treats this in full and \cref{sec:contradictions}
+returns to the live disagreement.
+
+These three are the load-bearing examples. Each is a stage-boundary
+collision: a quantity measured at one stage, an invariant claimed at
+another. The pipeline framing isolates them.
+
+\begin{intuition}
+A useful mental picture: each stage is a distinct
+\emph{KL-constrained reweighting} of the model's output distribution.
+Pre-training fits an unconstrained $\pi^{\mathrm{base}}$ to the corpus
+distribution. SFT performs a forward-KL projection of $\pi^{\mathrm{base}}$
+onto a demonstration distribution. RLHF / DPO / RLAIF perform a reverse-KL
+reweighting of $\pi^{\mathrm{SFT}}$ toward higher reward, with the anchor
+$\beta\,\KL(\pi_\theta \|\, \pi^{\mathrm{SFT}})$ controlling how far the
+policy may drift. RLVR performs the same reverse-KL reweighting with the
+reward replaced by a verifier indicator. Returning to canonical form: the
+post-training stages all share the closed-form RL optimum
+$\pi^*(y|x) \propto \pi^{\mathrm{ref}}(y|x)\,\exp(r(x,y)/\beta)$
+(\cref{sec:rlhf}); only $r$ and $\pi^{\mathrm{ref}}$ change between
+RLHF, RLAIF, DPO, and RLVR. The pipeline is a \emph{chain} of such
+reweightings; mixing two stages' references and rewards is what
+produces the confused empirics.
+\end{intuition}
+
+\subsection{Why six stages, why now}
+\label{sec:intro-six}
+
+The six-stage decomposition is not a logical necessity. It is the
+empirical shape of frontier-2026 recipes once we read across the
+disclosed stack: DeepSeek-V3 / R1, Llama 3 / 4, Qwen 2.5 / 3, Phi-4,
+T\"ulu 3, OLMo 2, Mistral Large, Gemma 3. Every disclosed pipeline
+since 2024 contains all six stages, in the same order, with the same
+inputs and outputs at each stage boundary. This convergence is recent:
+GPT-3 \citep{kaplan2020} shipped without stages 4--6; InstructGPT
+\citep{ouyang2022-instructgpt} added stages 4--5 (SFT and PPO-RLHF);
+the RLVR / GRPO / DAPO line \citep{shao2024,deepseek-r1,dapo2025} added
+stage 6's reasoning-RL leg; the merging line
+\citep{wortsman2022-model-soups,ilharco2022-task-vectors,yadav2023-ties-merging}
+added stage 6's adaptation leg. The 2026 question --- \emph{is the
+six-stage decomposition canonical, or recipe-zoo bias from the same few
+labs reading each other's papers?} --- is open, and we treat it
+explicitly in \cref{sec:frontier-snapshot} after the body of the paper
+has put each stage's load-bearing variables on the page.
+
+\subsection{Notation and scope}
+\label{sec:intro-notation}
+
+Paper 2 assumes Paper 1's residual-stream / FFN / attention notation.
+The Transformer block, with its alternating attention and feed-forward
+sub-layers around residual connections, is taken as given
+\citep{vaswani2017}; the parameter count $N$, sequence length $S$,
+batch size $B$, model dimension $D$, head count $H$, head dimension
+$d_h$, vocabulary size $V$, and layer count $L$ from Paper 1's
+preamble are reused without redefinition. New to this paper: $D$ also
+denotes the training-token count when paired with $N$ (the scaling-law
+context disambiguates), $C \approx 6ND$ is total non-embedding training
+compute in FLOPs \citep[\S 2.1]{kaplan2020}, and the post-training
+stages introduce $\pi_\theta$ for the trainable policy,
+$\pi^{\mathrm{ref}}$ for whichever reference is anchoring it,
+$r_\phi(x,y)$ or $R(x,y)$ for learned and verifiable rewards, and
+$\beta$ for the KL coefficient.
+
+We hand off a single forward thread to Paper 3:
+\cref{sec:rlvr-grpo}'s GRPO and DAPO machinery is the \emph{training
+leg} of Paper 3's compute / search / verification triangle for
+reasoning. The \emph{inference} side --- chain-of-thought sampling,
+self-consistency, process reward models, MCTS-style tree search at
+generation time --- is treated there. Paper 4 (interpretability) and
+Paper 5 (evaluation) reach back into this paper for, respectively, the
+training-time activations that probes are built on and the alignment
+surface that RLHF / CAI shapes.
+
+What this paper deliberately does \emph{not} cover. (i) Architectural
+choices --- attention variants, MoE, normalization placement,
+positional encodings --- live in Paper 1, even though MoE intersects
+training (\cref{sec:distributed-training} on EP, \cref{sec:mixed-precision}
+on FP8 expert-collapse) and is cited from there. (ii) Inference-time
+techniques --- speculative decoding, KV-cache compression, quantized
+serving --- live in Paper 1's inference section. (iii) Evaluation
+methodology --- contamination, benchmark validity, alignment-faking
+detection --- lives in Paper 5; this paper takes \emph{loss}, \emph{pass@1},
+and \emph{preference win-rate} as legitimate signals and defers
+benchmark critique to Paper 5.
+
+\subsection{Roadmap}
+\label{sec:intro-roadmap}
+
+The body of this paper walks the six stages in order, then closes with
+a frontier snapshot and a contradictions chapter.
+
+\begin{description}
+\item[\cref{sec:pre-training-data} --- Pre-training data.] Curate
+  $\to$ ablate $\to$ mix. The FineWeb pipeline end-to-end (96 CC
+  snapshots, MinHash 14$\times$8, custom quantile-derived filters), the
+  Data Mixing Laws functional form, and the FineWeb-Edu
+  distill-then-classify pattern. Token-budget choice ($D \approx 20N$
+  Chinchilla, $D/N \approx 1875$ Llama-3 over-train) sets up
+  \cref{sec:scaling-laws}.
+\item[\cref{sec:scaling-laws} --- Scaling laws.] Kaplan's three power
+  laws and joint $L(N, D)$; Chinchilla's matched-LR-horizon re-fit
+  yielding $N \propto C^{0.5},\, D \propto C^{0.5}$; the post-Chinchilla
+  industry move to over-train for inference economics; \textmu-Transfer
+  as the HP-transfer technology that makes any of these recipes tunable
+  at frontier scale.
+\item[\cref{sec:optimization} --- Optimization.] AdamW as the
+  production default; Lion and Sophia as training-loss-only speedups;
+  Muon's Newton--Schulz orthogonalization with a verified
+  $\sim\!2\times$ compute-efficiency lift at $16$B-MoE / $5.7$T tokens;
+  the schedule axis (cosine $\to$ Warmup--Stable--Decay $\to$
+  Schedule-Free).
+\item[\cref{sec:distributed-training} --- Distributed training.] Five
+  composable axes on a single \texttt{DeviceMesh}:
+  $G = d \cdot t \cdot c \cdot p \cdot e$ for DP $\times$ TP $\times$
+  CP $\times$ PP $\times$ EP. Per-axis cost analysis, DeepSeek-V3's
+  TP-free plan as case study, TorchTitan's 4D composability,
+  Distributed Muon.
+\item[\cref{sec:mixed-precision} --- Mixed precision and stability.]
+  Three independent precision choices (storage / compute /
+  communication) on a master-FP32 backbone; the format zoo
+  (FP32 / FP16 / BF16 / FP8 / NVFP4 / BitNet); DeepSeek-V3's
+  fine-grained FP8 recipe with zero irrecoverable loss spikes over
+  $14.8$T tokens; loss-spike taxonomy and mitigations.
+\item[\cref{sec:sft} --- Supervised fine-tuning.] Cross-entropy with
+  prompt-masking; the data-not-loss thesis; lineage from FLAN through
+  InstructGPT to T\"ulu-3, MAGPIE, R1-Distill, and s1; multi-turn
+  loss-mask conventions; why SFT precedes RL.
+\item[\cref{sec:rlhf} --- RLHF.] InstructGPT's three-stage pipeline;
+  Bradley--Terry reward modelling; PPO with KL anchor and the
+  closed-form RL optimum; the four-model PPO infrastructure;
+  reward-model variants (ensembles, WARM/WARP).
+\item[\cref{sec:dpo} --- DPO and offline preference.] The
+  reparameterization that turns the RLHF optimum into a classification
+  loss on the same preference data; the variant lattice (IPO, KTO,
+  ORPO, SimPO, CPO) along three knobs.
+\item[\cref{sec:rlaif-cai} --- RLAIF and Constitutional AI.] The same
+  RLHF machinery with an AI labeler; CAI's two-stage pipeline (SL-CAI
+  $\to$ RL-CAI); the constitution as the \emph{only} human-authored
+  alignment input; non-evasion behavior and its dual-use surface.
+\item[\cref{sec:rlvr-grpo} --- RLVR and GRPO.] Programmatic verifiers
+  in place of learned reward models; group-mean baselines in place of
+  co-sized value models; DeepSeek-R1's GRPO trajectory and the DAPO
+  improvements (Clip-Higher, Dynamic Sampling, Token-Level Loss,
+  Overlong Reward Shaping). Cross-paper anchor for Paper~3.
+\item[\cref{sec:adaptation-and-merging} --- Adaptation and merging.]
+  LoRA / QLoRA as low-rank parameter-efficient fine-tuning; Model
+  Soups, Task Vectors, TIES-Merging as weight-space operations; the
+  linear-mode-connectivity story as the speculative theoretical
+  underpinning.
+\item[\cref{sec:frontier-snapshot} --- Frontier-2026 snapshot.] The
+  six-stage table across the disclosed frontier (DeepSeek-V3 / R1,
+  Llama 3 / 4, Qwen 2.5 / 3, Phi-4, T\"ulu 3, OLMo 2, Mistral Large,
+  Gemma 3). Where labs agree, where they diverge, where they are
+  opaque. Returns to the open question of whether the six-stage
+  decomposition is canonical or recipe-zoo bias.
+\item[\cref{sec:contradictions} --- Live contradictions.] Concentrated
+  treatment of the \texttt{[CONTRADICTION]} markers raised throughout
+  the body: Kaplan-vs-Chinchilla, optimizer speedups, TP-yes-vs-TP-no,
+  FP8 / NVFP4 / BitNet production status, SFT data quantity-vs-quality,
+  reward-hacking, DPO-vs-PPO, CAI internalization, RLVR capability,
+  merge guarantees, precision $\times$ token-count, \textmu-P at
+  frontier scale.
+\end{description}
+
+The closing thesis we will defend in \cref{sec:contradictions}: the
+pipeline's open questions are \emph{localized}. Most live at stage
+boundaries (precision $\times$ optimizer; token-count $\times$
+quantization; preference $\times$ verifier) rather than at the
+pipeline's structure. The structure --- pre-train $\to$ scale $\to$
+optimize $\to$ distribute $\to$ precision $\to$ SFT $\to$ preference
+$\to$ reasoning $\to$ merge --- is now stable enough to write down.
+The empirical envelope around each stage's variables is what
+2027-class results will close.
