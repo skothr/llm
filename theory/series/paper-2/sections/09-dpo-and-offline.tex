@@ -1,0 +1,568 @@
+% Paper 2, §9 — DPO and offline preference optimization
+% Anchors: kb/notes/post-training/dpo-and-offline.md
+%          kb/excerpts/{rafailov2023-dpo,meng2024-simpo,ouyang2022-instructgpt}.md
+% Cross-paper: cited from §10 (RLAIF feeding DPO) and §11 (RLVR as
+%              orthogonal axis).
+
+\section{DPO and offline preference optimization}
+\label{sec:dpo}
+
+The closed-form RL optimum \cref{eq:rlhf-optimum} that closes
+\cref{sec:rlhf} is also the load-bearing equation of this one. Direct
+Preference Optimization \citep{rafailov2023-dpo} reads
+\cref{eq:rlhf-optimum} not as the \emph{target} of an RL loop but as the
+\emph{definition} of a reward that can be inverted: solving for $r$ in
+terms of $\pi^*$ and $\pi^{\mathrm{ref}}$ gives the reward as a
+log-ratio of policies, and substituting that log-ratio into the
+Bradley--Terry preference probability \cref{eq:rlhf-rm} cancels the
+intractable partition function and yields a closed-form classification
+loss on the same preference data the reward model of
+\cref{sec:rlhf-rm} was trained on \citep[\S 4]{rafailov2023-dpo}.\footnote{KB
+excerpt: \texttt{kb/excerpts/rafailov2023-dpo.md\#sec-4}.} The thesis
+of this section is that this single algebraic move converts post-
+training from a PPO-class engineering problem (four model copies, three-
+phase rollout/score/optimize, on-policy sampling) into a
+fine-tuning-class engineering problem (two forward passes, one backward,
+no sampler, no value head): \emph{same fixed point on the same data,
+dramatically cheaper per step.} The variant family that has grown
+around DPO since 2023 (IPO, KTO, ORPO, SimPO, CPO) inherits this
+structure and varies one of three knobs at a time --- the loss shape on
+the implicit-reward gap, the reference dependence, and the length
+normalization --- producing a small organized lattice of offline
+preference methods.
+
+\subsection{Reparameterization: from RL optimum to classification loss}
+\label{sec:dpo-derivation}
+
+\cref{sec:rlhf-ppo}'s Eq.~\cref{eq:rlhf-optimum} states that the
+KL-constrained reward maximization
+$\max_{\pi_\theta} \E[r(x,y)] - \beta\,\KL(\pi_\theta \| \pi^{\mathrm{ref}})$
+admits the analytic optimum
+\begin{equation}
+\pi^*(y \mid x)
+  = \frac{1}{Z(x)} \, \pi^{\mathrm{ref}}(y \mid x)
+    \exp\!\left(\frac{1}{\beta}\, r(x, y)\right),
+\label{eq:dpo-rl-optimum}
+\end{equation}
+with $Z(x) = \sum_y \pi^{\mathrm{ref}}(y \mid x) \exp(r(x,y)/\beta)$ ---
+a re-weighting of the reference distribution by an exponential of the
+reward \citep[\S 4, Eq.~4]{rafailov2023-dpo}.\footnote{KB excerpt:
+\texttt{kb/excerpts/rafailov2023-dpo.md\#sec-4}.} \citet{rafailov2023-dpo}'s
+move is to invert this expression for $r$. Taking logarithms of
+\cref{eq:dpo-rl-optimum} and rearranging,
+\begin{equation}
+r(x, y)
+  = \beta \log \frac{\pi^*(y \mid x)}{\pi^{\mathrm{ref}}(y \mid x)}
+    \;+\; \beta \log Z(x),
+\label{eq:dpo-reward-from-policy}
+\end{equation}
+verbatim from \citet[\S 4, Eq.~5]{rafailov2023-dpo}. The reward is now
+written as a function of the optimal policy and the reference, plus a
+prompt-dependent additive constant $\beta \log Z(x)$. The constant is
+intractable in general --- $Z(x)$ is a sum over all possible
+completions $y$ --- but the next step removes it. The Bradley--Terry
+preference assumption from \cref{sec:rlhf-rm} states
+$p(y_w \succ y_l \mid x) = \sigma(r(x, y_w) - r(x, y_l))$, a difference
+of rewards on the same prompt. Substituting
+\cref{eq:dpo-reward-from-policy} into the Bradley--Terry probability,
+\begin{equation}
+p^*(y_w \succ y_l \mid x)
+  = \sigma\!\left(
+       \beta \log \frac{\pi^*(y_w \mid x)}{\pi^{\mathrm{ref}}(y_w \mid x)}
+       - \beta \log \frac{\pi^*(y_l \mid x)}{\pi^{\mathrm{ref}}(y_l \mid x)}
+     \right),
+\label{eq:dpo-bt-pref}
+\end{equation}
+since the $\beta \log Z(x)$ terms appear with opposite signs on $y_w$
+and $y_l$ and cancel exactly \citep[\S 4, Eq.~6]{rafailov2023-dpo}.
+The preference probability now depends only on policy log-ratios; the
+intractable normalizer is gone.
+
+Maximum-likelihood on a preference dataset
+$\mathcal{D} = \{(x_i, y_w^i, y_l^i)\}_{i=1}^N$ then yields the DPO
+loss \citep[\S 4, Eq.~7]{rafailov2023-dpo}:\footnote{KB excerpt:
+\texttt{kb/excerpts/rafailov2023-dpo.md\#sec-4-loss}.}
+\begin{equation}
+\mathcal{L}_{\mathrm{DPO}}(\pi_\theta;\, \pi^{\mathrm{ref}})
+  = -\, \E_{(x, y_w, y_l) \sim \mathcal{D}}
+      \!\left[
+        \log \sigma\!\left(
+          \beta \log \frac{\pi_\theta(y_w \mid x)}{\pi^{\mathrm{ref}}(y_w \mid x)}
+          - \beta \log \frac{\pi_\theta(y_l \mid x)}{\pi^{\mathrm{ref}}(y_l \mid x)}
+        \right)
+      \right].
+\label{eq:dpo-loss}
+\end{equation}
+The implicit reward associated with the policy under training is
+\begin{equation}
+\hat{r}_\theta(x, y)
+  \;=\; \beta \log \frac{\pi_\theta(y \mid x)}{\pi^{\mathrm{ref}}(y \mid x)},
+\label{eq:dpo-implicit-reward}
+\end{equation}
+so \cref{eq:dpo-loss} is exactly the Bradley--Terry log-likelihood
+\cref{eq:rlhf-rm} of \cref{sec:rlhf}, evaluated on the implicit reward
+\cref{eq:dpo-implicit-reward} instead of a separately-trained
+$r_\phi$ \citep[\S 4]{rafailov2023-dpo}.
+
+\paragraph{Same fixed point as PPO-RLHF.} The crucial structural fact:
+if $\pi_\theta$ approaches the maximum-likelihood solution of
+\cref{eq:dpo-loss}, then by construction the implicit reward
+\cref{eq:dpo-implicit-reward} approaches the underlying preference-data
+reward $r$, and $\pi_\theta$ approaches the closed-form RL optimum
+$\pi^*$ of \cref{eq:dpo-rl-optimum} on that reward. \emph{DPO and
+PPO-RLHF share the same fixed point on the same preference data}
+\citep[\S 4]{rafailov2023-dpo} --- they differ only in the optimization
+trajectory, not in the optimum. PPO walks toward $\pi^*$ along on-policy
+rollouts scored by a learned $r_\phi$; DPO walks toward $\pi^*$ along
+gradient steps of a classification loss on a fixed preference dataset.
+
+\paragraph{The DPO gradient.} Differentiating
+\cref{eq:dpo-loss}\footnote{KB excerpt:
+\texttt{kb/excerpts/rafailov2023-dpo.md\#sec-4-gradient}.} gives
+\citep[\S 4]{rafailov2023-dpo}
+\begin{equation}
+\nabla_\theta \mathcal{L}_{\mathrm{DPO}}
+  = -\, \beta\, \E\!\left[\,
+       \sigma\!\big(\hat{r}_\theta(x, y_l) - \hat{r}_\theta(x, y_w)\big)
+       \;\big(\nabla_\theta \log \pi_\theta(y_w \mid x)
+              - \nabla_\theta \log \pi_\theta(y_l \mid x)\big)
+     \right],
+\label{eq:dpo-gradient}
+\end{equation}
+the \emph{preference-margin gradient} that defines all DPO-class
+methods. Two structural pieces are worth naming. First, the gradient is
+proportional to a \emph{relative} score change: the policy is asked to
+push up $\log \pi_\theta(y_w \mid x)$ and push down
+$\log \pi_\theta(y_l \mid x)$ \emph{by the same amount}. Second, the
+sigmoid weight $\sigma(\hat r_\theta(y_l) - \hat r_\theta(y_w))$ is
+large precisely when the preference is currently violated by the
+implicit reward (the policy assigns lower implicit reward to the
+preferred response), and small when the policy already agrees with the
+preference. The update is self-modulating: aggressive on
+miscalibrated pairs, gentle on already-correct ones.
+
+\begin{intuition}
+The DPO derivation is an \emph{inversion} trick. The RL optimum
+\cref{eq:dpo-rl-optimum} maps a reward $r$ to a policy $\pi^*$;
+\cref{eq:dpo-reward-from-policy} reads the same equation backward and
+maps a policy back to a reward. Once you have a policy-to-reward map,
+the obvious move is to express the Bradley--Terry preference
+probability \cref{eq:rlhf-rm} in terms of the policy directly, and the
+intractable $\log Z(x)$ vanishes because it appears symmetrically on
+$y_w$ and $y_l$. What looked like an RL problem (KL-constrained reward
+maximization with on-policy rollouts) becomes a classification problem
+(maximum-likelihood on policy log-ratios). Returning to canonical form:
+\cref{eq:dpo-loss} is literally \cref{eq:rlhf-rm}, the
+Bradley--Terry RM training loss, with the parametric $r_\phi$
+substituted by the implicit $\hat r_\theta = \beta \log \pi_\theta /
+\pi^{\mathrm{ref}}$ of \cref{eq:dpo-implicit-reward}. The ``language
+model is secretly a reward model'' phrasing
+\citep{rafailov2023-dpo} is the algebraic identity, not a metaphor.
+\end{intuition}
+
+\subsection{The DPO training protocol}
+\label{sec:dpo-protocol}
+
+The protocol is supervised classification on log-ratios. Starting from
+the SFT-stage model $\pi^{\mathrm{SFT}}$ of \cref{sec:sft}, set
+$\pi^{\mathrm{ref}} \leftarrow \pi^{\mathrm{SFT}}$ and
+$\pi_\theta \leftarrow \pi^{\mathrm{SFT}}$, then for each batch of
+preference triples $(x, y_w, y_l)$:
+\begin{enumerate}
+\item Compute $\log \pi_\theta(y_w \mid x)$ and
+$\log \pi_\theta(y_l \mid x)$ via a forward pass on the policy under
+training.
+\item Compute $\log \pi^{\mathrm{ref}}(y_w \mid x)$ and
+$\log \pi^{\mathrm{ref}}(y_l \mid x)$ via a forward pass on the frozen
+reference (often pre-cached, since $\pi^{\mathrm{ref}}$ does not
+change).
+\item Evaluate \cref{eq:dpo-loss} and back-propagate through $\theta$.
+\end{enumerate}
+There is no sampling, no reward model, no value model, no reinforcement
+learning loop. The total compute per step is $\sim\!2$ forward passes
+$+ 1$ backward pass on $\pi_\theta$ (both win and loss completions
+share the prompt prefix in practice, so the forward cost is closer to
+$1.5\times$ a single completion's), versus PPO's four-model-copy plus
+sampling-plus-scoring-plus-optimization three-phase loop
+\citep[\S 3]{ouyang2022-instructgpt}. \cref{tab:dpo-vs-ppo-cost}
+summarizes the per-step infrastructure delta that drives the
+``DPO-replaces-PPO'' move at frontier scale.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Cost axis & PPO-RLHF & DPO \\
+\midrule
+Co-resident model copies & 4 ($\pi_\theta$, $\pi^{\mathrm{SFT}}$, $r_\phi$, $V_\phi$) & 2 ($\pi_\theta$, $\pi^{\mathrm{ref}}$) \\
+Sampling phase & yes (rollouts at temperature $T$) & no \\
+Scoring phase & yes ($r_\phi$ forward per rollout) & no \\
+Forward passes per step & $\geq 4$ (rollout + $r_\phi$ + $V_\phi$ + ref) & 2 \\
+Backward passes per step & 1--$K$ (PPO inner-loop $K \in \{1,4\}$) & 1 \\
+Hyperparameters that matter & $\beta, \epsilon, \lambda_{\mathrm{GAE}}, \gamma_{\mathrm{ptx}}, \mathrm{LR}_{\pi}, \mathrm{LR}_V, T$ & $\beta, \mathrm{LR}$ \\
+\bottomrule
+\end{tabular}
+\caption{Per-step cost comparison of PPO-RLHF (\cref{sec:rlhf-ppo}) vs.\
+DPO (\cref{sec:dpo-protocol}). The ``four model copies'' line is the
+load-bearing infrastructure fact behind the empirical move at frontier
+scale \citep{meta-llama3, tulu3}.}
+\label{tab:dpo-vs-ppo-cost}
+\end{table}
+
+\paragraph{Hyperparameters.} The canonical open-source recipe
+\citep{tulu3} runs $\beta = 0.1$ and learning rate
+$5 \times 10^{-7}$ --- about ten times smaller than the SFT learning
+rate of \cref{sec:sft}. Llama-3 \citep{meta-llama3} uses the same
+$\beta = 0.1$ at frontier scale. Batch sizes are typically
+$32$--$256$ effective; epochs $1$--$3$. The low learning rate is not
+optional: although DPO does not have PPO's value-network instability,
+the policy can still drift far enough from $\pi^{\mathrm{ref}}$ to
+collapse onto a degenerate mode that satisfies the preference margin on
+training pairs while losing fluency on held-out prompts. The
+$\mathrm{KL}(\pi_\theta \| \pi^{\mathrm{ref}})$ that emerges
+implicitly --- through the $\hat r_\theta = \beta \log \pi_\theta /
+\pi^{\mathrm{ref}}$ structure --- is the only thing keeping the policy
+on the SFT support, and a higher LR overshoots that constraint.
+
+\paragraph{On-policy preferences with off-policy optimization.} DPO's
+loss is off-policy by default: it reads a fixed dataset of preference
+triples and never samples from $\pi_\theta$. This is structurally
+identical to a one-shot SFT pass, but the empirical best practice at
+frontier scale (Llama-3 \citep{meta-llama3}, T\"ulu-3 \citep{tulu3}) is
+to \emph{iterate}: run DPO to convergence, sample new responses from
+the resulting policy, label them (human or LLM-judge) into new
+preference triples, and run DPO again --- often with
+$\pi^{\mathrm{ref}}$ kept at the original $\pi^{\mathrm{SFT}}$ across
+rounds, so the implicit reward stays anchored to the SFT support. The
+result is \emph{on-policy preference collection with off-policy
+optimization}: the gradient signal comes from preferences on
+$\pi_\theta$'s own samples, recovering some of the on-policy benefit
+of PPO without paying the per-step rollout cost.
+
+\subsection{Variant family: one organized axis at a time}
+\label{sec:dpo-variants}
+
+The DPO variant landscape since 2023 has not produced a clear winner;
+it has produced a small lattice of methods that vary one knob at a time
+along three axes (loss shape on the implicit-reward gap; reference
+dependence; length normalization). \cref{tab:dpo-variants} is the
+load-bearing organizing table.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Method & Reference & Reward form & Length-normalize & Loss shape \\
+\midrule
+PPO-RLHF & $\pi^{\mathrm{SFT}}$ & learned $r_\phi$ & no & on-policy clipped surrogate \\
+DPO & $\pi^{\mathrm{ref}}$ frozen & $\beta \log \pi_\theta / \pi^{\mathrm{ref}}$ & no & log-sigmoid \\
+IPO & $\pi^{\mathrm{ref}}$ frozen & same as DPO & no & squared-gap \\
+KTO & $\pi^{\mathrm{ref}}$ frozen & prospect-theory utility & no & asymmetric per-rating \\
+ORPO & none & SFT loss + log-odds-ratio & no & combined SFT + OR \\
+SimPO & none & $(\beta/|y|) \log \pi_\theta(y \mid x)$ & yes & log-sigmoid + margin $\gamma$ \\
+CPO & none & policy log-prob + SFT regularizer & no & log-sigmoid + SFT \\
+\bottomrule
+\end{tabular}
+\caption{Offline preference variant family, organized by reference
+dependence (anchored vs.\ reference-free) and the implicit-reward form.
+PPO-RLHF row from \cref{sec:rlhf}; DPO row from
+\citep[\S 4]{rafailov2023-dpo}; SimPO row from
+\citep[\S 3]{meng2024-simpo}.\protect\footnotemark{} IPO, KTO, ORPO,
+CPO entries summarize the canonical statement of each variant; see
+\cref{sec:dpo-variants} for citations.}
+\label{tab:dpo-variants}
+\end{table}
+\footnotetext{KB excerpts: \texttt{kb/excerpts/rafailov2023-dpo.md\#sec-4-loss},
+\texttt{kb/excerpts/meng2024-simpo.md\#sec-3}.}
+
+\paragraph{IPO --- squared-gap loss.} The DPO log-sigmoid loss has a
+known overconfidence pathology: when one preference is clearly
+satisfied, the implicit reward gap $\hat r_\theta(y_w) - \hat
+r_\theta(y_l)$ can grow without bound while the loss falls toward zero,
+driving the policy to overfit a few extreme pairs and undertrain on the
+bulk. IPO replaces the log-sigmoid with a squared loss on the gap,
+\begin{equation}
+\mathcal{L}_{\mathrm{IPO}}(\theta)
+  = \E_{(x, y_w, y_l) \sim \mathcal{D}}
+    \!\left[\,\Big(\hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l)
+                   - \tfrac{1}{2\tau}\Big)^{\!2}\right],
+\label{eq:ipo}
+\end{equation}
+where $\tau$ controls the target margin
+\citep[Azar et al.\ 2023; Eq.~17 in the paper's IPO derivation]{rafailov2023-dpo}.\footnote{IPO's
+canonical form as reproduced in DPO survey arXiv:2503.11701 \S4.1.}
+\deepencite{azar2023-ipo §4 — bibkey not yet in references.bib}
+The squared loss is bounded above and saturates symmetrically, removing
+the runaway-log-ratio failure mode.
+
+\paragraph{KTO --- single-rating data, prospect theory.} KTO operates
+on \emph{single-rating} data $(x, y, \mathrm{label})$ with
+$\mathrm{label} \in \{\textsf{good}, \textsf{bad}\}$, instead of the
+pairwise $(x, y_w, y_l)$ DPO requires. The loss is asymmetric, weighted
+by Kahneman--Tversky prospect-theory loss-aversion --- a unit of
+``bad'' reward weighs more than a unit of ``good'' reward
+\citep[Ethayarajh et al.\ 2024]{rafailov2023-dpo}.
+\deepencite{ethayarajh2024-kto §3 — bibkey not yet in references.bib}
+KTO is the right method when the labeling pipeline can produce thumbs-
+up / thumbs-down judgments but not pairwise rankings (e.g., binary
+production-feedback streams).
+
+\paragraph{ORPO --- combined SFT and preference, no reference.} ORPO
+collapses SFT and preference learning into a single objective and
+removes the reference model entirely:
+\begin{equation}
+\mathcal{L}_{\mathrm{ORPO}}(\theta)
+  = \mathcal{L}_{\mathrm{SFT}}(\pi_\theta;\, y_w)
+    \;+\; \lambda \, \mathcal{L}_{\mathrm{OR}}(\pi_\theta;\, y_w, y_l),
+\label{eq:orpo}
+\end{equation}
+where $\mathcal{L}_{\mathrm{SFT}}$ is the cross-entropy on the chosen
+response (Eq.~\cref{eq:rlhf-sft}) and $\mathcal{L}_{\mathrm{OR}}$ is a
+log-odds-ratio penalty between $y_w$ and $y_l$
+\citep[Hong et al.\ 2024]{rafailov2023-dpo}.
+\deepencite{hong2024-orpo §3 — bibkey not yet in references.bib}
+The SFT term takes over the role of the KL anchor (without a separate
+reference forward), and the pipeline reduces from two stages
+(SFT $\to$ DPO) to one (ORPO from base directly). The cost: the
+reference-frozen guarantee that DPO inherits from
+\cref{eq:dpo-rl-optimum} no longer applies, so ORPO is no longer the
+same fixed point as PPO-RLHF on the same data --- it is a different
+optimum that may or may not match.
+
+\paragraph{SimPO --- reference-free, length-normalized.} SimPO drops
+the reference and divides the implicit reward by sequence length
+\citep[\S 3]{meng2024-simpo}:\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2024-simpo.md\#sec-3}.}
+\begin{equation}
+r_{\mathrm{SimPO}}(x, y)
+  \;=\; \frac{\beta}{|y|} \log \pi_\theta(y \mid x)
+  \;=\; \frac{\beta}{|y|} \sum_{t=1}^{|y|} \log \pi_\theta(y_t \mid x, y_{<t}).
+\label{eq:simpo-reward}
+\end{equation}
+The full loss adds a target reward margin $\gamma$
+\citep[\S 3, the SimPO loss]{meng2024-simpo}:
+\begin{equation}
+\mathcal{L}_{\mathrm{SimPO}}(\theta)
+  = -\, \E_{(x, y_w, y_l) \sim \mathcal{D}}
+    \!\left[\log \sigma\!\left(
+       \frac{\beta}{|y_w|} \log \pi_\theta(y_w \mid x)
+       - \frac{\beta}{|y_l|} \log \pi_\theta(y_l \mid x)
+       - \gamma
+    \right)\right].
+\label{eq:simpo-loss}
+\end{equation}
+Two changes vs.\ DPO. First, no reference model: the implicit reward
+is the length-normalized average log-prob of the response under the
+policy alone. Second, a target margin $\gamma > 0$: the chosen
+response must beat the rejected one by at least $\gamma$ in implicit
+reward, not just by an arbitrary positive amount. \citet[\S 4]{meng2024-simpo}
+report SimPO outperforming DPO substantially on length-controlled
+benchmarks (AlpacaEval~2, Arena-Hard).\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2024-simpo.md\#sec-4-headline}.}
+
+\paragraph{CPO --- policy log-prob with SFT regularizer.} CPO drops the
+reference (like SimPO and ORPO) and adds an SFT regularizer on the
+chosen response (like ORPO), but keeps the DPO log-sigmoid form
+\citep[Xu et al.\ 2024]{rafailov2023-dpo}.
+\deepencite{xu2024-cpo §3 — bibkey not yet in references.bib} CPO is
+empirically positioned between SimPO and ORPO on the lattice and is
+most-cited in machine-translation post-training.
+
+\begin{analogy}
+The variant family is best read as one organized axis: \emph{anchored
+vs.\ reference-free}. Anchored methods (DPO, IPO, KTO) keep
+$\pi^{\mathrm{ref}}$ in the loss; the implicit reward is a
+\emph{ratio}, and the policy is constrained --- through the algebra of
+$\log \pi_\theta / \pi^{\mathrm{ref}}$ --- to live on the support of
+the reference. Reference-free methods (ORPO, SimPO, CPO) drop the
+reference; the implicit reward becomes an \emph{absolute} quantity
+($\log \pi_\theta(y \mid x)$ or its length-normalized version), and
+the policy is no longer pinned to the SFT support. Returning to
+canonical form: anchored variants inherit the
+$\KL(\pi_\theta \| \pi^{\mathrm{ref}})$ regularization of
+\cref{eq:dpo-rl-optimum} as a structural property of the implicit-
+reward parameterization; reference-free variants do not, and
+substitute different mechanisms (SimPO's length-norm; ORPO's SFT loss;
+CPO's SFT regularizer) to keep the policy on a sensible support
+without the reference's constraint. The choice of axis determines what
+guarantees you keep --- anchored variants share a fixed point with
+PPO-RLHF, reference-free variants do not --- and what cost you pay ---
+anchored variants run a reference forward each step, reference-free
+variants do not.
+\end{analogy}
+
+\subsection{Length bias and SimPO's normalization fix}
+\label{sec:dpo-length}
+
+DPO's documented \emph{length bias} (longer outputs systematically beat
+shorter ones on length-uncontrolled benchmarks) is the most
+empirically-robust failure mode of the canonical Eq.~\cref{eq:dpo-loss}
+form. The mechanism, articulated by \citet[\S 3]{meng2024-simpo}, is
+algebraic: the implicit reward
+$\hat r_\theta(x, y) = \beta \log \pi_\theta(y \mid x) /
+\pi^{\mathrm{ref}}(y \mid x)$ is a sum over tokens. For preference pairs
+with very different lengths, DPO can satisfy the preference by assigning
+extreme per-token log-probability shifts on a few tokens of the long
+response --- the implicit reward gap grows without the per-token
+shifts being individually large. This biases optimization toward the
+longer side of any length asymmetry in the preference data.
+
+SimPO's length-normalized reward \cref{eq:simpo-reward} fixes the
+mechanism by construction: dividing by $|y|$ converts the sum-of-tokens
+implicit reward into a \emph{mean-of-tokens} implicit reward, which is
+length-invariant in expectation. \citet[\S 4.2]{meng2024-simpo} report
+the length-normalization ablation as the dominant single contributor to
+SimPO's gain over DPO on length-controlled
+AlpacaEval~2.\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2024-simpo.md\#sec-4-headline}.}
+
+\begin{intuition}
+SimPO's length-normalization is to DPO's implicit reward what
+perplexity is to log-likelihood. Raw log-likelihood favors short
+sequences (each token contributes a negative term to the total);
+perplexity normalizes by length to compare sequences fairly across
+sequence-length regimes. Similarly, DPO's $\log \pi_\theta(y \mid x)$
+favors sequences whose token-level log-probs are easy to inflate (the
+loss reads a sum); SimPO's $\log \pi_\theta(y \mid x) / |y|$ normalizes
+for length so the implicit reward is comparable across responses of
+unequal length. Returning to the canonical math:
+\cref{eq:simpo-reward} is the average of $\log \pi_\theta(y_t \mid x,
+y_{<t})$ over the trajectory, scaled by $\beta$, so the
+preference-margin gradient \cref{eq:dpo-gradient} acquires a
+$1 / |y|$ factor that prevents long-response inflation.
+\end{intuition}
+
+\subsection{Frontier-2026 deployment: Llama-3, T\"ulu-3, Gemma 3}
+\label{sec:dpo-frontier}
+
+The empirical narrative around DPO at frontier scale has settled into
+two camps. The Llama-3 / T\"ulu-3 camp \citep{meta-llama3, tulu3} runs
+SFT $\to$ rejection-sampling SFT $\to$ multi-round iterated DPO and
+reports that DPO required less compute than PPO and performed as well
+or better at the post-training stage \citep[\S 4]{meta-llama3}. T\"ulu-3
+\citep{tulu3} adopts the same SFT $\to$ DPO $\to$ RLVR
+(\cref{sec:rlvr-grpo}) stack as its open recipe, and explicitly
+reproduces the per-step cost-and-quality crossover of
+\cref{tab:dpo-vs-ppo-cost}. The Gemma 3 / DeepMind camp
+\citep{gemma3} retains a PPO-style RLHF stage with WARM/WARP-augmented
+reward ensembles \citep{warm-2024, warp-2024} as the production
+preference stage, on the argument that ensembled-RM PPO recovers gains
+that the DPO-replaces-PPO move sacrifices on creative or open-ended
+generation.
+
+The orthogonal axis in 2026 is the relationship between the offline-
+preference stage and what surrounds it. \cref{sec:rlaif-cai} walks the
+RLAIF / Constitutional AI \citep{bai2022-cai} family: AI judgments under
+a constitution can replace human labels at the preference-data step,
+and the resulting AI-preference triples can feed DPO directly with no
+PPO loop in between. The composition --- AI-labeled preferences
+$\to$ DPO --- is increasingly the default at open-source scale,
+because both halves of the pipeline avoid human labeling and on-policy
+RL. \cref{sec:rlvr-grpo}'s RLVR / GRPO stack is the verifier-domain
+alternative: where a programmatic verifier exists, the learned reward
+of \cref{sec:rlhf-rm} is replaced by an indicator
+$R_{\mathrm{verifier}}(x, y) \in \{0, 1\}$ and the implicit-reward
+parameterization of \cref{eq:dpo-implicit-reward} is replaced by a
+group-mean baseline. DPO and RLVR are orthogonal: DPO replaces the
+\emph{algorithm} (PPO $\to$ classification on preferences); RLVR
+replaces the \emph{reward source} (learned RM $\to$ verifier). Modern
+post-training pipelines compose both --- T\"ulu-3 runs DPO for general
+preferences and GRPO for verifier-domain reasoning --- treating them as
+complementary stages.
+
+\subsection{Open contradictions}
+\label{sec:dpo-contradictions}
+
+Three contradictions are surfaced here and picked up in \cref{sec:rlhf}'s
+\S~14 contradiction concentration.
+
+\begin{contradiction}
+\textbf{DPO-vs-PPO at frontier scale.} The Llama-3 / T\"ulu-3 view
+\citep{meta-llama3, tulu3} is that DPO is \emph{better} than PPO at
+frontier scale, not just cheaper: with iterated on-policy preference
+collection, the DPO-class pipeline matches or exceeds PPO-class
+pipelines on standard alignment benchmarks at lower compute. The
+Gemma 3 / DeepMind view \citep{gemma3, warm-2024, warp-2024} is that
+PPO + WARM/WARP-averaged reward ensembles is still the production
+choice for general alignment, with the ensembled RM recovering the
+proxy-vs-gold gap that single-RM PPO suffered. The disagreement is
+partly recipe-specific (different RMs, different preference datasets,
+different KL schedules) and partly task-specific: DPO is more
+competitive on instruction-following and structured chat;
+PPO-with-ensemble retains advantage on creative / open-ended
+generation per anecdotal reports. No controlled head-to-head at
+frontier scale has been published, and the data, RM, and KL-schedule
+axes are entangled in the existing comparisons. Pick up in \S 14.
+\end{contradiction}
+
+\begin{contradiction}
+\textbf{DPO does not avoid reward overoptimization.} The early DPO
+narrative was structural: ``no explicit reward model means no reward
+hacking'' --- if there is no $r_\phi$ to overfit, the proxy-vs-gold
+gap that drives PPO's reward-hacking pathology cannot exist. The
+2024 ``scaling laws for direct alignment'' result
+\deepencite{rosset2024-direct-alignment-scaling arXiv:2406.02900 §3
+— bibkey not yet in references.bib} undercuts this read. The implicit
+reward $\hat r_\theta = \beta \log \pi_\theta / \pi^{\mathrm{ref}}$ of
+\cref{eq:dpo-implicit-reward} is itself a learned proxy --- it is
+\emph{trained} on the preference data through the maximum-likelihood
+fit of \cref{eq:dpo-loss} --- and the gap between $\hat r_\theta$ and
+the gold preference grows with $\KL(\pi_\theta \| \pi^{\mathrm{ref}})$
+in the same way that the gap between $r_\phi$ and gold preference
+grows in PPO-RLHF. The mechanism is more subtle than ``DPO has no
+reward model'': the policy log-ratio \emph{is} the reward model, and
+the policy hacks itself. The empirical implication: the
+$\KL$-anchor regularization is load-bearing for both PPO-RLHF and
+DPO, and the practical mitigations --- on-policy iteration, KL
+scheduling, early stopping --- are necessary for DPO too. Pick up
+in \S 14.
+\end{contradiction}
+
+\begin{contradiction}
+\textbf{Length bias is annotator-bias-or-loss-form.} SimPO frames the
+length-normalization fix as a loss-form correction
+\citep[\S 3]{meng2024-simpo}: DPO's implicit-reward sum-over-tokens
+biases toward longer outputs by construction, and the fix is
+algebraic. The competing view is that the length bias originates in
+the \emph{preference data}: human (and AI) annotators systematically
+prefer longer, more detailed responses, and the bias transfers
+through the loss regardless of normalization. Both are partially
+right: SimPO's $1/|y|$ fix demonstrably reduces length bias on
+length-controlled benchmarks \citep[\S 4]{meng2024-simpo}, but
+remaining length bias persists in the data after normalization. The
+two factors have not been cleanly separated. The empirical signature
+that would distinguish them --- a length-controlled human preference
+collection followed by both DPO and SimPO training, with held-out
+length-controlled evaluation --- has not, to our knowledge, been
+published at frontier scale.
+\end{contradiction}
+
+\subsection{Forward link}
+\label{sec:dpo-forward}
+
+\cref{sec:dpo-derivation} establishes the inversion of
+\cref{eq:rlhf-optimum} into the closed-form classification loss
+\cref{eq:dpo-loss}; \cref{sec:dpo-protocol} the per-step
+infrastructure delta versus PPO; \cref{sec:dpo-variants} the variant
+family organized along reference-anchoring and length-normalization;
+\cref{sec:dpo-length} SimPO's length-bias fix; \cref{sec:dpo-frontier}
+the frontier-2026 deployment landscape; \cref{sec:dpo-contradictions}
+the three live contradictions concentrated in \S 14. Two next stages
+follow. \cref{sec:rlaif-cai} replaces the \emph{preference source}
+itself: AI-judge-under-a-constitution preferences feed the same DPO
+loss directly, with \cref{eq:dpo-loss} unchanged but the dataset
+$\mathcal{D}$ now generated by a preference-labeling LLM rather than
+human annotators. \cref{sec:rlvr-grpo} replaces the \emph{reward
+mechanism}: where a programmatic verifier exists, the learned reward
+of \cref{sec:rlhf-rm} and the implicit reward of
+\cref{eq:dpo-implicit-reward} are both displaced by an indicator
+$R_{\mathrm{verifier}} \in \{0, 1\}$, and the optimization moves from
+preference classification on log-ratios back to a critic-free RL loop
+(GRPO) that exploits the verifier's lack of a proxy-vs-gold gap. The
+canonical 2026 post-training stack runs all three stages in sequence:
+SFT (\cref{sec:sft}) $\to$ preference-anchored DPO or its variants
+(\cref{sec:dpo}) $\to$ verifier-domain RLVR with GRPO
+(\cref{sec:rlvr-grpo}), with adaptation and merging
+(\cref{sec:adaptation}) closing the pipeline.

@@ -1,0 +1,402 @@
+% Paper 3, §10 — Search-vs-RL under fixed compute
+% Anchors: kb/notes/scaling/inference-time-compute-scaling.md §2.2-2.3
+%          kb/notes/post-training/rlvr-and-grpo.md §2.2
+%          kb/excerpts/{snell2024,dapo2025,deepseek-r1}.md
+
+\section{Search-vs-RL under fixed compute}
+\label{sec:search-vs-rl}
+
+\Cref{sec:inference-compute-scaling} (the Snell anchor) settled one
+slice of the triangle's central operational tradeoff: at fixed total
+compute $C_\text{train} + C_\text{test}$, when does spending the
+marginal FLOP on inference-time search beat spending it on
+\emph{pretraining}? The empirical answer is conditional on difficulty
+regime: on easy and intermediate prompts test-time compute substitutes
+for $\sim\!14\times$ more pretraining FLOPs at matched accuracy
+\citep[\S 6]{snell2024};\footnote{KB excerpt:
+\texttt{kb/excerpts/snell2024.md\#sec-1-flops-matched}.} on the hardest
+tail it does not. \Cref{sec:rlvr-grpo-dapo} introduced a third
+allocation channel that did not exist when Snell's curves were drawn:
+RL on verifiable rewards (RLVR) at GRPO/DAPO scale, which spends
+FLOPs on \emph{post-training} the proposer rather than on either
+pretraining the proposer or running it longer at inference. The
+triangle's central operational question therefore generalises:
+\textbf{at fixed total compute, when does the marginal FLOP go to
+(a) more inference search/sampling, (b) more RLVR training, or (c)
+more pretraining?} This section transcribes what is settled, isolates
+what is anecdotal, and demarcates the open frontier.
+
+\subsection{The three-channel allocation}
+\label{sec:svr-three-channels}
+
+Total compute spent to produce a deployed answer to a single prompt
+decomposes into three additive components:
+\begin{equation}
+  C_\text{total}
+    \;=\; \underbrace{C_\text{pre}}_{\text{pretraining}}
+    \;+\; \underbrace{C_\text{RL}}_{\text{RLVR / GRPO post-training}}
+    \;+\; \underbrace{C_\text{test}}_{\text{inference search/sampling}}.
+  \label{eq:three-channel}
+\end{equation}
+The three terms are amortised differently. $C_\text{pre}$ is paid once
+per base model and amortises across every prompt the model ever sees.
+$C_\text{RL}$ is paid once per post-training run and amortises across
+every prompt the post-trained checkpoint serves. $C_\text{test}$ is
+paid \emph{per prompt at inference} and does not amortise. The
+appropriate accounting for a budget question therefore depends on the
+deployment volume: a one-shot research evaluation amortises
+$C_\text{pre}$ and $C_\text{RL}$ over very few queries and is
+inference-cheap; a productionised consumer endpoint amortises both over
+$10^9$+ queries and is inference-bound.
+
+Snell's FLOPs-matched experiment of \cref{eq:flops-matched} is the
+two-channel restriction $C_\text{RL} = 0$:
+\begin{equation}
+  C_\text{small}^\text{train} + C^\text{test}
+    \;\approx\; C_\text{large}^\text{train} + C_\text{large}^\text{1-pass}.
+  \label{eq:svr-flops-matched-2chan}
+\end{equation}
+\citet[\S 6]{snell2024} compare a smaller base model running
+compute-optimal test-time strategies against a $14\times$ larger base
+model running a single inference pass at matched total FLOPs. The
+match is between $C_\text{pre}$ on the right and
+$C_\text{pre} + C_\text{test}$ on the left; the RL channel does not
+appear because PaLM~2-S\* (Codey) is not RLVR-trained
+\citep[\S 4]{snell2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/snell2024.md\#sec-4-setup}.} What
+\cref{sec:rlvr-grpo-dapo} added is a second axis of post-training
+compute that was not in the original FLOPs-matched menu.
+
+\begin{intuition}
+The folk gloss of \cref{eq:three-channel} is ``where do the next
+million GPU-hours go?'' The folk gloss is exactly right; the only
+subtlety is that the answer depends on the deployment volume and the
+prompt-difficulty distribution simultaneously. Returning to math: each
+of $C_\text{pre}, C_\text{RL}, C_\text{test}$ is a knob in
+\cref{eq:three-channel}, and the joint argmax over the three at fixed
+$C_\text{total}$ subject to a target accuracy on a target prompt
+distribution is the natural generalisation of Snell's
+\cref{eq:snell-compute-optimal} from a $\theta$-only argmax at fixed
+$C_\text{test}$ to a $(\theta_\text{pre}, \theta_\text{RL},
+\theta_\text{test})$ argmax at fixed $C_\text{total}$.
+\end{intuition}
+
+\subsection{Snell's pretraining-vs-inference slice}
+\label{sec:svr-pretraining-vs-inference}
+
+The Snell two-channel result establishes the substitution direction
+between $C_\text{pre}$ and $C_\text{test}$
+\citep[\S 6]{snell2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/snell2024.md\#sec-1-flops-matched}.} At matched
+total FLOPs, the smaller-base-plus-test-time configuration (the
+left-hand side of \cref{eq:svr-flops-matched-2chan}) outperforms the
+$14\times$-larger-base configuration on easy and intermediate
+difficulty bins, breaks even or under-performs on the hard bin, and
+materially under-performs on the very-hard tail where
+$\widehat{\mathrm{pass@}1}(q)$ on the small base is near zero. The
+substitution ratio is therefore not a single number; it is a
+\emph{difficulty-conditional curve}, and the $14\times$ headline is
+the easy-bin reading.
+
+Two consequences for \cref{eq:three-channel} follow directly. First,
+on the easy/intermediate tail, marginal FLOPs are better spent on
+$C_\text{test}$ than on $C_\text{pre}$. Second, on the very-hard tail,
+the order reverses: marginal FLOPs are better spent on $C_\text{pre}$
+than on $C_\text{test}$. The cross-over is benchmark-specific and
+base-model-specific; \citet[\S 6]{snell2024} report it for the MATH
+benchmark on PaLM~2-S\*, and the cross-over has not been
+re-measured on a frontier-2026 reasoning-trained base model
+(\cref{sec:snell-open}).
+
+\subsection{The RL-vs-inference slice}
+\label{sec:svr-rl-vs-inference}
+
+The third channel of \cref{eq:three-channel} requires partial
+empirical answers from the RLVR literature, since no Snell-style
+FLOPs-matched study has been published for $C_\text{RL}$ vs.\
+$C_\text{test}$ as of 2026-Q2. Two anchor data points exist.
+
+\paragraph{R1's training-token cost.} \citet[\S 2.1]{deepseek-r1}%
+\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-1-hp}.} report
+DeepSeek-R1-Zero training as $10{,}400$ GRPO steps on $G = 16$ rollouts
+per prompt with maximum trajectory length $32{,}768$ tokens (raised to
+$65{,}536$ tokens after step $8{,}200$). The training-time token
+budget is therefore order $10^{4} \cdot 16 \cdot 3.3 \cdot 10^{4}
+\approx 5 \cdot 10^{9}$ tokens of generation per epoch (rough), times
+$1.6$ epochs \citep[\S 2.1]{deepseek-r1}. AIME~2024 pass@1 climbs from
+$15.6\%$ on DeepSeek-V3-Base to $77.9\%$ on R1-Zero
+\citep[\S 2.3]{deepseek-r1};\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} self-consistency
+at inference adds a further $8.8\%$ to $86.7\%$ at $N = 64$ samples
+\citep[\S 2.3]{deepseek-r1}. The $N = 64$ inference branch costs
+$\sim 64$ forward-pass-equivalents per prompt; the GRPO training
+branch costs $\sim 5\cdot 10^{9}$ tokens, amortised across every
+deployed query. For a deployment that serves $\gtrsim 10^{8}$ queries
+the per-query share of $C_\text{RL}$ is below the per-query
+$C_\text{test}$ at $N = 64$; for a one-shot evaluation it is not.
+
+\paragraph{DAPO's step-efficiency.}
+\citet[\S 4]{dapo2025}%
+\footnote{KB excerpt: \texttt{kb/excerpts/dapo2025.md\#sec-4-headline}.}
+report that DAPO reaches $50$ points on AIME~2024 with the
+Qwen2.5-32B-base in roughly half the GRPO steps the DeepSeek-R1-Zero
+recipe would require to reach a comparable score. The four targeted
+modifications --- clip-higher, dynamic sampling, token-level loss,
+overlong reward shaping --- compose multiplicatively on the
+step-efficiency dimension \citep[\S 3]{dapo2025}. From the perspective
+of \cref{eq:three-channel}, DAPO halves $C_\text{RL}$ at matched
+post-training accuracy. The substitution direction is therefore: a
+better RL recipe makes the RL channel cheaper without changing
+$C_\text{pre}$ or $C_\text{test}$, and the saved $C_\text{RL}$ is
+re-allocatable to either of the other two channels.
+
+\paragraph{The composite R1 + self-consistency anecdote.} The R1
+empirics combine the second and third channels. Starting from the
+DeepSeek-V3-Base model (the $C_\text{pre}$ channel, fixed), GRPO with
+verifiable rewards lifts AIME~2024 from $15.6\%$ to $77.9\%$ pass@1
+(the $C_\text{RL}$ channel, $\sim\!10^{4}$ GRPO steps); self-consistency
+at $N = 64$ then adds $8.8\%$ to $86.7\%$ (the $C_\text{test}$ channel,
+$N$-fold inference). Reading the curve as a sequence of marginal
+returns: the first units of $C_\text{RL}$ deliver the largest accuracy
+gain ($+62.3$ percentage points from $15.6\%$ to $77.9\%$); the first
+units of $C_\text{test}$ on top of the trained model deliver an
+incremental gain of $+8.8$ points at the cost of $64\times$ inference
+flops per query. The marginal-FLOP ranking is anecdotal and
+benchmark-specific, but the qualitative pattern --- RL channel buys
+the bulk of the gain on math, inference channel buys the long tail of
+sample-efficient sharpening --- recurs across the 2025-2026
+reasoning-trained-model literature \citep[\S 2.3]{deepseek-r1}.
+
+\subsection{The identity that ties the channels}
+\label{sec:svr-identity}
+
+The two-channel \cref{eq:svr-flops-matched-2chan} generalises in
+the obvious way to three channels. Holding total compute fixed,
+\begin{equation}
+  C_\text{small}^\text{train} + C_\text{RL}^\text{small} + C^\text{test}
+    \;\approx\; C_\text{large}^\text{train} + C_\text{large}^\text{1-pass},
+  \label{eq:svr-three-channel-identity}
+\end{equation}
+where the left side is a smaller base model post-trained with RLVR
+plus inference-time search, and the right side is the
+$14\times$-larger un-RL'd base model running a single inference pass.
+\Cref{eq:svr-three-channel-identity} is a budget bookkeeping
+identity, not a scaling law: it commits to no functional form for
+how accuracy depends on the three components on either side. The
+empirical question is whether (and on which prompt-difficulty bins)
+the left-hand configuration matches the right-hand accuracy. As of
+2026-Q2 the three-channel version of the FLOPs-matched experiment
+has not been published; the two-channel restriction is Snell's, and
+the third channel's empirical content is the anecdotes of
+\cref{sec:svr-rl-vs-inference}.
+
+\paragraph{What a closed-form would look like.} A Chinchilla-style
+joint frontier in the three channels would be a parametric loss
+\begin{equation}
+  L(N, D, C_\text{RL}, C_\text{test})
+    \;=\; E
+      \;+\; \frac{A}{N^{\alpha}}
+      \;+\; \frac{B}{D^{\beta}}
+      \;+\; \Phi(C_\text{RL})
+      \;+\; \Psi(C_\text{test}, q),
+  \label{eq:svr-hypothetical-frontier}
+\end{equation}
+generalising \citet[\S 3, Eq.~10]{hoffmann2022-chinchilla}'s
+$L(N, D) = E + A/N^\alpha + B/D^\beta$ with two additional terms
+$\Phi$ and $\Psi$ capturing RL-channel and inference-channel returns.
+The functional forms of $\Phi$ and $\Psi$ are unknown:
+\citet{s1-2025}'s budget-forcing experiment is suggestive of
+roughly logarithmic returns to thinking-token count for $\Psi$ on a
+small reasoning-trained model (\cref{sec:snell-open}), but no
+parametric fit with the structural status of Chinchilla's law has
+been attested for either $\Phi$ or $\Psi$. The cross-derivative
+$\partial^2 L / \partial C_\text{RL}\, \partial C_\text{test}$ ---
+whether the RL and inference channels substitute or complement at
+the margin --- is the empirical content
+\cref{sec:svr-rl-vs-inference}'s anecdotes hint at, but no
+closed-form has been fitted.
+
+\subsection{Where the curves cross is benchmark-specific}
+\label{sec:svr-benchmark-specific}
+
+The three-channel allocation question is not solvable in the abstract.
+The cross-over points among $\{C_\text{pre}, C_\text{RL},
+C_\text{test}\}$ depend on at least four contingencies, each of which
+shifts the curves measurably:
+
+\begin{enumerate}
+\item \textbf{Prompt-difficulty distribution.} Easy prompts favour
+$C_\text{test}$ (Snell's revision regime); intermediate prompts favour
+$C_\text{test}$ in search form (best-of-$N$-with-PRM, beam, MCTS); the
+hardest tail favours $C_\text{pre}$ \citep[\S 6]{snell2024}. RLVR
+training shifts the difficulty distribution itself: an
+RL-trained model's difficulty bins are not the base model's bins
+\citep[\S 2.3]{deepseek-r1}, which means the prompt-difficulty contingency
+interacts with $C_\text{RL}$ rather than being orthogonal to it.
+
+\item \textbf{Verifier availability.} The whole RLVR channel exists
+because a programmatic verifier can be applied at training time
+\citep[\S 1.1]{shao2024}. Domains without a verifier (open-ended
+generation, agentic tasks without a programmatic check) cannot spend
+the $C_\text{RL}$ channel directly, so the three-channel allocation
+collapses to Snell's two-channel \cref{eq:svr-flops-matched-2chan}.
+The frontier extension --- LLM-as-judge, generative PRMs as soft
+verifiers (\cref{sec:prm-after-r1}) --- is exactly the attempt to
+make $C_\text{RL}$ available outside the verifiable domain at the
+cost of soft-verifier reward-hacking risk.
+
+\item \textbf{Base-model checkpoint.} The substitution ratios are
+measured against a specific base model. PaLM~2-S\* on MATH gives
+$14\times$ at the easy bin \citep[\S 6]{snell2024}; the same
+experiment on Qwen2.5-32B-base, on Llama 4, or on the still-classified
+o1-base would produce different ratios. \citet[\S 6]{snell2024}
+explicitly note their result depends on ``the specific conditions on
+the pretraining and inference workload.''
+
+\item \textbf{Deployment-volume amortisation.} The per-query share of
+$C_\text{pre}$ and $C_\text{RL}$ scales as $1/(\text{queries served})$
+while $C_\text{test}$ does not amortise. For a research evaluation,
+$C_\text{test}$ dominates the per-query budget; for a frontier
+production endpoint, $C_\text{pre}$ and $C_\text{RL}$ are
+nearly-free-at-the-margin and $C_\text{test}$ is the binding
+constraint.
+\end{enumerate}
+
+The four contingencies multiply, not add. A statement of the form
+``the optimal split between RL training and inference search is X:Y''
+is therefore meaningful only when scoped to all four: a specific
+prompt-difficulty distribution, a specific verifier availability, a
+specific base model, and a specific deployment volume. The 2025-2026
+literature reports such scoped statements --- the R1 anecdote of
+\cref{sec:svr-rl-vs-inference} is one --- but does not extract a
+universal exchange rate.
+
+\begin{contradiction}
+\textbf{No closed-form three-channel tradeoff curve is attested.}
+\citet[\S 6]{snell2024} establish the pretraining-vs-inference
+substitution at $14\times$ on the easy/intermediate MATH bin under
+PaLM~2-S\*. \citet[\S 2.3]{deepseek-r1} establish that GRPO on
+DeepSeek-V3-Base converts $\sim\!10^{4}$ training steps into $+62.3$
+points of AIME~2024 pass@1 with self-consistency adding a further
+$+8.8$ at $N = 64$. \citet[\S 4]{dapo2025} establish that DAPO halves
+$C_\text{RL}$ at matched post-training accuracy. The three results
+are anchor anecdotes, each on a different base model and benchmark.
+No published study has run a three-channel FLOPs-matched experiment
+holding $C_\text{total} = C_\text{pre} + C_\text{RL} + C_\text{test}$
+fixed and varying the allocation, and no parametric fit
+to \cref{eq:svr-hypothetical-frontier} with the structural status of
+Chinchilla's $L(N, D) = E + A/N^\alpha + B/D^\beta$ exists. Whether a
+joint $(C_\text{train}, C_\text{RL}, C_\text{test})$ frontier with a
+clean closed form exists at all is open; the contingencies of
+\cref{sec:svr-benchmark-specific} suggest the answer may be ``only
+within a fixed prompt-difficulty distribution, verifier setting, base
+model, and deployment regime,'' which is a much weaker statement than
+the universal Chinchilla-style law it would generalise. Re-visited in
+\cref{sec:contradictions}.
+\end{contradiction}
+
+\subsection{Operating-point heuristics from the anchor anecdotes}
+\label{sec:svr-heuristics}
+
+Although no closed-form tradeoff is attested, the anchor results of
+\cref{sec:svr-pretraining-vs-inference,sec:svr-rl-vs-inference}
+support three operating-point heuristics that are stable across the
+2025-2026 reasoning literature:
+
+\begin{itemize}
+\item \textbf{If the verifier is available, spend on $C_\text{RL}$
+first.} The R1 anecdote shows the first units of GRPO buy the largest
+accuracy gain on math benchmarks
+\citep[\S 2.3]{deepseek-r1}.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} The marginal
+return on $C_\text{RL}$ exceeds the marginal return on either
+$C_\text{test}$ (small inference samples on an un-RL'd base) or
+$C_\text{pre}$ (Snell's $14\times$ pretraining substitution on an
+un-RL'd base) until the policy saturates the verifier-detectable
+gain.
+\item \textbf{Once the policy is RL-trained, $C_\text{test}$ delivers
+incremental sharpening.} Self-consistency on R1-Zero adds $8.8$
+points at $N = 64$ \citep[\S 2.3]{deepseek-r1}; the same algorithm
+on the un-RL'd base would not approach this number. The
+inference-channel return depends on the base distribution it operates
+on (\cref{sec:self-consistency,sec:inference-compute-scaling}),
+and the RL-trained distribution is sharper.
+\item \textbf{The very-hard tail wants $C_\text{pre}$.} For prompts
+the base model essentially never solves
+($\widehat{\mathrm{pass@}1}(q) \to 0$),
+\citet[\S 6]{snell2024} report no inference strategy recovers the
+gap. RLVR cannot bootstrap on a $G$-group of trajectories that all
+score $R_i = 0$ either, because the group-normalised advantage of
+\cref{eq:grpo-advantage} is zero by construction
+\citep[\S 4.1]{shao2024}; this is the failure mode DAPO's dynamic
+sampling addresses by discarding all-zero groups
+\citep[\S 3]{dapo2025}\footnote{KB excerpt:
+\texttt{kb/excerpts/dapo2025.md\#sec-3-dynamic-sampling}.} but cannot
+solve at the level of the underlying capability gap. The very-hard
+tail therefore requires expanding the base distribution's support,
+which is the $C_\text{pre}$ channel.
+\end{itemize}
+
+The three heuristics are scoped: they hold for verifiable-reward
+domains, for the prompt-difficulty bins where a verifier discriminates,
+and on the timescales where amortisation favours one-time training
+costs over per-query inference costs. None of them is a substitute for
+a closed-form tradeoff curve; they are operating-point recipes that
+the 2026 frontier deploys.
+
+\begin{forumsignal}
+The shorthand ``RL is more compute-efficient than search'' is
+sometimes cited as a derivable consequence of the R1 anecdote. It is
+not. The R1 anecdote shows that on \emph{a specific base model and
+benchmark, with a specific verifier and a specific deployment-volume
+amortisation}, the first units of $C_\text{RL}$ deliver more accuracy
+per FLOP than the first units of $C_\text{test}$ on top of the un-RL'd
+base. The shorthand drops every contingency. Cited or repeated
+without scope, it should be treated as a discovery signal that RL
+buys a lot on math under verifiers, not as a numerical exchange rate
+transferable to non-verifiable domains, frontier base models, or
+research-scale deployments. \citet[\S 6]{snell2024} make the same
+point about the $14\times$ substitution ratio.
+\end{forumsignal}
+
+\subsection{Cross-paper and forward links}
+\label{sec:svr-forward}
+
+The three-channel allocation question is the operational form of the
+triangle's central tradeoff. \Cref{sec:cot-faithfulness} (CoT
+faithfulness) is structurally adjacent: it asks what causal work the
+$C_\text{test}$ channel's reasoning trace actually does in producing
+the answer, which is upstream of any quantitative split between
+$C_\text{RL}$ and $C_\text{test}$ --- if the trace is post-hoc
+rationalisation \citep[KB note]{arcuschin2025-cot-wild},
+\deepencite{arcuschin2025-cot-wild §3, citation-pending}
+the inference-channel return is upper-bounded by what answer-only
+sampling could achieve. \Cref{sec:r1-family} (the R1 family,
+forthcoming) makes \cref{sec:svr-rl-vs-inference}'s composite
+anecdote concrete by walking the four-stage R1 protocol; the
+empirics of $C_\text{RL}$ in this section are taken from that
+protocol's first RL stage. \Cref{sec:frontier-2026} (frontier
+snapshot, forthcoming) catalogues the production combinations of the
+three channels deployed by R1, o1/o3, Gemini~2.5-thinking,
+Claude~3.7-extended-thinking, Qwen3-thinking, and QwQ; the snapshot
+is the empirical census the closed-form
+\cref{eq:svr-hypothetical-frontier} would have to fit.
+\Cref{sec:contradictions} (contradictions live and open frontiers)
+collects the open-frontier reading of this section's central
+contradiction --- whether a joint
+$(C_\text{train}, C_\text{RL}, C_\text{test})$ scaling law exists ---
+alongside the other five \texttt{[CONTRADICTION]} markers carried
+forward from \cref{sec:cot-phenomenon,sec:tree-search,sec:rlvr-grpo-dapo,sec:r1-family,sec:cot-faithfulness,sec:prm-after-r1}.
+
+The structural picture: \cref{eq:three-channel} is the budget
+identity; \cref{eq:svr-three-channel-identity} is its FLOPs-matched
+form; \cref{eq:svr-hypothetical-frontier} is the parametric law that
+would close the loop and currently does not exist. The triangle's
+three legs are individually well-characterised
+(\cref{sec:inference-compute-scaling,sec:rlvr-grpo-dapo,sec:r1-family}),
+but their joint frontier is the open research direction this section
+demarcates. The closing thesis of \cref{sec:contradictions} returns
+to this frontier as the most consequential of the paper's six live
+contradictions for the next model generation's compute-allocation
+decisions.
