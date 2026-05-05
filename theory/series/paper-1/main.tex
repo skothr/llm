@@ -1,0 +1,49 @@
+% theory/series/paper-1/main.tex — The modern Transformer is a small set of choices
+
+\input{../preamble}
+
+\title{
+  The modern Transformer is a small set of choices: \\
+  convergent architecture in frontier LLMs, 2017--2026
+}
+\author{Theory KB --- Paper 1 of 5}
+\date{2026-05-04 (draft)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We argue that frontier LLMs in 2026 are converging on a small,
+identifiable set of architectural choices along a few orthogonal axes:
+KV-sharing (MHA $\to$ MQA $\to$ GQA $\to$ MLA), attention implementation
+(FA1 $\to$ FA2 $\to$ FA3, NSA), feed-forward style (dense $\to$
+fine-grained MoE with shared experts), normalization (LN $\to$ RMSNorm,
+Post-LN $\to$ Pre-LN with $1/\sqrt{N}$ residual init), positional
+encoding (sinusoidal $\to$ RoPE/YaRN), tokenization (BPE $\to$
+SentencePiece byte-level), and multi-token output (speculative decoding
+$\to$ MTP). For each axis we formalize the canonical 2017 baseline,
+trace the choices made between 2017 and 2026, and identify the localized
+open frontiers --- MLA-vs-MHA at scale, NSA-vs-FA3, SSM-hybrids at
+frontier --- where the convergence is still contested.
+\end{abstract}
+
+\tableofcontents
+
+\input{sections/01-introduction}
+\input{sections/02-prequel-and-canonical}
+\input{sections/03-tokenization-embedding-unembedding}
+\input{sections/04-positional-encoding}
+\input{sections/05-attention-kv-sharing}
+\input{sections/06-attention-hardware-implementation}
+\input{sections/07-feedforward-axis}
+\input{sections/08-normalization-axis}
+\input{sections/09-state-space-and-hybrids}
+\input{sections/10-multi-token-output}
+\input{sections/11-multimodal-extensions}
+\input{sections/12-inference-adjuncts}
+\input{sections/13-frontier-2026-snapshot}
+\input{sections/14-contradictions-and-frontiers}
+
+\bibliography{../references}
+
+\end{document}

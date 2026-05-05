@@ -1,0 +1,119 @@
+% theory/series/preamble.tex — shared LaTeX setup for all five papers.
+%
+% Usage in paper-N/main.tex:
+%   \input{../preamble}
+%   \title{...}
+%   \author{...}
+%   \begin{document}
+%     \maketitle
+%     \input{sections/01-introduction}
+%     ...
+%   \end{document}
+%
+% Dependencies: a recent TeXLive (>=2022). LuaLaTeX recommended for
+% Unicode and font flexibility; pdfLaTeX works as fallback.
+
+\documentclass[11pt,letterpaper]{article}
+
+% ----- core packages
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage[margin=1in]{geometry}
+\usepackage{lmodern}
+
+% ----- math
+\usepackage{amsmath, amssymb, amsthm, amsfonts}
+\usepackage{mathtools}
+\usepackage{bm}
+
+% ----- figures, tables, code
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% ----- references and links
+\usepackage[round,authoryear]{natbib}
+\bibliographystyle{plainnat}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{colorlinks=true, citecolor=blue!50!black, linkcolor=black, urlcolor=blue!50!black}
+\usepackage{cleveref}
+
+% ----- TODO and margin notes (used during writing pass)
+\usepackage[textsize=footnotesize, color=yellow!40]{todonotes}
+\newcommand{\deepencite}[1]{\todo[inline,color=orange!30]{deepen-cite: #1}}
+
+% ----- KB tag environments — preserve [INTUITION]/[ANALOGY]/etc. from notes
+% Each tag renders as a margin-style callout box, NEVER as body math.
+\usepackage{tcolorbox}
+\tcbuselibrary{theorems, breakable}
+
+\newtcolorbox{intuition}[1][]{
+  enhanced, breakable, colback=blue!4, colframe=blue!50!black,
+  fonttitle=\bfseries, title={Intuition}, #1
+}
+\newtcolorbox{analogy}[1][]{
+  enhanced, breakable, colback=green!4, colframe=green!40!black,
+  fonttitle=\bfseries, title={Analogy}, #1
+}
+\newtcolorbox{contradiction}[1][]{
+  enhanced, breakable, colback=red!4, colframe=red!50!black,
+  fonttitle=\bfseries, title={Contradiction}, #1
+}
+\newtcolorbox{forumsignal}[1][]{
+  enhanced, breakable, colback=gray!4, colframe=gray!50!black,
+  fonttitle=\bfseries, title={Forum signal}, #1
+}
+\newtcolorbox{speculation}[1][]{
+  enhanced, breakable, colback=purple!4, colframe=purple!50!black,
+  fonttitle=\bfseries, title={Speculation}, #1
+}
+
+% ----- math operators / shortcuts used across papers
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\softmax}{softmax}
+\DeclareMathOperator{\KL}{KL}
+\DeclareMathOperator{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+
+% Shape notation (B batch, S sequence, D model, H heads, dh head-dim, V vocab, L layers, K KV-heads)
+\newcommand{\BSH}{\mathsf{B}\!\times\!\mathsf{S}\!\times\!\mathsf{D}}
+\newcommand{\BHSdh}{\mathsf{B}\!\times\!\mathsf{H}\!\times\!\mathsf{S}\!\times\!d_h}
+\newcommand{\bsv}{\mathsf{B}\!\times\!\mathsf{S}\!\times\!\mathsf{V}}
+
+% ----- theorems
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[section]
+
+% ----- citation helper macros
+% \kbcite{paper-key}{section} — for inline KB-paper citations matching the
+% [paper-key §X, eq.Y; kb/excerpts/key#anchor] dual-citation pattern in the KB.
+\newcommand{\kbcite}[2]{\citet[\S #2]{#1}}
+\newcommand{\kbciteex}[3]{\citet[\S #2; ex.\ #3]{#1}}
+
+% ----- listings styling for code blocks
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  showstringspaces=false,
+  frame=single,
+  framerule=0.4pt,
+  backgroundcolor=\color{gray!5},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+}
+
+% ----- URL line breaking
+\Urlmuskip=0mu plus 1mu
