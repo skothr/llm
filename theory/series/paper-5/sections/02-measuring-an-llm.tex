@@ -37,8 +37,12 @@ measure.
 \label{sec:measuring-score-rv}
 
 Following \citet{liang2022-helm} and the open-source eval-harness
-discipline, write a reported benchmark score as a sample from a
-distribution%
+discipline --- in particular EleutherAI's
+\texttt{lm-evaluation-harness} \citep{lm-eval-harness}, the
+de-facto reference implementation for the academic-benchmark
+column of \cref{sec:knowledge-benchmarks}\footnote{KB excerpt:
+\texttt{kb/excerpts/lm-eval-harness.md\#sec-framing}.} ---
+write a reported benchmark score as a sample from a distribution%
 \footnote{KB note: \texttt{kb/notes/evaluation/eval-methodology.md\#1-formal-framing-the-score-is-a-noisy-random-variable}.}
 \begin{equation}
 \hat{S}(\theta, \mathcal{B}, \pi, \tau) \in [0, 1]
