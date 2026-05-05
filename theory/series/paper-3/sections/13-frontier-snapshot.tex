@@ -1,0 +1,406 @@
+% Paper 3, §13 — Frontier-2026 snapshot: reasoning protocols
+% Anchors: kb/index/timeline.md 2024–2026 entries
+%          kb/notes/scaling/inference-time-compute-scaling.md §3.3
+%          kb/excerpts/{deepseek-r1,s1-2025}.md plus model-card papers
+% Cross-paper: Paper-1 §13 is the architecture-side analog; this is the
+%              reasoning-protocol side.
+
+\section{Frontier-2026 snapshot: reasoning protocols}
+\label{sec:frontier-2026}
+
+The previous twelve sections decompose reasoning into three legs ---
+inference-time compute (\cref{sec:inference-compute-scaling,
+sec:self-consistency,sec:budget-forcing}), verifier signals
+(\cref{sec:process-reward-models,sec:tree-search,sec:prm-survival}), and
+RL on verifiable rewards
+(\cref{sec:rlvr-grpo-dapo,sec:r1-family}) --- and ask, leg by leg, what
+the literature settled and what remains contested. This section closes
+that decomposition by collapsing it into one cross-cutting view: which
+\emph{currently-deployed} reasoning model ships which legs of the
+triangle, and at what budget. The intended use is the same as Paper~1's
+architecture-side frontier snapshot --- a reference figure that lets a
+reader place any new model release on the design space the rest of the
+paper formalises. Because the underlying training and serving stacks
+move on the order of weeks, this snapshot is dated 2026-Q2 and explicit
+about which entries are tier-A primary sources, which are vendor system
+cards, and which are still discovery-tier signals pending paper-grade
+documentation.
+
+The argument structure is: a single 2-page comparison table
+(\cref{tab:frontier-2026}) that codes each model along the three legs;
+three short subsections grouping the lineup into R1-style, o-series-style,
+and hybrid-think families; an agreement-and-divergence summary; and a
+forward link into the contradictions catalogued by \cref{sec:contradictions}.
+The single load-bearing claim of the section is structural rather than
+empirical: \emph{every} frontier-2026 reasoning entry ships RLVR plus
+long-CoT, \emph{none} of them ship a process reward model in the headline
+RL loop, and the productionised exposure of inference-time compute has
+converged on a small number of API-shaped ``thinking budget'' surfaces.
+
+\subsection{The 2-page comparison table}
+\label{sec:frontier-table}
+
+\Cref{tab:frontier-2026} summarises six reasoning entries that
+collectively span the open-weight, open-API, and closed-frontier ends of
+the 2026 lineup. The columns trace the three legs of the triangle plus
+two productionisation columns. The legend below the table specifies
+exactly what counts as ``ships'' for each leg.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}lXXXXX@{}}
+\toprule
+\textbf{Model} & \textbf{Long-CoT} & \textbf{RLVR} & \textbf{Verifier in RL loop} & \textbf{Inference search} & \textbf{Budget exposure} \\
+\midrule
+DeepSeek-R1 \citep{deepseek-r1}
+  & yes; ${\sim}10^4$ tok traces \citep[\S 2.3]{deepseek-r1}
+  & yes; GRPO \citep[\S 2.1]{deepseek-r1}, terminal binary reward
+  & none; explicit no-PRM commitment \citep[\S 2.2]{deepseek-r1}
+  & none in headline; self-consistency optional \citep[\S 2.3]{deepseek-r1}
+  & none (open-weights, fixed schema) \\
+Qwen3-thinking
+  & yes; toggleable via system prompt
+  & yes \deepencite{qwen3-thinking — system card pending in references.bib; cf.\ \citet{qwen3} for the lineage and base}
+  & verifier-only in headline reports \deepencite{qwen3-thinking}
+  & none in headline
+  & think / non-think mode toggle \deepencite{qwen3-thinking} \\
+QwQ
+  & yes; reasoning-preview model
+  & yes \deepencite{qwq — Qwen's standalone reasoning preview, predates Qwen3-thinking; system card pending}
+  & verifier-only \deepencite{qwq}
+  & none in headline
+  & none (always-on thinking) \\
+OpenAI o1 / o3
+  & yes; thinking-first generation
+  & yes; proprietary RL on reasoning, ``the more reinforcement learning ($\ldots$) the more time it spends thinking'' \deepencite{openai-o1 — system card; cf.\ openai-o3 — system card}
+  & not disclosed; headline reports do not name a PRM \deepencite{openai-o1}
+  & not disclosed
+  & \texttt{reasoning\_effort} $\in\{\text{low, medium, high}\}$ \deepencite{openai-o-series — API reference}\\
+Gemini~2.5-thinking \citep{gemini2-5}
+  & yes; reasoning-mode
+  & yes \deepencite{gemini2-5 — Google DeepMind technical report}
+  & not disclosed; verifier-style reward emphasised \deepencite{gemini2-5}
+  & not disclosed
+  & \texttt{thinkingBudget} (token cap) \deepencite{gemini2-5 — API reference} \\
+Claude 3.7 / 4 extended thinking
+  & yes; ``extended thinking'' mode
+  & yes \deepencite{claude-3-7 — Anthropic system card; analogous treatment for Claude 4 family}
+  & not disclosed; constitutional + verifier-style mix \deepencite{claude-3-7}
+  & not disclosed
+  & extended-thinking toggle + budget knob \deepencite{claude-3-7} \\
+\bottomrule
+\end{tabularx}
+\caption{Frontier-2026 reasoning lineup along the three legs of the
+inference-scaling triangle. ``Long-CoT'': the deployed protocol emits a
+\texttt{<think>...</think>}-style trace structurally distinct from the
+answer phase, with the model trained to use the channel
+\citep[\S 2]{deepseek-r1}.\protect\footnotemark{} ``RLVR'': the
+post-training pipeline includes an RL phase whose reward depends on a
+mechanically-checkable correctness signal (math answer, unit-test pass,
+regex), as formalised by \cref{eq:verifier-reward} of
+\cref{sec:rlvr-verifier-reward}. ``Verifier in RL loop'': whether a
+\emph{neural} reward model (PRM or ORM) appears alongside the verifiable
+reward during RL, as opposed to terminal binary verifiers only.
+``Inference search'': whether the deployed inference path explicitly
+expands a beam, MCTS tree, or PRM-guided rollout (vs.\ pure long-CoT or
+$N$-sample self-consistency on top of it). ``Budget exposure'': the API
+or system-prompt surface through which a caller can trade thinking-token
+spend for accuracy at request time, the productionised form of Snell's
+\cref{eq:snell-compute-optimal} \cref{sec:snell-compute-optimal}.
+Categorisation rationale per row in
+\cref{sec:frontier-r1-family,sec:frontier-o-series,sec:frontier-hybrid-budget}.
+Open-weight rows cite tier-A primary sources; closed-weight rows cite
+tier-B vendor system cards via \deepencite{} where \texttt{papers.json}
+does not yet carry a stable bibkey.}
+\label{tab:frontier-2026}
+\end{table}
+\footnotetext{KB excerpt: \texttt{kb/excerpts/deepseek-r1.md\#sec-2}.}
+
+Three reading conventions follow from the table. First, the
+``Verifier in RL loop'' column is uniformly ``none'' or ``not
+disclosed'': no frontier-2026 entry that has published a system card
+identifies a PRM as a reward source in the headline RL loop. The R1
+authors' explicit no-PRM commitment
+\citep[\S 2.2]{deepseek-r1}\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}.} is the strongest
+attested form; the closed-weight entries decline to specify, which on
+this question is operationally indistinguishable from absence at the
+level of evidence available.
+
+Second, the ``Inference search'' column is also uniformly ``none in
+headline'' or ``not disclosed.'' The MCTS-and-PRM-guided lineage of
+\cref{sec:tree-search} is a research lineage; deployed reasoning models
+in 2026 ship long-CoT plus optional self-consistency on top. Whether
+that is because search does not pay at frontier scale, because the
+extra orchestration is a serving-cost burden, or because the PRMs that
+would guide it are not strong enough on reasoning-trained policies
+(\cref{sec:prm-survival}) is not separable from the published 2026
+evidence base.
+
+Third, the ``Budget exposure'' column is the column where the field
+visibly converges on an API shape: a discrete-level reasoning-effort
+selector \deepencite{openai-o-series — API reference}, a token-cap
+\texttt{thinkingBudget} \deepencite{gemini2-5 — API reference}, an
+extended-thinking toggle \deepencite{claude-3-7}, or a system-prompt
+think / non-think mode \deepencite{qwen3-thinking}. All four are the
+productionised form of $\theta$ in \cref{eq:snell-compute-optimal} ---
+the strategy choice the section-4 anchor formalises as the
+prompt-conditional argmax over compute spend.
+
+\subsection{R1-style: long-CoT + RLVR + verifier-only}
+\label{sec:frontier-r1-family}
+
+The R1 family is the cleanest published form of the triangle: open
+weights, an open paper with explicit hyperparameters, a verifier-only
+RL loop \citep[\S 2.2]{deepseek-r1}, and an RL phase that drives
+average response length from $\sim\!200$ to $\sim\!10^4$ tokens with
+no length term in the reward
+\citep[\S 2.3]{deepseek-r1}.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aha}.} \Cref{sec:r1-family}
+walked the four-stage protocol; the family it seeded by 2026-Q2
+includes Qwen's QwQ reasoning-preview \deepencite{qwq} and Qwen3-thinking
+\deepencite{qwen3-thinking; cf.\ \citet{qwen3}}, plus the open-replication
+track Tülu~3 \citep{tulu3} and the Hugging Face OpenR1 community effort
+\deepencite{openr1 — community reproduction; pending bibkey}.
+
+The structural commitment shared across this row of
+\cref{tab:frontier-2026} is doctrinal more than algorithmic: a binary
+verifier reward in \cref{eq:verifier-reward} is treated as the gold
+reward in its supported domains, and a learned reward model is treated
+as a reward-hackable proxy that the field has now opted out of for the
+reasoning subset of post-training. \citet[\S 2.2]{deepseek-r1} state
+the position; the open-replication track inherits it; the closed-frontier
+rows of the table neither contradict it on the published evidence nor
+positively confirm it.
+
+\subsection{o-series: RL-trained thinking with proprietary mix}
+\label{sec:frontier-o-series}
+
+OpenAI's o1 (Sept 2024) and o3 successor lineage \deepencite{openai-o1
+— system card; openai-o3 — system card and capability writeups} are
+treated by the published material as the productionised form of the
+same ``RL on reasoning trajectories'' family that R1 reproduces in the
+open. The system-card narrative is uniformly that ``the more
+reinforcement learning ($\ldots$) and the more time it spends thinking,
+the better it performs on reasoning tasks''
+\deepencite{openai-o1 — system card}; no PRM is named in the headline
+reward source; no inference-time search algorithm is named in the
+deployed serving path. The o-series exposes a discrete
+\texttt{reasoning\_effort} parameter at the API level
+\deepencite{openai-o-series — API reference} that maps to a
+thinking-token-spend budget, the same operative knob as Gemini~2.5's
+\texttt{thinkingBudget} but discretised rather than token-quantised.
+
+The reading available from the published material: the o-series and the
+R1 family are operationally close enough on the published axes
+(long-CoT yes, RLVR yes, terminal verifier in the publicly-disclosed
+reward, no headline PRM, no headline inference search) that the
+remaining differences are training-data composition, base-model scale,
+and proprietary post-training tooling. None of those three are visible
+in the 2026 system-card disclosure level. The cross-paper hook to
+Paper~1's architecture-side snapshot is symmetric: closed-frontier
+architecture rows are also dominated by ``not disclosed'' on the
+load-bearing axes, and the convergence-vs-divergence reading in this
+paper depends on the same disclosure ceiling.
+
+\subsection{Hybrid think / non-think with productionised budget knobs}
+\label{sec:frontier-hybrid-budget}
+
+The third 2026 productionisation pattern --- and the operationally
+distinct one --- is the hybrid model that ships \emph{both} a
+non-thinking decode path and a thinking-decode path, switched at
+request time by a system prompt or API parameter. Three exemplars:
+
+\begin{itemize}
+\item \textbf{Gemini~2.5} \citep{gemini2-5} exposes a
+\texttt{thinkingBudget} parameter that maps to a hard cap on
+thinking-token spend per request, with cheap mode and expensive mode at
+the two ends of the budget axis \deepencite{gemini2-5 — API reference}.
+This is the most-explicit token-cap formulation of
+\cref{eq:snell-compute-optimal} in deployment.
+\item \textbf{Anthropic Claude 3.7 (and the Claude~4 family)} exposes
+``extended thinking'' as a request-time toggle alongside a budget knob
+\deepencite{claude-3-7 — Anthropic system card; analogous treatment in
+the Claude~4 family}. The non-extended-thinking decode path remains
+production-standard for latency-sensitive consumer endpoints; the
+extended-thinking path is invoked when the caller has a hard problem.
+\item \textbf{Qwen3-thinking} \deepencite{qwen3-thinking — system card}
+is the open-weight version of the same pattern: a single model that
+toggles between thinking and non-thinking modes via a system-prompt
+flag, with mode-tagged post-training that shapes both branches.
+\end{itemize}
+
+The shared structural commitment across the hybrid row of
+\cref{tab:frontier-2026} is that the productionisation surface
+acknowledges \cref{eq:snell-compute-optimal} explicitly: the caller
+\emph{is} the strategy chooser $\theta^\ast$, and the API exposes the
+budget axis $N$ as a first-class request-time parameter. This is the
+operational form of the difficulty-binning operationalisation of
+\citet[\S 3.2]{snell2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/snell2024.md\#sec-3-2-difficulty}.} ---
+hard-problem callers select expensive mode; easy-problem callers
+select cheap mode --- pushed to the API edge.
+
+\begin{intuition}
+The hybrid budget knob is Snell's compute-optimal selection problem
+shipped to the caller. \Cref{eq:snell-compute-optimal} defines
+$\theta^\ast_{q, y^\ast(q)}(N)$ as a function of the prompt $q$;
+the deployed API treats $\theta$ as a parameter the \emph{caller}
+sets per request, on the assumption that the caller has more
+information about the problem's difficulty than a difficulty-classifier
+that the model would otherwise have to learn. Returning to math: the
+expectation
+$\E_{y \sim \mathrm{Target}(\theta, N, q)}[\mathbb{1}_{y = y^\ast(q)}]$
+that \cref{sec:snell-compute-optimal} maximises is now maximised by a
+two-player decomposition --- the model fixes the policy
+$\pi_\theta(\cdot \mid q;\, \text{thinking budget } L)$, and the
+caller fixes $L$ at request time. The compute-optimal $\theta^\ast(N)$
+of Snell's formal statement is then the joint optimum the two players
+together approximate, with the API surface as the coordination
+mechanism.
+\end{intuition}
+
+\subsection{Where the lineup agrees}
+\label{sec:frontier-agree}
+
+Four cross-row agreements are stable across the 2026-Q2 published
+material:
+
+\begin{enumerate}
+\item \textbf{RLVR is universal at frontier.} Every reasoning row of
+\cref{tab:frontier-2026} reports an RL phase whose reward signal
+includes a verifiable correctness component on math, code, or both.
+The R1 row is the most explicit \citep[\S 2.2]{deepseek-r1}; the
+o-series and Gemini~2.5 rows attribute headline gains to ``more
+reinforcement learning'' \deepencite{openai-o1; gemini2-5} on
+reasoning trajectories. The DAPO-class RL improvements
+of \cref{sec:rlvr-grpo-dapo} \citep{dapo2025}\footnote{KB excerpt:
+\texttt{kb/excerpts/dapo2025.md\#sec-2}.} are part of the same family
+deployed in some open-weight reproductions \citep{tulu3}.
+
+\item \textbf{Long-CoT is universal.} Every row deploys a
+\texttt{<think>...</think>}-style structurally-separate reasoning
+phase ahead of the answer. The pattern is no longer paper-grade
+research; it is the deployment standard. \Cref{sec:r1-family} and
+\cref{sec:budget-forcing} cover the training-time and inference-time
+mechanisms, respectively.
+
+\item \textbf{PRMs are absent from headline RL loops.} The
+``Verifier in RL loop'' column is empty in every row that has
+published a system card, and explicitly empty in the R1 row
+\citep[\S 2.2]{deepseek-r1}. The post-R1 question
+\cref{sec:prm-survival} catalogues --- whether PRMs survive as a
+\emph{training} signal beyond verifier-only RLVR --- is not answered
+by current frontier deployments; it is answered by their non-adoption.
+
+\item \textbf{Thinking-budget exposure is the productionised form of
+the inference-compute axis.} Every row that exposes any
+inference-compute knob does so as a budget cap or discrete-effort
+parameter --- the operational form of $\theta$ in
+\cref{eq:snell-compute-optimal}. The convergence on this surface is
+strong enough that a 2026 caller can transfer expectations about
+what ``high reasoning effort'' means across vendors, even though the
+underlying policies and base models are distinct.
+\end{enumerate}
+
+\subsection{Where the lineup diverges}
+\label{sec:frontier-diverge}
+
+Three load-bearing axes of divergence remain, all of them either not
+disclosed by closed-frontier vendors or actively contested in the
+open-replication literature.
+
+\paragraph{Training-data composition.} R1's pretraining mix is
+DeepSeek-V3's ($\sim\!14.8\text{T}$ tokens, mix not fully disclosed
+\citep[\S 2]{deepseek-r1}); the o-series and Claude families do not
+publish their pretraining mixes; Gemini~2.5 publishes only summary
+characterisations \deepencite{gemini2-5}. The AIME-2024 contamination
+contradiction of \cref{sec:r1-contamination} interacts non-trivially
+with this axis: rows whose pretraining mix is undisclosed cannot be
+contamination-audited from outside, and the headline reasoning numbers
+on AIME-class benchmarks are conditional on the audit not having been
+done.
+
+\paragraph{Reasoning-architecture details.} Whether the model is a
+single dense Transformer trained with mode-tagged data
+\deepencite{qwen3-thinking}, a model with a separate thinking-decode
+path \deepencite{claude-3-7 extended thinking}, or a model with no
+public architectural documentation at all (the o-series) is not
+visible to a caller, and is operationally distinct from the
+training-protocol differences of \cref{sec:r1-fourstage}. Paper~1's
+reasoning-architecture axis is the architecture-side counterpart;
+this paper's row taxonomy in \cref{tab:frontier-2026} is the
+training-protocol-side counterpart.
+
+\paragraph{Search vs.\ no-search at inference.} The ``Inference
+search'' column is uniformly ``not disclosed'' or ``none.'' Whether
+some rows in fact run undisclosed PRM-guided beam or MCTS rollouts in
+serving is not separable from the available evidence. The research
+literature \cref{sec:tree-search} continues to push search-and-PRM
+methods on benchmarks; the deployed lineup either does not adopt them
+or does not disclose adoption. A correct 2026-Q2 reading is that
+search at inference is currently a research-and-eval-stack lineage,
+not a deployment-stack lineage, with the deployment-stack reasons
+either unrelated to algorithmic value or undisclosed.
+
+\begin{contradiction}
+\textbf{The disclosure ceiling and what it means for the snapshot.}
+\Cref{tab:frontier-2026} reports the 2026-Q2 published material at
+face value: \emph{published} system cards say ``no PRM in headline
+reward,'' \emph{published} reports describe long-CoT and RLVR, and
+\emph{published} APIs expose budget knobs. None of those statements
+rule out the contrary on closed-weight rows. The R1 row is the only
+one where the ``Verifier in RL loop = none'' cell is positively
+attested rather than not-disclosed
+\citep[\S 2.2]{deepseek-r1}.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}.} Two readings of
+the column-uniformity that follows are both compatible with the
+evidence: \emph{(i)} the field has converged on verifier-only RL plus
+long-CoT plus thinking-budget knobs as the dominant pattern, or
+\emph{(ii)} the closed-frontier vendors are running undisclosed PRM
+or search machinery and the disclosure ceiling produces the apparent
+convergence as a measurement artefact. The 2026-Q2 published evidence
+does not discriminate; \cref{sec:contradictions} catalogues this as a
+load-bearing open contradiction whose resolution requires either
+disclosure changes or third-party reverse-engineering at frontier
+scale.
+\end{contradiction}
+
+\subsection{Cross-paper hook and forward link}
+\label{sec:frontier-forward}
+
+Paper~1's frontier-2026 architecture snapshot covers the
+architecture-side analog of \cref{tab:frontier-2026}: convergence on
+KV-sharing variants (GQA / MLA), RMSNorm with Pre-LN, RoPE with
+position-extension methods, SwiGLU FFNs, MoE at scale. The reasoning
+side of the same lineup --- this section's table --- exhibits the same
+structural pattern: a small number of dominant-deployment choices
+(verifier-only RLVR, long-CoT trace, thinking-budget API), a small
+number of contested axes (training-data composition, search-at-inference,
+reasoning-architecture details), and a long tail of vendor-specific
+proprietary tooling that the 2026 disclosure regime does not surface.
+The two snapshots together are the synthesis the rest of the series'
+section-by-section treatments build toward.
+
+The forward link is to \cref{sec:contradictions}, which catalogues the
+six load-bearing open contradictions of the paper:
+PRM utility post-R1 (\cref{sec:prm-survival}), CoT faithfulness
+scaling (\cref{sec:cot-faithfulness}), RLVR generalisation versus
+memorisation
+(\cref{sec:rlvr-grpo-dapo,sec:r1-family}), search-vs-RL under fixed
+compute (\cref{sec:search-vs-rl}), AIME-2024 contamination
+(\cref{sec:r1-contamination}), and MCTS-vs-beam at matched budget
+(\cref{sec:tree-search}). The frontier-2026 snapshot is not a
+resolution of those contradictions --- it is a coordinate system in
+which they are localisable. A reader who knows where a 2026 model sits
+in \cref{tab:frontier-2026} can read off which of the six
+contradictions bears most directly on its expected behaviour, and which
+of the disclosed and undisclosed axes most affect what a third party
+can verify about it. The headline of the snapshot is structural and
+sober: the triangle is real, the three legs co-design, the
+productionisation surface has converged, and the open questions about
+which combination is optimal at which (compute, latency, domain)
+operating point will not be closed-form for at least another model
+generation.
