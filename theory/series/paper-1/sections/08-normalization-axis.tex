@@ -1,0 +1,243 @@
+% Paper 1, §8 — Normalization axis
+% Thesis: LayerNorm → RMSNorm; Post-LN → Pre-LN (with 1/√N residual init)
+% → DeepNorm. Why frontier-2026 is RMSNorm + Pre-LN with 1/√N init.
+
+\section{Normalization}
+\label{sec:normalization-axis}
+
+The Transformer's normalization layer evolved along two orthogonal axes
+between 2017 and 2026: the \emph{type} of normalization (LayerNorm vs
+RMSNorm) and the \emph{placement} of the norm relative to the residual
+addition (Post-LN vs Pre-LN, plus stabilizer variants such as DeepNorm).
+The frontier-2026 consensus across LLaMA, Mistral, DeepSeek, and Qwen is
+\textbf{RMSNorm + Pre-LN with $1/\sqrt{N}$ residual scaling at
+initialization}; the parameters of this consensus are the smallest
+non-trivial slice of the architecture, and each piece has a directly
+attributable primary source.
+
+\subsection{LayerNorm: the canonical 2016 definition}
+\label{sec:norm-layernorm}
+
+LayerNorm normalizes across the feature axis of a single example, so
+that the same statistics are computed at training and inference and
+batch size has no effect. For an input vector
+$\mathbf{a}^l \in \mathbb{R}^H$ (the summed inputs to the $H$ hidden
+units of layer $l$),~\citet{ba2016-layernorm} define%
+\footnote{KB excerpt: \texttt{kb/excerpts/ba2016-layernorm.md\#sec-3}.}
+\begin{equation}
+  \mu^l = \frac{1}{H} \sum_{i=1}^{H} a_i^l,
+  \qquad
+  \sigma^l = \sqrt{\frac{1}{H} \sum_{i=1}^{H} (a_i^l - \mu^l)^2},
+  \tag{Ba--Eq.~3}
+  \label{eq:ba-eq3}
+\end{equation}
+and apply a per-feature gain $\mathbf{g}$ and bias $\mathbf{b}$ after
+the normalization but before the non-linearity:
+\begin{equation}
+  \bar{\mathbf{a}}^l \;=\; \frac{\mathbf{g}}{\sigma^l} \odot
+  (\mathbf{a}^l - \mu^l) + \mathbf{b}.
+  \label{eq:ba-eq3-affine}
+\end{equation}
+Two structural properties follow directly from
+Eq.~\eqref{eq:ba-eq3}--\eqref{eq:ba-eq3-affine}: (i) all hidden units in
+a layer share the same $\mu^l, \sigma^l$ but \emph{different training
+cases} get different normalization terms~\citep[\S 3]{ba2016-layernorm};
+(ii) LayerNorm is invariant under re-scaling of the entire weight
+matrix and under re-centering of the incoming
+weights~\citep[\S 4, Table~1]{ba2016-layernorm}. The second invariance
+is what \citet{zhang2019} will later argue is dispensable.
+
+In modern decoder-only notation, $H$ is the model dimension $\mathsf{D}$
+and $\mathbf{a}^l$ is a single token's residual stream slice at depth
+$l$; the normalization is applied independently per token, per layer.
+The shape passing through is $\BSH$.
+
+\subsection{RMSNorm: dropping the mean}
+\label{sec:norm-rmsnorm}
+
+\citet{zhang2019} hypothesize that LayerNorm's success rests on its
+\emph{re-scaling} invariance, not its \emph{re-centering} invariance,
+and propose Root Mean Square Layer Normalization%
+\footnote{KB excerpt: \texttt{kb/excerpts/zhang2019.md\#sec-3-1}.}
+defined verbatim as
+\begin{equation}
+  \bar{a}_i \;=\; \frac{a_i}{\mathrm{RMS}(\mathbf{a})}\, g_i,
+  \qquad
+  \mathrm{RMS}(\mathbf{a}) \;=\;
+  \sqrt{\frac{1}{n} \sum_{i=1}^{n} a_i^2}.
+  \tag{Zhang--Eq.~4}
+  \label{eq:rmsnorm}
+\end{equation}
+Comparing Eq.~\eqref{eq:rmsnorm} to Eq.~\eqref{eq:ba-eq3}: RMSNorm drops
+the mean $\mu^l$ entirely (and with it the bias $\mathbf{b}$), keeping
+only the scale parameter $\mathbf{g}$. Two reductions over the feature
+axis become one; one element-wise add disappears.
+
+Empirically, dropping the mean is ``free.'' \citet{zhang2019} report
+matched quality across machine translation, reading comprehension,
+summarization, and image classification, with runtime savings of
+\textbf{7\%--64\%} depending on architecture and norm
+placement~\citep[\S 4]{zhang2019}; on Transformer-base WMT'14 EN--DE
+the swap costs $0.05$ BLEU and saves 9.4\% of training
+time~\citep[\S 4]{zhang2019}. The shift-invariance that LayerNorm
+afforded turns out not to be load-bearing in
+practice~\citep[\S 3.2]{zhang2019}, and every frontier-2026 decoder-only
+LLM (LLaMA-1/2/3, Mistral, Qwen, DeepSeek-V2/V3, Gemma, OLMo, Phi-4)
+ships RMSNorm rather than
+LayerNorm~\citep{touvron2023,jiang2023,meta-llama3,deepseek-v3,qwen3,olmo2,gemma3}.
+
+\subsection{Post-LN versus Pre-LN}
+\label{sec:norm-placement}
+
+Independent of \emph{which} norm you compute, the question of
+\emph{where} you compute it is a separate axis. Writing $F$ for a
+sublayer (attention or FFN) and $\mathbf{x}$ for its input, the
+canonical placements are
+\begin{align}
+  \text{Post-LN} \quad & \mathbf{y} \;=\; \mathrm{Norm}(\mathbf{x} + F(\mathbf{x}))
+  \label{eq:post-ln} \\
+  \text{Pre-LN} \quad & \mathbf{y} \;=\; \mathbf{x} + F(\mathrm{Norm}(\mathbf{x})).
+  \label{eq:pre-ln}
+\end{align}
+\citet{vaswani2017} used Post-LN \eqref{eq:post-ln} in the original
+Transformer; the norm sits \emph{on} the residual path, so the residual
+stream itself is renormalized after every block.~\citet{radford2019-gpt2}
+moved the norm in GPT-2, in a passage worth quoting
+verbatim%
+\footnote{KB excerpt: \texttt{kb/excerpts/radford2019-gpt2.md\#sec-2-3}.}:
+\begin{quote}
+``Layer normalization (Ba et al., 2016) was moved to the input of each
+sub-block, similar to a pre-activation residual network (He et al.,
+2016) and an additional layer normalization was added after the final
+self-attention block. A modified initialization which accounts for the
+accumulation on the residual path with model depth is used. We scale
+the weights of residual layers at initialization by a factor of
+$1/\sqrt{N}$ where $N$ is the number of residual layers.''
+\citep[\S 2.3]{radford2019-gpt2}
+\end{quote}
+Two architectural decisions are bundled in that paragraph: the Pre-LN
+move \eqref{eq:pre-ln}, and the $1/\sqrt{N}$ residual-path scaling at
+initialization. The first changes the placement; the second compensates
+for the fact that an unnormalized residual stream's variance grows with
+depth. Both are still in effect in frontier-2026 models, with $N$
+typically the count of attention~+~FFN sublayers (i.e., $2L$ for an
+$L$-block decoder-only stack).
+
+\subsection{The Pre-LN stability proof}
+\label{sec:norm-stability}
+
+\citet{xiong2020} furnish the theoretical justification for the GPT-2
+move via a mean-field analysis of gradient norms at
+initialization%
+\footnote{KB excerpt: \texttt{kb/excerpts/xiong2020.md\#sec-4}.}.
+Stating their two main results:
+\begin{theorem}[Post-LN gradient scaling at init,
+\citealp{xiong2020}, Thm.~1]
+\label{thm:postln}
+For the Post-LN Transformer with standard Xavier initialization, the
+expected Frobenius gradient norm at the final FFN sublayer is
+\[
+  \|\partial \mathcal{L} / \partial W^{2,L}\|_F
+  \;=\; O\!\left( d \sqrt{\ln d} \right),
+\]
+independent of depth $L$. The gradient propagated through the residual
+stream to earlier layers accumulates an additional $O(\sqrt{L})$ near
+the output: parameter updates near the output layer become
+disproportionately large as $L$ grows.
+\end{theorem}
+\begin{theorem}[Pre-LN gradient scaling at init,
+\citealp{xiong2020}, Thm.~2]
+\label{thm:preln}
+For the Pre-LN Transformer with the same initialization, the expected
+gradient norm at every layer is
+\[
+  \|\partial \mathcal{L} / \partial W^{l}\|_F
+  \;=\; O\!\left( d \sqrt{\ln d / L} \right),
+\]
+balanced across depth and bounded as $L \to \infty$.
+\end{theorem}
+The practical consequence~\citep[\S 4.1, \S 5]{xiong2020}: Post-LN
+training requires the linear-warmup schedule
+$\mathrm{lr}(t) = (t/T_{\mathrm{warmup}})\,\mathrm{lr}_{\max}$ to
+compensate for the output-layer gradient blow-up, while Pre-LN trains
+stably \emph{without warmup} at the same maximum learning rate. Their
+WMT'14 and BERT-pretraining experiments confirm the prediction:
+Post-LN with $\mathrm{lr}_{\max} = 10^{-3}$ and no warmup diverges, but
+the same setting with $T_{\mathrm{warmup}} = 4000$ trains stably; the
+Pre-LN counterpart trains stably at $\mathrm{lr}_{\max} = 10^{-3}$ with
+no warmup at all~\citep[\S 5]{xiong2020}. Theorem~\ref{thm:preln} is the
+load-bearing reason every 2020+ decoder-only LLM is Pre-LN.
+
+\subsection{DeepNorm and beyond}
+\label{sec:norm-deepnorm}
+
+A natural follow-up question is whether one could keep the Post-LN
+placement (which has its own expressivity arguments at very deep stacks)
+but rescale the residual contribution to defang
+Theorem~\ref{thm:postln}. \citet{wang2022-deepnorm}'s DeepNet answers
+yes: introduce a per-block constant $\alpha > 1$ on the residual
+addition,
+\begin{equation}
+  \mathbf{y} \;=\; \mathrm{Norm}(\alpha \mathbf{x} + F(\mathbf{x})),
+  \label{eq:deepnorm}
+\end{equation}
+with $\alpha$ and the sublayer initialization scale chosen as functions
+of depth $L$ such that the residual stream's variance and the
+gradient's expected norm both stay $O(1)$ at initialization for $L$ as
+large as $1000$.~\deepencite{wang2022-deepnorm \S 3 (DeepNorm scaling
+constants $\alpha, \beta$ as functions of $L$ for encoder-only,
+decoder-only, encoder-decoder)} DeepNorm thus generalizes the Pre-LN /
+$1/\sqrt{N}$ trick to a regime where Pre-LN's residual-stream-norm
+drift becomes a problem on its own, and demonstrates that the
+1000-layer regime is reachable. It is used in some Microsoft tech-report
+models but has not displaced Pre-LN at frontier scale; modern frontier
+LLMs run at $L = 32\text{--}126$ layers~\citep{deepseek-v3,meta-llama3}
+where Pre-LN is comfortable and the DeepNorm machinery is not yet
+necessary.
+
+\begin{intuition}
+LayerNorm is ``make every token's residual stream have the same energy
+along the feature axis, then re-scale per-channel.'' Energy of
+$\mathbf{a}$ along the feature axis is $\sum_i a_i^2$, so RMSNorm
+(Eq.~\eqref{eq:rmsnorm}) is the same statement with the offset removed:
+divide each component by $\sqrt{(1/n) \sum_i a_i^2}$ so the resulting
+vector has unit RMS, then apply a learned per-channel gain $g_i$. The
+mean-subtraction in LayerNorm pre-projects onto the
+$\mathbf{1}^\perp$-hyperplane; if the model doesn't use that
+projection's invariance (Zhang \& Sennrich's \S 3.2 finding), dropping
+it costs nothing. Returning to math: RMSNorm preserves
+$\mathrm{RMS}(\bar{\mathbf{a}}) = \|\mathbf{g}\|_2 / \sqrt{n}$; the
+energy of the normalized stream is fixed by $\mathbf{g}$ alone.
+\end{intuition}
+
+\subsection{Why frontier-2026 settled here}
+\label{sec:norm-frontier}
+
+Composing the four moves: take LayerNorm
+(Eq.~\eqref{eq:ba-eq3}--\eqref{eq:ba-eq3-affine}), drop the mean and
+the bias to get RMSNorm (Eq.~\eqref{eq:rmsnorm}); place the norm
+\emph{before} each sublayer per Eq.~\eqref{eq:pre-ln}; scale the
+residual-path weights at init by $1/\sqrt{N}$ per
+\citet[\S 2.3]{radford2019-gpt2}; rely on Theorem~\ref{thm:preln} for
+warmup-free trainability. The total cost on top of the canonical 2017
+Transformer is one bias parameter removed, one mean-subtraction
+removed, one norm relocated, and one initialization scale changed --
+each backed by a primary source. \citet{touvron2023}'s LLaMA-1
+specification adopts the full bundle, and every subsequent
+LLaMA-/Mistral-/DeepSeek-/Qwen-class model has shipped some variant
+of it~\citep{jiang2023,meta-llama3,deepseek-v3,qwen3}, with two open
+splits: 2025+ models add QK-Norm to the attention path
+(\citealp{olmo2}; covered in \S\ref{sec:attention-mechanism-axis} of
+this paper), and a separate stream switches to Peri-LN for very-deep
+stacks~\citep{olmo2,gemma3,peri-ln2025}. Both are extensions of, not
+replacements for, the RMSNorm + Pre-LN + $1/\sqrt{N}$ baseline
+established between 2016 and 2020.
+
+The next section (\S\ref{sec:state-space-and-hybrids}) leaves the
+attention-and-FFN-with-residuals architecture entirely and asks what
+happens when the residual stream is replaced by a state-space
+recurrence -- a setting in which the normalization choices of this
+section largely transfer (state-space-model-based LLMs use RMSNorm and
+analogues of Pre-LN), but the gradient-scaling argument of
+Theorem~\ref{thm:preln} no longer applies because the residual
+structure is gone.
