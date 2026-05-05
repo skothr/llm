@@ -1,0 +1,367 @@
+% Paper 2, §14 — Contradictions live and open frontiers
+% Pass-C synthesis. Concentrates the [CONTRADICTION] markers from §2-§13
+% into one explicit treatment. Each contradiction: what each side claims,
+% what evidence would close it. Closing thesis: the pipeline's open
+% questions are localized at stage boundaries, not at pipeline structure.
+% Anchors: kb/index/contradictions.md (training, post-training, scaling
+% sections); the §2-§13 contradiction blocks themselves.
+
+\section{Contradictions live and open frontiers}
+\label{sec:contradictions}
+
+The previous twelve sections each ended with
+\texttt{[CONTRADICTION]} blocks where the literature does \emph{not}
+yet converge. This section concentrates them. For each of twelve
+live disagreements we name what each side claims, why the
+disagreement is real, and what evidence would close it. The closing
+thesis is structural: the open questions are \emph{localized} at
+stage boundaries (precision~$\times$~optimizer;
+token-count~$\times$~quantization; preference~$\times$~verifier),
+not at the pipeline's six-stage structure, which
+\cref{sec:frontier-snapshot} shows has converged.
+
+\subsection{Pre-training, scaling, optimization}
+\label{sec:contradictions-pretrain-scale-opt}
+
+\paragraph{(1) Kaplan-vs-Chinchilla compute allocation.}
+On the methodological question this is settled.
+\citet[\S 6]{kaplan2020} fit $N \propto C^{0.73}$, $D \propto C^{0.27}$
+under a cosine-LR schedule decayed to a fixed token horizon, which
+biased shorter-data runs upward;
+\citet[\S 3, Table 2]{hoffmann2022-chinchilla} re-fit with
+LR-horizon matching across three independent approaches
+(training-curves, IsoFLOP, parametric) and recover the
+$\approx 0.50/0.50$ split with the canonical $D \approx 20 N$ at
+compute-optimal pre-training. The contradiction that remains is the
+``Chinchilla trap'' framing: frontier industry over-trains far past
+the Chinchilla optimum (Llama-3-8B at $D / N \approx 1875$
+\citep{meta-llama3}, two orders of magnitude past
+$D / N \approx 20$). This is not a refutation. It is a different
+objective --- minimize \emph{total lifetime cost} (pre-training plus
+amortized inference) rather than pre-training-FLOP-optimal loss
+\citep[\S \ref{sec:scaling-map}]{hoffmann2022-chinchilla}\protect\footnote{KB
+excerpt: \texttt{kb/excerpts/hoffmann2022-chinchilla.md\#sec-3}.}. What
+\emph{is} open is the joint
+$(C_{\text{train}}, C_{\text{test}}, b, q)$ scaling law, where
+$C_{\text{test}}$ is inference-time compute (Paper~3) and $b, q$ are
+precision and mixture quality: documented empirically, not in closed
+form. Closing evidence would be a multi-axis IsoFLOP sweep at
+$10$B-$70$B that exposes the trade-off surface; no public lab has
+reported one.
+
+\paragraph{(2) Optimizer speedups are training-loss-conditional.}
+Lion (sign-momentum, Chen et al.\ 2023) and Sophia (diagonal-Hessian
+preconditioning, Liu, Li et al.\ 2023) reported $\sim$1.5--$2\times$
+training-loss speedups at LLM-relevant scales. AdamW closes or
+reverses the gap on downstream evaluation panels (MMLU, GSM8K,
+HumanEval, BBH) at matched wall-clock time
+\citep[\S 1]{muon-moonlight2025}\protect\footnote{KB excerpt:
+\texttt{kb/excerpts/muon-moonlight2025.md\#sec-1-challenges}.}.
+Muon-Moonlight \citep{muon-moonlight2025} fits
+$L_{\text{Muon}} = 2.506\,C^{-0.052}$ vs.\
+$L_{\text{AdamW}} = 2.608\,C^{-0.054}$ for a constant matched-loss
+compute ratio $\eta \approx 0.52$, and the downstream panel at the
+$16$B-MoE / $5.7$T-token Moonlight point is competitive with similarly
+sized DeepSeek-V3 variants. The disagreement is whether Muon's lift
+generalizes beyond a single tech report. As of 2026-Q2 the result is
+\emph{single-source} on a $16$B-MoE run; whether the $\sim$$2\times$
+constant holds at $70$B+ dense and $600$B+ MoE is the paper's own
+\S 1 open question. Closing evidence would be one independent
+third-party replication at frontier dense scale plus a downstream
+panel matched on tokens and wall-clock --- the structural lesson
+(re-verify training-loss claims on downstream surface) is the
+operational rule until then.
+
+\paragraph{(11) Precision $\times$ token-count interaction.}
+\citet{scaling-laws-precision-2024} extend the Chinchilla form with
+precision as a third axis and predict, via an effective parameter
+count $N_{\text{eff}}(N, b_{\text{train}})$, that
+\emph{over-trained models are harder to quantize}: the more $D$ a
+model has consumed relative to $N$, the larger the post-quantization
+loss penalty at deployment.\deepencite{scaling-laws-precision-2024 \S
+4: effective-parameter form $N_{\text{eff}}$ and over-training
+$\to$ harder-to-quantize prediction; needed at frontier scale.} This
+collides directly with the inference-cost-aware over-training
+strategy of contradiction (1): the same Llama-3-8B that gains from
+being small-and-token-heavy is, by the Kumar prediction, more
+difficult to quantize at deployment, partially offsetting the
+strategy's gain. The industry response has been native low-precision
+training: pre-train at the precision you will deploy, not above. The
+DeepSeek-V3 \citep[abstract]{deepseek-v3} zero-spike $14.8$T-token
+FP8 result is the strongest production data point. The full
+$(D / N) \times b$ surface at frontier scale is incompletely mapped;
+the specific Kumar prediction is \emph{fitted on small models} and
+extrapolated. Closing evidence: a controlled
+$(D / N \in \{20, 200, 2000\}) \times (b \in \{\text{BF16, FP8,
+FP4}\})$ sweep at $7$B--$70$B with both training stability and
+post-quantization downstream loss reported.
+
+\paragraph{(12) \textmu P at frontier scale.}
+\citet{yang2022-mup} prove, under Definition 4.1's strict scaling
+rules, that the master HPs (LR, betas, schedule shape) transfer
+losslessly across width. Microsoft (Phi-4 \citep{phi4}), Cerebras,
+and Graphcore (u-\textmu P, \citealp{u-mup2024}) disclose strict-or-
+near-strict use; Meta (Llama 4 \citep{meta-llama4}) cites a
+``MetaP'' scheme for cross-scale HP transfer with thin published
+detail; Anthropic, OpenAI, Google do not disclose. Independent
+positive results outside the
+Microsoft/Cerebras/Graphcore ecosystem at $10$B+ scale are scarce.
+The community working assumption is that frontier labs apply the
+\textmu P LR scalings while keeping Vaswani's $1/\sqrt{d_k}$
+attention rather than \textmu P's $1/d$, making them
+``\textmu P-inspired'' rather than strict-Definition-4.1 variants.
+Whether the loose variants retain the unique-feature-learning
+guarantee is open. Closing evidence: an open-weights frontier model
+disclosing strict Definition-4.1 \textmu P with width-sweep HP
+transfer evidence at $\geq 70$B parameters.
+
+\subsection{Distributed training and precision}
+\label{sec:contradictions-dist-prec}
+
+\paragraph{(3) TP-yes-vs-TP-no.}
+\citet{meta-llama3} train Llama 3 405B with heavy TP+PP+DP --- the
+prototypical Megatron-3D shape. \citet{deepseek-v3} train
+DeepSeek-V3 671B-A37B \emph{without TP at all}, claiming the
+combination of ZeRO-1 DP $+$ EP $+$ DualPipe $+$ FP8 supplies enough
+activation relief to make TP's per-linear collective cost a net
+loss. This is a real architectural-conditional disagreement, not a
+wash. TP costs $2L$ inter-GPU all-reduces per step; EP costs
+$2 L_{\text{MoE}}$ inter-node all-to-alls per step. DeepSeek's
+fine-grained MoE forces them to pay the EP all-to-all already
+\citep[\S 3.2]{deepseek-v3}, and pairing it with DualPipe overlap
+plus the $4$-node-cap kernel hides the cost. Llama 3 is dense at
+active-parameter level; without an EP all-to-all to fold TP work
+into, the Megatron-3D plan stays preferable. The general rule is
+\emph{which} parallelism is best is a function of the model graph
+(MoE vs.\ dense, expert count, expert size, attention head count) ---
+not a universal answer. Closing evidence is a plan-from-graph
+optimizer that picks $(d, t, c, p, e)$ from $(N, D, \text{cluster},
+\text{graph})$; \citet[\S 1]{torchtitan2024} explicitly punt on this,
+GSPMD propagates rather than searches, and AlpaDiscovery is not
+dominant in 2026 open practice.
+
+\paragraph{(4) FP8 / NVFP4 / BitNet production status.}
+Three precision regimes, three different statuses. \emph{FP8}: the
+DeepSeek-V3 zero-spike $14.8$T-token result \citep[abstract]{deepseek-v3}
+is the strongest production data point on record; Llama 4
+\citep{meta-llama4} likewise discloses FP8 pre-training. The
+contradiction is that the FP8 result remains \emph{single-source} on
+its specific recipe (per-token-per-128-channel activation tile,
+per-128$\times$128 weight block, all-E4M3, $N_C = 128$ promotion)
+and no other major lab has publicly matched the envelope. \emph{FP4
+/ NVFP4}: Blackwell hardware ships FP4 Tensor Cores with MXScale,
+several Blackwell-deploying vendors are running FP4 pilots, but as
+of 2026-Q2 no major lab has publicly confirmed FP4 \emph{pre-training}
+of a frontier model. The Kumar effective-parameter prediction warns
+of substantial loss below $\sim$$7$ bits and is fitted on small
+models. \emph{BitNet 1.58 ternary}: \citet{ma2024-bitnet} claim
+ternary $\{-1, 0, 1\}$ matches FP16 quality, with the BitNet b1.58
+2B4T tech report \citep{bitnet-2b4t-2025} as a follow-up, but
+independent reproductions thin past $\sim$$7$B parameters and no
+frontier-scale companion has appeared. Treat FP8 as
+production-stable contingent on recipe transfer; treat sub-FP8 as
+open. Closing evidence: a non-DeepSeek frontier-scale FP8
+zero-spike replication; a frontier-scale FP4 pre-training
+disclosure; a $\geq$$30$B BitNet replication outside the original
+authors.
+
+\subsection{Post-training: SFT, preference-RL, reasoning-RL}
+\label{sec:contradictions-post}
+
+\paragraph{(5) SFT data quantity-vs-quality.}
+Two empirical traditions. \emph{``Few high-quality samples
+suffice''}:
+LIMA\deepencite{lima-2023 §results --- bibkey not yet in
+references.bib} and s1 \citep{s1-2025} report $1$K--$10$K curated
+examples eliciting instruction-following from a strong base.
+\emph{``Scale with quality gates''}: T\"ulu-3 \citep{tulu3}, Llama-3
+\citep{meta-llama3}, Phi-4 \citep{phi4} run $10^6$+-sample SFT mixes
+with rejection-sampling and reward-model filtering, reporting clean
+monotonic gains. Both are likely correct in different regimes:
+small-curated for \emph{instruction style and tone}, large-set for
+\emph{capability breadth} (math, code, multilingual, refusal,
+safety). The regime boundary has not been mapped at frontier scale.
+Closing evidence: a controlled
+$(\text{data scale}) \times (\text{evaluation axis})$ sweep on a
+fixed strong base, separating style/tone from capability.
+
+\paragraph{(6) Reward-hacking is fundamental or tractable.}
+\emph{Tractable view} (Coste 2023; \citealp{warm-2024,warp-2024};
+Gemma 3 production \citep{gemma3}): RM ensembles, weight-averaged
+RMs, KL scheduling, and on-policy preference iteration mitigate
+reward hacking enough for production. \emph{Fundamental view} (the
+direct-alignment scaling-laws line\deepencite{rosset2024-direct-alignment-scaling
+arXiv:2406.02900 \S 3 --- bibkey not yet in references.bib} and
+the persistence of sycophancy as a localized shortcut at all scales,
+\citealp{sharma2023-sycophancy}): proxy-reward optimization produces
+overoptimization across \emph{all} preference-based post-training,
+including DPO, since DPO's implicit reward
+$\hat r_\theta = \beta \log \pi_\theta / \pi^{\mathrm{ref}}$ is itself
+a learned proxy that can be hacked. Closing evidence: a controlled
+RM-quality $\times$ KL-budget $\times$ pipeline (PPO/DPO/GRPO) sweep
+with both proxy reward and gold reward measured, plus an adversarial
+sycophancy-probe panel.
+
+\paragraph{(7) DPO-vs-PPO at frontier scale.}
+\citet{rafailov2023-dpo} establishes that DPO and PPO-RLHF share
+the \emph{same} fixed point on the same preference data, with DPO
+reaching it without sampling, RM, or RL loop. The empirical
+disagreement is whether the shared fixed point is reached equally
+well in practice. \emph{Llama-3 / T\"ulu-3 view}
+\citep{meta-llama3,tulu3}: with iterated on-policy preference
+collection, DPO matches or exceeds PPO on standard alignment
+benchmarks at lower compute. \emph{DeepMind / Gemma-3 view}
+\citep{gemma3,warm-2024,warp-2024}: PPO + WARM/WARP-averaged reward
+ensembles remains the production choice for general alignment, the
+ensembled RM recovering the proxy-vs-gold gap that single-RM PPO
+suffered. The disagreement is partly recipe-specific (different RMs,
+preference datasets, KL schedules) and partly task-specific (DPO
+more competitive on instruction-following; PPO-with-ensemble retains
+advantage on creative / open-ended generation per anecdotal reports).
+No controlled head-to-head at frontier scale has been published. The
+SimPO length-bias fix \citep{meng2024-simpo} adjusts loss form
+without resolving the head-to-head. Closing evidence: a
+fixed-base $\times$ fixed-preference-data sweep over
+$\{\text{DPO}, \text{PPO+WARM}\}$ $\times$ KL schedule $\times$
+on-policy iteration depth, with held-out alignment $+$ creative panels.
+
+\paragraph{(8) RLAIF / CAI: internalization or surface mimicry; CAI vs.\ sycophancy.}
+\citet{bai2022-cai} establish CAI as ``RLHF with a different
+labeler'': AI-judge under randomly-chosen principle $c_k$ replaces
+human preferences, BT-RM trained on AI labels feeds PPO with KL
+anchor to $\pi^{\text{SL-CAI}}$. CAI's behavioral signature is
+non-evasion. Two open splits. First, internalization vs.\ surface
+mimicry: \emph{genuine principle internalization} and \emph{learned
+text shaped like constitutional reasoning} are behaviorally
+indistinguishable on standard evaluations; only adversarial probes
+where the principle's intent and its surface verbalization disagree
+can separate them. Second, CAI vs.\ sycophancy: the AI judge rewards
+principle-\emph{aligned} responses, so the policy can learn to
+\emph{appear} principle-aligned to the judge whether the underlying
+reasoning is shallow or deep --- sycophancy with respect to the AI
+judge instead of the human labeler \citep{sharma2023-sycophancy}.
+CAI may not solve sycophancy and may amplify it, since the
+algorithmic judge is more consistent than human labelers and the
+policy can find its biases more reliably. Closing evidence:
+held-out adversarial probe panels (intent-vs-verbalization,
+principle-conflict, sycophancy with counter-evidence) reported
+jointly for SFT-only, RLHF, RLAIF, and CAI baselines on a fixed base.
+
+\begin{contradiction}
+\textbf{The proxy-reward thread.} Contradictions (6), (7), and (8)
+are not independent. They are three readings of one underlying
+question: \emph{is post-training fundamentally a proxy-reward
+optimization, and if so, does the proxy-vs-gold gap close or persist
+as the proxy improves?} The fundamental view answers ``persists ---
+the gap is a structural property of any learned reward signal,
+including DPO's implicit reward and CAI's AI judge.'' The tractable
+view answers ``closes to acceptable levels --- ensembling,
+KL anchoring, on-policy iteration, and judge-under-constitution
+together push the residual below the deployment threshold.'' The
+empirical signature that would distinguish them is whether the gap
+\emph{shrinks} or \emph{stabilizes} as proxy quality is varied along
+a controlled axis (RM ensemble size, judge capability, KL budget).
+We do not yet have the controlled axis-sweep at frontier scale. The
+\cref{sec:contradictions-post} contradictions are individually
+tractable; the underlying question --- is reward-hacking fundamental
+or engineering --- is not.
+\end{contradiction}
+
+\paragraph{(9) Does RLVR create new reasoning capability?}
+\citet{deepseek-r1} frame RLVR as ``incentivizing reasoning
+capability'' (R1-Zero from $15.6\%$ to $77.9\%$ on AIME 2024 over
+GRPO training, the ``aha-moment'' \texttt{wait}-token spike), with
+parallel framings in \citet{tulu3} and \citet{qwen3} treating RLVR
+as eliciting reasoning behaviors the base model could not produce.
+\citet{rlvr-limits-2025} (Yue et al.\ NeurIPS 2025 oral) disagree:
+by carefully comparing pass@1 vs.\ pass@$K$ of base-model vs.\
+RLVR'd model at matched sampling budget, RLVR improves pass@1
+(sampling efficiency) on problems the base model can already solve
+at higher $K$, but does \emph{not} expand the set of problems
+solvable at any $K$. The capability ceiling is set by pre-training;
+RLVR is sampling-efficient sharpening. As of 2026-Q2 the open-source
+consensus leans toward Yue with caveats: the result is benchmark-,
+temperature-, and sample-budget-conditional, and generalization to
+non-math (agentic, long-horizon) RLVR is single-source. Closing
+evidence is concentrated in Paper~3, which treats RLVR alongside
+inference-time-compute scaling and search; the
+$(C_{\text{train,RLVR}}) \times (C_{\text{test}})$ joint surface is
+where the framings might reconcile.
+
+\subsection{Adaptation and merging}
+\label{sec:contradictions-merge}
+
+\paragraph{(10) Model-merging guarantees.}
+The merge literature reports two patterns that do not yet reconcile.
+On controlled multi-task benchmarks, merged models often exceed any
+single ingredient (\citealp[\S 4]{wortsman2022-model-soups};
+\citealp[\S 4]{yadav2023-ties-merging}). On real-world deployments at
+the open-weights LLM merging community's frontier scale, merged
+models routinely under-perform the strongest specialist on its own
+task, with merge wins concentrated in multi-task generalization
+rather than peak-task performance. The per-paper benchmarks are
+largely single-source: TIES and Soups sweep their own task suites
+with no third-party head-to-head at frontier-LLM scale. The
+speculative theoretical underpinning is linear-mode-connectivity ---
+the basin-sharing hypothesis that fine-tuned models from a common
+base lie in a connected low-loss region whose center is the average
+\citep{ilharco2022-task-vectors,wortsman2022-model-soups}. LMC holds
+empirically for SFT-from-shared-base, partly for RLHF, and breaks
+for from-scratch different-init runs; no canonical theory predicts
+when merging produces interference vs.\ basin-centering. The
+\emph{merged-beats-best-ingredient} claim should be read as
+\emph{task-set-conditional}: it holds on multi-task evaluations of
+specialists, and is not yet established at the single-task ceiling.
+Closing evidence: a third-party head-to-head at $\geq$$30$B with
+matched training data, isolating sign-conflict resolution
+(TIES \citep{yadav2023-ties-merging}) from drop-and-rescale (DARE)
+from greedy-soup ingredient selection.
+
+\subsection{Closing thesis: structure stable, boundaries open}
+\label{sec:contradictions-thesis}
+
+The twelve contradictions above admit a structural reading. None of
+them disputes the \emph{shape} of the pipeline. Every disclosed
+2024--2026 frontier pipeline (\cref{sec:frontier-snapshot}) executes
+the same six stages in the same order: pre-training-data $\to$
+scaling-and-optimization $\to$ distributed-and-precision
+scaffolding $\to$ SFT $\to$ preference-RL $\to$ reasoning-RL /
+adaptation. What the contradictions dispute is what each stage
+should do internally and how stages should be \emph{coupled at their
+boundaries}.
+
+\begin{intuition}
+The contradictions cluster at three boundary couplings:
+\textbf{precision~$\times$~optimizer} (Muon update RMS exceeds BF16
+high-precision range without weight decay; FP8 stability requires
+the per-tile scaling DeepSeek-V3 introduced; (2)$\cap$(4) live here),
+\textbf{token-count~$\times$~quantization} (over-trained models are
+harder to quantize, but inference economics rewards
+over-training; (1)$\cap$(11) live here), and
+\textbf{preference~$\times$~verifier} (proxy reward from a learned
+judge can be hacked; verifier reward is gold but sparse and
+domain-bound; (6)$\cap$(7)$\cap$(8)$\cap$(9) live here). Returning
+to canonical form: the pipeline factorizes structurally as a chain of
+stages $S_1 \to S_2 \to \cdots \to S_6$, but the load-bearing
+\emph{interaction terms} $\partial S_i / \partial S_j$ for adjacent
+stages have not been characterized. The contradictions are reading
+those missing interaction terms.
+\end{intuition}
+
+This is the closing claim of Paper~2. The shape of frontier
+post-2024 LLM training is stable: six stages, canonical lineages,
+broadly disclosed at the architecture level. The 2027-class results
+that close the open contradictions will not be about pipeline shape
+but about load-bearing variables \emph{inside} each stage and at the
+boundaries \emph{between} adjacent stages: $D / N$ under joint
+inference-cost and quantization constraints; optimizer choice under
+joint downstream and frontier-stability constraints; TP-yes-vs-no
+under joint model-graph and topology constraints; DPO-vs-PPO under
+joint proxy-reward and on-policy constraints; RLVR's
+sampling-efficiency-vs-capability split under joint pre-training
+and inference-time-compute budgets. Where Paper~1 established the
+architectural axes and Paper~3 will establish the
+inference-time-compute axes, Paper~2's claim is that the
+\emph{training} axes are now legible and the open boundaries between
+them are localized, named, and falsifiable. The pipeline is a real
+object; we now know which of its joints flex.

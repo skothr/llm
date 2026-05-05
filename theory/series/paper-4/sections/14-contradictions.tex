@@ -1,0 +1,256 @@
+% Paper 4, §14 — Contradictions live and open frontiers
+% Thesis: method-pluralism is principled because the contradictions live at
+% the boundaries between methods, and resolving them requires *cross-method*
+% evidence — not better single-method tools. This section concentrates the
+% [CONTRADICTION] markers raised across §3–§13 and, for each, names the
+% strongest form of each side, the evidence on the table, and the experiment
+% that would resolve it.
+
+\section{Contradictions live and open frontiers}
+\label{sec:contradictions}
+
+The five methods of this paper agree often enough to make the field
+move (the GPT-2-small IOI circuit is the worked convergence example;
+the GPT-2-XL factual-recall locus is the second), but the cases where
+they \emph{disagree} are not embarrassments to be papered over: they
+are where the field's next experiments live. We collect five anchor
+contradictions raised across \S\S\ref{sec:logit-lens-family}--\ref{sec:scaling-snapshot}
+and discuss each in the same three-part form: the strongest version of
+each side's claim, the evidence on the table as of 2026, and the
+experiment that would resolve it. The closing argument recasts
+method-pluralism as a principled stance: contradictions live at the
+\emph{boundaries between} methods, and cross-method evidence is the
+only currency that can spend them.
+
+\subsection{The SAE canonical-feature claim}
+\label{sec:contradictions-sae}
+
+The strongest form of the \citet{bricken2023-monosemanticity} and
+\citet{templeton2024-scaling-monosemanticity} program is that there
+exists a privileged decomposition of activations into ``true features'' ---
+a feature dictionary that any sufficiently-careful SAE training
+recovers, modulo a known equivalence. The strongest opposing form,
+from \citet[\S 1]{leask2025-sae-not-canonical}, is that no such
+canonical decomposition exists: meta-SAEs trained on the decoder
+$\mathbf{W}_{\text{dec}}$ of a target SAE recover a sparse decomposition
+of the target's atoms (the ``Einstein'' latent splits into
+``scientist'', ``Germany'', ``famous person'') --- non-atomicity --- and
+SAE stitching reveals novel latents present in larger SAEs that smaller
+SAEs cannot recover --- incompleteness.
+
+The evidence on the table, summarized in \S\ref{sec:sae-canonicality}:
+two ICLR-2025 lines of experiment supporting the negative; a corpus of
+qualitative interpretability successes from
+\citet{templeton2024-scaling-monosemanticity} consistent with the
+positive but not entailing it; and the field's pragmatic resting
+position --- ``apply SAEs of several widths''
+\citep[\S 1]{leask2025-sae-not-canonical} --- which is methodological
+agnosticism, not resolution.
+
+\textbf{Resolving experiment.} A basis-finding criterion under which two
+independent SAE training runs --- at different widths $M_1, M_2$,
+different sparsity targets, different random seeds, on the same
+activations --- converge on the same feature inventory modulo a known
+equivalence (rotation, sign, permutation, scale). Until that criterion
+is exhibited, the canonical-feature claim is unfalsifiable in the
+direction that matters and the field is right to treat SAEs as useful
+basis-dependent tools.
+
+\subsection{Lens cross-model unreliability}
+\label{sec:contradictions-lens}
+
+The strongest form of the lens program
+\citep{belrose2023-tuned-lens}: an affine translator
+$(A_\ell, \mathbf{b}_\ell)$ trained by KL distillation against the
+final-layer output is sufficient to absorb the basis drift that breaks
+the bare logit lens, and the resulting tuned-lens trajectory is a
+useful diagnostic on any pre-norm transformer. The strongest opposing
+form, raised in \S\ref{sec:lens-frontier} and \S\ref{sec:scaling-no}:
+the lens benchmarks predate the architectural substrate of the deployed
+2026 lineup --- MLA-compressed-KV (DeepSeek-V3), fine-grained MoE,
+NSA-sparse attention, sliding-window layers, hybrid attention/SSM
+stacks --- and whether the affine-translator ansatz suffices on these
+substrates is empirical, not deduced.
+
+The evidence on the table is asymmetric. The \emph{positive} case for
+extension is that the residual stream remains additive across these
+variants; the \emph{negative} case, raised in
+\S\ref{sec:scaling-no}, is the
+\citet{halawi2023-overthinking} layer-of-prediction-vs-decision result
+\textemdash\ early-layer predictions can be \emph{more} robust than the
+final layer on incorrect-demonstration prompts, and choosing the right
+layer has no a-priori recipe. \citet{chuang2023-dola}'s DoLa contrast
+turns the inconsistency into a decoding strategy on
+LLaMA-7B/13B/33B, but whether DoLa's gains survive at frontier-2026
+scale is not systematically reproduced.
+
+\textbf{Resolving experiment.} Train tuned lenses across the
+frontier-2026 lineup (Llama 3 / 4, Qwen 2.5 / 3, DeepSeek-V3, Gemma 3),
+report the per-architecture distillation-loss curves, and test whether
+the trajectory diagnostics (smoothness, layer-of-acquisition,
+contrastive DoLa decoding) carry over with the architecture-specific
+modifications they require. The empirical answer settles whether the
+lens framework is a property of the additive residual stream (it
+extends) or of a specific GPT-2-era attention/FFN profile (it does
+not).
+
+\subsection{Probe correlation versus causation}
+\label{sec:contradictions-probe}
+
+The strongest pre-2023 form of the probing program: high-accuracy
+linear probe accuracy on a held-out test split implies the model
+linearly represents the property at that layer. The strongest opposing
+form, consolidated in
+\citet[\S abstract]{belinkov2022-probing-survey} and the
+\S\ref{sec:correlation-causation} contradiction block: \emph{decodable
+does not entail used}. The model may compute a property at some
+intermediate layer and discard it; later layers may use a different
+representation; the probe direction may correlate near-perfectly with
+the used representation while not being it.
+
+The evidence on the table is now substantial on both sides. The 2023+
+direction-ablation literature
+\citep[\S 3]{marks-tegmark-2023-truth} closes the gap on canonical
+worked examples: ablating $\hat{\mathbf{d}}_{\text{MM}}$ at LLaMA-2-13B
+mid-layers flips TRUE/FALSE behavior, validating the truth direction's
+\emph{use}. \deepencite{vennemeyer2025-sycophancy-not-one-thing §3,
+multi-component-ablation} extends the pattern to a behavioral target
+(sycophancy) with a multi-component decomposition. What remains open
+is the alignment-relevant question: probes validated on
+in-distribution evaluation prompts may not flag the same direction the
+model uses on adversarial out-of-distribution inputs --- and that
+generalization gap is precisely the load-bearing question for
+\textbf{[Paper~5]} alignment-detection probing.
+
+\textbf{Resolving experiment.} Pair every alignment-claim probe with
+direction-ablation on adversarial OOD evaluation suites; report
+whether the ablation-induced behavior change persists under
+distribution shift. A probe whose ablation effect halves on a
+held-out OOD shift has not validated the use claim it asserted.
+
+\subsection{The truth direction across datasets}
+\label{sec:contradictions-truth}
+
+The strongest version of the linear-truth-representation program:
+LLaMA-family models on factual statements admit a single linear axis
+$\mathbf{d}_{\text{truth}} \in \R^D$, recoverable late-layer by
+mass-mean and validated by patching
+\citep[\S 3]{marks-tegmark-2023-truth}. The strongest opposing form
+\citep[\S 4]{marks-tegmark-2023-truth} and the
+\S\ref{sec:truth-frontier} contradiction block: per-dataset truth
+directions are \emph{antipodal} early, rotate to orthogonal mid, and
+align only late --- the ``stark misalignment'' of the original paper's
+own §4. The 2025
+\citet{vennemeyer2025-sycophancy-not-one-thing} sycophancy
+decomposition generalizes the multi-component pattern: an
+alignment-relevant phenomenon thought representationally singular
+admits a three-direction (agreement / praise / genuine-agreement)
+decomposition, each independently steerable. The evidence on the table
+is therefore that ``behaviorally-singular properties may be
+representationally-plural'' on at least two cases. CCS as the
+unsupervised analog is documented to fail under negation
+\citep[\S 1.1]{marks-tegmark-2023-truth} --- a near-truth confound, not
+truth.
+
+\textbf{Resolving experiment.} A multi-axis basis-recovery procedure
+that, applied independently to \texttt{cities}, \texttt{neg\_cities},
+\texttt{larger\_than}, and \texttt{cities\_conj} at matched layers,
+returns a low-dimensional subspace whose per-dataset projections
+recover the single-dataset directions modulo a known equivalence
+(rotation, sign, scale). Until the subspace structure is exhibited,
+``the truth direction'' is a useful one-dimensional projection of a
+richer subspace, in a fixed model and dataset family --- not a
+basis-free property of the model.
+
+\subsection{Circuit-tracing scalability past Anthropic-2025}
+\label{sec:contradictions-circuit-tracing}
+
+The strongest form of the attribution-graph program
+\citep{lindsey2025-circuit-tracing,lindsey2025-biology}: replacing
+MLPs with cross-layer transcoders enables end-to-end Jacobian
+attribution graphs on Claude-class models, with reported findings
+including forward planning in poetry, multi-step factual chains
+(``Texas'' $\to$ ``Austin'' for ``the capital of the state Dallas is
+in''), refusal-circuit features, and cross-lingual feature overlap.
+The strongest opposing form, raised in \S\ref{sec:circuit-forward}:
+the Haiku findings have not been independently reproduced as of 2026,
+the $\sim\!20\%$-of-pretraining transcoder-training cost is a real
+adoption barrier outside frontier labs, and transcoder canonicality
+inherits the \citet{leask2025-sae-not-canonical,dunefsky2024-transcoders}
+critique --- a different transcoder training run may factor the same
+MLP into a different sparse basis, and the stability of attribution
+graphs across transcoder seeds is open empirical.
+
+The evidence on the table is single-source on the substantive claims;
+the 2025-06 Anthropic open-release of the circuit-tracer tooling
+(\S\ref{sec:scaling-pipelines}) is a corrective force, but a corrective
+force is not a replication.
+
+\textbf{Resolving experiment.} Two transcoders trained on the same
+Claude-class model with different random seeds, and an attribution
+graph on the same prompt computed against each. The conclusions ---
+which features mediate the behavior, which features feed which, the
+shape of the graph past the input embedding --- should agree modulo a
+known transcoder equivalence. If they don't, attribution graphs are
+seed-dependent in the sense that matters for circuit claims, and the
+canonicality concern transfers from SAEs to circuits in a load-bearing
+way.
+
+\begin{contradiction}
+\textbf{Method-pluralism is principled, not provisional.} The five
+contradictions above share a structural feature: each one is the
+\emph{boundary between} two of the paper's methods. SAE canonicality
+is a question that probing alone cannot answer (probes don't decompose
+activations into a basis) and that activation patching alone cannot
+answer (patching tests components, not feature inventories). Lens
+extension to frontier-2026 architectures is a question that lens-only
+benchmarks can only partially settle --- the ground truth requires a
+patching-validated model of what the lens \emph{should} read out at
+each layer. Probe correlation-vs-causation is, by 2026 consensus, a
+question whose resolution \emph{requires} pairing probes with
+intervention machinery from \S\ref{sec:patching}. The truth-direction
+plurality is visible only when probes are run across datasets
+\emph{and} subspace methods (\citet{vennemeyer2025-sycophancy-not-one-thing})
+are layered on top. Circuit-tracing scalability is, finally, a question
+whose closure requires both transcoder-replication evidence (within
+the SAE/transcoder method-family) and downstream behavior-edit
+validation (with patching-style interventions). At every contradiction
+listed above, the resolving experiment is \emph{cross-method}: it
+reads off two methods on the same artifact and tests whether they
+agree where they should. \emph{Better single-method tools cannot
+close these gaps}, because what the gaps measure is the disagreement
+between the questions different methods answer.
+\end{contradiction}
+
+\subsection{What ``partially read'' means, restated}
+\label{sec:contradictions-partially-read}
+
+Paper~4's title --- \emph{the internal computation can be partially
+read} --- is now precise. We can extract human-legible structure for
+\emph{some} behaviors (IOI on GPT-2 small, factual recall on GPT-2 XL,
+truth direction in LLaMA-2-13B late layers, abstract features on
+Claude 3 Sonnet), on \emph{some} models (open-source GPT-family +
+Gemma 2 + LLaMA 2 dominate the literature; the frontier-2026 lineup is
+sparser), with \emph{cross-method agreement} on \emph{some} claims (the
+two convergence cases of \S\ref{sec:cross-method}). The five anchor
+contradictions catalog the open frontiers in the same vocabulary:
+where the methods disagree, what each side asserts, what evidence is
+on the table, and what experiment would resolve it. The closing
+discipline of the paper is that progress is measured in
+\emph{contradictions retired by cross-method evidence}, not in
+single-method headline results --- and that the field, in 2026, has
+the methodological vocabulary to do that work.
+
+\subsection{Forward link}
+\label{sec:contradictions-forward}
+
+The five contradictions above are the explicit interpretability-side
+input to the alignment-evaluation discussion of \textbf{[Paper~5]}.
+Three load-bearing claims of the alignment-claim literature ---
+``the model has a deception feature,'' ``the model uses its CoT
+faithfully,'' ``activation steering is a safe inference-time
+intervention'' --- depend on a probe-and-feature substrate whose
+canonicality and use validity is exactly what \S\S\ref{sec:contradictions-probe},
+\ref{sec:contradictions-truth}, and \ref{sec:contradictions-sae} have
+just declared open. Paper~5 picks up the question of how much weight
+those claims can carry given the evidence on the table here.

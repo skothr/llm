@@ -1,0 +1,340 @@
+% Paper 4, §12 — Cross-method convergence and divergence
+% Thesis: across §3-§11 we have five methods (lens, probes, SAEs,
+% activation patching, circuit tracing). This is the paper's central
+% synthesis. When multiple methods converge on the same picture (IOI
+% on GPT-2 small; factual recall on GPT-2 XL), the joint claim is
+% load-bearing in a way no single method's claim is. When methods
+% diverge — truth direction across datasets, SAE feature inventories
+% across widths, lens cross-model unreliability — the divergence is
+% itself diagnostic: either at least one method's assumptions have
+% been falsified, or the methods are answering different questions
+% and the apparent conflict is principled. Forward-link to §13 (the
+% scaling/coverage map) and §14 (consolidated contradictions).
+
+\section{Cross-method convergence and divergence}
+\label{sec:cross-method}
+
+The five methods of \S\S\ref{sec:logit-lens-family}--\ref{sec:circuits}
+make different commitments. Lenses are correlational and project the
+residual stream through the model's own unembedding. Probes are
+correlational and project it through a trained classifier. Sparse
+autoencoders are unsupervised and project it into a learned
+$M\!\gg\!D$-dimensional sparse basis. Activation patching is causal at
+the component level. Circuit tracing is causal at the feature level.
+The methodological question this section asks is: when methods
+\emph{should} agree --- because the underlying mechanism is the same
+and they answer the same question about it --- what do their points
+of convergence and divergence tell us about the model and about the
+methods?
+
+The answer is two-sided. \S\S\ref{sec:cross-ioi}--\ref{sec:cross-rome}
+take up the convergence cases (IOI on GPT-2 small; factual recall
+on GPT-2 XL), where three or four methods triangulate on the same
+picture and the joint claim is more robust than any single-method
+claim. \S\S\ref{sec:cross-truth}--\ref{sec:cross-lens} take up the
+divergence cases (truth direction across datasets; SAE feature
+canonicality; lens cross-model unreliability), where the methods
+disagree and the disagreement is itself diagnostic.
+\S\ref{sec:cross-principle} states the closing argument and
+forward-links to \S\ref{sec:scaling-snapshot} and
+\S\ref{sec:contradictions}.
+
+\subsection{Convergence: the IOI circuit on GPT-2 small}
+\label{sec:cross-ioi}
+
+The most-replicated cross-method picture in the field is
+indirect-object identification on GPT-2 small. The substrate is
+$\sim 124$M parameters; the task is the canonical Wang--prompt
+template ``\textsc{When Mary and John went to the store, John gave a
+drink to \_\_}''; the target is the indirect-object name
+\citep{wang2022-ioi}\footnote{KB excerpt:
+\texttt{kb/excerpts/wang2022-ioi.md\#sec-2-task-and-circuit}.}. Three
+methodologically independent readouts converge on the same circuit
+picture.
+
+\citet{wang2022-ioi} identify a circuit of $26$ attention heads in
+$7$ functional classes (Duplicate Token, Previous Token,
+S-Inhibition, Name Mover, Negative Name Mover, Backup Name Mover,
+Induction Heads), $1.1\%$ of all (head, token-position) pairs, by
+manual path-patching. \citet{conmy2023-acdc} recover a substantially
+overlapping subgraph by automating the discovery: the ACDC
+algorithm of \S\ref{sec:circuit-acdc} iterates over
+computational-graph edges, KL-thresholds the indirect effect of
+each, and prunes below threshold; the surviving subgraph on GPT-2
+small recovers the Wang circuit's load-bearing edges without
+human-supplied prior structure. A third method enters from the
+lens side: the tuned-lens prediction trajectory of
+\S\ref{sec:lens-trajectory} on IOI prompts shows the
+indirect-object name's probability rising in the mid-late layer
+band of GPT-2 small, consistent with the Name-Mover-and-S-Inhibition
+commit identified by Wang et al.\ at the head level. SAE-feature
+analysis on the same prompts identifies features matching the QK
+and OV roles of the discovered heads
+\deepencite{IOI SAE feature analysis: Bricken-style features matching
+QK/OV roles, citation pending — Neuronpedia replication, not in
+papers.json}.
+
+\begin{intuition}
+Three methods, three different commitments (causal-component,
+causal-edge, correlational-readout), one converging picture: IOI on
+GPT-2 small uses a sparse subset of attention heads in 7 functional
+classes, distributed across mid-late layers, and the predicted
+indirect-object probability emerges in exactly the layer band the
+heads operate in. Returning to canonical form: the intersection of
+patching's component-level localization, ACDC's edge-level discovery,
+and the lens's prediction trajectory is the circuit
+$C$ of \S\ref{sec:substrate-circuit}, satisfying faithfulness,
+completeness, and minimality at the GPT-2-small scale.
+\end{intuition}
+
+\subsection{Convergence: factual recall on GPT-2 XL}
+\label{sec:cross-rome}
+
+The second positive cross-method case is factual recall on GPT-2 XL,
+where four methods converge on the same localization. The substrate
+is $1.5$B parameters; the task is the
+$(s, r, o)$-triple cloze of \S\ref{sec:rome-tracing} (e.g., ``The
+Eiffel Tower is in \_\_''); the target is the object completion.
+
+\citet{meng2022-rome} run causal tracing across (component, token,
+layer) cells and report two effects: the average indirect effect
+peaks at MLP layers around layer 15--20 at the last subject token,
+and the AIE for MLP perturbations ($6.6\%$) substantially exceeds
+the AIE for attention perturbations ($1.6\%$) at that locus
+\citep[\S 2.3]{meng2022-rome}\footnote{KB excerpt:
+\texttt{kb/excerpts/meng2022-rome.md\#sec-2-effects}.}. The first
+method --- activation patching with Gaussian noise as the corruption
+--- localizes the mediating component class to mid-layer MLPs at the
+last subject token.
+
+The second method enters as the weight-level intervention. Following
+the localized factual association hypothesis,
+\citeauthor{meng2022-rome} construct a rank-one MLP-weight edit at
+the localized layer that inserts a new $(s, r, o)$ triple under a
+key--value constraint
+$(W + \Delta W)\,\mathbf{k}_* = \mathbf{v}_*$ minimizing
+$\|\Delta W \mathbf{k}_*\|^2$ \citep[\S 3.2]{meng2022-rome}. The
+edit inserts new facts with $99.8\%$ efficacy and $88\%$ paraphrase
+generalization on zsRE. The patching localization survives the
+strongest possible test: an edit at the localized site succeeds at
+inserting facts; an edit elsewhere does not. (See
+\S\ref{sec:rome-hase-critique} for the Hase et al.\ 2023 ``does
+localization inform editing'' caveat
+\deepencite{hase2023-localization-not-editing §1, citation-pending}:
+the \emph{precise} layer-of-edit is not always the AIE peak, but
+the locus is robust.)
+
+The third method enters from the lens side. The tuned-lens
+prediction trajectory of \S\ref{sec:lens-trajectory} on factual
+recall prompts shows the predicted-object token's logit rising
+across exactly the localized layer band: the object is not yet
+predicted at early layers, becomes predictable across the mid-layer
+MLPs, and is committed by the late layers. The lens trajectory and
+the patching heatmap are reading the same phenomenon through two
+different windows.
+
+The fourth method enters from the SAE side. SAE features trained on
+the residual stream and MLP outputs of GPT-2 XL recover
+subject-entity features at exactly the layer band patching
+localizes \deepencite{Templeton-style SAE feature analysis on GPT-2 XL
+factual-recall prompts; partial replication of
+\citet{templeton2024-scaling-monosemanticity} methodology on a
+smaller open model, citation pending}. The features are not fully
+catalogued at the GPT-2 XL scale, but the structural pattern ---
+subject-entity features are sparse in the localized band and not
+elsewhere --- holds.
+
+Four methods, one converging picture: factual recall in GPT-2 XL is
+mediated by mid-layer MLPs at the last subject token; the effect
+can be localized causally (patching), validated intervention-ally
+(rank-one edit), seen correlationally (lens trajectory), and
+decomposed at the feature level (SAE features). The joint claim is
+more robust than any single-method claim because each method's
+confound is different and the four do not align: a lens-only
+artifact would not produce a successful edit; a patching-only
+artifact (e.g., Gaussian-noise off-distribution effects
+\citep{zhang2023-apatching}) would not align with SAE-discovered
+features that are training-distribution by construction.
+
+\subsection{Divergence: truth direction across datasets}
+\label{sec:cross-truth}
+
+The negative cases begin with the most-studied probing target. The
+\citet{marks-tegmark-2023-truth} mass-mean direction on
+LLaMA-2-13B, $\mathbf{d}_{\mathrm{MM}} = \boldsymbol{\mu}_+ -
+\boldsymbol{\mu}_-$, is the canonical truth probe of
+\S\ref{sec:mass-mean}; the same \S 4 of the paper documents
+``stark misalignment'' across datasets \citep[\S 4]{marks-tegmark-2023-truth}\footnote{KB
+excerpt: \texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-4-misalignment}.}.
+The truth direction recovered from the \texttt{cities} dataset
+(``The capital of France is Paris.'') and the truth direction
+recovered from \texttt{neg\_cities} (``The capital of France is
+not Berlin.'') are antipodal in early layers, orthogonal in
+mid-layers, and aligned only in late layers (around layers
+12--15). Whether the recovered direction is a property of the
+\emph{model}'s truth representation or of the \emph{dataset}'s
+truth-pattern is layer-dependent.
+
+A second method on the same target gives a different answer.
+Contrast-Consistent Search (CCS)
+\deepencite{burns2022-ccs §3, citation-pending} finds an
+unsupervised direction satisfying a probabilistic-consistency loss
+on contrast pairs; \citet[\S 1 related work]{marks-tegmark-2023-truth}\footnote{KB
+excerpt: \texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-1-related}.}
+documents that the recovered direction is not the mass-mean
+direction, and CCS suffers documented failures under negation that
+mass-mean does not share. A third method on the same target enters from the SAE side.
+SAE-discovered ``truthfulness''-related features
+\citep[\S 4]{templeton2024-scaling-monosemanticity}\footnote{KB
+excerpt: \texttt{kb/excerpts/templeton2024-scaling-monosemanticity.md\#sec-4}
+(HTML, deepen-cite pending).} \deepencite{templeton2024-scaling-monosemanticity §4
+truthfulness features, HTML-only quotes pending Phase 2 transcription}
+overlap partially but not fully with mass-mean directions: the
+cosine between the probe direction and the SAE feature decoder
+column on matched concepts is, to the best of our knowledge, not
+yet systematically reported, and the few hand-spot-check writeups
+report partial alignment rather than identity.
+
+\begin{contradiction}
+\textbf{There may not be a single truth direction.} Mass-mean
+probing on LLaMA-2-13B finds dataset-dependent directions that align
+only in late layers \citep[\S 4]{marks-tegmark-2023-truth}; CCS
+finds a different direction that fails under negation; SAE-discovered
+truthfulness-related features overlap partially but not fully with
+either. Three methods, no single converging direction. The
+\citet{vennemeyer2025-sycophancy-not-one-thing} multi-component
+result on sycophancy generalizes the pattern: behaviorally-singular
+properties may be representationally plural, and the field's
+single-axis truth-probe assumption may be the wrong shape of model
+for the underlying representation. The strongest form of the open
+question --- ``does the model represent truth along a single linear
+axis, or along a multi-axis subspace whose components depend on
+prompt format?'' --- is unresolved as of 2026, and the experiment
+that would close it is a cross-method, cross-prompt-format,
+cross-model-family study reporting probe direction, SAE feature
+direction, and patching-validated causal direction in matched
+coordinates.
+\end{contradiction}
+
+This is principled divergence in part. A probe asks ``what
+direction linearly decodes property $y$ from this dataset's
+activations?''; an SAE asks ``what sparse basis decomposes
+activations under reconstruction-and-sparsity loss?''. Different
+answers need not falsify each other --- but the divergence becomes
+load-bearing once the field makes single-axis truth-probe claims
+(``ablating $\mathbf{d}_y$ flips the model's TRUE/FALSE behavior''):
+if there is no single $\mathbf{d}_y$, the claim is
+dataset-conditional. The divergence is the diagnostic.
+
+\subsection{Divergence: SAE feature canonicality}
+\label{sec:cross-sae}
+
+A second negative case is the SAE feature inventory itself.
+\citet{leask2025-sae-not-canonical} show that two independent SAE
+training runs at different widths $M$ may produce different
+feature inventories on the same activations
+\citep[\S 1]{leask2025-sae-not-canonical}\footnote{KB excerpt:
+\texttt{kb/excerpts/leask2025-sae-not-canonical.md\#sec-1-canonical}.}:
+meta-SAEs decompose larger-SAE latents into combinations of
+smaller-SAE latents (non-atomicity), and SAE stitching reveals
+novel latents present in larger SAEs but absent from smaller ones
+(incompleteness). The
+\citet{bricken2023-monosemanticity}/\citet{templeton2024-scaling-monosemanticity}
+``true features'' framing assumes a sufficiently large SAE
+recovers the model's underlying units of computation modulo
+training noise; the \citeauthor{leask2025-sae-not-canonical}
+critique argues that ``sufficiently large'' is not well-defined.
+\S\ref{sec:sae-canonicality} treats the contradiction at depth;
+the cross-method consequence is that any claim grounding in SAE
+features (``the SAE feature for truth has cosine $\rho$ with the
+probe direction'') is a claim about \emph{this} SAE's inventory,
+not about a model-canonical basis. The pragmatic 2026 position ---
+training SAEs at multiple widths and reporting which claims survive
+across widths --- reduces the single-run-artifact risk; the open
+theoretical question (a basis-finding criterion under which
+independent runs converge modulo a known equivalence) is
+documented in \S\ref{sec:canonicality-frontier}.
+
+\subsection{Divergence: lens cross-model unreliability}
+\label{sec:cross-lens}
+
+The third negative case is internal to the lens family. The logit
+lens of \citet{nostalgebraist2020-logit-lens} works on GPT-2 ---
+the trajectory $\{\mathrm{LogitLens}(\mathbf{h}_\ell)\}_{\ell=0}^L$
+converges smoothly toward the final-layer prediction --- but on
+BLOOM and GPT-Neo of equivalent scale fails: intermediate
+distributions are systematically biased and the no-training
+baseline is no longer a useful diagnostic
+\citep[\S 2.2]{belrose2023-tuned-lens}\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-2-failures}.}.
+\citet{belrose2023-tuned-lens} fix the bias with the per-layer
+affine translator
+$\mathrm{TunedLens}_\ell(\mathbf{h}_\ell) = \mathrm{LogitLens}(A_\ell\,
+\mathbf{h}_\ell + \mathbf{b}_\ell)$, at the cost of
+$L\!\cdot\!(D^2 + D)$ trained parameters.
+\citet{chuang2023-dola}'s DoLa contrastive decoding works on the
+LLaMA-7B/13B/33B family; whether it generalizes to Llama 3 / 4,
+Qwen 2.5 / 3, DeepSeek-V3, and Gemma 3 has not been systematically
+reproduced, and the \texttt{logitlens4llms-2025} extension is the
+partial cover for the 2025--2026 frontier. The cross-method
+consequence: any synthesis using a lens trajectory (the IOI and
+factual-recall convergence cases above) is implicitly
+model-conditional, and the four-method factual-recall convergence
+of \S\ref{sec:cross-rome} is therefore a GPT-2-XL-specific result
+until a tuned lens for the frontier-2026 architecture exists.
+
+\subsection{When divergence is principled, and when it is falsification}
+\label{sec:cross-principle}
+
+The closing argument is structural. Two methods can disagree for
+two reasons: they answer the same question with different
+commitments and one is wrong (\emph{falsification divergence}, and
+the diagnostic action is to identify which method's assumption
+breaks); or they answer different questions whose answers happen
+to disagree on a target (\emph{principled divergence}, and the
+diagnostic action is to be careful about which method's answer one
+cites for which claim). The convergence cases above are the regime
+where methods are answering compatible questions and the answers
+cross-validate. The truth-direction divergence is on the boundary:
+probes and SAE features ask different questions, but the
+single-axis truth claim assumes the questions have a common answer,
+and the divergence falsifies that assumption (or exposes that the
+representation is multi-axis). The SAE-canonicality and lens
+cross-model divergences are internal to one method family: two
+runs of the same procedure return different answers, and the
+divergence falsifies a stability assumption in each case.
+
+\begin{intuition}
+Method-pluralism is principled because the methods commit
+differently and answer different questions. But the convergence
+cases above show that, for sufficiently constrained behaviors on
+sufficiently small models, the methods \emph{can} be made to
+answer the same question, and when they do, agreement is the
+load-bearing form of evidence. Returning to canonical form: the
+joint posterior over circuits, given evidence from
+$\{\text{patching}, \text{lens}, \text{SAEs}, \text{ROME-edit}\}$,
+is sharply peaked when all four methods agree (the IOI and
+factual-recall cases) and diffusely supported when they do not
+(the truth-direction case). The next paper-level methodological
+move is not better single methods --- it is principled
+cross-method protocols that fix what each method is asked to
+answer, so that disagreement is interpretable as falsification
+rather than as a question mismatch.
+\end{intuition}
+
+This synthesis feeds two downstream sections.
+\S\ref{sec:scaling-snapshot} consumes the convergence cases as the
+regime where every method has scaled enough to participate, and
+the divergence cases as the regime where single-method claims are
+still the only evidence on production-scale models.
+\S\ref{sec:contradictions} consolidates the divergence cases of
+\S\S\ref{sec:cross-truth}--\ref{sec:cross-lens} alongside the
+\S\S\ref{sec:circuit-disagreement}, \ref{sec:canonicality-frontier},
+and \ref{sec:rome-hase-critique} contradictions surfaced earlier
+in the paper, and pairs each with the experiment that would close
+the gap. The thesis holds: ``\emph{partially read}'' is the right
+phrase because on the well-constrained behaviors where the methods'
+angles coincide (IOI, factual recall) the model is read tightly,
+while on the open behaviors where they do not (truth, sycophancy,
+the SAE feature inventory) the field has identified the
+disagreement and is working on the resolution.
