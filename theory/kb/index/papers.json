@@ -3684,6 +3684,43 @@
       ],
       "category": "foundational",
       "summary": "DeepNorm: a normalization scheme that scales the residual branch by depth-dependent constants alpha and beta. Stabilizes training of 1000-layer Transformers. Bridges Pre-LN (which works at moderate depth but loses representational capacity) and Post-LN (which has the capacity but instability)."
+    },
+    {
+      "key": "halawi2023-overthinking",
+      "title": "Overthinking the Truth: Understanding how Language Models Process False Demonstrations",
+      "authors": "Halawi, Denain, Steinhardt",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2307.09476",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/lens-techniques"
+      ],
+      "topics": [
+        "lens-techniques"
+      ],
+      "category": "landmark",
+      "summary": "Documents the layer-of-prediction vs layer-of-decision phenomenon: in some prompts (false demonstrations), early-to-mid layer logit-lens predictions are more robust than the final-layer output. Establishes that 'the right layer to read out' has no a-priori recipe; cross-method evidence at the layer level is needed."
+    },
+    {
+      "key": "hewitt2019-control-tasks",
+      "title": "Designing and Interpreting Probes with Control Tasks",
+      "authors": "Hewitt, Liang",
+      "year": 2019,
+      "venue": "EMNLP 2019",
+      "url": "https://arxiv.org/abs/1909.03368",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/probing",
+        "interpretability/lens-techniques"
+      ],
+      "topics": [
+        "probing"
+      ],
+      "category": "foundational",
+      "summary": "Foundational methodology paper for probing. Introduces 'control tasks' (random labels) as a baseline; argues probe selectivity (gap between real-task and control-task accuracy) is a more honest measure than raw accuracy. Establishes that high-accuracy probes can be reading their own classifier capacity rather than the model's representations."
     }
   ]
 }

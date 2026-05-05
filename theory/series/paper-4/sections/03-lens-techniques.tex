@@ -1,0 +1,353 @@
+% Paper 4, §3 — Lens techniques: the cheapest readout
+% Thesis: lenses project intermediate hidden states through the model's
+% own unembedding W_U to obtain a layer-l "as-if-final" distribution
+% over the vocabulary. Logit lens (nostalgebraist 2020) is the no-training
+% baseline; tuned lens (Belrose 2023) inserts a per-layer affine
+% translator that fixes documented cross-model failures; DoLa (Chuang
+% 2023) turns the framework into a hallucination-suppression decoding
+% strategy.
+
+\section{Lens techniques}
+\label{sec:logit-lens-family}
+
+A \emph{lens} takes a transformer's intermediate residual-stream state
+$\mathbf{h}_\ell$ at some layer $\ell$ and returns a distribution over
+the vocabulary $\mathcal{V}$ — the prediction the model would commit to
+if it were forced to early-exit at $\ell$. Lenses are the cheapest
+interpretability readout: no training data, no auxiliary classifier, no
+causal intervention; the lens reuses the model's own pre-unembed
+normalization and unembedding matrix $W_U$. This section covers three
+lens techniques that anchor the literature: the \emph{logit lens}
+\citep{nostalgebraist2020-logit-lens}, the no-training baseline that
+introduced the framework on a LessWrong post in 2020; the \emph{tuned
+lens} \citep{belrose2023-tuned-lens}, which inserts a learned per-layer
+affine translator and fixes the logit lens's documented cross-model
+failures; and \emph{DoLa} \citep{chuang2023-dola}, an inference-time
+contrastive-decoding strategy that uses the layerwise-readout structure
+to suppress hallucinations. Each commits to a different question: what
+\emph{would} the model predict at layer $\ell$? what \emph{is} the model
+already predicting there once basis drift is accounted for? and what
+content did the \emph{later} layers specifically commit?
+
+\subsection{Setup: the iterative-inference view}
+\label{sec:lens-setup}
+
+\citet{belrose2023-tuned-lens} frame the transformer as iterative
+inference\footnote{KB excerpt: \texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-1-iterative}.}:
+each block makes a small additive update to the residual stream, and
+the per-layer prediction tends to converge smoothly toward the
+final-layer output. Concretely, for a pre-LayerNorm transformer the
+residual update at layer $\ell$ is
+\begin{equation}
+  \mathbf{h}_{\ell+1} \;=\; \mathbf{h}_\ell + F_\ell(\mathbf{h}_\ell),
+  \label{eq:residual-update}
+\end{equation}
+where $F_\ell$ is the residual output of layer $\ell$ (attention
+followed by MLP). Splitting the model $\mathcal{M}$ into the layers up
+to $\ell$ and the layers after, the function from a hidden state
+$\mathbf{h}_\ell$ to the final-layer logits is
+\citep[\S 2, Eq.~2]{belrose2023-tuned-lens}\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-2-decomposition}.}
+\begin{equation}
+  \mathcal{M}_{>\ell}(\mathbf{h}_\ell)
+  \;=\;
+  \mathrm{LayerNorm}\!\left[\mathbf{h}_\ell
+  \;+\;\underbrace{\sum_{\ell'=\ell}^{L} F_{\ell'}(\mathbf{h}_{\ell'})}_{\text{residual update}}\right]\!W_U,
+  \label{eq:residual-decomp}
+\end{equation}
+with $W_U \in \mathbb{R}^{D \times V}$ the unembedding matrix (often
+weight-tied with the input embedding) and $\mathrm{LayerNorm}$ the
+model's own final pre-unembed normalization. Tensor shapes for the
+rest of this section: residual stream $\mathbf{h}_\ell \in \mathbb{R}^D$
+at one $(B, S)$ position, with $D$ the model dim, $V = |\mathcal{V}|$
+the vocabulary, and $L$ the layer count from Paper~1's notation. A
+batched residual stream is $\mathsf{B}\!\times\!\mathsf{S}\!\times\!D$;
+the lens output is $\mathsf{B}\!\times\!\mathsf{S}\!\times\!V$.
+
+The \emph{prediction trajectory}
+$\{\mathrm{Lens}_\ell(\mathbf{h}_\ell)\}_{\ell=0}^L$ across layers is
+the diagnostic object: a single lens reading is a snapshot, but the
+evolution across layers fingerprints the model's iterative computation.
+\citet[\S 1]{belrose2023-tuned-lens} report that for clean
+in-distribution prompts the trajectory converges smoothly to the final
+prediction many layers before $L$, and that prompt-injected or
+otherwise anomalous inputs deviate from the smooth trajectory in
+detectable ways — the basis for a near-perfect prompt-injection
+detector \citep[\S 5.3]{belrose2023-tuned-lens}\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-5-3}.}.
+
+\subsection{The logit lens: no-training baseline}
+\label{sec:logit-lens}
+
+The logit lens drops the post-$\ell$ residual updates from
+Eq.~\eqref{eq:residual-decomp} entirely — it sets
+$\sum_{\ell'=\ell}^{L} F_{\ell'} = 0$ and reads
+\citep[\S 2, Eq.~3]{belrose2023-tuned-lens}\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-2-logit-lens}.}:
+\begin{equation}
+  \boxed{\;\mathrm{LogitLens}(\mathbf{h}_\ell) \;:=\; \mathrm{LayerNorm}[\mathbf{h}_\ell]\,W_U\;}
+  \label{eq:logit-lens}
+\end{equation}
+The result is a logit vector in $\mathbb{R}^V$; softmax gives the
+layer-$\ell$ ``as-if-final'' distribution and $\arg\max$ gives the
+top-$1$ token. Per-(layer, token) cost is one LayerNorm plus one
+$D \times V$ matmul — exactly the same compute as the model's actual
+unembed step at the top of the stack. The technique has no training
+parameters and no hyperparameters beyond the choice of normalization;
+it is the cheapest interpretability readout of any kind.
+
+\begin{forumsignal}
+The logit lens was introduced by nostalgebraist on LessWrong in August
+2020 \citep{nostalgebraist2020-logit-lens} and propagated for nearly
+three years before any peer-reviewed treatment landed
+\citep[\S 2]{belrose2023-tuned-lens}. We treat the LessWrong post as the
+canonical source of the technique, but flag it explicitly as a
+forum-tier (Tier C) artifact under the source-tier convention of
+Paper~1: the technique is widely reused
+\citep[Halawi 2023, Geva 2022, Dar 2022 referenced in
+][\S 2]{belrose2023-tuned-lens}, but the original write-up is a
+LessWrong essay, not a journal paper. Hard technical claims about lens
+behavior in this section back to the Belrose et al.\ peer-reviewed
+treatment, not to the original post.
+\end{forumsignal}
+
+\subsubsection*{Why the logit lens fails on some models}
+
+\citet[\S 2]{belrose2023-tuned-lens} document three failure modes of
+the raw logit lens\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-2-failures}.}.
+\textbf{Bias.} The logit lens systematically puts more mass on certain
+vocabulary items than the final layer does. On Pythia 12B, the bias
+measured as KL between logit-lens marginal and final-layer marginal is
+``around 4 to 5 bits for most layers,'' against $0.0068$ bits between
+Pythia 160M's and Pythia 12B's final-layer
+distributions~\citep[\S 2]{belrose2023-tuned-lens}. A rational agent's
+beliefs should not update predictably over time, so the prediction
+trajectory under a biased lens cannot be read as Bayesian belief
+updating. \textbf{Representational drift.} Hidden states at different
+layers occupy slightly different covariance subspaces; the final-layer
+covariance often shifts sharply relative to earlier layers
+\citep[\S 3]{belrose2023-tuned-lens}, so a fixed final-layer unembedding
+applied to an earlier-layer state may be misapplied to the wrong basis.
+\textbf{Cross-model unreliability.} The logit lens works ``reasonably
+well'' on GPT-2 (\citealp{radford2019-gpt2}) but fails on BLOOM and
+GPT-Neo: its top-$1$ predictions in the bottom 21 layers of GPT-Neo-2.7B
+are nonsense (e.g., ``\texttt{@G:}'') rather than coherent intermediate
+tokens \citep[\S 2 + Fig.~1]{belrose2023-tuned-lens}. For BLOOM and OPT
+125M, the top-$1$ logit-lens prediction is the input token rather than
+any plausible continuation in more than half the
+layers~\citep[\S 2]{belrose2023-tuned-lens}.
+
+These three failure modes set up the tuned lens as the targeted
+correction.
+
+\subsection{The tuned lens: a per-layer affine translator}
+\label{sec:tuned-lens}
+
+\citet[\S 3]{belrose2023-tuned-lens} insert a learned affine
+\emph{translator} $(A_\ell, \mathbf{b}_\ell)$ at each layer that maps
+$\mathbf{h}_\ell$ into the basis the unembedding expects:
+\begin{equation}
+  \boxed{\;\mathrm{TunedLens}_\ell(\mathbf{h}_\ell)
+  \;:=\; \mathrm{LogitLens}(A_\ell \mathbf{h}_\ell + \mathbf{b}_\ell)\;}
+  \label{eq:tuned-lens}
+\end{equation}
+\citep[\S 3, Eq.~8]{belrose2023-tuned-lens}\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-3-tuned-lens}.},
+with $A_\ell \in \mathbb{R}^{D \times D}$ and
+$\mathbf{b}_\ell \in \mathbb{R}^D$. Translators are initialized to the
+identity, so a freshly initialized tuned lens is identical to the logit
+lens; training pulls the translator off the identity to absorb basis
+drift. Crucially, the unembedding $W_U$ is \emph{frozen} — there is
+exactly one $W_U$ per model, shared across all $L$ tuned lenses
+\citep[\S 3]{belrose2023-tuned-lens}.
+
+The training objective is a per-layer distillation against the model's
+own final-layer prediction:
+\begin{equation}
+  \mathcal{L}(\ell)
+  \;=\;
+  \mathbb{E}_\mathbf{x}\!\left[D_{\mathrm{KL}}\!\left(\mathcal{M}_{>\ell}(\mathbf{h}_\ell)
+  \,\big\|\,\mathrm{TunedLens}_\ell(\mathbf{h}_\ell)\right)\right]
+  \label{eq:tuned-lens-loss}
+\end{equation}
+\citep[\S 3, Eq.~9]{belrose2023-tuned-lens}\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-3-loss}.}.
+Using $\mathcal{M}_{>\ell}$ as the soft target rather than ground-truth
+tokens is what makes Eq.~\eqref{eq:tuned-lens-loss} a distillation loss:
+the translator is incentivized to recover what the model itself already
+knows, never to learn extra information beyond it. This is the design
+choice that distinguishes tuned-lens translators from
+\citet{alain-bengio-2017}-style early-exit probes, which retrain a full
+unembedding per layer and risk learning structure not present in the
+underlying model — the classic ``probe-as-feature-extractor'' confound
+flagged by \citet{hewitt2019-control-tasks} and engaged in
+\S\ref{sec:probing}.
+
+\paragraph{Cost.} Tuned-lens parameters total $L \cdot (D^2 + D)$ — a
+fraction of the model's own size, since $D \times D$ is roughly the
+size of one attention block's $W^Q$ projection. For Pythia 12B with
+$D = 5120$ and $L = 36$, this works out to roughly $944$M extra
+parameters \citep[\S 3.2]{belrose2023-tuned-lens}\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-3-tuned-lens}.} ---
+considerably smaller than per-layer unembeddings of size
+$V \times D$ would be, since $V \in [50\text{K}, 250\text{K}]$ across
+the models Belrose et al.\ study. The cost-per-(layer, token) at
+inference is one extra $D \times D$ matmul on top of the logit-lens
+LayerNorm + $W_U$ chain.
+
+\paragraph{Why a single affine map is enough.} The tuned lens fixes
+all three logit-lens failures with one affine map per layer:
+$\mathbf{b}_\ell$ absorbs the bias term, $A_\ell$ absorbs the
+representational drift (basis shift), and the joint training across all
+layers adapts to the cross-model pathologies that defeated the raw
+logit lens. \citet[Fig.~1]{belrose2023-tuned-lens} report that the
+tuned lens recovers coherent intermediate predictions throughout the
+GPT-Neo-2.7B stack where the logit lens produced nonsense, and
+generalizes across Pythia, GPT-Neo, GPT-NeoX-20B, OPT, BLOOM, and
+GPT-2. The fact that a \emph{linear} correction suffices is itself
+informative: representational drift in residual-stream architectures is
+approximately linear, not learned-feature-dependent.
+
+\begin{intuition}
+The lens framework exploits one architectural fact: the residual stream
+is an additive bus. The final-layer hidden state is
+$\mathbf{h}_L = \mathbf{h}_\ell + \sum_{\ell'=\ell}^{L-1} F_{\ell'}(\mathbf{h}_{\ell'})$
+by recursing Eq.~\eqref{eq:residual-update}. If the residual sum is
+small relative to $\mathbf{h}_\ell$, the unembedding of $\mathbf{h}_\ell$
+already approximates the unembedding of $\mathbf{h}_L$ — the logit lens
+is a zero-order Taylor expansion that the residual is unchanged. The
+tuned-lens translator
+$A_\ell \mathbf{h}_\ell + \mathbf{b}_\ell$ in
+Eq.~\eqref{eq:tuned-lens} extends this to a first-order correction
+that compensates for whatever systematic drift the actual residual
+contributes at layer $\ell$. Returning to canonical form: the tuned
+lens is the logit lens with a per-layer linear basis correction; the
+underlying readout is still $\mathrm{LayerNorm}[\,\cdot\,]W_U$.
+\end{intuition}
+
+\subsection{DoLa: lens techniques as a decoding strategy}
+\label{sec:dola}
+
+The lens framework is not only diagnostic. \citet{chuang2023-dola}
+turn the layerwise readout into an inference-time decoding strategy by
+contrasting logits across layers. \emph{Decoding by Contrasting Layers}
+(DoLa) defines, at each generation step,
+\begin{equation}
+  \mathrm{logits}_{\mathrm{DoLa}}(t)
+  \;=\;
+  \mathrm{logit}^{(L)}(t) \;-\; \mathrm{logit}^{(\ell^\star)}(t),
+  \label{eq:dola}
+\end{equation}
+where $\ell^\star$ is selected per token as the layer whose logit
+distribution is maximally divergent (in Jensen-Shannon divergence) from
+the final-layer logit distribution \citep{chuang2023-dola}. Tokens
+whose probability rises sharply between layer $\ell^\star$ and layer
+$L$ are exactly the tokens the later layers specifically committed to;
+reweighting toward those tokens preserves the late-stage factual
+signal while suppressing tokens that were already high in early layers
+(plausibly hallucination-shaped). DoLa requires no fine-tuning, adds
+only a modest decoding-time overhead, and reports improved TruthfulQA
+scores on LLaMA-7B/13B/33B \citep{chuang2023-dola}. The conceptual
+point: layerwise readout carries decision-relevant information that
+can be fed back into generation, not just inspected.
+
+\begin{analogy}
+DoLa is to the logit lens what a numerical \emph{difference} is to a
+function evaluation. The logit lens reads
+$\mathrm{LogitLens}(\mathbf{h}_\ell)$ as the model's belief at layer
+$\ell$; DoLa reads
+$\mathrm{LogitLens}(\mathbf{h}_L) - \mathrm{LogitLens}(\mathbf{h}_{\ell^\star})$
+as the \emph{change} in belief that the later layers contributed. The
+analogy returns to canonical form: Eq.~\eqref{eq:dola} is exactly the
+difference of two logit-lens evaluations
+(Eq.~\eqref{eq:logit-lens}) on the same token, so the underlying
+object is still the layerwise unembed — read differentially across
+depth instead of pointwise at one layer.
+\end{analogy}
+
+\subsection{Diagnostic: the prediction trajectory}
+\label{sec:lens-trajectory}
+
+The empirical signature of a working lens is the smoothness of the
+prediction trajectory $\{\mathrm{Lens}_\ell(\mathbf{h}_\ell)\}_{\ell=0}^L$.
+\citet[\S 1]{belrose2023-tuned-lens} document three regimes. On
+\emph{clean in-distribution prompts}, the tuned-lens trajectory
+converges smoothly to the final prediction, with each layer typically
+reducing perplexity. On \emph{prompt-injected} or otherwise anomalous
+inputs, the trajectory deviates from the smooth manifold of normal
+trajectories detectably enough that off-the-shelf isolation-forest /
+local-outlier-factor classifiers achieve near-perfect prompt-injection
+detection accuracy \citep[\S 5.3]{belrose2023-tuned-lens}\footnote{KB
+excerpt: \texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-5-3}.}. On
+\emph{hard examples} — data points the model required many training
+steps to learn — the trajectory's commit-layer extends deeper into the
+stack: harder examples are classified later
+\citep[\S 5.4]{belrose2023-tuned-lens}. The trajectory is therefore
+not just a richer readout than the layer-pointwise prediction; it is
+also a fingerprint that distinguishes input regimes the model treats
+differently.
+
+\begin{contradiction}
+\textbf{Layer-of-prediction vs.\ layer-of-decision.} The trajectory
+view assumes the lens reading is monotonically improving in $\ell$:
+later layers reflect the model's better-considered prediction.
+\citet{halawi2023-overthinking}, however, find that on certain tasks
+predictions extracted from \emph{earlier} layers are \emph{more}
+robust to incorrect demonstrations than the final-layer prediction.
+\citet[\S 5.2]{belrose2023-tuned-lens} reproduce this on three models
+(BLOOM 560M, GPT-Neo 1.3B, GPT-Neo 2.7B), but flag that without
+peeking at ground-truth labels the lens user has no a-priori recipe
+for choosing the right layer\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-5}.}. So
+``commit later $=$ commit better'' is sometimes false, and the field
+lacks a principled criterion for layer selection. The strongest
+form of the claim is that lens techniques diagnose what \emph{would}
+happen at $\ell$, not what the model \emph{should} commit to; closing
+that gap requires the causal interventions of \S\ref{sec:probing}
+and the patching machinery of \S\ref{sec:patching}.
+\end{contradiction}
+
+\subsection{Frontier coverage and forward link}
+\label{sec:lens-forward}
+
+The lens framework as published covers the open-source generation
+through 2023: GPT-2, Pythia (70M–12B), GPT-Neo, GPT-NeoX-20B, OPT,
+BLOOM, and (via lens transfer) Vicuna-13B
+\citep[\S 3, \S 5]{belrose2023-tuned-lens}. The 2025–2026 frontier ---
+Llama 3 / 4, Qwen 2.5 / 3, DeepSeek-V3, Gemma 3 --- is largely
+uncovered by published tuned lenses as of writing. The
+\texttt{logitlens4llms-2025} extension targets Qwen-2.5 and Llama-3.1;
+broader open-lens releases for the rest of the frontier-2026 lineup
+are an outstanding need. Whether the lens framework extends cleanly
+to architectures with substantially modified attention or FFN substrate
+--- DeepSeek-V3's MLA-compressed-KV plus fine-grained-MoE, NSA-sparse
+attention, sliding-window layers --- is partially empirical and not
+yet documented at frontier scale. The residual stream is still
+well-defined in all of these, but the layer structure is more
+irregular, and the assumption that a single affine translator suffices
+to absorb basis drift may need re-examination on per-architecture
+basis.
+
+The lens is correlational by construction: it tells you what the model
+\emph{would} predict if it committed at $\ell$, not whether the model
+\emph{uses} the layer-$\ell$ information that supports that prediction.
+\citet[\S 4]{belrose2023-tuned-lens} partially close this gap with
+\emph{Causal Basis Extraction}, which finds a tuned-lens-derived
+orthonormal basis ordered by mean-ablation influence and validates that
+the directions important to the lens are also important to the
+underlying model (Spearman $\rho = 0.89$ on Pythia 410M, layer
+$18$)\footnote{KB excerpt:
+\texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-4-cbe}.}. The next
+two sections take up this correlational/causal split directly: §%
+\ref{sec:probing} introduces probes as the supervised correlational
+analog of lenses --- a trained classifier on frozen activations rather
+than the model's own unembedding --- and §\ref{sec:correlation-causation}
+shows how the field couples probes with activation interventions to
+upgrade correlational readouts into causal claims. The lens results in
+this section reappear in §\ref{sec:cross-method}: the tuned-lens
+prediction trajectory on IOI prompts is one of the three independent
+methodologies that converge on the GPT-2-small IOI-circuit picture, and
+the lens cross-model unreliability documented in
+\S\ref{sec:logit-lens} is one of the field's open contradictions
+catalogued there.

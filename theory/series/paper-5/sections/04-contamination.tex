@@ -1,0 +1,313 @@
+% Paper 5, §4 — Contamination: the boundary between "well-known" and "leaked"
+% Anchors: kb/notes/evaluation/eval-methodology.md §contamination
+%          kb/notes/evaluation/knowledge-benchmarks.md §contamination
+%          kb/excerpts/{contamination-survey-2025,mmlu-redux-2024}.md
+
+\section{Contamination: the boundary between well-known and leaked}
+\label{sec:contamination}
+
+The MMLU lineage of \cref{sec:knowledge-benchmarks} closes on the
+question this section opens. A frontier model that scores within the
+verifier-error band of a saturated knowledge benchmark either
+\emph{knows} the material in the deployment-relevant sense or has
+\emph{seen} the material during pre-training in a way that lets it
+reproduce the answer key. The boundary between those two states is
+fuzzy by construction --- the same exam-bank items that make MMLU a
+broad-coverage benchmark are exactly the items that pre-training
+scrapes from public web text --- and the field has not converged on a
+protocol that draws the boundary cleanly. The thesis of this section
+is that contamination has three structurally distinct failure modes
+(direct, indirect, methodological), four detection methods with
+characteristic false-positive / false-negative profiles, one
+worked-case-study where the boundary is genuinely contested
+(\textsc{aime~2024}), and zero field-standard contamination protocols
+shipped alongside benchmark releases. The next layer of the layered
+defense (\cref{sec:reasoning-benchmarks}) inherits all of this, because
+reasoning benchmarks are knowledge benchmarks with longer derivation
+chains and narrower answer distributions.
+
+\subsection{Three failure modes}
+\label{sec:contamination-modes}
+
+\citet{contamination-survey-2025} structures the field's response into
+\emph{static} and \emph{dynamic} evaluation strategies%
+\footnote{KB excerpt: \texttt{kb/excerpts/contamination-survey-2025.md\#abstract}.}
+\citep[\S{}abstract]{contamination-survey-2025}:
+
+\begin{quote}\itshape
+To mitigate the risk of potential data contamination, LLM benchmarking
+has undergone a transformation from static to dynamic benchmarking.
+\ldots\ We first examine methods that enhance static benchmarks and
+identify their inherent limitations. We then highlight a critical
+gap--the lack of standardized criteria for evaluating dynamic
+benchmarks.
+\end{quote}
+
+The taxonomy below is the synthesis the contamination notes carry
+forward%
+\footnote{KB note: \texttt{kb/notes/evaluation/eval-methodology.md\#sec-2-2}; the canonical category list in the survey itself is \texttt{[PDF-VERIFY]}-flagged. \deepencite{contamination-survey-2025 §sec-taxonomy}}
+into three failure modes that differ in where the leak enters the
+pipeline.
+
+\paragraph{Direct contamination.} A test-set item appears verbatim or
+near-verbatim in the model's pre-training corpus. The benchmark
+question $\rho$ and (often) the gold answer $a^\star$ are tokens in the
+training sequence; the model's score on that item is partially a
+recall of the training distribution rather than a measurement of the
+construct the benchmark advertises. This is the failure mode that
+$n$-gram-overlap decontamination filters target. \citet{hendrycks2021-mmlu}'s
+MMLU was constructed from publicly-available exam banks (AP exams,
+GRE, MCAT, professional licensing exams), which is exactly the
+distribution that web crawls preserve at high redundancy.
+
+\paragraph{Indirect contamination.} The verbatim item is absent, but a
+paraphrase, translation, partial overlap, distractor-set match, or
+worked solution is present. \citet{contamination-survey-2025}'s
+abstract names static-benchmark enhancement as one of the survey's
+two structural concerns, with the implicit recognition that the
+enhancements (paraphrase, distractor swap, language transfer) only
+shift contamination from \emph{input} to \emph{label} or
+\emph{distribution}: a model trained on AIME 2023 problems has seen
+the AIME style, the AIME difficulty calibration, and the AIME answer
+distribution, and that exposure transfers to AIME 2024 even when no
+2024 item is in the training set%
+\footnote{KB note: \texttt{kb/notes/evaluation/eval-methodology.md\#sec-2-2} enumerates input/label/distribution/indirect/generative variants.}.
+The StackExchange-and-Reddit explanations that surround any widely-used
+benchmark are themselves an indirect contamination channel that no
+$n$-gram filter on the benchmark text can catch.
+
+\paragraph{Methodological contamination.} The leak happens at
+\emph{evaluation time}, not training time. The model is given
+tool-use, retrieval, or fine-tune-on-eval access during scoring, so
+the gold answer (or material that determines it) re-enters the inference
+context. This is structurally different from the first two: no
+amount of training-corpus auditing closes it, because the channel is
+the eval harness itself. \textsc{rag}-augmented model cards that
+report \textsc{mmlu} scores under tool-use, agentic-benchmark
+scaffolds that browse the live web, and \textsc{llm}-as-judge
+pipelines whose judge has been fine-tuned on the same task are all
+instances. The contamination-survey abstract does not name this mode
+explicitly, but the dynamic-benchmark gap it calls out --- ``the lack
+of standardized criteria for evaluating dynamic benchmarks''
+\citep[\S{}abstract]{contamination-survey-2025} --- is partly the
+methodological-contamination problem dressed in a positive frame.
+
+\begin{intuition}
+The three modes correspond to three distinct repair points in the
+layered-defense framing of \cref{sec:introduction}. \emph{Direct}
+contamination is repaired upstream of training, by decontamination
+filters on the corpus. \emph{Indirect} contamination is repaired at
+benchmark construction, by contamination-resistant items (Google-proof
+\cref{sec:knowledge-gpqa}; unpublished \cref{sec:knowledge-frontiermath}).
+\emph{Methodological} contamination is repaired downstream, in the
+eval harness's isolation guarantees. A benchmark that defends against
+only one of the three is not contaminated-clean; it is
+contaminated-clean-along-one-axis. (Returning to canonical form: the
+score random variable $\hat{S}(\theta, \mathcal{B}, \pi, \tau)$ from
+\cref{sec:eval-methodology} carries an additive bias term whose
+support is the union of the three contamination channels, and zeroing
+out one channel does not zero the bias.)
+\end{intuition}
+
+\subsection{Four detection methods, four error profiles}
+\label{sec:contamination-detection}
+
+No detection method is uniformly best; each has a characteristic
+false-positive / false-negative profile that determines what the
+method can rule in and what it can rule out. The four methods below
+are the field's working set as of 2026%
+\footnote{KB note: \texttt{kb/notes/evaluation/eval-methodology.md\#sec-5-1} catalogs these methods and their adoption status.}.
+
+\paragraph{$n$-gram overlap.} Flag any training document that contains
+a benchmark item's $n$-gram of length $\geq k$ (Brown et al.\ used
+$k = 13$ tokens for GPT-3 \deepencite{brown2020-gpt3 §C-decontamination}).
+\textbf{Cheap, standard, the only method most pre-training pipelines
+actually run.} False-positive profile: low; a 13-gram match is rarely
+coincidental. False-negative profile: severe under any paraphrase,
+translation, or partial-template rewrite. The method catches direct
+contamination and misses essentially all indirect contamination.
+
+\paragraph{Embedding-space neighbors.} Embed both training documents
+and benchmark items in a shared dense space and flag training docs
+whose nearest-neighbor distance to a benchmark item is below threshold.
+\textbf{Catches paraphrases the $n$-gram filter misses.} False-positive
+profile: high and threshold-dependent --- legitimate exam-bank-style
+items not in the benchmark cluster near benchmark items by genre, not
+by content. False-negative profile: depends on the embedding model's
+own training distribution; a benchmark item paraphrased into a domain
+the embedding model under-represents will be missed.
+
+\paragraph{Prompted recall (Min-K\% Prob, perplexity gap).} For a
+candidate item, compute a model-internal memorization signal:
+$\sum_{i \in K\%\text{-lowest}} \log P(x_i)$ \deepencite{shi2024-min-k};
+or the ratio of the model's perplexity on the held-out test split
+to its perplexity on training-distribution-matched text. Memorized
+items have characteristic flat-low-perplexity signatures.
+\textbf{Model-internal --- does not need access to the training corpus.}
+False-positive profile: confounded by item difficulty and stylistic
+familiarity; an easy item the model would always assign high
+probability to looks contaminated even when it is not. False-negative
+profile: degraded by post-training (RLHF / instruction-tuning) which
+overwrites base-model probability surfaces; the signal is strongest
+on base models and weakens substantially on chat-tuned variants.
+
+\paragraph{Behavioral probes.} Construct items the contaminated model
+should fail on if it is reasoning rather than memorizing: shuffle the
+multiple-choice option order, swap the gold-letter position,
+substitute synonymous distractors, perturb numerical inputs.
+A model whose accuracy collapses on the perturbed variant is leaning
+on memorized surface form. \textbf{Falsifiable in either direction.}
+False-positive profile: a model that legitimately handles the
+canonical surface but is brittle to perturbation looks contaminated
+when it is merely brittle. False-negative profile: a model that
+memorized the underlying \emph{logic} (not the surface form) of a
+contaminated item passes the perturbation test even though the
+training distribution leaked the answer.
+
+The methods are non-redundant: each catches a different leak channel,
+and the correlation between their flags across a benchmark is far
+from one. The field's open-source decontamination pipelines run a
+subset (typically just $n$-gram overlap); vendor pipelines reportedly
+run more (LLaMA 3 and Phi-4 model cards document multi-method
+filters), but the audits are vendor-internal and not externally
+reproducible.
+
+\subsection{The \textsc{aime~2024} case study}
+\label{sec:contamination-aime}
+
+\textsc{aime~2024} is the worked example. The American Invitational
+Mathematics Examination's 2024 problems were administered in early
+2024, then publicly released alongside official answer keys, and have
+since served as the canonical \emph{reasoning} benchmark for late-2024
+and 2025-frontier models. \citet{deepseek-r1}'s headline result is
+the load-bearing illustration%
+\footnote{KB excerpt: \texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.}
+\citep[\S{}2.3]{deepseek-r1}:
+
+\begin{quote}\itshape
+Figure 1(a) depicts the performance trajectory of DeepSeek-R1-Zero on
+the AIME 2024 benchmark throughout the RL training process, where the
+average pass@1 score on AIME 2024 shows a significant increase,
+jumping from an initial 15.6\% to 77.9\%.
+\end{quote}
+
+The headline jump from $15.6\%$ to $77.9\%$ at $\mathrm{pass}@1$
+(further to $86.7\%$ under self-consistency) is the load-bearing
+RL-on-verifiable-rewards demonstration of Paper 3 \deepencite{paper-3 §reasoning-RL}.
+What the contamination question asks of that result is whether the RL
+optimization is teaching new reasoning computation or learning to
+invoke pretrained computation that already saw enough \textsc{aime}-style
+material to do this --- the open question that the
+reasoning-training KB note flags as the load-bearing 2026 dispute%
+\footnote{KB note: \texttt{kb/notes/reasoning/reasoning-training.md\#sec-3-2}.}.
+
+The timeline that complicates the question:
+
+\begin{enumerate}
+\item \textbf{February 2024:} \textsc{aime~2024} administered;
+problems and official answer keys publicly released within weeks.
+\item \textbf{Q2--Q3 2024:} \textsc{aime~2024} problems and worked
+solutions appear on Art-of-Problem-Solving forums, math-coaching
+blogs, and StackExchange threads --- the indirect-contamination
+channel of \cref{sec:contamination-modes}.
+\item \textbf{Q4 2024:} pre-training data cutoffs for late-2024
+frontier models include the public-web representation of these
+problems and (for problems with worked solutions) their
+derivation chains. Reasoning-RL traces are subsequently generated
+on these same problems, sometimes from a base model that has
+already seen them.
+\item \textbf{2025:} \textsc{aime~2024} is the canonical
+reasoning-RL headline benchmark, used to compare model classes
+that have differing levels of training-time exposure to its
+items.
+\end{enumerate}
+
+The line between ``publicly canonical'' (the problems are by
+construction released for human study) and ``contaminated'' (the
+items are in the model's training distribution in a way the
+benchmark's measurement assumes they are not) is, on
+\textsc{aime~2024}, structurally fuzzy. The same release that makes
+the benchmark legible to human contestants makes it absorbable by
+crawl-based pre-training. The dispute is not over a methodological
+mistake; it is over which benchmark category \textsc{aime~2024} is
+in. Paper 3's discussion of the same headline picks up this
+contradiction explicitly \deepencite{paper-3 §AIME-contamination}.
+
+\begin{contradiction}
+\textbf{What counts as contamination?} The vendor-side position is
+that \emph{decontaminated}-by-the-released-procedure equals clean:
+LLaMA 3, Phi-4, and other frontier model cards document
+$n$-gram-overlap-based filters and report decontaminated training
+sets, and on that basis report \textsc{aime}-2024-style scores as
+measurements of reasoning capability. The third-party position is
+that the survey of leak channels in \cref{sec:contamination-modes}
+makes this position incomplete: $n$-gram filters miss
+indirect/generative contamination, contamination-survey
+\citep[\S{}abstract]{contamination-survey-2025} explicitly calls out
+``the lack of standardized criteria'' as a gap, and the
+multi-method audits that would close the loop are not run
+field-wide. As of 2026-Q2, no contamination protocol ships alongside
+benchmark releases the way \texttt{requirements.txt} ships alongside
+Python code; each lab certifies its own pipeline against its own bar.
+The two positions are not formally inconsistent --- decontamination
+\emph{by some procedure} is a real artifact --- but they make
+incompatible claims about what reported benchmark scores mean,
+because they implicitly fix different procedures as the procedure.
+\end{contradiction}
+
+\subsection{Why the field has not standardized}
+\label{sec:contamination-no-standard}
+
+The mechanical reason is that the four detection methods of
+\cref{sec:contamination-detection} have non-overlapping cost-quality
+profiles, and no single subset is dominated by another. $n$-gram
+overlap is cheap and reproducible but indirectly-blind;
+embedding-neighbor methods catch indirect leakage but require
+expensive training-corpus access and tunable thresholds;
+prompted-recall methods are model-internal and corpus-free but
+weakened by post-training; behavioral probes are cheap and
+falsifiable but confounded by brittleness. A field-standard protocol
+would have to specify which subset to run, at what threshold, on
+which corpus slice --- and the right answer plausibly differs across
+benchmarks. \textsc{mmlu-redux} \citep{mmlu-redux-2024} is a partial
+analogue at the verifier-error layer (a published per-question
+correction set that subsequent runs can use), and its partial
+adoption --- the Open LLM Leaderboard moved its primary headline to
+\textsc{mmlu-pro} while many model cards still report raw \textsc{mmlu}
+\citep[\S{}implications]{mmlu-redux-2024} --- is the diagnostic for
+how field-wide adoption of a heavier contamination protocol would
+likely play out.
+
+The structural reason is that the incentives diverge. A vendor
+reporting on its own model is rewarded for a clean score and for a
+documented decontamination story; a third party auditing the same
+score has no comparable reward. \citet{contamination-survey-2025}'s
+EMNLP-2025 framing is the closest the field has come to a
+field-standard \emph{discussion}, but the survey is a description of
+what exists, not a protocol that ships. The methodological
+dynamic-benchmark proposals (MathArena, LiveCodeBench, GAIA's gated
+leaderboard) work around contamination rather than measure it; that
+is the right move where it is feasible, but it abandons the question
+of what to do with the legacy benchmarks the field continues to
+report on.
+
+\subsection{Forward-link}
+\label{sec:contamination-forward}
+
+The next layer of the layered defense, in
+\cref{sec:reasoning-benchmarks}, asks whether benchmarks designed for
+multi-step reasoning escape the contamination problem this section
+named. The short answer is that they inherit it: \textsc{aime} and
+\textsc{math-500} are exactly the case study above; \textsc{gpqa
+diamond} \citep{rein2023-gpqa} mitigates direct contamination by
+\emph{construction} but cannot rule out indirect signal from worked
+PhD-level expositions on the open web; \textsc{frontiermath}
+\citep{glazer2024-frontiermath} is the most aggressive defense in the
+lineage with its unpublished-item construction, at the cost of being
+single-source and not externally replicable. The contradiction this
+section opened --- ``what counts as contamination?'' --- is
+collected with its sibling contradictions in
+\cref{sec:contradictions}, where the closing-condition for each is
+named: a field-standard contamination-detection protocol shipped
+alongside benchmark releases, the way reproducibility tooling now
+ships alongside published scientific code.
