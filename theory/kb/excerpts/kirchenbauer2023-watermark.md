@@ -7,12 +7,12 @@ venue: ICML 2023
 arxiv: 2301.10226
 local_pdf: null
 type: excerpts
-note: PDF download blocked; excerpts derived from arXiv landing page (WebFetch 2026-05-04). The green/red list mechanism, gamma/delta parameters, and z-score detection statistic are described from the landing page; deeper section anchors pending PDF access.
+note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2301.10226 (2026-05-05). The green/red list mechanism, gamma/delta parameters, and z-score detection statistic are described below from secondary sources; deeper section anchors with the precise default-value choices (γ=0.25, δ=2.0) pending PDF access.
 ---
 
 # Excerpts — Kirchenbauer et al. 2023, "A Watermark for Large Language Models"
 
-## Abstract — central claim {#abstract}
+## #abstract — full verbatim
 
 > Potential harms of large language models can be mitigated by
 > watermarking model output, i.e., embedding signals into generated
@@ -21,7 +21,17 @@ note: PDF download blocked; excerpts derived from arXiv landing page (WebFetch 2
 > proprietary language models. The watermark can be embedded with
 > negligible impact on text quality, and can be detected using an
 > efficient open-source algorithm without access to the language model
-> API or parameters.
+> API or parameters. The watermark works by selecting a randomized set
+> of "green" tokens before a word is generated, and then softly
+> promoting use of green tokens during sampling. We propose a
+> statistical test for detecting the watermark with interpretable
+> p-values, and derive an information-theoretic framework for analyzing
+> the sensitivity of the watermark. We test the watermark using a
+> multi-billion parameter model from the Open Pretrained Transformer
+> (OPT) family, and discuss robustness and security.
+
+(Verified verbatim from arXiv 2301.10226 abstract via WebFetch
+2026-05-05.)
 
 ## The green/red list mechanism {#sec-greenred}
 

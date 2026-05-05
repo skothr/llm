@@ -5,7 +5,7 @@ authors: Gloeckle, Idrissi, Rozière, Lopez-Paz, Synnaeve
 year: 2024
 venue: arXiv (Meta AI)
 arxiv: 2404.19737
-local_pdf: null
+local_pdf: theory/sources/papers/gloeckle2024_mtp.pdf
 type: excerpts
 note: Verbatim quotations from the v1 arXiv PDF (Apr 2024). The paper proposes training language models with auxiliary heads that predict $n$ future tokens at each position; reports quality improvements and inference speedups via self-speculative decoding. DeepSeek-V3 (Dec 2024) productionized a chained variant of this idea.
 ---

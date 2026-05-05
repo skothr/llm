@@ -5,7 +5,7 @@ authors: Hoffmann, Borgeaud, Mensch, Buchatskaya, Cai, Rutherford, et al. (DeepM
 year: 2022
 venue: arXiv (subsequently incorporated into Gopher follow-on work)
 arxiv: 2203.15556
-local_pdf: theory/sources/papers/hoffmann2022-chinchilla_compute_optimal.pdf
+local_pdf: theory/sources/papers/hoffmann2022-chinchilla_chinchilla.pdf
 type: excerpts
 note: Verbatim quotations from the v1 arXiv PDF (Mar 2022). Anchors point to section + table/equation numbers in the paper. The headline result is the equal-scaling rule N ≈ D / 20 at compute-optimum, overthrowing the Kaplan model-size-bias rule.
 ---

@@ -1,6 +1,6 @@
 # Contradictions surface
 
-_Generated 2026-05-04 by `theory/plans/_phase2/extract_contradictions.py` from every `[CONTRADICTION]` paragraph across `kb/notes/`. 99 contradictions across 53 notes in 9 areas._
+_Generated 2026-05-05 by `theory/plans/_phase2/extract_contradictions.py` from every `[CONTRADICTION]` paragraph across `kb/notes/`. 99 contradictions across 53 notes in 9 areas._
 
 Each entry below is the verbatim paragraph from the note, preceded by a `<area>/<topic>` header. Use this as a single lens for: where do primary sources disagree? Which areas have the deepest live open questions? Which contradictions appear in multiple areas (suggesting a cross-area research thread)?
 
@@ -848,7 +848,7 @@ _Source: `kb/notes/interpretability/sparse-autoencoders.md`_
 - **2024-07** — Rajamanoharan et al. (DeepMind): JumpReLU SAEs.
 - **2024-08** — Lieberum et al. (DeepMind): Gemma Scope — JumpReLU SAEs
   released openly across Gemma 2 2B/9B/27B
-  `[gemma-scope-2024 §1, §2.2; kb/excerpts/gemma-scope-2024-jumprelu-saes#sec-2]`.
+  `[gemma-scope-2024 §1, §2.2; kb/excerpts/gemma-scope-2024#sec-2]`.
 - **2024-11** — Dunefsky et al. (NeurIPS): transcoders for input-invariant
   circuit analysis.
 - **2024-12** — Bussmann: BatchTopK SAEs (variant of TopK that picks the

@@ -5,7 +5,7 @@ authors: Press, Wolf
 year: 2017
 venue: EACL
 arxiv: 1608.05859
-local_pdf: null
+local_pdf: theory/sources/papers/press2017_tied-embed.pdf
 type: excerpts
 note: Verbatim quotations from the v3 arXiv PDF (21 Feb 2017). The paper proposed weight tying — setting the LM head equal to the transposed input embedding — and demonstrated perplexity improvements + parameter savings on Penn Treebank, WikiText-2, and on machine-translation models. The recommendation is now contested at frontier scale: most modern decoder-only LLMs above ~8B parameters untie.
 ---

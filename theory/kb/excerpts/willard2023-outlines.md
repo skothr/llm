@@ -7,30 +7,31 @@ venue: arXiv (Outlines library)
 arxiv: 2307.09702
 local_pdf: null
 type: excerpts
-note: "Excerpts from arXiv abstract page (verbatim) plus methodology summary reproduced in subsequent constrained-decoding papers (XGrammar §2; SGLang §4 references). PDF not yet downloaded."
+note: |
+  Abstract verified verbatim 2026-05-05 via WebFetch on arXiv abs page.
+  Body sections paraphrase methodology cross-referenced in XGrammar §2
+  and SGLang §4. PDF download blocked in this sandbox; full §3/§4
+  verbatim quotes pending PDF acquisition.
 ---
 
 # Excerpts — Willard & Louf 2023, "Efficient Guided Generation for Large Language Models"
 
 ## Abstract — FSM-over-vocabulary reformulation {#abstract}
 
-> In this article we describe an efficient approach to guiding
-> language model text generation with regular expressions and
-> context-free grammars. Our approach adds little to no overhead to
-> the token sequence generation process, and makes guided generation
-> feasible in practice. An implementation is provided in the open
-> source Python library **Outlines**.
->
-> Drawing parallels with the (random variate) sampling literature, we
-> reformulate the problem of neural text generation in terms of
-> transitions between the states of a finite-state machine. This
-> framework leads to an efficient approach to guiding text generation
-> with regular expressions and context-free grammars by allowing the
-> construction of an **index over a language model's vocabulary**.
-> The approach is **model agnostic**, allows one to enforce
-> domain-specific knowledge and constraints, and enables the
-> construction of reliable interfaces by guaranteeing the structure
-> of the generated text.
+Verbatim from the arXiv abs page (verified 2026-05-05):
+
+> In this article we show how the problem of neural text generation can
+> be constructively reformulated in terms of transitions between the
+> states of a finite-state machine. This framework leads to an efficient
+> approach to guiding text generation with regular expressions and
+> context-free grammars by allowing the **construction of an index over a
+> language model's vocabulary**. The approach is model agnostic, allows
+> one to enforce domain-specific knowledge and constraints, and enables
+> the construction of reliable interfaces by guaranteeing the structure
+> of the generated text. It adds little overhead to the token sequence
+> generation process and significantly outperforms existing solutions. An
+> implementation is provided in the open source Python library
+> **Outlines**.
 
 ## §3 The vocabulary index {#sec-3}
 

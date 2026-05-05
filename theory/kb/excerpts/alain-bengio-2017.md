@@ -7,26 +7,27 @@ venue: ICLR 2017 Workshop (arXiv 1610.01644)
 arxiv: 1610.01644
 local_pdf: null
 type: excerpts
-note: PDF not yet downloaded; excerpts from arXiv abstract (verified via WebSearch 2026-05-04). The foundational paper for the linear-classifier-probe methodology, applied to vision models (Inception v3, ResNet-50). Key findings used in the probing note: (i) the formal probe definition, (ii) the monotonic-linear-separability finding.
+note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 1610.01644 abstract page (2026-05-05). The foundational paper for the linear-classifier-probe methodology, applied to vision models (Inception v3, ResNet-50). Key findings used in the probing note: (i) the formal probe definition, (ii) the monotonic-linear-separability finding.
 ---
 
 # Excerpts — Alain & Bengio 2017, "Understanding intermediate layers using linear classifier probes"
 
-## Abstract — methodology and findings {#sec-1}
+## #abstract — full verbatim
 
 > Neural network models have a reputation for being black boxes. We
-> propose to monitor the features at every layer of a model and
-> measure how suitable they are for classification. We use linear
-> classifiers, which we refer to as "probes", trained entirely
-> independently of the model itself.
->
-> This helps us better understand the roles and dynamics of the
-> intermediate layers. We use this technique to study the popular
-> models Inception v3 and Resnet-50. Among other things, we observe
-> experimentally that the linear separability of features increases
-> monotonically along the depth of the model.
+> propose to monitor the features at every layer of a model and measure
+> how suitable they are for classification. We use linear classifiers,
+> which we refer to as "probes", trained entirely independently of the
+> model itself. This helps us better understand the roles and dynamics
+> of the intermediate layers. We demonstrate how this can be used to
+> develop a better intuition about models and to diagnose potential
+> problems. We apply this technique to the popular models Inception v3
+> and Resnet-50. Among other things, we observe experimentally that the
+> linear separability of features increase monotonically along the depth
+> of the model.
 
-(Verified from arXiv 1610.01644 abstract, version v3 / v4.)
+(Verified verbatim from arXiv 1610.01644 abstract via WebFetch
+2026-05-05.)
 
 ## The probe definition (operational)
 
