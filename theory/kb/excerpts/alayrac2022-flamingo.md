@@ -5,7 +5,7 @@ authors: Alayrac, Donahue, Luc, Miech, Barr, Hasson, Lenc, Mensch, Millican, Rey
 year: 2022
 venue: NeurIPS
 arxiv: 2204.14198
-local_pdf: null
+local_pdf: theory/sources/papers/alayrac2022_flamingo.pdf
 type: excerpts
 note: Verbatim from the v2 arXiv PDF (Nov 2022). Flamingo introduced the gated cross-attention pattern for inserting vision features into a frozen LLM. Foundational for Visual Language Models predating LLaVA.
 ---

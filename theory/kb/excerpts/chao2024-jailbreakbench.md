@@ -7,34 +7,35 @@ venue: NeurIPS 2024 D&B
 arxiv: 2404.01318
 local_pdf: null
 type: excerpts
-note: PDF not yet downloaded; excerpts from arXiv 2404.01318 abstract (verified via WebSearch 2026-05-04). Used in `kb/notes/alignment/safety-evaluation.md` §2.1.
+note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2404.01318 abstract page (2026-05-05). Judge identity (per arXiv comments): Llama-3-70B with custom prompt for harmfulness; Llama-3-8B for semantic refusal. Used in `kb/notes/alignment/safety-evaluation.md` §2.1.
 ---
 
 # Excerpts — Chao et al. 2024, "JailbreakBench"
 
-## Abstract — full text {#abstract}
+## #abstract — full verbatim
 
 > Jailbreak attacks cause large language models (LLMs) to generate
 > harmful, unethical, or otherwise objectionable content. Evaluating
 > these attacks presents a number of challenges, which the current
-> collection of benchmarks and evaluation techniques do not
-> adequately address. First, there is no clear standard of practice
-> regarding jailbreaking evaluation. Second, existing works compute
-> costs and success rates in incomparable ways. And third, numerous
-> works are not reproducible, as they withhold adversarial prompts,
-> involve closed-source code, or rely on evolving proprietary APIs.
->
-> To address these challenges, we introduce JailbreakBench, an
-> open-sourced benchmark with the following components:
-> (1) an evolving repository of state-of-the-art adversarial prompts,
-> which we refer to as *jailbreak artifacts*;
-> (2) a jailbreaking dataset comprising 100 behaviors — both original
-> and sourced from prior work — which align with OpenAI's usage
-> policies, along with a standardized evaluation framework and a
-> leaderboard that tracks the performance of attacks and defenses for
-> various LLMs.
+> collection of benchmarks and evaluation techniques do not adequately
+> address. First, there is no clear standard of practice regarding
+> jailbreaking evaluation. Second, existing works compute costs and
+> success rates in incomparable ways. And third, numerous works are
+> not reproducible, as they withhold adversarial prompts, involve
+> closed-source code, or rely on evolving proprietary APIs. To address
+> these challenges, we introduce JailbreakBench, an open-sourced
+> benchmark with the following components: (1) an evolving repository
+> of state-of-the-art adversarial prompts, which we refer to as
+> jailbreak artifacts; (2) a jailbreaking dataset comprising 100
+> behaviors -- both original and sourced from prior work (Zou et al.,
+> 2023; Mazeika et al., 2023, 2024) -- which align with OpenAI's usage
+> policies; (3) a standardized evaluation framework that includes a
+> clearly defined threat model, system prompts, chat templates, and
+> scoring functions; and (4) a leaderboard that tracks the performance
+> of attacks and defenses for various LLMs.
 
-(Verified via WebSearch 2026-05-04 against arXiv 2404.01318 abstract.)
+(Verified verbatim from arXiv 2404.01318 abstract via WebFetch
+2026-05-05.)
 
 ## Structural commitments {#sec-structure}
 

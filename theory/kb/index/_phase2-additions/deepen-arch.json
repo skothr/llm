@@ -1,0 +1,34 @@
+{
+  "subagent": "deepen-arch-2026-05-04",
+  "existing_paper_updates": [
+    {"key": "alayrac2022-flamingo", "set_local_file": "theory/sources/papers/alayrac2022_flamingo.pdf", "set_excerpts_file": "kb/excerpts/alayrac2022-flamingo.md"},
+    {"key": "gloeckle2024-mtp", "set_local_file": "theory/sources/papers/gloeckle2024_mtp.pdf", "set_excerpts_file": "kb/excerpts/gloeckle2024-mtp.md"},
+    {"key": "kudo2018-sentencepiece", "set_local_file": "theory/sources/papers/kudo2018_sentencepiece.pdf", "set_excerpts_file": "kb/excerpts/kudo2018-sentencepiece.md"},
+    {"key": "press2017-tied-embed", "set_local_file": "theory/sources/papers/press2017_tied-embed.pdf", "set_excerpts_file": "kb/excerpts/press2017-tied-embed.md"},
+    {"key": "sennrich2016", "set_local_file": "theory/sources/papers/sennrich2016_bpe.pdf", "set_excerpts_file": "kb/excerpts/sennrich2016.md"},
+    {"key": "shazeer2019", "set_local_file": "theory/sources/papers/shazeer2019_mqa.pdf", "set_excerpts_file": "kb/excerpts/shazeer2019.md"},
+    {"key": "shazeer2020", "set_local_file": "theory/sources/papers/shazeer2020_glu_variants.pdf", "set_excerpts_file": "kb/excerpts/shazeer2020.md"},
+    {"key": "su2021", "set_local_file": "theory/sources/papers/su2021_rope.pdf", "set_excerpts_file": "kb/excerpts/su2021.md"},
+    {"key": "vaswani2017", "set_local_file": "theory/sources/papers/vaswani2017_attention_is_all_you_need.pdf", "set_excerpts_file": "kb/excerpts/vaswani2017.md"},
+    {"key": "xiong2020", "set_local_file": "theory/sources/papers/xiong2020_layer_norm.pdf", "set_excerpts_file": "kb/excerpts/xiong2020.md"},
+    {"key": "yuan2025", "set_local_file": "theory/sources/papers/yuan2025_nsa.pdf", "set_excerpts_file": "kb/excerpts/yuan2025.md"},
+    {"key": "zhang2019", "set_local_file": "theory/sources/papers/zhang2019_rmsnorm.pdf", "set_excerpts_file": "kb/excerpts/zhang2019.md"},
+    {"key": "ainslie2023", "set_local_file": "theory/sources/papers/ainslie2023_gqa.pdf", "set_excerpts_file": "kb/excerpts/ainslie2023.md"},
+    {"key": "dao2022", "set_local_file": "theory/sources/papers/dao2022_flashattention.pdf", "set_excerpts_file": "kb/excerpts/dao2022.md"},
+    {"key": "deepseek-v2", "set_local_file": "theory/sources/papers/deepseek-v2.pdf", "set_excerpts_file": "kb/excerpts/deepseek-v2.md"},
+    {"key": "llava2023", "set_local_file": "theory/sources/papers/llava2023.pdf", "set_excerpts_file": "kb/excerpts/llava2023.md"},
+    {"key": "blt2024", "set_local_file": "theory/sources/papers/blt2024.pdf", "set_excerpts_file": "kb/excerpts/blt2024.md"},
+    {"key": "cai2024-medusa", "set_excerpts_file": "kb/excerpts/cai2024-medusa.md"},
+    {"key": "leviathan2023", "set_excerpts_file": "kb/excerpts/leviathan2023.md"},
+    {"key": "li2024-eagle", "set_excerpts_file": "kb/excerpts/li2024-eagle.md"},
+    {"key": "phi4", "set_excerpts_file": "kb/excerpts/phi4.md"}
+  ],
+  "new_papers": [],
+  "flags": [
+    "deepseek-v3-training is NOT a paper-key in papers.json — the canonical key is 'deepseek-v3' (arXiv 2412.19437). The excerpt file 'kb/excerpts/deepseek-v3-training.md' already exists with substantive content from a prior phase, focused on the training-infrastructure half of the V3 tech report. No deepening needed; the key/file mismatch is a naming inconsistency that the orchestrator may want to either rename ('kb/excerpts/deepseek-v3.md') or formally alias.",
+    "radford2019-gpt2: PDF could not be fetched. curl was denied by sandbox even though cdn.openai.com is in the allowed-hosts list — bash blocked the call before the network policy was consulted. PDF is at https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf — orchestrator or follow-up agent should fetch and write the excerpt. NO excerpt file exists yet for this key; this is the only MISSING excerpt that remains unwritten in the 24-key set.",
+    "cai2024-medusa, leviathan2023, li2024-eagle, phi4: PDFs were on the NEED_FETCH list but excerpt files already exist with substantial content (75-136 lines each, matching template). curl was denied for these too; however the excerpts were written in a prior pass directly from the arXiv abstracts and authors' open material rather than verbatim PDF reads. The 'verbatim from PDF' bar is technically unmet for these four, but content quality is high. Recommend a follow-up agent re-verify quotes against the PDFs once curl is enabled. Listed in 'set_excerpts_file' updates above without 'set_local_file' since PDFs were not actually fetched.",
+    "All 16 PDFs that were ALREADY on disk had substantive verbatim excerpts (existing or freshly written) matching the ba2016-layernorm.md / vaswani2017.md template. The 5 MISSING-excerpt keys: sennrich2016, xiong2020, llava2023, blt2024 were freshly written from PDFs on disk. radford2019-gpt2 alone remains unwritten due to fetch denial.",
+    "Total work: 4 new excerpts written (sennrich2016, xiong2020, llava2023, blt2024) totaling ~22KB of verbatim PDF-anchored content. 4 frontmatter updates (alayrac2022-flamingo, gloeckle2024-mtp, kudo2018-sentencepiece, press2017-tied-embed) to set local_pdf field from null to actual on-disk path."
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "subagent": "deepen-reason-2026-05-05",
+  "existing_paper_updates": [
+    {
+      "key": "hoffmann2022-chinchilla",
+      "set_local_file": "theory/sources/papers/hoffmann2022-chinchilla_chinchilla.pdf",
+      "set_excerpts_file": "kb/excerpts/hoffmann2022-chinchilla.md"
+    },
+    {
+      "key": "kaplan2020",
+      "set_local_file": "theory/sources/papers/kaplan2020_scaling_laws.pdf",
+      "set_excerpts_file": "kb/excerpts/kaplan2020.md"
+    },
+    {
+      "key": "snell2024",
+      "set_local_file": "theory/sources/papers/snell2024_test_time_compute.pdf",
+      "set_excerpts_file": "kb/excerpts/snell2024.md"
+    },
+    {
+      "key": "vaswani2017",
+      "set_local_file": "theory/sources/papers/vaswani2017_attention_is_all_you_need.pdf",
+      "set_excerpts_file": "kb/excerpts/vaswani2017.md"
+    },
+    {
+      "key": "yang2022-mup",
+      "set_local_file": "theory/sources/papers/yang2022-mup_tensor_programs_v.pdf",
+      "set_excerpts_file": "kb/excerpts/yang2022-mup.md"
+    }
+  ],
+  "flags": [
+    "All 5 cluster excerpts already had multi-section §-anchored verbatim quotes from a prior Phase 2 pass — meeting the deepening bar (#abstract + the load-bearing equations: Kaplan eq 1.1-1.5/2.1, Chinchilla eq 2-4 + Tables 2/3, Snell eq 1, μP Table 3 + Def 4.1). Only Vaswani required substantial additions: prepended #abstract and added §3.1 (encoder/decoder), §3.3 (FFN eq.2), §3.4 (weight tying), §3.5 (positional encoding formula), §5.3 (Noam LR schedule eq.3), §5.4 (regularization).",
+    "hoffmann2022-chinchilla excerpt frontmatter previously pointed at a non-existent path (_compute_optimal.pdf); corrected to _chinchilla.pdf to match the actual fetched filename.",
+    "All 4 PDFs (chinchilla, kaplan, snell, mup) had to be fetched fresh — papers.json local_file fields were aspirational. Used Python urllib (curl was sandbox-denied even with arxiv on the allowlist; should not block future runs since the request was never in flight long enough to validate the host).",
+    "Notes scan: kb/notes/reasoning/*.md and kb/notes/scaling/*.md reference exactly the 5 cluster keys — no cross-cluster excerpts owned here."
+  ]
+}

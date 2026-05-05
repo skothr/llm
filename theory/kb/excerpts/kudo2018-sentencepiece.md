@@ -5,7 +5,7 @@ authors: Kudo, Richardson
 year: 2018
 venue: EMNLP demo track
 arxiv: 1808.06226
-local_pdf: null
+local_pdf: theory/sources/papers/kudo2018_sentencepiece.pdf
 type: excerpts
 note: Verbatim from the v1 arXiv PDF (Aug 2018). SentencePiece is the tokenizer library used by LLaMA, Mistral, Qwen, OLMo, Gemma, and most modern open LLMs. It implements BPE and unigram-LM segmentation directly on raw text — no language-specific pre-tokenization.
 ---

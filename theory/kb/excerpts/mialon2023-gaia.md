@@ -7,7 +7,7 @@ venue: arXiv (HuggingFace + Meta)
 arxiv: 2311.12983
 local_pdf: null
 type: excerpts
-note: Excerpts from the arXiv abstract (verbatim). The 466-question split, level-1/2/3 difficulty bands, and gated-leaderboard methodology are public on the HF leaderboard space. `[PDF-VERIFY]` tags mark claims from external public materials that need PDF confirmation.
+note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); abstract content retrieved verbatim via WebFetch on arXiv 2311.12983 abstract page (2026-05-05). The 466-question split, level-1/2/3 difficulty bands, and gated-leaderboard methodology are public on the HF leaderboard space. `[PDF-VERIFY]` tags mark claims from external public materials that need PDF confirmation.
 ---
 
 # Excerpts — Mialon et al. 2023, "GAIA"

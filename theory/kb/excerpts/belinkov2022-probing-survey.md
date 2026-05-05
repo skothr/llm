@@ -8,7 +8,7 @@ arxiv: 2102.12452
 url: https://aclanthology.org/2022.cl-1.7/
 local_pdf: null
 type: excerpts
-note: PDF not yet downloaded; excerpts from ACL Anthology / arXiv 2102.12452 abstract (verified via WebSearch 2026-05-04). The methodology review that consolidates the correlational critique of probing and surveys causal alternatives. Used in `kb/notes/interpretability/probing.md` §3 as the canonical reference for the probe-as-correlation-not-causation gap.
+note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2102.12452 (2026-05-05). The methodology review that consolidates the correlational critique of probing and surveys causal alternatives. Used in `kb/notes/interpretability/probing.md` §3 as the canonical reference for the probe-as-correlation-not-causation gap.
 ---
 
 # Excerpts — Belinkov 2022, "Probing Classifiers: Promises, Shortcomings, and Advances"

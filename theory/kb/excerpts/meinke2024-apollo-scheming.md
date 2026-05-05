@@ -7,7 +7,7 @@ venue: Apollo Research / arXiv
 arxiv: 2412.04984
 local_pdf: null
 type: excerpts
-note: PDF download blocked in this pass; excerpts are verbatim from the arXiv abstract page (WebFetch 2026-05-04). Behaviors and percentages quoted directly. Section-level deep excerpts pending PDF access.
+note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2412.04984 (re-verified 2026-05-05). Behaviors and percentages quoted directly. The six-evaluation list is enumerated in the existing structure section but not in the abstract itself — `[PDF-VERIFY]` flagged below for the named-list ordering.
 ---
 
 # Excerpts — Meinke et al. 2024 (Apollo Research), "Frontier Models are Capable of In-context Scheming"
@@ -42,6 +42,11 @@ note: PDF download blocked in this pass; excerpts are verbatim from the arXiv ab
 > in-context.
 
 ## The six evaluations {#sec-six-evals}
+
+`[PDF-VERIFY: the abstract names "a suite of six agentic evaluations"
+without enumerating them; the list below is reconstructed from the
+paper's body and Apollo Research's public summaries — verify against
+the PDF before propagating as a hard claim]`
 
 The "suite of six agentic evaluations" identified in the abstract probes
 distinct scheming primitives:

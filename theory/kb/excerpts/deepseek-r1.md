@@ -5,9 +5,16 @@ authors: DeepSeek-AI
 year: 2025
 venue: "arXiv (Nature 2025)"
 arxiv: 2501.12948
-local_pdf: theory/sources/papers/deepseek-r1.pdf
+local_pdf: null
 type: excerpts
-note: "Verbatim quotes from v2 PDF (4 Jan 2026). PDF was downloaded via WebFetch by the training-area Phase 2 subagent (2026-05-04); section numbers below verified against PDF."
+note: |
+  Most quotes (§2.1 GRPO Eq.1/Eq.3, §2.1 hyper-params, §2.3 AIME, §3
+  pipeline) were verified verbatim from the v2 PDF by an earlier Phase
+  2 subagent (2026-05-04). PDF is no longer present in
+  theory/sources/papers/ at the time of this 2026-05-05 audit;
+  re-acquire the PDF when downloads are unblocked. §2 R1-Zero/R1
+  description (the prose paragraphs in §sec-2) is paraphrased and
+  flagged below.
 ---
 
 # Excerpts — DeepSeek-AI 2025, "DeepSeek-R1"

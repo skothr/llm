@@ -10,7 +10,7 @@
       "year": 2017,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/1706.03762",
-      "local_file": "sources/papers/vaswani2017_attention_is_all_you_need.pdf",
+      "local_file": "theory/sources/papers/vaswani2017_attention_is_all_you_need.pdf",
       "excerpts_file": "kb/excerpts/vaswani2017.md",
       "notes_referenced_by": [
         "architecture/attention-mechanism",
@@ -34,7 +34,7 @@
       "year": 2018,
       "venue": "OpenAI Tech Report",
       "url": "https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf",
-      "local_file": "sources/papers/radford2018_gpt1.pdf",
+      "local_file": "theory/sources/papers/radford2018_gpt1.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
       "topics": [
@@ -51,7 +51,7 @@
       "year": 2020,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2005.14165",
-      "local_file": "sources/papers/brown2020_gpt3.pdf",
+      "local_file": "theory/sources/papers/brown2020_gpt3.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
       "topics": [
@@ -68,7 +68,7 @@
       "year": 2023,
       "venue": "Meta Tech Report",
       "url": "https://arxiv.org/abs/2302.13971",
-      "local_file": "sources/papers/touvron2023_llama.pdf",
+      "local_file": "theory/sources/papers/touvron2023_llama.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [
         "architecture/transformer-overview",
@@ -90,8 +90,8 @@
       "year": 2016,
       "venue": "ACL",
       "url": "https://arxiv.org/abs/1508.07909",
-      "local_file": "sources/papers/sennrich2016_bpe.pdf",
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/sennrich2016_bpe.pdf",
+      "excerpts_file": "kb/excerpts/sennrich2016.md",
       "notes_referenced_by": [
         "architecture/tokenization"
       ],
@@ -108,7 +108,7 @@
       "year": 2021,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2104.09864",
-      "local_file": "sources/papers/su2021_rope.pdf",
+      "local_file": "theory/sources/papers/su2021_rope.pdf",
       "excerpts_file": "kb/excerpts/su2021.md",
       "notes_referenced_by": [
         "architecture/position-encoding",
@@ -128,7 +128,7 @@
       "year": 2020,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2002.05202",
-      "local_file": "sources/papers/shazeer2020_glu_variants.pdf",
+      "local_file": "theory/sources/papers/shazeer2020_glu_variants.pdf",
       "excerpts_file": "kb/excerpts/shazeer2020.md",
       "notes_referenced_by": [
         "architecture/ffn",
@@ -147,8 +147,8 @@
       "year": 2020,
       "venue": "ICML",
       "url": "https://arxiv.org/abs/2002.04745",
-      "local_file": "sources/papers/xiong2020_layer_norm.pdf",
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/xiong2020_layer_norm.pdf",
+      "excerpts_file": "kb/excerpts/xiong2020.md",
       "notes_referenced_by": [
         "architecture/normalization"
       ],
@@ -165,8 +165,8 @@
       "year": 2019,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/1910.07467",
-      "local_file": "sources/papers/zhang2019_rmsnorm.pdf",
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/zhang2019_rmsnorm.pdf",
+      "excerpts_file": "kb/excerpts/zhang2019.md",
       "notes_referenced_by": [
         "architecture/normalization"
       ],
@@ -236,7 +236,7 @@
       "year": 2023,
       "venue": "EMNLP",
       "url": "https://arxiv.org/abs/2305.13245",
-      "local_file": null,
+      "local_file": "theory/sources/papers/ainslie2023_gqa.pdf",
       "excerpts_file": "kb/excerpts/ainslie2023.md",
       "notes_referenced_by": [
         "architecture/attention-mechanism",
@@ -256,7 +256,7 @@
       "year": 2024,
       "venue": "arXiv (DeepSeek Tech Report)",
       "url": "https://arxiv.org/abs/2405.04434",
-      "local_file": null,
+      "local_file": "theory/sources/papers/deepseek-v2.pdf",
       "excerpts_file": "kb/excerpts/deepseek-v2.md",
       "notes_referenced_by": [
         "architecture/attention-mechanism",
@@ -307,7 +307,7 @@
       "year": 2025,
       "venue": "arXiv (Nature 2025)",
       "url": "https://arxiv.org/abs/2501.12948",
-      "local_file": null,
+      "local_file": "theory/sources/papers/deepseek-r1.pdf",
       "excerpts_file": "kb/excerpts/deepseek-r1.md",
       "notes_referenced_by": [
         "architecture/reasoning-architectures",
@@ -530,7 +530,7 @@
       "year": 2022,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2205.14135",
-      "local_file": null,
+      "local_file": "theory/sources/papers/dao2022_flashattention.pdf",
       "excerpts_file": "kb/excerpts/dao2022.md",
       "notes_referenced_by": [
         "architecture/attention-mechanism",
@@ -549,7 +549,7 @@
       "year": 2024,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2407.08608",
-      "local_file": null,
+      "local_file": "theory/sources/papers/shah2024_flashattention3.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [
         "architecture/attention-mechanism",
@@ -626,7 +626,7 @@
       "year": 2025,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2502.11089",
-      "local_file": "sources/papers/yuan2025_nsa.pdf",
+      "local_file": "theory/sources/papers/yuan2025_nsa.pdf",
       "excerpts_file": "kb/excerpts/yuan2025.md",
       "notes_referenced_by": [
         "architecture/attention-mechanism",
@@ -771,8 +771,8 @@
       "year": 2024,
       "venue": "ACL 2025",
       "url": "https://arxiv.org/abs/2412.09871",
-      "local_file": null,
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/blt2024.pdf",
+      "excerpts_file": "kb/excerpts/blt2024.md",
       "notes_referenced_by": [
         "architecture/tokenization"
       ],
@@ -789,7 +789,7 @@
       "year": 2023,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2305.18290",
-      "local_file": null,
+      "local_file": "theory/sources/papers/rafailov2023-dpo.pdf",
       "excerpts_file": "kb/excerpts/rafailov2023-dpo.md",
       "notes_referenced_by": [
         "post-training/dpo-and-offline",
@@ -809,7 +809,7 @@
       "year": 2024,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2405.14734",
-      "local_file": null,
+      "local_file": "theory/sources/papers/meng2024-simpo.pdf",
       "excerpts_file": "kb/excerpts/meng2024-simpo.md",
       "notes_referenced_by": [
         "post-training/dpo-and-offline"
@@ -827,7 +827,7 @@
       "year": 2022,
       "venue": "Anthropic Tech Report",
       "url": "https://arxiv.org/abs/2212.08073",
-      "local_file": null,
+      "local_file": "theory/sources/papers/bai2022-cai.pdf",
       "excerpts_file": "kb/excerpts/bai2022-cai.md",
       "notes_referenced_by": [
         "alignment/oversight-and-scalable-alignment",
@@ -891,7 +891,7 @@
       "year": 2025,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2502.16982",
-      "local_file": null,
+      "local_file": "theory/sources/papers/muon-moonlight2025.pdf",
       "excerpts_file": "kb/excerpts/muon-moonlight2025.md",
       "notes_referenced_by": [
         "training/optimization",
@@ -911,7 +911,7 @@
       "year": 2025,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2503.14476",
-      "local_file": null,
+      "local_file": "theory/sources/papers/dapo2025.pdf",
       "excerpts_file": "kb/excerpts/dapo2025.md",
       "notes_referenced_by": [
         "post-training/rlvr-and-grpo",
@@ -950,7 +950,7 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2408.03314",
-      "local_file": "sources/papers/snell2024_test_time_compute.pdf",
+      "local_file": "theory/sources/papers/snell2024_test_time_compute.pdf",
       "excerpts_file": "kb/excerpts/snell2024.md",
       "notes_referenced_by": [
         "reasoning/test-time-compute",
@@ -973,7 +973,7 @@
       "year": 2025,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2501.19393",
-      "local_file": null,
+      "local_file": "theory/sources/papers/s1-2025.pdf",
       "excerpts_file": "kb/excerpts/s1-2025.md",
       "notes_referenced_by": [
         "reasoning/test-time-compute",
@@ -1059,7 +1059,7 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2402.17764",
-      "local_file": null,
+      "local_file": "theory/sources/papers/ma2024-bitnet.pdf",
       "excerpts_file": "kb/excerpts/ma2024-bitnet.md",
       "notes_referenced_by": [
         "inference/quantization",
@@ -1133,7 +1133,7 @@
       "year": 2020,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2001.08361",
-      "local_file": "sources/papers/kaplan2020_scaling_laws.pdf",
+      "local_file": "theory/sources/papers/kaplan2020_scaling_laws.pdf",
       "excerpts_file": "kb/excerpts/kaplan2020.md",
       "notes_referenced_by": [
         "scaling/kaplan-laws",
@@ -1154,7 +1154,7 @@
       "year": 2022,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2203.15556",
-      "local_file": "sources/papers/hoffmann2022-chinchilla_compute_optimal.pdf",
+      "local_file": "theory/sources/papers/hoffmann2022-chinchilla_chinchilla.pdf",
       "excerpts_file": "kb/excerpts/hoffmann2022-chinchilla.md",
       "notes_referenced_by": [
         "scaling/chinchilla",
@@ -1176,7 +1176,7 @@
       "year": 2022,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2203.03466",
-      "local_file": "sources/papers/yang2022-mup_tensor_programs_v.pdf",
+      "local_file": "theory/sources/papers/yang2022-mup_tensor_programs_v.pdf",
       "excerpts_file": "kb/excerpts/yang2022-mup.md",
       "notes_referenced_by": [
         "scaling/mu-transfer"
@@ -1253,7 +1253,7 @@
       "year": 2022,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2211.00593",
-      "local_file": "sources/papers/wang2022-ioi_ioi-circuit.pdf",
+      "local_file": "theory/sources/papers/wang2022-ioi_ioi-circuit.pdf",
       "excerpts_file": "kb/excerpts/wang2022-ioi.md",
       "notes_referenced_by": [
         "interpretability/mechanistic-interpretability",
@@ -1273,7 +1273,7 @@
       "year": 2022,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2202.05262",
-      "local_file": "sources/papers/meng2022_rome.pdf",
+      "local_file": "theory/sources/papers/meng2022_rome.pdf",
       "excerpts_file": "kb/excerpts/meng2022-rome.md",
       "notes_referenced_by": [
         "interpretability/activation-patching",
@@ -1309,8 +1309,8 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2408.05147",
-      "local_file": "sources/papers/gemma-scope-2024_jumprelu-saes.pdf",
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/gemma-scope-2024_jumprelu-saes.pdf",
+      "excerpts_file": "kb/excerpts/gemma-scope-2024.md",
       "notes_referenced_by": [
         "interpretability/sparse-autoencoders"
       ],
@@ -1347,7 +1347,7 @@
       "year": 2025,
       "venue": "ICLR 2025",
       "url": "https://proceedings.iclr.cc/paper_files/paper/2025/file/84ca3f2d9d9bfca13f69b48ea63eb4a5-Paper-Conference.pdf",
-      "local_file": null,
+      "local_file": "theory/sources/papers/sae-not-canonical-2025.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [],
       "topics": [
@@ -1363,7 +1363,7 @@
       "year": 2023,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2303.08112",
-      "local_file": "sources/papers/belrose2023_tuned-lens.pdf",
+      "local_file": "theory/sources/papers/belrose2023_tuned-lens.pdf",
       "excerpts_file": "kb/excerpts/belrose2023-tuned-lens.md",
       "notes_referenced_by": [
         "interpretability/lens-techniques",
@@ -1402,7 +1402,7 @@
       "year": 2024,
       "venue": "NeurIPS D&B",
       "url": "https://arxiv.org/abs/2406.01574",
-      "local_file": null,
+      "local_file": "theory/sources/papers/wang2024-mmlu-pro.pdf",
       "excerpts_file": "kb/excerpts/wang2024-mmlu-pro.md",
       "notes_referenced_by": [
         "evaluation/reasoning-benchmarks",
@@ -1422,7 +1422,7 @@
       "year": 2023,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2311.12022",
-      "local_file": null,
+      "local_file": "theory/sources/papers/rein2023-gpqa.pdf",
       "excerpts_file": "kb/excerpts/rein2023-gpqa.md",
       "notes_referenced_by": [
         "evaluation/reasoning-benchmarks",
@@ -1441,7 +1441,7 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2411.04872",
-      "local_file": null,
+      "local_file": "theory/sources/papers/glazer2024-frontiermath.pdf",
       "excerpts_file": "kb/excerpts/glazer2024-frontiermath.md",
       "notes_referenced_by": [
         "evaluation/reasoning-benchmarks",
@@ -1461,7 +1461,7 @@
       "year": 2025,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2501.14249",
-      "local_file": null,
+      "local_file": "theory/sources/papers/phan2025-hle.pdf",
       "excerpts_file": "kb/excerpts/phan2025-hle.md",
       "notes_referenced_by": [
         "evaluation/reasoning-benchmarks",
@@ -1499,7 +1499,7 @@
       "year": 2023,
       "venue": "ICML",
       "url": "https://arxiv.org/abs/2301.10226",
-      "local_file": null,
+      "local_file": "theory/sources/papers/kirchenbauer2023-watermark.pdf",
       "excerpts_file": "kb/excerpts/kirchenbauer2023-watermark.md",
       "notes_referenced_by": [
         "alignment/watermarking-and-provenance"
@@ -1535,7 +1535,7 @@
       "year": 2023,
       "venue": "ICML 2024",
       "url": "https://arxiv.org/abs/2312.09390",
-      "local_file": null,
+      "local_file": "theory/sources/papers/burns2023-w2s.pdf",
       "excerpts_file": "kb/excerpts/burns2023-w2s.md",
       "notes_referenced_by": [
         "alignment/oversight-and-scalable-alignment",
@@ -1555,7 +1555,7 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2412.14093",
-      "local_file": null,
+      "local_file": "theory/sources/papers/greenblatt2024-alignment-faking.pdf",
       "excerpts_file": "kb/excerpts/greenblatt2024-alignment-faking.md",
       "notes_referenced_by": [
         "alignment/scheming-and-deceptive-alignment",
@@ -1593,7 +1593,7 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2402.04249",
-      "local_file": null,
+      "local_file": "theory/sources/papers/harmbench2024.pdf",
       "excerpts_file": "kb/excerpts/harmbench2024.md",
       "notes_referenced_by": [
         "alignment/safety-evaluation"
@@ -1611,7 +1611,7 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2406.17557",
-      "local_file": null,
+      "local_file": "theory/sources/papers/fineweb2024.pdf",
       "excerpts_file": "kb/excerpts/fineweb2024.md",
       "notes_referenced_by": [
         "scaling/scaling-frontier",
@@ -1631,7 +1631,7 @@
       "year": 2024,
       "venue": "ICLR 2025",
       "url": "https://arxiv.org/abs/2403.16952",
-      "local_file": null,
+      "local_file": "theory/sources/papers/data-mixing-laws-2024.pdf",
       "excerpts_file": "kb/excerpts/data-mixing-laws-2024.md",
       "notes_referenced_by": [
         "scaling/chinchilla",
@@ -1652,7 +1652,7 @@
       "year": 2024,
       "venue": "ICLR 2025",
       "url": "https://arxiv.org/abs/2410.06511",
-      "local_file": null,
+      "local_file": "theory/sources/papers/torchtitan2024.pdf",
       "excerpts_file": "kb/excerpts/torchtitan2024.md",
       "notes_referenced_by": [
         "training/distributed-training",
@@ -1746,8 +1746,8 @@
       "year": 2023,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2304.08485",
-      "local_file": null,
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/llava2023.pdf",
+      "excerpts_file": "kb/excerpts/llava2023.md",
       "notes_referenced_by": [
         "architecture/multimodal-llm-extensions"
       ],
@@ -1782,7 +1782,7 @@
       "year": 2019,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/1911.02150",
-      "local_file": "sources/papers/shazeer2019_mqa.pdf",
+      "local_file": "theory/sources/papers/shazeer2019_mqa.pdf",
       "excerpts_file": "kb/excerpts/shazeer2019.md",
       "notes_referenced_by": [
         "architecture/attention-mechanism",
@@ -1802,7 +1802,7 @@
       "year": 2023,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2307.08691",
-      "local_file": "sources/papers/dao2023_flashattention2.pdf",
+      "local_file": "theory/sources/papers/dao2023_flashattention2.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [
         "architecture/attention-mechanism",
@@ -1821,7 +1821,7 @@
       "year": 2023,
       "venue": "ICLR 2024",
       "url": "https://arxiv.org/abs/2310.13548",
-      "local_file": null,
+      "local_file": "theory/sources/papers/sharma2023-sycophancy.pdf",
       "excerpts_file": "kb/excerpts/sharma2023-sycophancy.md",
       "notes_referenced_by": [
         "alignment/sycophancy",
@@ -1860,8 +1860,8 @@
       "year": 2018,
       "venue": "arXiv (OpenAI)",
       "url": "https://arxiv.org/abs/1805.00899",
-      "local_file": null,
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/irving2018_debate.pdf",
+      "excerpts_file": "kb/excerpts/irving2018-debate.md",
       "notes_referenced_by": [
         "alignment/oversight-and-scalable-alignment"
       ],
@@ -1932,7 +1932,7 @@
       "year": 2024,
       "venue": "NeurIPS 2024 D&B",
       "url": "https://arxiv.org/abs/2404.01318",
-      "local_file": null,
+      "local_file": "theory/sources/papers/chao2024-jailbreakbench.pdf",
       "excerpts_file": "kb/excerpts/chao2024-jailbreakbench.md",
       "notes_referenced_by": [
         "alignment/safety-evaluation"
@@ -1950,7 +1950,7 @@
       "year": 2024,
       "venue": "USENIX 2025",
       "url": "https://arxiv.org/abs/2404.01833",
-      "local_file": null,
+      "local_file": "theory/sources/papers/russinovich2024-crescendo.pdf",
       "excerpts_file": "kb/excerpts/russinovich2024-crescendo.md",
       "notes_referenced_by": [
         "alignment/safety-evaluation"
@@ -2024,7 +2024,7 @@
       "year": 2024,
       "venue": "ICLR 2024",
       "url": "https://arxiv.org/abs/2310.06770",
-      "local_file": null,
+      "local_file": "theory/sources/papers/jimenez2024-swebench.pdf",
       "excerpts_file": "kb/excerpts/jimenez2024-swebench.md",
       "notes_referenced_by": [
         "evaluation/agentic-benchmarks",
@@ -2044,7 +2044,7 @@
       "year": 2023,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2311.12983",
-      "local_file": null,
+      "local_file": "theory/sources/papers/mialon2023-gaia.pdf",
       "excerpts_file": "kb/excerpts/mialon2023-gaia.md",
       "notes_referenced_by": [
         "evaluation/agentic-benchmarks",
@@ -2063,7 +2063,7 @@
       "year": 2024,
       "venue": "NeurIPS 2024 Datasets & Benchmarks",
       "url": "https://arxiv.org/abs/2404.07972",
-      "local_file": null,
+      "local_file": "theory/sources/papers/xie2024-osworld.pdf",
       "excerpts_file": "kb/excerpts/xie2024-osworld.md",
       "notes_referenced_by": [
         "evaluation/agentic-benchmarks"
@@ -2081,7 +2081,7 @@
       "year": 2024,
       "venue": "arXiv (Sierra Research)",
       "url": "https://arxiv.org/abs/2406.12045",
-      "local_file": null,
+      "local_file": "theory/sources/papers/yao2024-tau-bench.pdf",
       "excerpts_file": "kb/excerpts/yao2024-tau-bench.md",
       "notes_referenced_by": [
         "evaluation/agentic-benchmarks"
@@ -2099,7 +2099,7 @@
       "year": 2022,
       "venue": "arXiv (Stanford CRFM)",
       "url": "https://arxiv.org/abs/2211.09110",
-      "local_file": null,
+      "local_file": "theory/sources/papers/liang2022-helm.pdf",
       "excerpts_file": "kb/excerpts/liang2022-helm.md",
       "notes_referenced_by": [
         "evaluation/eval-methodology"
@@ -2117,7 +2117,7 @@
       "year": 2025,
       "venue": "EMNLP 2025",
       "url": "https://arxiv.org/abs/2502.17521",
-      "local_file": null,
+      "local_file": "theory/sources/papers/contamination-survey-2025.pdf",
       "excerpts_file": "kb/excerpts/contamination-survey-2025.md",
       "notes_referenced_by": [
         "evaluation/eval-methodology"
@@ -2250,7 +2250,7 @@
       "year": 2023,
       "venue": "SOSP 2023",
       "url": "https://arxiv.org/abs/2309.06180",
-      "local_file": null,
+      "local_file": "theory/sources/papers/kwon2023.pdf",
       "excerpts_file": "kb/excerpts/kwon2023.md",
       "notes_referenced_by": [
         "inference/kv-cache-management",
@@ -2270,7 +2270,7 @@
       "year": 2022,
       "venue": "ICLR 2023",
       "url": "https://arxiv.org/abs/2210.17323",
-      "local_file": null,
+      "local_file": "theory/sources/papers/frantar2022.pdf",
       "excerpts_file": "kb/excerpts/frantar2022.md",
       "notes_referenced_by": [
         "inference/quantization",
@@ -2344,7 +2344,7 @@
       "year": 2023,
       "venue": "ICML 2023",
       "url": "https://arxiv.org/abs/2211.10438",
-      "local_file": null,
+      "local_file": "theory/sources/papers/xiao2023-smoothquant.pdf",
       "excerpts_file": "kb/excerpts/xiao2023-smoothquant.md",
       "notes_referenced_by": [
         "inference/quantization"
@@ -2362,7 +2362,7 @@
       "year": 2024,
       "venue": "NeurIPS 2024",
       "url": "https://arxiv.org/abs/2312.07104",
-      "local_file": null,
+      "local_file": "theory/sources/papers/zheng2024-sglang.pdf",
       "excerpts_file": "kb/excerpts/zheng2024-sglang.md",
       "notes_referenced_by": [
         "inference/kv-cache-management",
@@ -2402,7 +2402,7 @@
       "year": 2023,
       "venue": "ICLR 2024",
       "url": "https://arxiv.org/abs/2309.16042",
-      "local_file": "sources/papers/zhang2023_apatching-best-practices.pdf",
+      "local_file": "theory/sources/papers/zhang2023_apatching-best-practices.pdf",
       "excerpts_file": "kb/excerpts/zhang2023-apatching.md",
       "notes_referenced_by": [
         "interpretability/activation-patching"
@@ -2420,7 +2420,7 @@
       "year": 2024,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2404.15255",
-      "local_file": "sources/papers/heimersheim2024_apatching-howto.pdf",
+      "local_file": "theory/sources/papers/heimersheim2024_apatching-howto.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [
         "interpretability/activation-patching"
@@ -2438,8 +2438,8 @@
       "year": 2023,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2304.14997",
-      "local_file": "sources/papers/conmy2023-acdc.pdf",
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/conmy2023-acdc.pdf",
+      "excerpts_file": "kb/excerpts/conmy2023-acdc.md",
       "notes_referenced_by": [
         "interpretability/activation-patching"
       ],
@@ -2457,7 +2457,7 @@
       "year": 2024,
       "venue": "arXiv (DeepMind)",
       "url": "https://arxiv.org/abs/2407.14435",
-      "local_file": "sources/papers/rajamanoharan2024_jumprelu.pdf",
+      "local_file": "theory/sources/papers/rajamanoharan2024_jumprelu.pdf",
       "excerpts_file": "kb/excerpts/rajamanoharan2024-jumprelu.md",
       "notes_referenced_by": [
         "interpretability/sparse-autoencoders"
@@ -2475,7 +2475,7 @@
       "year": 2024,
       "venue": "arXiv (OpenAI)",
       "url": "https://arxiv.org/abs/2406.04093",
-      "local_file": "sources/papers/gao2024_topk-saes.pdf",
+      "local_file": "theory/sources/papers/gao2024_topk-saes.pdf",
       "excerpts_file": "kb/excerpts/gao2024-topk-saes.md",
       "notes_referenced_by": [
         "interpretability/sparse-autoencoders"
@@ -2493,7 +2493,7 @@
       "year": 2024,
       "venue": "NeurIPS 2024",
       "url": "https://arxiv.org/abs/2406.11944",
-      "local_file": "sources/papers/dunefsky2024_transcoders.pdf",
+      "local_file": "theory/sources/papers/dunefsky2024_transcoders.pdf",
       "excerpts_file": "kb/excerpts/dunefsky2024-transcoders.md",
       "notes_referenced_by": [
         "interpretability/sparse-autoencoders",
@@ -2514,7 +2514,7 @@
       "year": 2025,
       "venue": "ICLR 2025",
       "url": "https://arxiv.org/abs/2502.04878",
-      "local_file": "sources/papers/sae-not-canonical-2025.pdf",
+      "local_file": "theory/sources/papers/sae-not-canonical-2025.pdf",
       "excerpts_file": "kb/excerpts/leask2025-sae-not-canonical.md",
       "notes_referenced_by": [
         "interpretability/sparse-autoencoders",
@@ -2534,7 +2534,7 @@
       "year": 2023,
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2310.06824",
-      "local_file": "sources/papers/burns2023-truth-geometry.pdf",
+      "local_file": "theory/sources/papers/marks-tegmark-2023-truth.pdf",
       "excerpts_file": "kb/excerpts/marks-tegmark-2023-truth.md",
       "notes_referenced_by": [
         "interpretability/probing"
@@ -2571,7 +2571,7 @@
       "year": 2022,
       "venue": "NeurIPS",
       "url": "https://arxiv.org/abs/2203.02155",
-      "local_file": null,
+      "local_file": "theory/sources/papers/ouyang2022-instructgpt.pdf",
       "excerpts_file": "kb/excerpts/ouyang2022-instructgpt.md",
       "notes_referenced_by": [
         "post-training/rlhf",
@@ -2669,7 +2669,7 @@
       "year": 2024,
       "venue": "arXiv (DeepSeek Tech Report)",
       "url": "https://arxiv.org/abs/2402.03300",
-      "local_file": null,
+      "local_file": "theory/sources/papers/shao2024.pdf",
       "excerpts_file": "kb/excerpts/shao2024.md",
       "notes_referenced_by": [
         "post-training/rlvr-and-grpo"
@@ -3059,8 +3059,8 @@
       "year": 2019,
       "venue": "OpenAI tech report",
       "url": "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf",
-      "local_file": null,
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/radford2019-gpt2.pdf",
+      "excerpts_file": "kb/excerpts/radford2019-gpt2.md",
       "notes_referenced_by": [
         "architecture/transformer-overview",
         "scaling/scaling-frontier"
@@ -3208,7 +3208,7 @@
       "year": 2016,
       "venue": "ICLR 2017 Workshop (arXiv 1610.01644)",
       "url": "https://arxiv.org/abs/1610.01644",
-      "local_file": null,
+      "local_file": "theory/sources/papers/alain-bengio-2017.pdf",
       "excerpts_file": "kb/excerpts/alain-bengio-2017.md",
       "notes_referenced_by": [
         "interpretability/probing"
@@ -3265,7 +3265,7 @@
       "year": 2023,
       "venue": "NeurIPS 2023",
       "url": "https://arxiv.org/abs/2307.02483",
-      "local_file": null,
+      "local_file": "theory/sources/papers/wei2023-jailbroken.pdf",
       "excerpts_file": "kb/excerpts/wei2023-jailbroken.md",
       "notes_referenced_by": [
         "alignment/safety-evaluation"
@@ -3453,7 +3453,7 @@
       "year": 2023,
       "venue": "arXiv (Outlines library)",
       "url": "https://arxiv.org/abs/2307.09702",
-      "local_file": null,
+      "local_file": "theory/sources/papers/willard2023-outlines.pdf",
       "excerpts_file": "kb/excerpts/willard2023-outlines.md",
       "notes_referenced_by": [
         "inference/structured-output"

@@ -7,27 +7,37 @@ venue: arXiv
 arxiv: 2411.04872
 local_pdf: null
 type: excerpts
-note: Excerpts from arXiv abstract (verbatim) plus widely cited details from Epoch AI's project page (https://epoch.ai/frontiermath/). Marked `[PDF-VERIFY]` where PDF text needed.
+note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2411.04872 abstract page (2026-05-05). Plus widely cited details from Epoch AI's project page (https://epoch.ai/frontiermath/). Marked `[PDF-VERIFY]` where PDF text needed.
 ---
 
 # Excerpts — Glazer et al. 2024, "FrontierMath"
 
-## Abstract — the design ambition {#abstract}
+## #abstract — full verbatim
 
 > We introduce FrontierMath, a benchmark of hundreds of original,
-> exceptionally challenging mathematics problems crafted and vetted
-> by expert mathematicians.
+> exceptionally challenging mathematics problems crafted and vetted by
+> expert mathematicians. The questions cover most major branches of
+> modern mathematics -- from computationally intensive problems in
+> number theory and real analysis to abstract questions in algebraic
+> geometry and category theory. Solving a typical problem requires
+> multiple hours of effort from a researcher in the relevant branch of
+> mathematics, and for the upper end questions, multiple days.
+> FrontierMath uses new, unpublished problems and automated
+> verification to reliably evaluate models while minimizing risk of
+> data contamination. Current state-of-the-art AI models solve under 2%
+> of problems, revealing a vast gap between AI capabilities and the
+> prowess of the mathematical community. As AI systems advance toward
+> expert-level mathematical abilities, FrontierMath offers a rigorous
+> testbed that quantifies their progress.
 
-Scope:
-
-> The benchmark encompasses diverse mathematical domains, from
-> computational number theory and real analysis to abstract algebraic
-> geometry and category theory. Problems demand multiple hours to days
-> of effort from domain specialists.
+(Verified verbatim from arXiv 2411.04872 abstract via WebFetch
+2026-05-05.)
 
 ## Headline result at launch (Nov 2024) {#sec-launch-result}
 
-> Current state-of-the-art AI models solve under 2% of problems
+> Current state-of-the-art AI models solve under 2% of problems,
+> revealing a vast gap between AI capabilities and the prowess of the
+> mathematical community.
 
 This is the load-bearing claim: the generation of frontier models that
 were ~80–95% on MMLU at the time of FrontierMath's release scored
@@ -36,8 +46,9 @@ research-grade math reasoning.
 
 ## Verification protocol — the contamination defense {#sec-verification}
 
-> [FrontierMath uses] automated verification to reliably evaluate
-> models while minimizing risk of data contamination.
+> FrontierMath uses new, unpublished problems and automated
+> verification to reliably evaluate models while minimizing risk of
+> data contamination.
 
 `[PDF-VERIFY]` From the Epoch AI project page: each problem has a
 **single canonical numerical answer** (a specific integer, a polynomial,
@@ -53,8 +64,9 @@ second mathematician for solvability and uniqueness of answer.
 
 ## Difficulty — the multi-day-effort calibration {#sec-difficulty}
 
-> Problems demand multiple hours to days of effort from domain
-> specialists.
+> Solving a typical problem requires multiple hours of effort from a
+> researcher in the relevant branch of mathematics, and for the upper
+> end questions, multiple days.
 
 This is the upper-difficulty calibration: where MATH (Hendrycks 2021)
 problems take a competent undergraduate ~30 min, and AIME problems
