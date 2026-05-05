@@ -1,0 +1,341 @@
+% Paper 1, §3 — Tokenization, embedding, and unembedding
+% Anchors: kb/notes/architecture/{tokenization,embeddings-and-tying}.md
+%          kb/excerpts/{sennrich2016,kudo2018-sentencepiece,press2017-tied-embed,
+%                       radford2019-gpt2,blt2024}.md
+
+\section{Tokenization, embedding, and unembedding}
+\label{sec:tokenization-embedding}
+
+The discrete-token interface of a Transformer LLM is implemented by three
+parameter blocks that bracket the residual stream: a tokenizer that maps
+text to integer IDs in $\{0, \dots, |V|-1\}$, an input embedding
+$E_{\text{in}} \in \R^{|V| \times \mathsf{D}}$ that lifts those IDs into
+the residual stream of shape $\BSH$, and an LM head
+$E_{\text{out}} \in \R^{\mathsf{D} \times |V|}$ that projects the final
+residual stream back to logits of shape $\bsv$. The thesis of this
+section is that the field has converged on a small lineage of choices
+along this triple: subword BPE in either the SentencePiece or
+byte-level (tiktoken) family, with a clear scale-dependent split on
+weight tying — tied at $\lesssim 1$B parameters, untied at $\gtrsim 8$B —
+and a still-open contender, the tokenizer-free byte-patch model (BLT),
+which is the first 2024 architecture to match a token-based 8B baseline
+at fixed FLOPs \citep{blt2024}. The choices are independent, but they
+interact: vocabulary size sets the embedding-table cost, which sets the
+parameter share at which untying becomes free.
+
+\subsection{Subword tokenization: BPE and SentencePiece}
+\label{sec:tok-bpe}
+
+\citet{sennrich2016} adapts \emph{byte-pair encoding} \citep[Gage
+1994;][\S 3.2]{sennrich2016}\footnote{KB excerpt:
+\texttt{kb/excerpts/sennrich2016.md\#sec-3-2}.} from data compression
+to NLP word segmentation. The training procedure is greedy bottom-up:
+initialize the symbol vocabulary with the character (or byte) alphabet,
+represent each word as a sequence of those symbols plus an
+end-of-word marker, then iterate the pair-merge loop. The reference
+implementation as transcribed in \citet[\S 3.2, Algorithm 1]{sennrich2016}
+is:
+
+\begin{lstlisting}[language=Python, caption={BPE training (Sennrich et al.\ 2016, \S 3.2)}, label=lst:bpe]
+import re, collections
+def get_stats(vocab):
+    pairs = collections.defaultdict(int)
+    for word, freq in vocab.items():
+        symbols = word.split()
+        for i in range(len(symbols)-1):
+            pairs[symbols[i], symbols[i+1]] += freq
+    return pairs
+def merge_vocab(pair, v_in):
+    v_out = {}
+    bigram = re.escape(' '.join(pair))
+    p = re.compile(r'(?<!\S)' + bigram + r'(?!\S)')
+    for word in v_in:
+        w_out = p.sub(''.join(pair), word)
+        v_out[w_out] = v_in[word]
+    return v_out
+num_merges = 10
+for i in range(num_merges):
+    pairs = get_stats(vocab)
+    best = max(pairs, key=pairs.get)
+    vocab = merge_vocab(best, vocab)
+\end{lstlisting}
+
+The final vocabulary size is the size of the initial alphabet plus the
+number of merge operations — \emph{the only hyperparameter of the
+algorithm} \citep[\S 3.2]{sennrich2016}. At inference, the same merge
+list is replayed deterministically over new text. Crucially, BPE is
+\emph{not} a left-to-right segmenter: the same prefix can yield a
+different first token when the suffix changes. We will return to this
+when contrasting with byte-patch models in \cref{sec:tok-blt}.
+
+\citet{kudo2018-sentencepiece} packages BPE (and a unigram-LM
+alternative) into a language-agnostic library with three additional
+design choices that became the modern default for open-weight LLMs.
+First, \emph{lossless tokenization}: SentencePiece treats raw input,
+including whitespace, as a sequence of Unicode characters and escapes
+spaces with the meta-symbol $\sqcup$ (U+2581) so that
+$\mathrm{decode}(\mathrm{encode}(x)) = x$ holds verbatim
+\citep[\S 3.1]{kudo2018-sentencepiece}.\footnote{KB excerpt:
+\texttt{kb/excerpts/kudo2018-sentencepiece.md\#sec-3-1}.} Second, an
+$O(N \log N)$ priority-queue training algorithm that scales to multi-TB
+corpora \citep[\S 3.2]{kudo2018-sentencepiece}. Third, \emph{byte
+fallback}: out-of-vocabulary characters decompose into the 256 UTF-8
+byte tokens, eliminating the UNK symbol entirely
+\citep[\S byte-fallback]{kudo2018-sentencepiece}. The three together
+make a single tokenizer trainable on raw multilingual text — the choice
+behind LLaMA-1/2/3 \citep{touvron2023, meta-llama3}, Mistral, Qwen,
+Gemma, and OLMo 2 \citep{olmo2}.
+
+\citet{radford2019-gpt2} addresses the orthogonal question of what
+\emph{base alphabet} BPE should run on. A character-level base requires
+the full Unicode code-point space ($> 130\text{K}$ symbols before any
+merge), while a byte-level base needs only $256$. The naive
+byte-level recipe, however, is sub-optimal for a load-bearing reason
+\citep[\S 2.2]{radford2019-gpt2}\footnote{KB excerpt:
+\texttt{kb/excerpts/radford2019-gpt2.md\#sec-2-2}.}:
+
+\begin{quote}
+\itshape We observed BPE including many versions of common words like
+\texttt{dog} since they occur in many variations such as \texttt{dog.}
+\texttt{dog!} \texttt{dog?}. This results in a sub-optimal allocation of
+limited vocabulary slots and model capacity. To avoid this, we prevent
+BPE from merging across character categories for any byte sequence. We
+add an exception for spaces which significantly improves the compression
+efficiency while adding only minimal fragmentation of words across
+multiple vocab tokens.
+\end{quote}
+
+The category-respecting byte-level BPE of \citet{radford2019-gpt2} is
+the direct ancestor of OpenAI's tiktoken (used by GPT-3, GPT-4, GPT-4o
+at $|V|=200\text{K}$, and Phi-4 at $|V|=100\text{K}$
+\citep[\S 2.1]{phi4}) and of DeepSeek-V3's $|V|=128\text{K}$ byte-level
+BPE \citep[\S 2.1]{deepseek-v3}.
+
+\subsection{Embedding and unembedding}
+\label{sec:tok-embed-unembed}
+
+Given token-ID sequence $\mathbf{t} \in \{0, \dots, |V|-1\}^N$, residual
+width $\mathsf{D}$, and depth $L$, the input embedding is a learned
+lookup,
+\begin{equation}
+X^0_i = E_{\text{in}}[t_i] \in \R^{\mathsf{D}}, \qquad
+E_{\text{in}} \in \R^{|V| \times \mathsf{D}},
+\label{eq:embed}
+\end{equation}
+producing the initial residual stream $X^0$ of shape $\BSH$. After $L$
+blocks the LM head produces logits,
+\begin{equation}
+\mathrm{logits}_i = X^L_i \, E_{\text{out}} \in \R^{|V|}, \qquad
+E_{\text{out}} \in \R^{\mathsf{D} \times |V|},
+\label{eq:unembed}
+\end{equation}
+of shape $\bsv$ \citep[\S 3.4]{vaswani2017}. In modern decoder-only
+LLMs $X^L$ is the output of the final RMSNorm rather than the raw
+post-block residual; \cref{eq:unembed} is otherwise unchanged. The
+LM-head matmul costs $O(N \cdot |V| \cdot \mathsf{D})$ FLOPs per
+position; at $|V| = 128\text{K}$ and $\mathsf{D} = 4096$ this is
+$\sim\!5\times 10^{8}$ FLOPs per token, comparable to a single
+Transformer block.
+
+The original encoder-decoder Transformer scales the embedding by
+$\sqrt{\mathsf{D}}$ before adding the positional signal
+\citep[\S 3.4]{vaswani2017}, an artifact of the Xavier-initialization
+variance regime; modern decoder-only LLMs typically omit the scaling
+and rely on the first RMSNorm to fix the norm of $X^0$.
+
+\subsection{Weight tying}
+\label{sec:tok-tying}
+
+\citet{press2017-tied-embed} observed that the input embedding $U$ and
+the output projection $W$ both index the same vocabulary and proposed
+constraining them:
+\begin{equation}
+W = U, \quad \text{equivalently} \quad E_{\text{out}} = E_{\text{in}}^\top
+\label{eq:tying}
+\end{equation}
+\citep[\S 3.1]{press2017-tied-embed}.\footnote{KB excerpt:
+\texttt{kb/excerpts/press2017-tied-embed.md\#sec-3-1}.} The forward path
+under tying is $\mathrm{logits}_i = X^L_i \, E_{\text{in}}^\top$, and a
+single matrix $E_{\text{in}}$ is updated from both input and output
+gradients. Tying halves the parameter count of the I/O blocks (saving
+$|V| \cdot \mathsf{D}$ parameters) and the empirical result on RNN-era
+language models was a perplexity \emph{reduction}: PTB validation drops
+from $78.4$ to $75.8$ on the medium LSTM, with similar gains on the
+large LSTM and on Wikitext-2 \citep[\S 4]{press2017-tied-embed}. On NMT
+encoder-decoder models with shared source/target vocabulary, three-way
+tying reduced parameters by 28--52\% with no BLEU degradation
+\citep[\S 5]{press2017-tied-embed}.
+
+The frontier-2026 picture inverts the recommendation. \cref{tab:tying}
+collects the public choices.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lllrr}
+\toprule
+Model & Tied? & $|V|$ & $\mathsf{D}$ & $|V|\mathsf{D}$ params \\
+\midrule
+Vaswani 2017 base & tied   & 37K   & 512   & 19M   \\
+GPT-2 (1.5B)      & tied   & 50K   & 1600  & 80M   \\
+LLaMA-1 / LLaMA-2 7B & tied   & 32K   & 4096  & 131M  \\
+Phi-4             & tied   & 100K  & 5120  & 512M  \\
+Qwen3 (small)     & tied   & 152K  & varies & varies \\
+\midrule
+LLaMA-3 8B        & untied & 128K  & 4096  & 525M $\times 2$ \\
+LLaMA-3 70B/405B  & untied & 128K  & 8192/16384 & --- \\
+OLMo 2 7B/13B     & untied & $\sim$50K & varies & varies \\
+DeepSeek-V3 671B  & untied & 128K  & 7168  & 920M $\times 2$ \\
+Qwen3 (235B)      & untied & 152K  & varies & varies \\
+\bottomrule
+\end{tabular}
+\caption{Tying decisions across reference models. Sources:
+\citet[\S 3.4]{vaswani2017}, \citet[\S 2.3]{radford2019-gpt2},
+\citet{touvron2023}, \citet[\S 2.1]{phi4},
+\citet[\S 3.1]{meta-llama3}, \citet{olmo2},
+\citet[\S 2.1]{deepseek-v3}, \citet{qwen3}.}
+\label{tab:tying}
+\end{table}
+
+The empirical pattern is \emph{tied at $\lesssim 1$B, untied at
+$\gtrsim 8$B}.
+
+\begin{intuition}
+Why frontier labs untie at scale: the embedding-block parameter saving
+from tying is constant in $|V| \cdot \mathsf{D}$, while the
+non-embedding model grows roughly as $L \cdot \mathsf{D}^2$. At LLaMA-3
+8B the I/O embeddings are $\sim$12\% of model parameters; at 70B,
+$\sim$5\%; at 405B, $\sim$1\%. The compression ratio of \cref{eq:tying}
+goes from \emph{meaningful} to \emph{negligible} as scale grows, while
+the alleged quality cost — the input embedding being pulled toward
+output-space directions by the dominant LM-head gradient — is
+constant. Returning to math: tying constrains
+$E_{\text{out}}=E_{\text{in}}^\top$ globally, but the gradient
+$\nabla_{E_{\text{in}}} \mathcal{L}$ acquires a contribution from the
+softmax cross-entropy that scales with $|V|$, while the input-side
+contribution scales only with the number of times each token is
+embedded as input. The trade flips when $|V| \cdot \mathsf{D}$ ceases
+to be a meaningful share of total parameters.
+\end{intuition}
+
+\begin{contradiction}
+\citet[\S 4--5]{press2017-tied-embed} reports tying \emph{improves}
+perplexity on $\sim$10M-parameter LSTM language models. Frontier
+2024--2026 open-weight LLMs at $\geq 8$B parameters
+(\citealp{meta-llama3, olmo2, deepseek-v3, qwen3}) untie and report
+this is the better choice. The reconciling claim — that the
+tying-induced output-space bias only dominates once embeddings are a
+small share of total parameters — is currently an
+\emph{intuition}, not a derivation, and the few alternatives between
+strict tying and full untying (e.g., pseudo-inverse tying,
+$E_{\text{out}} = (E_{\text{in}}^\top)^+$) are recent and not yet
+evaluated at frontier scale. \deepencite{press2017-tied-embed §6}
+\end{contradiction}
+
+\subsection{Vocabulary scaling}
+\label{sec:tok-vocab}
+
+Vocabulary size is the lever that connects tokenizer choice to
+embedding cost. Smaller $|V|$ produces longer token sequences (higher
+\emph{fertility}, defined as tokens-per-character), inflating
+attention's $O(N^2)$ cost and reducing the model's effective context
+horizon in characters. Larger $|V|$ produces shorter sequences but
+inflates the embedding and LM-head matmul. The lineage of public
+choices traces an upward arc: GPT-2 at $|V|=50{,}257$
+\citep[\S 2.3]{radford2019-gpt2}; LLaMA-1/2 at $|V|=32{,}000$ on
+SentencePiece BPE \citep[\S 2.3]{touvron2023}; LLaMA-3 at
+$|V|=128{,}256$ on expanded SentencePiece-BPE
+\citep[\S 3.1]{meta-llama3}; DeepSeek-V3 at $|V|=128{,}000$ on
+byte-level BPE \citep[\S 2.1]{deepseek-v3}; Phi-4 at $|V|=100{,}000$
+on tiktoken cl100k \citep[\S 2.1]{phi4}; GPT-4o at $|V|\!\approx\!200{,}000$
+on tiktoken o200k; Qwen3 at $|V|=152{,}000$ \citep{qwen3}.
+
+The capacity cost is concrete: LLaMA-3's $4\times$ vocab expansion
+relative to LLaMA-2 added approximately $128{,}256 \times 4096 = 525\text{M}$
+parameters per embedding matrix at 8B scale, and untied means double
+that. The capability gain is also concrete: LLaMA-3 reports tokens-per-
+English-word fertility near $1.0$ (vs.\ $\sim 1.5$ for LLaMA-2's 32K
+vocab), with a substantially larger improvement on non-English text
+where 32K SentencePiece-BPE produced fertilities of $2$--$4$
+\citep[\S 3.1]{meta-llama3}. The same expansion reserved a block of
+unused token IDs explicitly for downstream fine-tuning, partly to
+mitigate the \emph{glitch-token} failure mode where rarely-trained
+embeddings sit near initialization and produce unpredictable model
+behavior when prompted (the canonical example, the
+\texttt{SolidGoldMagikarp} token in GPT-2/3, is a Tier C community
+report and not relied on as a hard claim here).
+
+\begin{analogy}
+The tokenizer is a fixed prior the model cannot learn its way out of:
+once $E_{\text{in}}$ is shaped by the merge list, every later
+representation is conditioned on what the tokenizer chose to make a
+single ID versus a sequence. If "12345" is one BPE merge but "1234" is
+five characters, the model's digit-by-digit arithmetic competence is
+not symmetric across strings — a fact LLaMA-3 addresses by tokenizing
+digits individually \citep[\S 3.1]{meta-llama3}. Returning to math:
+the tokenizer is the function $\mathbf{t}: \text{text} \to V^N$
+upstream of \cref{eq:embed}; its merge list defines the equivalence
+classes of strings that share a row of $E_{\text{in}}$, and the model
+operates on those classes, not on the underlying bytes.
+\end{analogy}
+
+\subsection{Tokenizer-free: the BLT alternative}
+\label{sec:tok-blt}
+
+\citet{blt2024} replaces the fixed tokenizer with a learned
+byte-patching scheme. A small byte-level auto-regressive language
+model is trained alongside the main LLM and used to score next-byte
+entropy,
+\begin{equation}
+H(x_i) = \sum_{v \in V_{\text{byte}}} p_e(x_i = v \mid x_{<i}) \log p_e(x_i = v \mid x_{<i}),
+\label{eq:blt-entropy}
+\end{equation}
+verbatim \citep[Eq.~1]{blt2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/blt2024.md\#sec-2-3}.} Patch boundaries are placed
+either when $H(x_t) > \theta_g$ (\emph{global} entropy threshold) or
+when $H(x_t) - H(x_{t-1}) > \theta_r$ (\emph{approximate monotonic}
+relative threshold) \citep[\S 2.3]{blt2024}. The result is an
+\emph{incremental} patching function — the patching of $x_{<i}$ does
+not depend on $x_{\geq i}$ — which BPE provably is not, because BPE
+merges can re-segment a prefix when its continuation changes
+\citep[\S 2.4]{blt2024}.
+
+The architecture is three modules: a lightweight Local Encoder mapping
+bytes to patch representations, a heavy Latent Transformer that runs
+once per patch, and a lightweight Local Decoder that reads patch
+outputs back to byte logits \citep[\S 3]{blt2024}. The Latent
+Transformer's runtime scales with the number of patches $m$, not the
+number of bytes $n$, and entropy patching produces $m \ll n$ on
+predictable spans (e.g., the body of a named entity is one patch; the
+boundary between sentences is its own patch). The headline scaling
+result \citep[\S 1, Fig.~1]{blt2024}:
+
+\begin{quote}
+\itshape Overall, BLT matches training flop-controlled performance of
+Llama 3 while using up to 50\% fewer flops at inference. … BLT models
+unlock a new dimension for scaling LLMs, where model size can now be
+scaled while maintaining a fixed-inference budget.
+\end{quote}
+
+\begin{forumsignal}
+As of 2026-Q2, no production frontier-LLM has shipped with a
+BLT-family tokenizer-free architecture; the published 8B-scale parity
+result \citep{blt2024} is the strongest public signal that
+tokenizer-free is viable at non-trivial scale, and the FAIR follow-up
+extending the comparison above 8B is reported in pre-print review but
+not yet released. \deepencite{blt2024 §6}
+\end{forumsignal}
+
+\subsection{Forward link}
+
+The choices in this section determine the rows of $E_{\text{in}}$ and
+the columns of $E_{\text{out}}$, but they say nothing about \emph{order}
+— two sequences that differ only by permutation produce the same
+multiset of embedded vectors $\{E_{\text{in}}[t_i]\}_i$. The order
+information is supplied by the positional-encoding choice that
+follows: sinusoidal (\citealp[\S 3.5]{vaswani2017}), learned, T5
+relative bias, ALiBi, RoPE, YaRN, NoPE. The next section
+(\cref{sec:positional}) walks that lineage, and explains why RoPE plus
+context-extension methods became the frontier-2026 default — a
+choice that, like tokenization, is one axis of the small set of
+choices the modern Transformer actually offers.

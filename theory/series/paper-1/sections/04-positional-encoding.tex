@@ -1,0 +1,332 @@
+\section{Positional encoding}
+\label{sec:positional-encoding}
+
+Self-attention is permutation-equivariant: with no positional signal the
+output for $(x_1, \ldots, x_S)$ is invariant under any permutation of
+positions, so the model treats ``dog bites man'' and ``man bites dog''
+identically~\citep{vaswani2017}. Positional encoding is the mechanism
+that breaks this symmetry, and the family of choices is one of the
+small number of axes along which the modern Transformer is
+parameterized. The thesis of this section: between 2017 and 2026 the
+field walked sinusoidal $\to$ learned $\to$ T5 relative bias $\to$
+ALiBi $\to$ RoPE, RoPE became dominant for decoder-only LLMs, and the
+practical question of long-context extension is now \emph{primarily a
+positional question} (NTK/YaRN/LongRoPE), not (only) an attention-
+implementation question. We close with NoPE and iRoPE, where the field
+asks whether explicit positional encoding is needed at all once depth
+and causal masking are in place.
+
+\subsection{The 2017 sinusoidal baseline}
+\label{sec:pos-sinusoidal}
+
+\citet{vaswani2017} adds a deterministic positional vector
+$\boldsymbol{p}_m \in \R^{D}$ to the token embedding at the input of
+the encoder/decoder stack, before any attention layer:
+\begin{equation}
+f_{\{q,k\}}(\boldsymbol{x}_m, m) = \boldsymbol{W}_{\{q,k\}}\,
+   (\boldsymbol{x}_m + \boldsymbol{p}_m),
+\label{eq:pe-additive}
+\end{equation}
+with the sinusoidal choice~\citep[\S 3.5]{vaswani2017}%
+\footnote{KB excerpt: \texttt{kb/excerpts/vaswani2017.md\#sec-3-5}.}
+\begin{equation}
+\begin{aligned}
+PE_{(pos,\,2i)}     &= \sin\!\bigl(pos\,/\,10000^{2i/d_{\text{model}}}\bigr), \\
+PE_{(pos,\,2i+1)}   &= \cos\!\bigl(pos\,/\,10000^{2i/d_{\text{model}}}\bigr),
+\end{aligned}
+\label{eq:pe-sinusoidal}
+\end{equation}
+where $pos$ is the token position and $i$ indexes dimension. The
+wavelengths form a geometric progression from $2\pi$ to
+$10000 \cdot 2\pi$. \citet{vaswani2017} motivate the closed form on two
+grounds: a fixed offset $k$ admits a linear map taking $PE_{pos}$ to
+$PE_{pos+k}$, ``[allowing] the model to easily learn to attend by
+relative positions''; and the closed form ``may allow the model to
+extrapolate to sequence lengths longer than the ones encountered during
+training''~\citep[\S 3.5]{vaswani2017}.
+
+The same paper notes that learned absolute embeddings produce
+``nearly identical results'' on WMT~\citep[Table 3 row (E)]{vaswani2017}
+--- so at the original $d_{\text{model}}=512$, $S \le 100$ scale,
+fixed-vs-learned was a non-issue. The fixed/learned dichotomy only
+becomes load-bearing once $S$ grows past the training horizon, which is
+precisely the regime where every successor encoding (T5 bias, ALiBi,
+RoPE) is designed to behave gracefully.
+
+\begin{intuition}
+The sinusoidal formula is the closest to a ``coordinate system'' the
+input can carry. Each pair of dimensions $(2i, 2i{+}1)$ traces a
+unit-circle hand at angular rate $\theta_i = 10000^{-2i/d_{\text{model}}}$.
+High-frequency hands ($i \to 0$) discriminate local order; low-frequency
+hands ($i \to d/2$) carry coarse global position. Returning to the
+canonical form: equation~\eqref{eq:pe-sinusoidal} is exactly the
+$(\sin, \cos)$ projection of those rotating hands at position $pos$.
+\end{intuition}
+
+\subsection{Learned absolute, T5 relative bias, and ALiBi}
+\label{sec:pos-learned-and-bias}
+
+Three intermediate families followed the sinusoidal baseline.
+
+\paragraph{Learned absolute (BERT, GPT-2).} Replace the fixed
+$\boldsymbol{p}_m$ in~\eqref{eq:pe-additive} with a learned embedding
+indexed by $m \in \{0, \ldots, S_{\text{train}}-1\}$~\citep{devlin2019-bert,
+radford2019-gpt2}. The cost: a hard cutoff at the training context
+$S_{\text{train}}$. Inference at $m \ge S_{\text{train}}$ has no defined
+embedding, and there is no closed-form way to extend the table.
+
+\paragraph{T5 relative bias.} \citet{raffel2019} replace the additive
+input-side encoding with a per-layer scalar bias on the attention
+logit, binned by signed relative distance:
+\begin{equation}
+\boldsymbol{q}_m^\top \boldsymbol{k}_n
+= \boldsymbol{x}_m^\top \boldsymbol{W}_q^\top \boldsymbol{W}_k \boldsymbol{x}_n
+  + b_{m-n}^{(h)},
+\label{eq:t5-bias}
+\end{equation}
+with one $b_{\Delta}^{(h)}$ table per head $h$. The bias is added inside
+each attention layer rather than once at the input, which avoids the
+``diluted-by-depth'' degradation of additive input
+encoding~\citep{raffel2019}.
+
+\paragraph{ALiBi.} \citet[ALiBi]{press-alibi} make the bias
+parameter-free and \emph{linear in distance}:
+$b_{m-n}^{(h)} = -|m-n| \cdot s_h$ with a fixed per-head slope $s_h$,
+producing a built-in linear penalty for distance and --- the load-
+bearing claim --- length extrapolation past $S_{\text{train}}$ without
+fine-tuning.\deepencite{press-alibi §3 (excerpt not yet in KB; cite
+``Train Short, Test Long: Attention with Linear Biases Enables Input
+Length Extrapolation'', Press et al.\ 2022)}
+
+All three lost ground to RoPE for decoder-only LLMs by 2022--2023.
+Learned absolute lost on extrapolation; T5 bias's binned table did not
+generalize cleanly across context lengths; ALiBi's linear slope is the
+right shape for some workloads but not for the long-range structure
+attention is asked to handle in modern decoder-only training.
+
+\subsection{RoPE: rotation in the QK inner product}
+\label{sec:pos-rope}
+
+\citet{su2021} replace the additive encoding with a multiplicative
+rotation applied to $Q$ and $K$ inside attention.\footnote{KB excerpt:
+\texttt{kb/excerpts/su2021.md\#sec-3-2-2}.} For a residual-stream
+activation $\boldsymbol{x}_m \in \R^{d_h}$ at position $m$ (per head,
+with $d_h$ even):
+\begin{equation}
+f_{\{q,k\}}(\boldsymbol{x}_m, m)
+= \boldsymbol{R}^{d_h}_{\Theta, m}\, \boldsymbol{W}_{\{q,k\}}\, \boldsymbol{x}_m,
+\label{eq:rope}
+\end{equation}
+where $\boldsymbol{R}^{d_h}_{\Theta, m}$ is the block-diagonal
+orthogonal rotation matrix with $d_h/2$ blocks of the form
+\begin{equation}
+\begin{pmatrix}\cos m\theta_i & -\sin m\theta_i \\
+               \sin m\theta_i & \phantom{-}\cos m\theta_i\end{pmatrix},
+\quad i = 1, \ldots, d_h/2,
+\label{eq:rope-block}
+\end{equation}
+and the frequencies form a geometric progression with base $b$:
+\begin{equation}
+\Theta = \bigl\{\theta_i = b^{-2(i-1)/d_h}\bigr\}_{i=1}^{d_h/2},
+\quad b = 10000\ \text{(default)}
+\label{eq:rope-theta}
+\end{equation}
+\citep[\S 3.2.2 Eq.\ 14--15]{su2021}. The critical property follows
+from orthogonality: substituting~\eqref{eq:rope}
+into the attention dot product gives
+\begin{equation}
+\boldsymbol{q}_m^\top \boldsymbol{k}_n
+= \boldsymbol{x}_m^\top \boldsymbol{W}_q^\top
+  \boldsymbol{R}^{d_h}_{\Theta, n - m} \boldsymbol{W}_k
+  \boldsymbol{x}_n,
+\label{eq:rope-relative}
+\end{equation}
+\citep[\S 3.2.2 Eq.\ 16]{su2021}. Position information enters the
+attention score \emph{only as the relative offset $n-m$} --- when
+$m = n$ the rotation is the identity and the inner product is content-
+only; otherwise it depends on $(n-m)$ but not on $m$ or $n$ separately.
+
+In practice the rotation is computed elementwise rather than as a
+matmul, exploiting the sparsity of $\boldsymbol{R}^{d_h}_{\Theta, m}$:
+\begin{equation}
+\boldsymbol{R}^{d_h}_{\Theta, m}\, \boldsymbol{x}
+= \boldsymbol{x} \otimes \cos(m\boldsymbol{\theta})
+  + \mathrm{rotate\_half}(\boldsymbol{x}) \otimes \sin(m\boldsymbol{\theta}),
+\label{eq:rope-pair}
+\end{equation}
+where $\boldsymbol{\theta}$ duplicates each $\theta_i$ to length $d_h$
+and $\mathrm{rotate\_half}$ swaps each pair
+$(x_{2i-1}, x_{2i}) \mapsto (-x_{2i}, x_{2i-1})$~\citep[\S 3.4.2 Eq.\ 34]{su2021}.
+This is the form behind the
+\texttt{apply\_rotary\_pos\_emb(q, k, cos, sin)} helper in HF
+transformers and the \texttt{ggml\_rope\_*} family in \texttt{llama.cpp};
+two element-wise multiplies and one add per query/key, negligible
+overhead.
+
+Three properties make RoPE the dominant choice in 2022--2026 frontier
+decoder-only LLMs (LLaMA 1--3, Mistral, Qwen, DeepSeek, Gemma, OLMo).
+First, the relative-only dependence~\eqref{eq:rope-relative} is
+arithmetic, not learned --- $\boldsymbol{R}^{d_h}_{\Theta, m}$ is
+defined for any $m \in \mathbb{N}$ without indexing a learned table.
+Second, applying the rotation \emph{at every layer on $Q, K$ only}
+preserves the residual stream's content basis. Third, the
+long-term-decay property~\citep[\S 3.3]{su2021}: at fixed $\Theta$, the
+inner product $\langle f_q(\cdot, m), f_k(\cdot, n) \rangle$ tends to
+decay as $|m-n|$ grows because rotations at different frequencies
+dephase, matching the prior that distant tokens should interact less.
+
+\begin{analogy}
+RoPE is a clock with $d_h/2$ hands, each ticking at a different rate.
+At position $m$, hand $i$ points to angle $m\theta_i$. Query $\boldsymbol{q}_m$
+and key $\boldsymbol{k}_n$ ``agree'' on dimension-pair $i$ when their
+hands align modulo $2\pi$ --- when $(m-n)\theta_i \equiv 0$. Returning
+to canonical form: hand alignment is exactly the cosine factor
+$\cos((m-n)\theta_i)$ that emerges from expanding
+$\boldsymbol{x}_m^\top \boldsymbol{R}^{d_h}_{\Theta, n-m} \boldsymbol{x}_n$
+in the canonical $2{\times}2$ block basis of~\eqref{eq:rope-block}.
+\end{analogy}
+
+\subsection{Long-context extension: NTK-aware, YaRN, LongRoPE}
+\label{sec:pos-long-context}
+
+The pre-trained context $S_{\text{train}}$ is set by training data and
+compute. Deploying at $S_{\text{infer}} > S_{\text{train}}$ requires
+some adjustment because positions $m > S_{\text{train}}$ produce
+rotations $m\theta_i$ that are out-of-distribution: the model has
+never observed these phases on $Q, K$ during training, and attention
+features may not generalize. The extension methods are the practical
+positional question for the 128K-and-up regime.
+
+\paragraph{Position interpolation (PI).} Chen et al.\ 2023 propose,
+for ratio $s = S_{\text{infer}} / S_{\text{train}} > 1$, replacing
+$m\theta_i$ with $(m/s)\theta_i$ in~\eqref{eq:rope-block}, mapping the
+new range into the training-seen
+range.\deepencite{chen2023-position-interpolation §3 (excerpt not yet
+in KB; cite ``Extending Context Window of Large Language Models via
+Positional Interpolation'', Chen et al.\ 2023, arXiv 2306.15595)} Cheap
+but degrades short-context quality because it compresses the
+high-frequency dimensions.
+
+\paragraph{NTK-aware scaling.} The insight: high-frequency dimensions
+($\theta_i$ small $i$) execute many full rotations within $S_{\text{train}}$
+and should not be interpolated --- compressing them harms local
+fidelity. Low-frequency dimensions execute less than one rotation in
+$S_{\text{train}}$ and benefit from interpolation. The NTK-aware fix
+scales the \emph{base} $b$ instead of the positions:
+\begin{equation}
+b' = b \cdot s^{d_h / (d_h - 2)},
+\label{eq:ntk-base}
+\end{equation}
+which compresses primarily the low-frequency dimensions while leaving
+high-frequency ones nearly intact~\citep[\S 3.2,
+\texttt{kb/notes/architecture/position-encoding.md\#sec-3-2}]{su2021}.
+
+\paragraph{YaRN.} \deepencite{peng2023-yarn (excerpt not yet in KB;
+cite ``YaRN: Efficient Context Window Extension of Large Language
+Models'', Peng et al.\ 2023, arXiv 2309.00071)} YaRN combines
+NTK-aware base-scaling with a per-frequency interpolation
+schedule: dimensions with wavelength shorter than the training context
+use no scaling, dimensions longer than the extended context use full
+PI, intermediate dimensions use a smooth ramp. YaRN additionally
+rescales attention logits by $1/\sqrt{t}$ where $t$ depends on the
+extension factor $s$:
+\begin{equation}
+\softmax\!\Bigl(\frac{Q K^\top}{\sqrt{d_h}\,\sqrt{t}}\Bigr) V,
+\quad \sqrt{t} = 0.1 \ln(s) + 1,
+\label{eq:yarn-temp}
+\end{equation}
+preserving the softmax temperature regime as the effective sequence
+length grows. YaRN reports roughly $10\times$ fewer fine-tuning tokens
+than plain PI to extend LLaMA-2 to 128K (note: equations
+\eqref{eq:ntk-base},~\eqref{eq:yarn-temp} are reconstructed from the
+LLaMA-3 implementation and secondary references; see the deepen-cite
+above for primary verification).
+
+\paragraph{LongRoPE / LongRoPE2.} LongRoPE introduces evolutionary
+search over per-frequency scaling factors --- a non-uniform rescaling
+that no closed-form method can produce, reaching 2M-token context.
+\citet{longrope2-2025} extend this to a per-position search and report
+near-lossless extension (98.5\% of short-context performance preserved)
+at $80\times$ fewer tokens than Meta's earlier LLaMA-3 long-context
+fine-tuning approach.\deepencite{longrope2-2025 §3 (KB excerpt
+abstract-only as of 2026-05-05; equations and the per-position search
+schedule still need transcription)}
+
+The pattern across PI $\to$ NTK $\to$ YaRN $\to$ LongRoPE is one of
+\emph{increasingly fine-grained per-frequency control over $\theta_i$}.
+Each step preserves the multiplicative structure
+of~\eqref{eq:rope}; only the rule for which $\theta_i$ get rescaled
+and by how much changes. Long-context extension is, in this lineage, a
+positional question --- a choice of frequency schedule --- not a
+choice of attention implementation. The attention kernel
+(FlashAttention, NSA; \S 6 of this paper) is unchanged.
+
+\subsection{NoPE and iRoPE}
+\label{sec:pos-nope}
+
+\deepencite{kazemnejad2023-nope (excerpt not yet in KB; cite ``The
+Impact of Positional Encoding on Length Generalization in Transformers'',
+Kazemnejad et al.\ 2023, NeurIPS)} The NoPE result (Kazemnejad et al.\
+2023) is that decoder-only Transformers trained \emph{without any
+positional encoding} can generalize as well or better than RoPE/ALiBi
+to longer sequences on synthetic length-generalization tasks. The
+mechanism is depth-induced: causal masking gives every position a
+unique attention pattern (position $m$ has $m+1$ attendable tokens, so
+position 0 is uniquely identifiable as the only one with empty
+attention context), and stacked layers can recover positional
+information from this content-mask interaction without an explicit
+embedding.
+
+\citet{meta-llama4} apply this in production with iRoPE: alternate
+RoPE-equipped attention layers with NoPE attention layers in a 3:1
+ratio, with a temperature-scaling factor in the NoPE layers. Trained
+natively at $S_{\text{train}} = 256\text{K}$, LLaMA 4 Scout reports a
+claimed 10M-token inference context --- a qualitative regime change,
+not just better interpolation. The pattern resembles a fallback: RoPE
+layers provide explicit local-order constraints; NoPE layers are
+forced to derive position from content alone, providing a channel that
+does not depend on the rotation when phases at $m \gg S_{\text{train}}$
+go out-of-distribution.
+
+\begin{contradiction}
+Long-context extrapolation method comparison is contested as of
+2026-05. Three competing positions: (a) RoPE-only with NTK-aware base
+scaling is sufficient for the $\le 4\times$ extension regime (e.g.\
+LLaMA-3's bump from 8K to 128K); (b) YaRN with a per-frequency
+schedule is required for the $\sim 10\times$ regime
+(\deepencite{peng2023-yarn}); (c) per-position search (LongRoPE2) and
+mixed RoPE/NoPE layers (iRoPE) are required for the $\ge 40\times$
+regime~\citep{longrope2-2025, meta-llama4}. The benchmarks backing
+each are largely single-source: Meta reports iRoPE at 10M, Microsoft
+reports LongRoPE2 at 2M, with no third-party head-to-head at frontier
+scale. NIAH-style retrieval saturates near 100\% at all of these
+context lengths; harder evaluations (RULER, HELMET) show steeper and
+methodologically inconsistent degradation patterns past 32K, making
+``which extension method is best'' contingent on which long-context
+benchmark is treated as ground truth (see
+\texttt{kb/notes/architecture/long-context.md\#sec-5}).
+\end{contradiction}
+
+\subsection{Summary and forward link}
+\label{sec:pos-summary}
+
+The 2017--2026 lineage along the positional-encoding axis is
+sinusoidal $\to$ learned absolute $\to$ T5 relative bias $\to$ ALiBi
+$\to$ RoPE $\to$ \{YaRN, LongRoPE, iRoPE, NoPE-hybrids\}, with RoPE as
+the convergent baseline since 2022. The decisive change is the move
+from \emph{additive at input} to \emph{multiplicative on $Q, K$ at
+every layer}: the multiplicative form
+of~\eqref{eq:rope}--\eqref{eq:rope-relative} makes the positional
+information arithmetic-extensible, which is the property every
+post-2023 long-context extension method exploits.
+
+The next axis (\S 5, attention KV-sharing) is largely
+\emph{independent} of this one: a model can choose any of
+\{MHA, MQA, GQA, MLA\} on the head-sharing axis and any of \{sinusoidal,
+RoPE, RoPE+YaRN, iRoPE\} on the position axis without strong cross-
+constraints. The one notable interaction is DeepSeek-V2's
+\emph{decoupled-RoPE} construction in MLA --- where applying the
+rotation to a low-rank latent $K$ projection breaks the cache-absorbed
+forward, and a separate small RoPE-only key channel is split out to
+preserve it~\citep{deepseek-v2}. We treat that interaction in detail
+in the next section.

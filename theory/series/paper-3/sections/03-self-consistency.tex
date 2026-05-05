@@ -1,0 +1,279 @@
+% Paper 3, §3 — Self-consistency: sampling and majority vote
+% Anchors: kb/notes/reasoning/{chain-of-thought.md §2.3, test-time-compute.md §2.1}
+%          kb/excerpts/{wang2022-self-consistency,wei2022-cot,deepseek-r1}.md
+
+\section{Self-consistency: sampling and majority vote}
+\label{sec:self-consistency}
+
+\citet{wang2022-self-consistency} replace the greedy decoder of
+\cref{sec:cot-phenomenon} with the cheapest non-trivial inference-time
+compute strategy in the reasoning literature: sample $N$ chain-of-thought
+traces independently at temperature $T > 0$, extract the final answer
+from each, and return the one that appears most often. No verifier is
+trained, no search tree is expanded, no model parameter is changed.
+Despite this minimality, self-consistency lifts greedy CoT by
+\textbf{+17.9\%} on GSM8K, \textbf{+11.0\%} on SVAMP, and \textbf{+12.2\%}
+on AQuA \citep[abstract]{wang2022-self-consistency}.\footnote{KB excerpt:
+\texttt{kb/excerpts/wang2022-self-consistency.md\#abstract}.} The
+result reframes the basic CoT decoder as one point on a sampling-budget
+axis, and supplies the baseline against which every later test-time
+compute strategy in this paper — best-of-$N$ with verifier
+(\cref{sec:process-reward-models}), tree-search (\cref{sec:tree-search}),
+RLVR-trained long traces (\cref{sec:rlvr,sec:r1-family}) — must show
+its incremental value.
+
+\subsection{The mechanism}
+\label{sec:sc-mechanism}
+
+Let $x$ be a problem, $z$ a reasoning trace, and $y$ the final answer
+extracted from $z$ by a regex on the trailing \textit{``The answer is
+$\langle\cdot\rangle$''} pattern \citep[\S 3.1]{wei2022-cot}. The CoT
+decoder of \cref{eq:cot-decode} samples a single trace, $z \sim
+p_\theta(\cdot \mid x)$, and answers $y \sim p_\theta(\cdot \mid x, z)$.
+Self-consistency replaces this single draw with $N$ independent draws
+and aggregates by plurality
+\citep[\S 3]{wang2022-self-consistency}:\footnote{KB excerpt:
+\texttt{kb/excerpts/wang2022-self-consistency.md\#sec-3}.}
+\begin{equation}
+  \hat y \;=\; \argmax_y \; \sum_{n=1}^N \mathbb{1}\bigl[y^{(n)} = y\bigr],
+  \qquad
+  z^{(n)} \sim p_\theta(\cdot \mid x), \;\;
+  y^{(n)} \sim p_\theta(\cdot \mid x, z^{(n)}).
+  \label{eq:self-consistency}
+\end{equation}
+Sampling is at temperature $T > 0$ (top-$k$ or nucleus optional);
+the value $T = 0.7$ used by \citet[\S 4.1]{wang2022-self-consistency}
+on GSM8K is a recurring default in the downstream literature.
+
+\begin{lstlisting}[mathescape=true, numbers=none, frame=single, caption={Self-consistency \citep[\S 3]{wang2022-self-consistency}. Inputs: problem $x$, model $p_\theta$, sample count $N$, temperature $T>0$. Output: aggregated answer $\hat y$.}, label=alg:sc]
+function self_consistency($x$, $p_\theta$, $N$, $T$):
+    $\mathcal{Y} \leftarrow \emptyset$                           # collected answers
+    for $n = 1$ to $N$:
+        $z^{(n)} \sim p_\theta(\cdot \mid x)$ at temperature $T$ # sample trace
+        $y^{(n)} \leftarrow$ extract_answer($z^{(n)}$)           # regex / parser
+        $\mathcal{Y} \leftarrow \mathcal{Y} \cup \{y^{(n)}\}$
+    return $\arg\max_y \sum_{n=1}^N \mathbb{1}[y^{(n)} = y]$     # majority vote
+\end{lstlisting}
+
+The compute cost is $C \propto N$ and the $N$ samples are embarrassingly
+parallel, sharing only the prompt-prefix KV cache
+\citep[\S 2.1]{snell2024}. Tensor shapes: each sample is a sequence of
+shape $\mathsf{S}_n \le L_{\max}$ tokens; the answer space the model
+votes over is finite and (for the targeted benchmarks) low-cardinality
+— integer answers on GSM8K and SVAMP, multiple-choice letters on AQuA
+\citep[\S 4]{wang2022-self-consistency}.
+
+\citet[\S 3]{wang2022-self-consistency} present the same mechanism in a
+Bayesian framing: $\hat y$ is the mode of the marginal
+$p_\theta(y \mid x) = \sum_z p_\theta(y \mid x, z)\, p_\theta(z \mid x)$
+estimated by Monte Carlo over the $N$ traces. Marginalising out $z$ is
+the conceptual contribution; the unweighted count is the simplest
+estimator of the marginal mode. Later work adds importance weights from
+verifiers (\cref{sec:process-reward-models}); the weight $w_n = 1$ here
+recovers Wang et al.
+
+\subsection{Why it works}
+\label{sec:sc-why}
+
+The empirical fact that majority-over-traces beats any single trace
+holds whenever two conditions are met. First, the model places higher
+probability mass on \emph{correct} reasoning paths than on any single
+\emph{incorrect} one — even if no individual sample is more likely
+than $0.5$, the correct answer can be the modal answer across samples
+when the model spreads error mass across many distinct wrong
+trajectories. Second, the answer space is small enough that the
+correct-and-correlated samples accumulate on a single bin while errors
+diffuse \citep[\S 3]{wang2022-self-consistency}. Both conditions are
+empirically satisfied on math word problems and constrained-choice
+benchmarks; both fail on open-ended generation
+(\cref{sec:sc-when-fails}).
+
+The connection to ensembling theory is direct. Treat each draw as a
+noisy classifier $\hat y^{(n)}$ with $\Pr[\hat y^{(n)} = y^*] = p$ for
+some $p > 1/|\mathcal{Y}|$; the $N$ draws are exchangeable and weakly
+dependent through the shared prompt. The probability that the
+plurality of $N$ samples equals $y^*$ approaches $1$ as $N \to \infty$
+by the law of large numbers, with rate determined by the gap
+$p - \max_{y \ne y^*} \Pr[\hat y^{(n)} = y]$. The rate is
+\emph{multiplicative} in this gap, which is why a small per-sample
+edge produces a large vote-margin advantage at moderate $N$. This is
+the standard variance-reduction argument used to justify ensemble
+voting in classical ML, transposed to the language-model decoder
+\citep[\S 3]{wang2022-self-consistency}.
+
+Why $T > 0$ is required: greedy decoding ($T = 0$) returns the same
+trace every time, so $N > 1$ samples carry no additional information.
+\citet[\S 4.3]{wang2022-self-consistency} ablate temperature and find
+gains stable across $T \in [0.4, 0.7]$, with degradation at very high
+$T$ (the per-sample correctness probability $p$ drops below the
+threshold where majority recovers it) and at $T \to 0$ (samples
+collapse to the greedy trajectory).
+
+\begin{intuition}
+Self-consistency is ``ask the model the same question $N$ times and
+take the answer it gives most often.'' The folk gloss is exactly right;
+the only subtlety is that the question is asked at $T > 0$ so the $N$
+answers are not literally identical. Returning to math: $\hat y$ in
+\cref{eq:self-consistency} is the mode of the empirical distribution
+$\hat p_N(y \mid x) = \frac{1}{N}\sum_n \mathbb{1}[y^{(n)} = y]$, which
+is a Monte Carlo estimator of the answer marginal
+$p_\theta(y \mid x) = \E_{z \sim p_\theta(\cdot \mid x)}\bigl[
+p_\theta(y \mid x, z)\bigr]$ filtered through the deterministic
+extraction map $z \mapsto y$. The estimator is unbiased and consistent
+in $N$; the rate of convergence is governed by the variance of the
+indicator, which shrinks fastest when the answer marginal is peaked on
+the correct $y^*$.
+\end{intuition}
+
+\subsection{Headline results}
+\label{sec:sc-results}
+
+\citet{wang2022-self-consistency} report gains on five benchmarks at the
+PaLM-540B / GPT-3-175B scale where greedy CoT is itself
+non-trivial \citep[abstract]{wang2022-self-consistency}:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lr}
+\toprule
+Benchmark & Self-consistency gain over greedy CoT \\
+\midrule
+GSM8K (arithmetic word problems) & $+17.9\%$ \\
+SVAMP  (arithmetic word problems) & $+11.0\%$ \\
+AQuA   (algebra, multiple choice) & $+12.2\%$ \\
+StrategyQA (commonsense)          & $+6.4\%$  \\
+ARC-challenge (science MC)        & $+3.9\%$  \\
+\bottomrule
+\end{tabular}
+\caption{Self-consistency over greedy CoT, headline gains
+\citep[abstract]{wang2022-self-consistency}.\protect\footnotemark{}
+The arithmetic benchmarks (GSM8K, SVAMP, AQuA) show the largest
+gains; the commonsense and science MC benchmarks where the answer
+space is constrained but the model's per-sample edge is smaller show
+correspondingly smaller — but consistently positive — improvements.}
+\label{tab:sc-headline}
+\end{table}
+\footnotetext{KB excerpt:
+\texttt{kb/excerpts/wang2022-self-consistency.md\#headline}.}
+
+The gains are produced by a single change to the decoder: from greedy
+to $N$-sample-plus-majority-vote at $T = 0.7$. No new model is trained,
+no exemplars are added to the CoT prompt, no answer verifier is
+introduced. \citet[\S 4]{wang2022-self-consistency} additionally report
+a saturation curve in $N$: gains are stable across $N \in [10, 40]$
+with diminishing returns past $N \approx
+40$.\footnote{KB excerpt:
+\texttt{kb/excerpts/wang2022-self-consistency.md\#sec-4}.} The
+practical sweet spot in the downstream literature is $N = 20$, which
+captures most of the gain at half the compute of $N = 40$.
+
+The result has not aged out. \citet[\S 2.3]{deepseek-r1} report that
+DeepSeek-R1-Zero — an RL-trained reasoning model that already lifts
+AIME 2024 pass\@1 from $15.6\%$ to $77.9\%$ — gains a further
+$8.8\%$ to $86.7\%$ when the same self-consistency rule is applied at
+inference time over $64$ samples.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} The mechanism that
+worked on PaLM-540B in 2022 still adds nearly nine points of pass\@1
+to the strongest open-weight reasoning model in 2025.
+
+\subsection{The baseline interpretation}
+\label{sec:sc-baseline}
+
+Self-consistency is the floor of the test-time compute axis
+(\cref{sec:test-time-compute}). Every other strategy in this paper
+adds either a verifier signal that re-weights the vote, a search
+structure that reuses partial-prefix compute, or a training-time
+intervention that changes the per-sample distribution itself:
+
+\begin{itemize}
+\item \textbf{Best-of-$N$ with outcome verifier} (ORM)
+\citep[\S 2]{lightman2023-prm800k}: replaces the unweighted majority of
+\cref{eq:self-consistency} with $\hat y = y^{(n^*)}$ where $n^* =
+\argmax_n R_\phi(x, z^{(n)}, y^{(n)})$. Adds a learned signal at
+training cost $C_\phi$ and runs only at fixed prompt overhead per
+sample; the vote becomes weighted by verifier confidence.
+
+\item \textbf{Best-of-$N$ with process reward model} (PRM, \cref{sec:process-reward-models}):
+scores each \emph{step} of the trace and aggregates per-trace by min,
+product, or last-step. \citet[\S 4]{lightman2023-prm800k} report PRM
+beats ORM at matched $N$ on the MATH benchmark; the gap is largest
+at small $N$, where a single bad-step penalty is fatal under
+min-aggregation.
+
+\item \textbf{Tree search with PRM} (\cref{sec:tree-search}): replaces
+flat sampling with MCTS or step-level beam search guided by a step
+verifier \citep[\S 3]{rstar-math2025}. Reuses partial-prefix KV-cache
+across siblings; cost scales as $B \times L$ rather than $N \times L$.
+
+\item \textbf{RL on verifiable rewards} (\cref{sec:rlvr,sec:r1-family}):
+trains the model so the per-sample distribution itself concentrates on
+correct answers. Self-consistency over an RLVR-trained model is then
+the same algorithm operating on a sharper underlying distribution
+\citep[\S 2.3]{deepseek-r1}.
+\end{itemize}
+
+The pattern is consistent: self-consistency is what every
+test-time-compute paper compares against because it is what users get
+``for free'' from any decoder once the model emits CoT traces. Outside
+this paper's reasoning context, the same role of ``cheapest baseline''
+makes self-consistency the standard calibration point for verifier-
+and search-based methods at \cref{sec:process-reward-models} and
+\cref{sec:tree-search}, and an inference-time control even on top of
+the strongest RLVR-trained models in \cref{sec:r1-family}.
+
+\subsection{When self-consistency fails}
+\label{sec:sc-when-fails}
+
+Three failure modes are catalogued in the literature; each stresses a
+different precondition of \cref{eq:self-consistency}.
+
+\paragraph{Brittle answer extraction.} The vote in
+\cref{eq:self-consistency} is over the \emph{extracted} answer
+$y^{(n)}$, not the full trace $z^{(n)}$. If the regex fails — the
+model omits the ``The answer is $X$'' template, or formats numbers
+inconsistently (\textit{``42''} vs.\ \textit{``forty-two''} vs.\
+\textit{``\$42$.$00$\$''}) — different traces arriving at the same
+underlying answer can land in different vote bins, splitting the
+correct cluster and causing a wrong answer to win by plurality. This
+is the dominant production failure mode of CoT pipelines
+\citep[\S 2.4]{wang2022-self-consistency}; mitigations are robust
+parsers, structured-output decoders (\cref{sec:structured-output} of
+Paper 1), and trained answer-format consistency.
+
+\paragraph{Temperature too high or too low.}
+\citet[\S 4.3]{wang2022-self-consistency} ablate $T$ and find an
+inverted-U shape: at $T \to 0$ all $N$ samples collapse to the
+greedy trace and the vote is degenerate; at large $T$ (e.g.,
+$T \ge 1.2$) the per-sample correctness rate drops below the
+threshold where majority recovers it. The gain band is roughly
+$T \in [0.4, 0.9]$ on the reported benchmarks.
+
+\paragraph{Many degenerate answer paths.} The mechanism assumes the
+correct answer is the \emph{modal} extracted answer. This fails when
+many traces converge on the same plausible-but-wrong answer — for
+instance, on a word problem with a tempting incorrect arithmetic
+shortcut, the model may produce that shortcut consistently across
+samples and majority-vote into a wrong answer with high confidence.
+\citet[\S 5]{wang2022-self-consistency} acknowledge that
+self-consistency cannot recover from systematic error. Open-ended
+generation (creative writing, summarisation, code with non-canonical
+correct outputs) breaks the precondition that the answer space has
+finite support; the analogue there is best-of-$N$ under a learned
+verifier (\cref{sec:process-reward-models}), not majority vote.
+
+\subsection{Forward link}
+\label{sec:sc-forward}
+
+Self-consistency moves the inference decoder from a single greedy draw
+to $N$ independent samples plus a deterministic vote. The $N$ axis is
+the simplest form of inference-time compute; the next section
+(\cref{sec:test-time-compute}) generalises to the full taxonomy of
+parallel-sampling, tree-search, and sequential-thinking compute
+budgets, formalises the compute-optimal selection problem of
+\citet{snell2024}, and presents the FLOPs-matched headline that on
+medium-difficulty problems a $14\times$ smaller model with
+test-time-compute beats the larger model at matched inference FLOPs.
+Self-consistency is then re-derivable as the unweighted-majority
+special case of that taxonomy at fixed sample count and verifier
+weight $w_n = 1$.

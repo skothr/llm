@@ -1,0 +1,362 @@
+% Paper 5, §3 — Knowledge benchmarks: the MMLU lineage
+% Anchors: kb/notes/evaluation/knowledge-benchmarks.md
+%          kb/excerpts/{hendrycks2021-mmlu,mmlu-redux-2024,wang2024-mmlu-pro,
+%                       rein2023-gpqa,glazer2024-frontiermath,phan2025-hle}.md
+
+\section{Knowledge benchmarks: the MMLU lineage}
+\label{sec:knowledge-benchmarks}
+
+What we measure when we say a model \emph{knows things} is the answer
+to a multi-subject multiple-choice exam, scored against a fixed answer
+key, on the assumption that the answer key is right. The lineage that
+made this concrete --- MMLU \citep{hendrycks2021-mmlu}, its 2024
+verifier audit \citep{mmlu-redux-2024}, the MMLU-Pro extension
+\citep{wang2024-mmlu-pro}, GPQA Diamond \citep{rein2023-gpqa},
+FrontierMath \citep{glazer2024-frontiermath}, and Humanity's Last Exam
+\citep{phan2025-hle} --- is the central instrument of frontier
+knowledge measurement from 2021 to 2026. It is also the lineage where
+the field's reported numbers and the benchmark's actual discriminative
+ceiling have most visibly come apart. The thesis of this section is
+narrow: at the frontier, MMLU is no longer a measurement instrument
+but a noise-floor smoke test, and every successor has been built to
+restore signal --- by raising difficulty, by widening the choice set,
+by demanding reasoning rather than retrieval, or by deliberately
+constructing items the field has not yet seen.
+
+\subsection{MMLU: the canonical knowledge benchmark}
+\label{sec:knowledge-mmlu}
+
+\citet{hendrycks2021-mmlu} introduces MMLU as a multi-subject test of
+factual breadth and depth. The benchmark has $15{,}908$ four-way
+multiple-choice questions across $57$ subjects --- elementary
+mathematics, US history, computer science, law, medicine, ethics, and
+others --- grouped into four broad areas (humanities, social sciences,
+STEM, and other-professional)%
+\footnote{KB excerpt: \texttt{kb/excerpts/hendrycks2021-mmlu.md\#sec-construction}.}.
+Items are sourced from publicly available exam banks (AP exams, GRE,
+MCAT, professional licensing exams) and filtered for clarity and
+unique correct answer; the verifier $V(\hat{a}, a^\star) \in \{0, 1\}$
+is exact-match on the chosen letter. Random-guess baseline is $25\%$;
+the human-expert baseline cited in the paper is $\sim 89.8\%$
+averaged across subjects \citep[\S{}abstract]{hendrycks2021-mmlu}.
+
+The headline launch result is the load-bearing one
+\citep[\S{}abstract]{hendrycks2021-mmlu}:
+
+\begin{quote}\itshape
+We find that while most recent models have near random-chance accuracy,
+the very largest GPT-3 model improves over random chance by almost 20
+percentage points on average. However, on every one of the 57 tasks,
+the best models still need substantial improvements before they can
+reach expert-level accuracy.
+\end{quote}
+
+GPT-3 175B at launch scored $\sim 43.9\%$, near random on many subjects,
+strong on humanities and weaker on calculations and specialized
+professional knowledge. This is the gap MMLU was constructed to expose:
+broad-but-shallow retrieval, not multi-step reasoning. Two operational
+choices made MMLU the headline benchmark of 2021--2024. First, the
+EleutherAI \texttt{lm-evaluation-harness} loglikelihood-scoring recipe
+\citep[\S{}\ref{sec:knowledge-mmlu}]{hendrycks2021-mmlu} --- five-shot
+in-context, direct-answer (no chain-of-thought), pick the argmax over
+$\{\log P(\text{A}), \log P(\text{B}), \log P(\text{C}),
+\log P(\text{D})\}$ --- made open-weight scores reproducible across
+groups. Second, the $57$-subject decomposition gave a per-subject
+diagnostic surface: a model could be evaluated not only on aggregate
+accuracy but on subject-area lopsidedness, which is the construct the
+abstract names explicitly. The combination is what made MMLU \emph{the}
+number on every model card from GPT-3 forward.
+
+\subsection{The 6.49\% verifier-error ceiling}
+\label{sec:knowledge-redux}
+
+The first thing the field broke on MMLU was the assumption that the
+answer key was right. \citet{mmlu-redux-2024} (\emph{Are We Done with
+MMLU?}) systematically audit $5{,}700$ MMLU questions against expert
+annotators and report a load-bearing number%
+\footnote{KB excerpt: \texttt{kb/excerpts/mmlu-redux-2024.md\#abstract}.}
+\citep[\S{}abstract]{mmlu-redux-2024}:
+
+\begin{quote}\itshape
+6.49\% of MMLU questions contain errors that range from incorrect
+ground truth labels to ambiguous question text and answers.
+\end{quote}
+
+The errors include malformed questions, wrong gold answers, ambiguous
+wording, and items where multiple options are defensibly correct. The
+distribution is heavy-tailed: in the Virology subject, $57\%$ of the
+analyzed questions contain errors, which means the per-subject score
+on Virology is almost entirely verifier noise
+\citep[\S{}abstract]{mmlu-redux-2024}.
+
+The implication for headline scores is mechanical. If $6.49\%$ of the
+gold labels are wrong, a perfect oracle scores at most
+$\sim 93.5\%$ on gold-labeled MMLU. Frontier models clustered at
+$90\%\text{--}92\%$ in 2024--25 are \emph{inside} the verifier-error
+band of one another and of the perfect-oracle ceiling --- leaderboard
+rankings inside that band are unstable to verifier corrections. This
+is not a complaint about the audit; it is what the audit found.
+
+\begin{contradiction}
+The contradiction is not between two papers but between what the field
+\emph{reports} and what the benchmark can \emph{measure}. Vendors and
+research papers regularly publish MMLU scores at single-percentage-point
+precision in the saturated regime: \(91.2\%\), \(92.4\%\), \(93.0\%\).
+Per \citet{mmlu-redux-2024}, none of these numbers is meaningfully
+distinguishable above the verifier-error band; any score reported
+above $\sim 93.5\%$ is by construction unverifiable against a corrected
+gold standard, and differences between two models reported at $90.5\%$
+and $92.0\%$ are within audit noise. The field continues to publish
+these numbers as if MMLU-Redux had not been written.
+\end{contradiction}
+
+The audit is a methodology contribution, not a new benchmark. Polo et
+al.\ publish per-question corrections so any subsequent run can use
+audited gold labels, but adoption has been partial: the Open LLM
+Leaderboard moved its primary headline to MMLU-Pro
+(\cref{sec:knowledge-mmlu-pro}), while many model cards still report
+raw MMLU as an in-distribution sanity check.
+
+\subsection{MMLU-Pro: the 24-prompt-style robustness extension}
+\label{sec:knowledge-mmlu-pro}
+
+\citet{wang2024-mmlu-pro} address MMLU's saturation directly with three
+structural changes%
+\footnote{KB excerpt: \texttt{kb/excerpts/wang2024-mmlu-pro.md\#abstract}.}
+\citep[\S{}abstract]{wang2024-mmlu-pro}:
+
+\begin{quote}\itshape
+This paper introduces MMLU-Pro, an enhanced dataset designed to extend
+the mostly knowledge-driven MMLU benchmark by integrating more
+challenging, reasoning-focused questions and expanding the choice set
+from four to ten options. Additionally, MMLU-Pro eliminates the trivial
+and noisy questions in MMLU.
+\end{quote}
+
+The structural changes are: (i) $4$-way $\to$ $10$-way MCQ, dropping
+the random-guess ceiling from $25\%$ to $10\%$ and expanding dynamic
+range above the noise floor; (ii) reasoning-focused item authoring;
+(iii) implicit denoising of the trivial / noisy items the
+\citeauthor{mmlu-redux-2024} audit identified. At launch, top frontier
+models scored $16$--$33$ percentage points lower on MMLU-Pro than on
+MMLU \citep[\S{}sec-delta]{wang2024-mmlu-pro}.
+
+The most original contribution is the prompt-stability protocol. The
+authors evaluate each model under $24$ different prompt styles and
+report the resulting score variance%
+\footnote{KB excerpt: \texttt{kb/excerpts/wang2024-mmlu-pro.md\#sec-delta}.}
+\citep[\S{}abstract]{wang2024-mmlu-pro}:
+
+\begin{quote}\itshape
+With 24 different prompt styles tested, the sensitivity of model
+scores to prompt variations decreased from 4--5\% in MMLU to just
+2\% in MMLU-Pro.
+\end{quote}
+
+A $4$--$5\%$ prompt-induced score variance on MMLU is significant ---
+it can reorder leaderboard positions on its own --- and the $10$-way
+design halves it both by diluting the answer-letter prior (a
+pre-trained model's bias toward A/B/C/D contributes a smaller fraction
+of the total score with more distractors) and by selecting items where
+the answer is determined by the question content rather than the
+surface format. The implication is that prompt-stability is now a
+benchmark axis, not an evaluation hygiene afterthought: the same
+model on the same items under different prompt templates can produce
+scores that differ by more than the gap between two models.
+
+A second diagnostic falls out of the MMLU-Pro construction. On the
+original MMLU, chain-of-thought and direct-answer scoring give
+comparable accuracy; on MMLU-Pro, CoT gives a marked improvement
+\citep[\S{}sec-cot]{wang2024-mmlu-pro}:
+
+\begin{quote}\itshape
+Chain-of-Thought reasoning showed marked improvements on MMLU-Pro,
+contrasting with the original MMLU where direct answering performed
+comparably---indicating the benchmark includes substantially more
+complex reasoning questions.
+\end{quote}
+
+\begin{intuition}
+A benchmark where CoT-vs-direct scoring gives the same number is
+dominated by retrieval: spending inference compute on intermediate
+reasoning does not help, because the items are answerable in one
+step given the relevant fact. A benchmark where CoT measurably
+outperforms direct is exposing items that demand multi-step
+inference. This is the diagnostic that distinguishes a knowledge
+benchmark from a reasoning benchmark, in the formal frame of
+\cref{sec:knowledge-mmlu}: knowledge-dominant $\rho$ has a
+zero CoT-vs-direct gap; reasoning-dominant $\rho$ has a positive
+one. (Returning to canonical form: the verifier
+$V(\hat{a}, a^\star)$ is the same in both cases; what changes is
+the distribution of $\rho$.)
+\end{intuition}
+
+\subsection{GPQA Diamond: the Google-proof pivot}
+\label{sec:knowledge-gpqa}
+
+\citet{rein2023-gpqa} pivot from broad coverage to narrow-domain depth%
+\footnote{KB excerpt: \texttt{kb/excerpts/rein2023-gpqa.md\#abstract}.}
+\citep[\S{}abstract]{rein2023-gpqa}:
+
+\begin{quote}\itshape
+We present GPQA, a challenging dataset of 448 multiple-choice questions
+written by domain experts in biology, physics, and chemistry.
+\end{quote}
+
+Construction emphasizes \emph{Google-proofness}: the methodological
+contribution is operationalizing what it means for a question to
+require expertise that simple web search cannot supply
+\citep[\S{}abstract]{rein2023-gpqa}:
+
+\begin{quote}\itshape
+highly skilled non-expert validators only reach 34\% accuracy, despite
+spending on average over 30 minutes with unrestricted access to the web.
+\end{quote}
+
+The $34\%$ non-expert-with-web baseline is the load-bearing
+methodological number. It is meaningfully above the $25\%$ random
+baseline (web access does help), but well below the $\sim 65\%$
+expert-PhD baseline. The gap between $34\%$ and $65\%$ is the operational
+definition of ``expertise required even with web search'' --- an
+attempt to construct items that resist the contamination failure mode
+\cref{sec:knowledge-mmlu} cannot defend against, by making the answer
+unrecoverable from public web text alone.
+
+GPQA Diamond, the canonical leaderboard slice, is the $198$-question
+subset where two expert annotators agreed on the answer and at least
+one non-expert validator with web access got it wrong
+\citep[\S{}sec-diamond]{rein2023-gpqa}. At launch, the strongest
+GPT-4-based baseline reached $39\%$, just above the non-expert ceiling
+\citep[\S{}sec-ai-baseline]{rein2023-gpqa}. By 2026, frontier reasoning
+models are reported above $90\%$ on Diamond --- $\sim 25$ points above
+the human PhD baseline. The benchmark is now effectively saturated at
+the frontier, in roughly $2.5$ years from publication. The intended
+downstream use, per the abstract, was scalable oversight research:
+items so hard that even skilled human supervisors cannot reliably
+verify the model's answer. That use case has not yet expired ---
+the benchmark continues to function as a probe for whether weak
+supervisors can verify strong models, even where simple
+capability-tracking has saturated.
+
+\subsection{FrontierMath: the unpublished-problem benchmark}
+\label{sec:knowledge-frontiermath}
+
+\citet{glazer2024-frontiermath} take the contamination defense further.
+The benchmark is constructed from \emph{unpublished} problems with
+single-canonical-answer formats designed for automated verification%
+\footnote{KB excerpt: \texttt{kb/excerpts/glazer2024-frontiermath.md\#abstract}.}
+\citep[\S{}abstract]{glazer2024-frontiermath}:
+
+\begin{quote}\itshape
+We introduce FrontierMath, a benchmark of hundreds of original,
+exceptionally challenging mathematics problems crafted and vetted by
+expert mathematicians. The questions cover most major branches of
+modern mathematics --- from computationally intensive problems in
+number theory and real analysis to abstract questions in algebraic
+geometry and category theory.
+\end{quote}
+
+The difficulty calibration is explicit: ``Solving a typical problem
+requires multiple hours of effort from a researcher in the relevant
+branch of mathematics, and for the upper end questions, multiple days''
+\citep[\S{}sec-difficulty]{glazer2024-frontiermath}. Problems are
+authored by working mathematicians (verified PhD or equivalent) and
+cross-vetted by a second mathematician for solvability and uniqueness
+of answer; problems that do not admit a single canonical answer
+(integer, polynomial, or parseable closed-form expression) are
+excluded \citep[\S{}sec-verification]{glazer2024-frontiermath}. The
+single-canonical-answer constraint is what enables automated grading
+without LLM-as-judge --- and without exposing intermediate work to
+gold-data leakage.
+
+The headline launch number is the load-bearing one. As of late 2024,
+state-of-the-art models that scored $80\text{--}95\%$ on MMLU scored
+\emph{under $2\%$} on FrontierMath \citep[\S{}sec-launch-result,\S{}abstract]{glazer2024-frontiermath}:
+
+\begin{quote}\itshape
+Current state-of-the-art AI models solve under 2\% of problems,
+revealing a vast gap between AI capabilities and the prowess of the
+mathematical community.
+\end{quote}
+
+The two-percent floor restored a usable signal for measuring
+research-grade math reasoning at exactly the moment AIME and MATH-500
+were saturating under reasoning-RL. The benchmark's design choice ---
+unpublished items, single-canonical-answer verifiers, multi-day
+expert calibration --- is the most aggressive contamination defense in
+the lineage and the closest analogue to a closed-book exam where the
+question pool itself is private.
+
+\subsection{Humanity's Last Exam: the post-MMLU broad-coverage frontier}
+\label{sec:knowledge-hle}
+
+\citet{phan2025-hle} (Humanity's Last Exam, HLE) is the most recent
+attempt to rebuild a broad-coverage knowledge benchmark with frontier
+headroom%
+\footnote{KB excerpt: \texttt{kb/excerpts/phan2025-hle.md\#abstract}.}.
+The motivation paragraph names the gap directly
+\citep[\S{}abstract]{phan2025-hle}:
+
+\begin{quote}\itshape
+LLMs now achieve over 90\% accuracy on popular benchmarks like MMLU,
+limiting informed measurement of state-of-the-art LLM capabilities.
+\end{quote}
+
+The construction is $2{,}500$ questions across dozens of subjects ---
+mathematics, humanities, and the natural sciences ---
+positioned as ``the final closed-ended academic benchmark of its kind
+with broad subject coverage'' \citep[\S{}abstract]{phan2025-hle}. The
+verifier discipline is a deliberate inheritance from
+\cref{sec:knowledge-gpqa,sec:knowledge-frontiermath}
+\citep[\S{}sec-format]{phan2025-hle}:
+
+\begin{quote}\itshape
+a known solution that is unambiguous and easily verifiable, but cannot
+be quickly answered via internet retrieval.
+\end{quote}
+
+What makes HLE distinct from MMLU and GPQA: it combines multiple-choice
+and short-answer formats, includes multimodal items (images) for some
+questions, and uses choice-equality or string-equality-after-normalization
+verifiers --- \emph{not} LLM-as-judge --- so the gold standard is
+mechanically reproducible. What makes it distinct from FrontierMath:
+broad subject coverage rather than a single discipline, and item
+publication so the test set is auditable. The capability gap at
+publication is large --- ``State-of-the-art LLMs demonstrate low
+accuracy and calibration on HLE, highlighting a significant gap between
+current LLM capabilities and the expert human frontier on closed-ended
+academic questions'' \citep[\S{}sec-capability-gap]{phan2025-hle} ---
+which is the property the design was reaching for: a knowledge
+benchmark whose ceiling is far above 2026 frontier capability, on the
+implicit bet that a benchmark with measurable headroom for $2$--$5$ years
+is more valuable than one that saturates in $12$--$24$ months.
+
+\subsection{What the lineage tells us}
+\label{sec:knowledge-summary}
+
+The MMLU-to-HLE arc is a coherent progression with a single underlying
+move: each successor responds to a specific failure mode of its
+predecessor. MMLU saturated, so MMLU-Redux audited the gold labels
+and exposed the $6.49\%$ verifier-error ceiling. The error ceiling
+made within-band scores meaningless, so MMLU-Pro raised difficulty,
+widened the choice set, and added the $24$-prompt-style robustness
+protocol. Pure broad coverage was no longer the bottleneck, so GPQA
+pivoted to narrow-domain depth with a Google-proof construction. The
+contamination defense in GPQA was item-level, so FrontierMath went
+further with unpublished items and a single-canonical-answer verifier.
+Single-discipline depth was insufficient for cross-domain measurement,
+so HLE rebuilt the broad-coverage frame with the contamination and
+verifier discipline of its predecessors carried forward. Each step
+buys $12$--$24$ months of frontier headroom; none has produced a
+benchmark whose half-life looks fundamentally different from MMLU's.
+
+The honest 2026 picture is that knowledge benchmarks at the frontier
+are no longer about \emph{what facts the model knows} --- on
+undergraduate-level material, scale and pre-training have closed
+that gap inside the verifier-error band --- but about whether the
+question pool can be kept ahead of contamination, whether the verifier
+is right, and whether the prompt format leaks more signal than the
+question content. The next layer of the layered defense, taken up in
+\cref{sec:contamination}, is the one that asks the prior question
+explicitly: \emph{what does it mean for an item to have leaked into
+the training distribution}, and how do we tell?

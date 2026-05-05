@@ -1,0 +1,350 @@
+% Paper 2, §12 — Adaptation and merging
+% Anchors: kb/notes/training/adaptation-and-merging.md
+%          kb/excerpts/{hu2021-lora,dettmers2023-qlora,ilharco2022-task-vectors,
+%                       wortsman2022-model-soups,yadav2023-ties-merging}.md
+
+\section{Adaptation and merging}
+\label{sec:adaptation-and-merging}
+
+The previous sections (\S7--\S11) drove parameter updates with gradients
+on data: SFT cross-entropy, RLHF/DPO preference signals, RLVR's
+verifiable rewards. This section closes the pipeline with a different
+class of operation altogether — \emph{weight-space} updates whose unit
+of action is the parameter vector itself, not a per-token loss.
+Parameter-efficient fine-tuning (PEFT) writes a low-rank patch onto a
+frozen base; model merging averages, signs, and trims weight vectors
+from fine-tunes that share an ancestor. Both rest on the same
+empirical phenomenon — fine-tunes from a shared base land in a single
+connected loss basin — and both are now production-load-bearing: every
+open-weight LLM since LLaMA-2 ships with a LoRA adapter ecosystem, and
+the strongest open multi-task models in 2024--2026 are merged from
+specialists rather than jointly trained.
+
+\subsection{LoRA: low-rank adaptation}
+\label{sec:adapt-lora}
+
+\citet{hu2021-lora} parameterize the update to a frozen pretrained
+linear-layer weight $W_0 \in \R^{d \times k}$ as a low-rank
+decomposition\footnote{KB excerpt:
+\texttt{kb/excerpts/hu2021-lora.md\#sec-3}.}:
+\begin{equation}
+W = W_0 + \Delta W = W_0 + B A,
+\quad
+B \in \R^{d \times r},\ A \in \R^{r \times k},\ r \ll \min(d, k)
+\label{eq:lora-decomp}
+\end{equation}
+\citep[\S 3]{hu2021-lora}. $W_0$ is frozen; only $A$ and $B$ are
+trained. The forward pass at a hidden state $x$ is
+\begin{equation}
+h = W_0 x + \Delta W x = W_0 x + (\alpha / r)\, B A x,
+\label{eq:lora-fwd}
+\end{equation}
+verbatim from \citet[\S 3]{hu2021-lora}, with scalar
+$\alpha$ a constant in $r$ \citep[\S 3]{hu2021-lora}. The backward pass
+flows gradients through $A$ and $B$ only:
+\begin{equation}
+\nabla_A \mathcal{L} = (\alpha/r)\, B^\top (\nabla_h \mathcal{L})\, x^\top,
+\qquad
+\nabla_B \mathcal{L} = (\alpha/r)\, (\nabla_h \mathcal{L})\, (A x)^\top,
+\label{eq:lora-grad}
+\end{equation}
+so the optimizer state (Adam $m, v$) is allocated only over the rank-$r$
+factors. The initialization is asymmetric: $A$ Gaussian, $B$ zero, so
+that $\Delta W = 0$ at step 0 and the model behaves identically to the
+base \citep[\S 3]{hu2021-lora}.
+
+The trainable-parameter count drops from $\sum_\ell d_\ell k_\ell$ to
+$\sum_\ell r(d_\ell + k_\ell)$. With LoRA applied to all attention
+$Q, K, V, O$ projections and rank $r = 4$, GPT-3 175B's trainable count
+falls roughly $10^{4}\times$ \citep[\S 3]{hu2021-lora}, with GPU memory
+for fine-tuning down $\sim\!3\times$ \citep[abstract]{hu2021-lora}. The
+empirical fact that \emph{rank $r = 4$ is sufficient for adapting the
+weight matrices in the GPT-3 175B model} is reported verbatim in
+\citet[\S 4]{hu2021-lora}, alongside the design choice that adapting
+$Q$ and $V$ together gives the strongest task transfer.
+
+The deployment-time mechanic is what separates LoRA from earlier
+adapter families \citep{houlsby2019-adapters}\deepencite{houlsby2019-adapters
+§3}. Adapter modules add bottleneck layers that incur inference
+latency at every forward pass; LoRA computes
+\begin{equation}
+W_{\text{merged}} = W_0 + (\alpha / r)\, B A
+\label{eq:lora-merge}
+\end{equation}
+\emph{once} at deployment \citep[\S 5]{hu2021-lora}, and the deployed
+model has identical inference cost to the base. Different LoRAs can be
+loaded and unloaded by adding or subtracting $(\alpha/r) B A$ — the
+inference-time mechanic that S-LoRA and Punica multi-tenant systems
+exploit (cross-ref Paper~1's serving discussion).
+
+\subsection{QLoRA: quantize the base, train the adapter}
+\label{sec:adapt-qlora}
+
+\citet{dettmers2023-qlora} extend LoRA by quantizing the frozen base
+$W_0$ to four bits while keeping the LoRA factors in BF16. The headline
+\citep[abstract]{dettmers2023-qlora}\footnote{KB excerpt:
+\texttt{kb/excerpts/dettmers2023-qlora.md\#abstract}.} is a 65B-parameter
+fine-tune fitting on a single 48~GB GPU at full 16-bit task
+performance. Three innovations carry the result:
+
+\paragraph{NF4 — quantile-based 4-bit format.} The
+\emph{NormalFloat-4} (NF4) format stores 16 bin centers chosen as the
+quantiles of a standard normal distribution, then assigns each weight
+to its nearest bin. Pretrained weights are empirically near-Gaussian
+per block \citep[\S 3]{dettmers2023-qlora}\footnote{KB excerpt:
+\texttt{kb/excerpts/dettmers2023-qlora.md\#sec-3-nf4}.}, so NF4's bin
+spacing is information-theoretically near-optimal in this regime.
+Concretely: bin centers are
+\begin{equation}
+q_i = \frac{1}{2}\!\left[Q_{\mathcal{N}(0,1)}\!\left(\tfrac{i}{16} + \tfrac{1}{2 \cdot 16}\right) + Q_{\mathcal{N}(0,1)}\!\left(\tfrac{i+1}{16} + \tfrac{1}{2 \cdot 16}\right)\right],
+\quad i \in \{0,\ldots,15\},
+\label{eq:nf4-bins}
+\end{equation}
+the midpoints of equal-mass quantiles of $\mathcal{N}(0,1)$
+\citep[\S 3]{dettmers2023-qlora}, then re-scaled per block. Per-block
+(block size 64) FP32 scales $Z$ are stored alongside, and the forward
+GEMM dequantizes just-in-time:
+\begin{equation}
+y = \mathrm{dequant}(W_0^{\text{NF4}})\, x + (\alpha / r)\, B (A x),
+\quad
+\mathrm{dequant}(W_0^{\text{NF4}}) = Z \cdot \mathrm{NF4\_decode}(W_0^{\text{NF4}})
+\label{eq:qlora-fwd}
+\end{equation}
+\citep[\S 3]{dettmers2023-qlora}, with $\mathrm{NF4\_decode}$ a 16-entry
+lookup. The GEMM itself runs in BF16.
+
+\paragraph{Double quantization.} The per-block FP32 scales are
+themselves quantized to 8-bit with a second-level scale, dropping the
+average overhead from $\sim\!0.5$~bits/parameter to $\sim\!0.37$~bits
+\citep[\S 3]{dettmers2023-qlora}\footnote{KB excerpt:
+\texttt{kb/excerpts/dettmers2023-qlora.md\#sec-3-doublequant}.}. At
+65B parameters the saving is $\sim\!1$~GB.
+
+\paragraph{Paged optimizers.} Optimizer state for the LoRA factors is
+allocated in NVIDIA unified-memory pages that swap to CPU under GPU
+pressure \citep[\S 3]{dettmers2023-qlora}\footnote{KB excerpt:
+\texttt{kb/excerpts/dettmers2023-qlora.md\#sec-3-paged}.}. Long-sequence
+batches that would OOM the 48~GB GPU instead spill to host RAM at a
+small bandwidth cost.
+
+QLoRA-tuned models recover within $\sim\!1\%$ of full BF16 fine-tunes
+on 8 instruction datasets and multiple model scales
+\citep[\S 4]{dettmers2023-qlora}, including 33B and 65B scales that
+would otherwise be infeasible on commodity hardware.
+
+\subsection{Task arithmetic: weight-space steering}
+\label{sec:adapt-taskvec}
+
+\citet{ilharco2022-task-vectors} reframe a fine-tune as a vector in
+weight space. Given a pretrained $\theta_0 \in \R^P$ and a fine-tune
+$\theta_T$ on task $T$, the \emph{task vector} is\footnote{KB excerpt:
+\texttt{kb/excerpts/ilharco2022-task-vectors.md\#sec-2}.}
+\begin{equation}
+\tau_T = \theta_T - \theta_0 \in \R^P
+\label{eq:task-vector}
+\end{equation}
+\citep[\S 2]{ilharco2022-task-vectors}. Three arithmetic operations on
+task vectors are well-defined:
+\begin{align}
+\theta &= \theta_0 + \alpha\, \tau_T && \text{(addition; $\alpha = 1$ recovers $\theta_T$)}, \label{eq:tv-add}\\
+\theta &= \theta_0 - \alpha\, \tau_T && \text{(negation; unlearns task $T$)}, \label{eq:tv-neg}\\
+\theta &= \theta_0 + \sum_i \alpha_i\, \tau_{T_i} && \text{(combination; multi-task)} \label{eq:tv-combine}
+\end{align}
+\citep[\S 2]{ilharco2022-task-vectors}. The empirical claims
+\citep[\S 3]{ilharco2022-task-vectors} are that negating a
+toxicity-task vector reduces toxic generation while preserving general
+benchmarks, that multi-task addition can outperform naive multi-task
+fine-tuning, and that analogy compositions $\tau_A - \tau_B + \tau_C$
+produce the expected behavioral shifts.
+
+The mechanism, per \citet[\S 4]{ilharco2022-task-vectors}, is the
+\emph{linearity of fine-tuning in weight space}: small movements in
+the basin around $\theta_0$ produce small behavioral changes that sum
+approximately linearly. We return to that claim — and its load-bearing
+assumption of basin-sharing — in \cref{sec:adapt-lmc}.
+
+\subsection{Model soups: averaging fine-tunes}
+\label{sec:adapt-soups}
+
+\citet{wortsman2022-model-soups}\footnote{KB excerpt:
+\texttt{kb/excerpts/wortsman2022-model-soups.md\#sec-3}.} address the
+hyperparameter-sweep waste problem. The conventional recipe trains $K$
+fine-tunes with different hyperparameters, picks the best on
+validation, and discards the rest \citep[\S 1]{wortsman2022-model-soups}.
+The soup recipe averages them. The \emph{uniform soup} of $K$ fine-tunes
+$\{\theta_k\}_{k=1}^K$ from the same base $\theta_0$ is
+\begin{equation}
+\theta_{\text{uniform}} = \frac{1}{K}\sum_{k=1}^K \theta_k
+\label{eq:soup-uniform}
+\end{equation}
+\citep[\S 3]{wortsman2022-model-soups}. The \emph{greedy soup} sorts
+checkpoints by validation accuracy and includes each $\theta_k$ in a
+running average $\bar\theta$ only if doing so does not decrease
+validation accuracy:
+\begin{equation}
+\bar\theta_k = \frac{|S_{k-1}|\, \bar\theta_{k-1} + \theta_k}{|S_{k-1}| + 1}
+\quad
+\text{if } \mathrm{ValAcc}(\bar\theta_k) \geq \mathrm{ValAcc}(\bar\theta_{k-1}),
+\label{eq:soup-greedy}
+\end{equation}
+else skip \citep[\S 3]{wortsman2022-model-soups}. Both soups produce a
+single inference-time model with no ensemble cost. The headline result
+\citep[\S 1, \S 4]{wortsman2022-model-soups}: averaging fine-tunes from
+a shared base \emph{often improves accuracy and robustness} over the
+best single fine-tune, with no inference-time penalty, on CLIP, ALIGN,
+and ViT-G fine-tuning sweeps. The condition that makes this work — the
+fine-tunes lying in a single low-error basin — is the linear-mode-
+connectivity assumption taken up in \cref{sec:adapt-lmc}.
+
+\subsection{TIES-Merging: trim, elect sign, disjoint-merge}
+\label{sec:adapt-ties}
+
+Naive task-vector summation suffers \emph{interference}
+\citep[abstract]{yadav2023-ties-merging}\footnote{KB excerpt:
+\texttt{kb/excerpts/yadav2023-ties-merging.md\#sec-3}.}: when two
+fine-tunes update the same coordinate in opposite directions, plain
+addition cancels both. \citet{yadav2023-ties-merging} introduce a
+three-step procedure that removes redundant low-magnitude updates and
+resolves sign disagreement before averaging.
+
+Given task vectors $\{\tau_i\}_{i=1}^K$ from a shared base $\theta_0$:
+
+\paragraph{Step 1 --- Trim.} Keep the top-$k\%$ entries of each task
+vector by magnitude, zero out the rest:
+\begin{equation}
+\tilde\tau_{i,j} =
+\begin{cases}
+\tau_{i,j} & \text{if } |\tau_{i,j}| \in \text{top-}k\% \text{ of } |\tau_i|,\\
+0 & \text{otherwise}
+\end{cases}
+\label{eq:ties-trim}
+\end{equation}
+\citep[\S 3, step 1]{yadav2023-ties-merging}. Typical $k = 20\%$; the
+trim removes \emph{interference due to redundant parameter values}
+\citep[abstract]{yadav2023-ties-merging}.
+
+\paragraph{Step 2 --- Elect sign.} For each coordinate $j$, take the
+sign with the largest total magnitude across tasks:
+\begin{equation}
+s_j = \mathrm{sign}\!\left(\sum_{i=1}^K \tilde\tau_{i,j}\right)
+\label{eq:ties-sign}
+\end{equation}
+\citep[\S 3, step 2]{yadav2023-ties-merging}. This is the
+dominant-direction sign, weighted by magnitude — a magnitude-weighted
+majority vote.
+
+\paragraph{Step 3 --- Disjoint merge.} For each coordinate, average
+only the task vectors whose sign matches the elected $s_j$:
+\begin{equation}
+\bar\tau_j = \frac{1}{|\mathcal{A}_j|}\sum_{i \in \mathcal{A}_j} \tilde\tau_{i,j},
+\quad
+\mathcal{A}_j = \{i : \mathrm{sign}(\tilde\tau_{i,j}) = s_j\}
+\label{eq:ties-merge}
+\end{equation}
+\citep[\S 3, step 3]{yadav2023-ties-merging}. The merged model is
+$\theta_0 + \lambda\, \bar\tau$ with scaling $\lambda$, typically $1$ or
+tuned on a held-out set. Across vision and NLP benchmarks with up to
+11 tasks merged, \citet[\S 4]{yadav2023-ties-merging} report the
+ordering TIES $>$ Task Arithmetic $>$ Uniform Soup on multi-task
+accuracy, with sign-conflict resolution contributing the largest gain
+and trimming a smaller but consistent improvement.
+
+\begin{intuition}
+Task vectors are weight-space directions, and their arithmetic is
+exactly that of vectors in $\R^P$. If $\tau_{\text{summarize-en}}$ is
+the fine-tune-direction for English summarization and
+$\tau_{\text{translate-fr}}$ is the fine-tune-direction for an
+English-to-French translator, then
+$\theta_0 + \tau_{\text{summarize-en}} + \tau_{\text{translate-fr}}$
+empirically produces a French-summarization model
+\citep[\S 3]{ilharco2022-task-vectors} — a behavioral analogy that
+returns to canonical math via \cref{eq:tv-combine}: a positive linear
+combination of task vectors lands at a weight that performs both
+constituent tasks, modulo the interference TIES is designed to handle.
+The mechanism TIES adds is that when the two task vectors disagree on
+the sign of coordinate $j$ — push it $+$ for summarization and $-$ for
+translation — \cref{eq:ties-merge} keeps only the dominant-magnitude
+sign, so the merge does not silently zero out load-bearing
+coordinates.
+\end{intuition}
+
+\subsection{Linear mode connectivity: why merging works}
+\label{sec:adapt-lmc}
+
+The shared substrate of \cref{sec:adapt-soups,sec:adapt-taskvec,sec:adapt-ties}
+is the empirical claim that fine-tunes of a shared pretrained base land
+in a \emph{connected} low-loss basin: the line segment
+\begin{equation}
+\theta(t) = \theta_0 + t\, (\theta_f - \theta_0),
+\quad t \in [0, 1]
+\label{eq:lmc-line}
+\end{equation}
+stays in low-loss territory. \citet[\S 3]{wortsman2022-model-soups}
+provide the empirical evidence — loss is approximately monotone-low
+along \cref{eq:lmc-line} for fine-tunes from a shared CLIP/ALIGN/ViT-G
+base, and \emph{logit ensembling and weight averaging produce similar
+accuracy when the loss landscape is locally flat}
+\citep[\S 4]{wortsman2022-model-soups} — but they do not prove sufficient
+conditions. The phenomenon is referred to in the broader literature as
+\emph{linear mode connectivity} (LMC), with \citet{frankle2020-lmc}\deepencite{frankle2020-lmc
+§3} the canonical reference\footnote{LMC was introduced for SGD-trained
+networks at the same initialization; the fine-tuning case is the
+operationally relevant specialization for adaptation.}; the
+\citet[\S 4]{ilharco2022-task-vectors} \emph{linearity-of-fine-tuning}
+attribution refers to the same phenomenon at the task-vector level.
+
+The condition is empirically tight in a load-bearing way. LMC holds for
+SFT-from-the-same-base; it holds partly for RLHF-from-the-same-base
+(see \S8); it breaks for from-scratch models with different
+initializations, where averaging produces a near-random model. This
+explains the \emph{common-ancestor} requirement of every merge method:
+LoRA's adapter is a delta on a fixed $W_0$, soup recipes assume the
+$\theta_k$ share $\theta_0$, task arithmetic encodes the assumption in
+\cref{eq:task-vector}'s subtraction, and TIES requires the ancestor
+explicitly. Merging models with different pretrained bases is not
+supported by any of these methods, because the assumed basin
+isn't there.
+
+\begin{contradiction}
+The merge literature reports two patterns that do not yet reconcile.
+On controlled multi-task benchmarks, merged models often exceed any
+single ingredient \citep[\S 4]{yadav2023-ties-merging,
+wortsman2022-model-soups}. On real-world deployments — the open-weights
+LLM merging community at frontier scale — merged models routinely
+under-perform the strongest specialist on its own task, with merge wins
+concentrated in multi-task generalization rather than peak-task
+performance. The per-paper benchmarks are largely single-source: TIES
+\citep[\S 4]{yadav2023-ties-merging} and Soups
+\citep[\S 4]{wortsman2022-model-soups} sweep their own task suites, with
+no third-party head-to-head at frontier-LLM scale, and no canonical
+theory predicts when merging produces interference vs.\ the
+basin-centering effect predicted by LMC. The
+\emph{merged-beats-best-ingredient} claim should be read as
+\emph{task-set-conditional}: it holds on multi-task evaluations of
+specialists, and is not yet established at the single-task ceiling.
+\deepencite{yadav2023-ties-merging §6}
+\end{contradiction}
+
+\subsection{Forward link}
+
+The pipeline closes here. The four sections following SFT (\S7) ---
+RLHF (\S8), DPO (\S9), RLAIF/CAI (\S10), RLVR/GRPO (\S11) --- moved the
+policy in data-driven directions; \cref{sec:adaptation-and-merging}
+makes the dual move in weight space, with PEFT
+(\cref{sec:adapt-lora,sec:adapt-qlora}) writing low-rank patches onto a
+frozen base and merging
+(\cref{sec:adapt-taskvec,sec:adapt-soups,sec:adapt-ties}) recombining
+fine-tunes that share an ancestor. Both rest on the LMC substrate of
+\cref{sec:adapt-lmc}, the speculative theoretical claim that holds the
+empirical ceiling. The next section
+(\cref{sec:frontier-snapshot})\deepencite{paper2-§13-cross-ref} fixes
+the frontier-2026 picture: a single table over disclosed pre-training,
+optimization, distributed, precision, SFT, preference-RL,
+reasoning-RL, and merge choices for the open-weights frontier
+(DeepSeek-V3/R1, Llama-3/4, Qwen-2.5/3, Phi-4, Tülu-3, OLMo-2, Gemma-3,
+Mistral) and the partial disclosures from the closed labs. The
+question \cref{sec:adaptation-and-merging} leaves open --- whether
+merging will be a load-bearing primitive of the frontier pipeline or
+a community add-on layered on top of single-base specialists --- is one
+of the open boundaries \cref{sec:contradictions}\deepencite{paper2-§14-cross-ref}
+takes up.

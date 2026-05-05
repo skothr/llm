@@ -1,0 +1,245 @@
+% Paper 1, §11 — Multimodal extensions
+% Page budget: ~5 pages. Anchors: kb/notes/architecture/multimodal-llm-extensions.md;
+% kb/excerpts/{alayrac2022-flamingo,llava2023}.md.
+
+\section{Multimodal extensions}
+\label{sec:multimodal}
+
+The architectures of \S\S\ref{sec:kv}--\ref{sec:multitoken} are decoder-only
+language models over a single token stream. Frontier 2026 systems also
+take images, video, and audio. Three integration patterns dominate the
+record: gated cross-attention insertion into a frozen LLM
+\citep{alayrac2022-flamingo}, linear projection of vision features into
+the LLM input-embedding space \citep{llava2023}, and native multimodal
+pretraining where vision and text patches share the residual stream
+from the first token of pretraining
+\citep{meta-llama4,internvl3-2025,gemini2-5}. The thesis of this
+section is that the projector and the choice of pattern are
+genuinely architectural, while the vision encoder and the
+freeze-versus-tune schedule are training-pipeline choices that we
+defer to Paper~2.
+
+\subsection{The three-piece pattern}
+\label{sec:multimodal-three-piece}
+
+Across all three integration patterns the same three pieces appear: a
+\emph{vision encoder} $E_V$ that turns an image into patch features, a
+\emph{projector} $\pi$ that maps those features into the LLM's residual
+width, and the \emph{LLM body} that consumes them. The encoder is
+typically a CLIP-style or SigLIP-style ViT producing a sequence of
+$M$ patch tokens of dimension $d_V$; for a $336{\times}336$ image with
+$14{\times}14$ patches, $M{=}576$ and $d_V{=}1024$ in the canonical
+LLaVA setup\footnote{KB excerpt: \texttt{kb/excerpts/llava2023.md\#sec-4-1}}
+\citep{llava2023}. We write the encoder output and the projection
+generically as
+\begin{align}
+v &= E_V(I) \;\in\; \R^{n_v \times d_V}, \label{eq:multimodal-encoder}\\
+\mathbf{X}_{\text{vis}} &= \pi(v) \;\in\; \R^{n_v \times \mathsf{D}}, \label{eq:multimodal-projector}
+\end{align}
+with $n_v$ the number of visual tokens and $\mathsf{D}$ the LLM model
+dimension. The interesting structure is in $\pi$ and in how the body
+consumes $\mathbf{X}_{\text{vis}}$.
+
+\begin{intuition}
+$\mathbf{X}_{\text{vis}}$ is a \emph{soft prompt}: a contiguous block of
+$n_v$ vectors in $\R^{\mathsf{D}}$ that the LLM treats as if they were
+output of its input embedding. The vision encoder is a tokenizer for a
+non-text modality, $\pi$ is the embedding lookup, and the LLM body is
+unchanged from \S\ref{sec:transformer-overview}. Returning to math:
+the residual-stream initial state becomes $\mathbf{X}^0 =
+[E_{\text{in}}(\mathbf{t}_{1:k}); \pi(E_V(I)); E_{\text{in}}(\mathbf{t}_{k+1:N})]$
+with the LLM's ordinary update rule applied above it.
+\end{intuition}
+
+This soft-prompt framing is exactly the LLaVA pattern. The other two
+patterns deviate by either sending $\mathbf{X}_{\text{vis}}$ through new
+\emph{cross-attention} layers rather than through the residual stream
+(Flamingo) or by training $E_V$ and the LLM body jointly from scratch on
+multimodal data (native multimodal). The pieces are the same; the
+plumbing differs.
+
+\subsection{Cross-attention bridge: Flamingo}
+\label{sec:multimodal-flamingo}
+
+\citet{alayrac2022-flamingo} introduced the first widely-adopted
+multimodal extension by inserting new trainable blocks between the
+existing layers of a frozen LLM. Two pieces are added: a
+\emph{Perceiver Resampler} that compresses the variable-length encoder
+output $v$ into a fixed-length set of $k$ latent tokens
+$\mathbf{V} \in \R^{k \times \mathsf{D}}$ (typically $k{=}64$),
+and \emph{gated cross-attention dense} blocks
+inserted between every few frozen LLM blocks%
+\footnote{KB excerpt: \texttt{kb/excerpts/alayrac2022-flamingo.md\#sec-2-1}}.
+The inserted block has the form
+\begin{align}
+\mathbf{y} &= \mathbf{x} + \tanh(\alpha_{\text{xattn}}) \cdot \mathrm{XAttn}(\mathbf{x},\mathbf{V}), \label{eq:flamingo-xattn}\\
+\mathbf{z} &= \mathbf{y} + \tanh(\alpha_{\text{ffw}}) \cdot \mathrm{FFW}(\mathbf{y}),  \label{eq:flamingo-ffw}
+\end{align}
+where $\mathbf{x}$ is the language hidden state at the insertion point,
+and $\alpha_{\text{xattn}}, \alpha_{\text{ffw}}$ are learnable scalars
+\emph{initialized to zero}\footnote{KB excerpt:
+\texttt{kb/excerpts/alayrac2022-flamingo.md\#sec-2-1-gated}}
+\citep{alayrac2022-flamingo}. With $\tanh(0){=}0$ the inserted block
+is the identity at initialization: the conditioned model exactly
+reproduces the frozen base LM, and as training proceeds the gates open
+and visual information enters the language stream.
+
+The Perceiver Resampler is itself a small Transformer with $k$ learned
+query latents that cross-attend to the encoder output $v$, producing a
+fixed-size compressed visual representation regardless of input image
+or video length. Crucially, both the vision encoder and the base LM
+remain frozen for the duration of training; only the Resampler and the
+inserted gated cross-attention blocks update
+\citep[\S 2.1]{alayrac2022-flamingo}.
+
+\subsection{Linear projection: LLaVA}
+\label{sec:multimodal-llava}
+
+\citet{llava2023} took the opposite approach: change nothing about the
+LLM's architecture, and replace Flamingo's Resampler-plus-gated-XAttn
+machinery with a single trainable linear matrix. With $Z_v = g(X_v)$
+the CLIP ViT-L/14 grid features for image $X_v$, LLaVA defines
+\begin{equation}
+H_v = W \cdot Z_v, \qquad W \in \R^{\mathsf{D} \times d_V}, \label{eq:llava}
+\end{equation}
+and concatenates the resulting visual tokens $H_v$ with the textual
+input as ordinary embedding-space vectors%
+\footnote{KB excerpt: \texttt{kb/excerpts/llava2023.md\#sec-4-1}, Eq. 1}.
+This is the entire architectural intervention. The LLM body sees a
+sequence that begins with $n_v$ visual ``tokens'' and continues with
+text; its forward pass is identical to a unimodal LLM's.
+
+Training proceeds in two stages\footnote{KB excerpt:
+\texttt{kb/excerpts/llava2023.md\#sec-4-2}}. \emph{Stage 1: feature
+alignment}, where both the CLIP encoder $g$ and the LLM body $f_\phi$
+are frozen and only $W$ trains on $595\text{K}$ filtered CC3M image-
+text pairs --- the projection learns to produce visual tokens that
+look, to the frozen LLM, like word embeddings. \emph{Stage 2:
+end-to-end fine-tuning}, where the encoder stays frozen but
+$\theta = \{W, \phi\}$ trains together on $158\text{K}$ GPT-4-generated
+visual instruction examples. Later LLaVA-1.5 replaced the linear $W$
+with a 2-layer MLP for small additional gains; the architectural
+premise is unchanged.
+
+\begin{analogy}
+Flamingo treats the LLM as sealed and bolts new vision-conditioning
+hardware onto its sides. LLaVA treats the LLM's input-embedding space
+as a public API: anything that can be projected into $\R^{\mathsf{D}}$
+becomes a token. Returning to math: Flamingo introduces a new operator
+$\mathrm{XAttn}(\cdot, \mathbf{V})$ that mixes vision into the residual
+stream via Eqs.~\eqref{eq:flamingo-xattn}--\eqref{eq:flamingo-ffw};
+LLaVA only changes the input sequence to the unmodified LLM via
+Eq.~\eqref{eq:llava}.
+\end{analogy}
+
+LLaVA's parametric simplicity is the reason it dominated the open
+multimodal stack from 2024 onward: a single linear matrix is fast to
+train, the LLM body needs no surgery, and ablations on data and
+encoder choice (CLIP vs.\ SigLIP, image resolution, dynamic patching)
+become cheap. Llama 3.2-Vision, InternVL, and the Qwen2-VL line all
+build on this LLaVA recipe before diverging on resolution policy and
+positional encoding.
+
+\subsection{Native multimodal: Gemini, GPT-4o, Claude, Llama 4, InternVL3}
+\label{sec:multimodal-native}
+
+The 2025--2026 frontier moves past adapter patterns. The pretraining
+corpus itself is multimodal --- interleaved web pages with text,
+images, video frames, and audio --- and the model is trained from
+scratch on it \citep{meta-llama4,internvl3-2025,gemini2-5}.
+Architecturally this is a standard decoder-only Transformer where the
+\emph{input embedding is multi-source}: text tokens flow through
+$E_{\text{in}}^{\text{text}}$, image patches through a small
+ViT-like $E_{\text{in}}^{\text{vis}}$, and audio frames through
+$E_{\text{in}}^{\text{audio}}$, all producing $\mathsf{D}$-dimensional
+vectors that share the residual stream. The body is unchanged; the
+``vocabulary'' has been generalized from text tokens alone to a union
+of token sources. \deepencite{gpt-4o-card §architecture}
+\deepencite{claude-3-5-sonnet §architecture}
+
+InternVL3 reports that joint pretraining outperforms an adapter
+baseline at matched compute on internal benchmarks
+\citep{internvl3-2025}; Llama 4 makes a similar claim
+\citep{meta-llama4}. The case for native multimodal at the frontier is
+empirical and lab-internal; the architectural commitment is that no
+explicit cross-modality bridge ($\mathrm{XAttn}$, Q-Former, or
+projector) is needed once the residual stream has seen both modalities
+since pretraining step zero.
+
+\begin{forumsignal}
+Vendor reports (Gemini 2.5, Llama 4, InternVL3) consistently claim
+native multimodal pretraining produces better quality at smaller active
+parameter count than adapter-based alternatives at the same compute.
+The published evidence is internal benchmark comparisons against each
+lab's own adapter baselines; no controlled cross-lab study with data,
+compute, and post-training fixed has appeared. Open replication at
+frontier scale is absent --- treat as forum signal pending
+reproduction~\citep{internvl3-2025,meta-llama4}.
+\end{forumsignal}
+
+\subsection{Where multimodality is an architecture question}
+\label{sec:multimodal-arch-vs-not}
+
+The framing of this paper is that the modern Transformer is a small
+set of architectural choices; multimodality adds two genuinely new
+ones and cleanly externalizes a third.
+
+\begin{enumerate}
+\item \textbf{The integration pattern.} Cross-attention bridge
+(Flamingo, Eqs.~\eqref{eq:flamingo-xattn}--\eqref{eq:flamingo-ffw}),
+prefix-token projection (LLaVA, Eq.~\eqref{eq:llava}), or unified-token
+native pretraining are three architecturally distinct choices. They
+differ in which weights see vision-conditioning gradients and at what
+depth in the network vision can interact with text. This is the
+load-bearing axis.
+
+\item \textbf{The projector design.} Whether $\pi$ is a single linear
+matrix, a 2-layer MLP, a Q-Former, or a Perceiver Resampler determines
+the visual token count $n_v$, the parameter cost, and how aggressively
+visual information is compressed before it reaches the residual
+stream. Within the prefix-token pattern this is the dominant variable.
+
+\item \textbf{The vision encoder family.} CLIP ViT-L/14, SigLIP,
+SigLIP2, Qwen-VL ViT, InternVL ViT --- the choice of $E_V$ is
+architectural \emph{at the boundary} between the multimodal interface
+and the unimodal vision literature. Inside the LLM body its
+contribution is summarized by $d_V$ and $n_v$ at the encoder output;
+the rest is a separate field's design space.
+\end{enumerate}
+
+What is \emph{not} a §\ref{sec:multimodal} architecture question:
+
+\begin{itemize}
+\item \emph{Frozen-versus-tuned LLM body.} LLaVA's two-stage recipe
+freezes then unfreezes the LLM body; Flamingo keeps it frozen
+throughout; native multimodal trains everything jointly from scratch.
+This is a training-pipeline choice with the same architecture under
+all three regimes; we defer it to Paper~2 (cf.\ Paper~2's SFT and
+multimodal-data-mixture sections).
+\item \emph{Visual instruction-tuning data.} LLaVA's
+$158\text{K}$ GPT-4-generated visual conversations
+\citep[\S 3]{llava2023} are a synthetic-data engineering choice, not
+an architectural one --- again Paper~2.
+\item \emph{Multi-axis positional encoding.} M-RoPE and Interleaved-MRoPE
+extend RoPE to 2D and 3D coordinates for image and video patches; the
+mechanism is positional and inherits the analysis of
+\S\ref{sec:position}, so we treat it there rather than here.
+\end{itemize}
+
+The cleanest architectural summary is: vision-language extension
+adds one new axis (integration pattern), refines one existing
+component (the input-embedding side, now multi-source), and otherwise
+leaves the choices of \S\S\ref{sec:kv}--\ref{sec:norm} untouched.
+
+\medskip
+
+A multimodal LLM is mostly a unimodal LLM with a generalized
+input-embedding stage, plus a single new architectural axis for how
+visual tokens enter the residual stream. The remaining components ---
+KV-sharing, attention implementation, FFN family, normalization,
+position encoding --- are the same choices Paper~1 has been
+documenting throughout. \S\ref{sec:inference-adjuncts} now turns to
+the inference-time companions of these choices: KV-cache lifecycle,
+quantization regime, and structured-output decoding, which constrain
+which architectural choices §§\ref{sec:kv}--\ref{sec:multitoken} can
+afford in deployment.

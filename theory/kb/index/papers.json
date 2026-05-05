@@ -3609,6 +3609,81 @@
       ],
       "category": "foundational",
       "summary": "Tied weight scheme: share the input token embedding matrix with the output unembedding. Cuts ~30% of parameters in small LMs and improves PPL by serving as an implicit regularizer. The default in many decoder-only LMs through ~2023; modern frontier LMs sometimes untie."
+    },
+    {
+      "key": "frankle2020-lmc",
+      "title": "Linear Mode Connectivity and the Lottery Ticket Hypothesis",
+      "authors": "Frankle, Dziugaite, Roy, Carbin",
+      "year": 2020,
+      "venue": "ICML 2020",
+      "url": "https://arxiv.org/abs/1912.05671",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "training/adaptation-and-merging"
+      ],
+      "topics": [
+        "adaptation-and-merging",
+        "optimization"
+      ],
+      "category": "foundational",
+      "summary": "Empirical demonstration that fine-tunes of a shared base land in a connected loss basin: averaging weights along the line segment between two endpoints gives a model with loss similar to the endpoints. The leading explanation for why model merging works at all."
+    },
+    {
+      "key": "houlsby2019-adapters",
+      "title": "Parameter-Efficient Transfer Learning for NLP",
+      "authors": "Houlsby, Giurgiu, Jastrzebski, Morrone, de Laroussilhe, Gesmundo, Attariyan, Gelly",
+      "year": 2019,
+      "venue": "ICML 2019",
+      "url": "https://arxiv.org/abs/1902.00751",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "training/adaptation-and-merging"
+      ],
+      "topics": [
+        "adaptation-and-merging"
+      ],
+      "category": "foundational",
+      "summary": "Original adapter-tuning paper. Inserts small bottleneck modules between Transformer layers and trains only those, freezing the base. Establishes the parameter-efficient fine-tuning (PEFT) family that LoRA / QLoRA later refined."
+    },
+    {
+      "key": "press-alibi",
+      "title": "Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation",
+      "authors": "Press, Smith, Lewis",
+      "year": 2022,
+      "venue": "ICLR 2022",
+      "url": "https://arxiv.org/abs/2108.12409",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "architecture/position-encoding",
+        "architecture/long-context"
+      ],
+      "topics": [
+        "position-encoding",
+        "long-context"
+      ],
+      "category": "foundational",
+      "summary": "ALiBi: replaces positional embeddings with a linear bias subtracted from each head's attention scores as a function of distance. Enables training on short sequences and inference on much longer sequences without retraining. A late competitor to RoPE; lost on production scale but the extrapolation argument shaped subsequent long-context work."
+    },
+    {
+      "key": "wang2022-deepnorm",
+      "title": "DeepNet: Scaling Transformers to 1,000 Layers",
+      "authors": "Wang, Ma, Dong, Huang, Zhang, Wei",
+      "year": 2022,
+      "venue": "arXiv:2203.00555",
+      "url": "https://arxiv.org/abs/2203.00555",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "architecture/normalization"
+      ],
+      "topics": [
+        "normalization"
+      ],
+      "category": "foundational",
+      "summary": "DeepNorm: a normalization scheme that scales the residual branch by depth-dependent constants alpha and beta. Stabilizes training of 1000-layer Transformers. Bridges Pre-LN (which works at moderate depth but loses representational capacity) and Post-LN (which has the capacity but instability)."
     }
   ]
 }
