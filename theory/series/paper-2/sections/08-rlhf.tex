@@ -1,0 +1,388 @@
+% Paper 2, §8 — RLHF: InstructGPT and the canonical pipeline
+% Anchors: kb/notes/post-training/rlhf.md
+%          kb/excerpts/{ouyang2022-instructgpt,rafailov2023-dpo,bai2022-cai,
+%                       sharma2023-sycophancy}.md
+
+\section{RLHF: InstructGPT and the canonical pipeline}
+\label{sec:rlhf}
+
+Reinforcement Learning from Human Feedback is the canonical
+three-stage post-training pipeline that converts a base language
+model into an instruction-following assistant: supervised fine-tuning
+(\cref{sec:sft}), reward-model training, and policy optimization
+against the reward model with a KL anchor to the SFT initialization
+\citep[\S 3]{ouyang2022-instructgpt}.\footnote{KB excerpt:
+\texttt{kb/excerpts/ouyang2022-instructgpt.md\#sec-3}.} The lineage
+runs from preference RL on Atari and locomotion
+\citep{christiano2017-pref-rl} through summarization-with-human-
+preferences \citep{stiennon2020-summarize} to the open-domain
+instruction-following inflection of InstructGPT
+\citep{ouyang2022-instructgpt}, whose headline empirical fact — a
+$1.3$B-parameter aligned model preferred over a $175$B-parameter
+unaligned base on user-submitted prompts
+\citep[\S 4]{ouyang2022-instructgpt} — established the pipeline as
+the load-bearing post-training technology for every assistant LLM
+since. The thesis of this section is that RLHF is best read as a
+\emph{coupled} optimization: a Bradley--Terry reward model fitted to
+pairwise human preferences, a PPO policy step that maximizes that
+reward subject to a KL anchor, and a closed-form RL optimum
+(\cref{eq:rlhf-optimum}) that turns out — six years later — to be the
+foundation that DPO inverts in \cref{sec:dpo}.
+
+\subsection{The three-stage pipeline}
+\label{sec:rlhf-pipeline}
+
+The InstructGPT pipeline \citep[\S 3]{ouyang2022-instructgpt} runs
+three stages in fixed order, each consuming the artifact of the
+previous stage.
+
+\paragraph{Stage 1 — SFT.} Collect human-written demonstrations
+$\{(x, y)\}$ on prompts drawn from a target distribution (the OpenAI
+API submission stream in InstructGPT's case). Fine-tune the base GPT-3
+with cross-entropy maximum-likelihood,
+\begin{equation}
+\mathcal{L}_{\mathrm{SFT}}(\pi_\theta)
+  = -\E_{(x,y)\sim\mathcal{D}_{\mathrm{SFT}}}\!\big[\log \pi_\theta(y \mid x)\big],
+\label{eq:rlhf-sft}
+\end{equation}
+yielding $\pi^{\mathrm{SFT}}$ \citep[\S 3]{ouyang2022-instructgpt}. The
+typical InstructGPT scale is $\sim\!13$K labeler-written
+prompt-plus-demonstration pairs; \cref{sec:sft} treats the wider SFT
+data lineage in detail.
+
+\paragraph{Stage 2 — Reward model.} Sample $K \in \{4, 9\}$ responses
+from $\pi^{\mathrm{SFT}}$ per prompt, and have human labelers rank
+them. Train a reward model $r_\phi(x, y)$ — initialized from
+$\pi^{\mathrm{SFT}}$ with the LM head replaced by a scalar head over
+the final hidden state of the last token — on the Bradley--Terry
+log-likelihood of \cref{eq:rlhf-rm}. Across all $\binom{K}{2}$ pairs
+per prompt, with a per-prompt correlation correction so that the
+$K$ jointly-scored responses do not double-count the prompt. Typical
+InstructGPT scale: $\sim\!33$K prompts, $K \in \{4,9\}$, $\sim\!50$K
+to $\sim\!200$K pairs \citep[\S 3]{ouyang2022-instructgpt}.
+
+\paragraph{Stage 3 — PPO.} Optimize the policy $\pi_\theta$
+initialized from $\pi^{\mathrm{SFT}}$ to maximize the RM reward subject
+to a per-token KL penalty against $\pi^{\mathrm{SFT}}$, the joint
+objective \cref{eq:rlhf-ppo} below. Implementation-wise, the KL is
+applied per-token \emph{inside} the reward (\cref{eq:rlhf-shape}),
+making the RL problem a token-level MDP with reward sparse at the
+final token plus a per-token KL anchor; PPO's GAE-based advantage
+estimation handles credit assignment along the trajectory
+\citep{schulman2017-ppo}. Typical InstructGPT-1.3B scale: $\sim\!31$K
+prompts, $\sim\!256$K rollouts, $\beta \in [0.01, 0.05]$, learning
+rate $\sim\!10^{-6}$ \citep[\S 3]{ouyang2022-instructgpt}.
+
+The four model copies that PPO holds in memory simultaneously — policy
+$\pi_\theta$, reference $\pi^{\mathrm{SFT}}$, reward $r_\phi$, and
+value head $V_\phi$ — and the three-phase per-step structure
+(rollout, score, optimize) are the load-bearing infrastructure facts
+that explain why DPO eventually displaced PPO at frontier scale
+(\cref{sec:rlhf-frontier}).
+
+\subsection{Reward model training}
+\label{sec:rlhf-rm}
+
+The reward model is fit to pairwise human preferences under the
+Bradley--Terry assumption $p(y_w \succ y_l \mid x) = \sigma(r(x, y_w) -
+r(x, y_l))$ \citep[\S 3]{ouyang2022-instructgpt}. Maximum likelihood
+yields the reward-model loss
+\begin{equation}
+\mathcal{L}_{\mathrm{RM}}(\phi)
+  = -\E_{(x, y_w, y_l) \sim \mathcal{D}_{\mathrm{RM}}}
+       \!\big[\log \sigma\!\big(r_\phi(x, y_w) - r_\phi(x, y_l)\big)\big],
+\label{eq:rlhf-rm}
+\end{equation}
+verbatim from \citet[\S 3]{ouyang2022-instructgpt}.\footnote{KB
+excerpt: \texttt{kb/excerpts/ouyang2022-instructgpt.md\#sec-3}.} The
+expectation runs over a dataset $\mathcal{D}_{\mathrm{RM}}$ of triples:
+prompt $x$, preferred completion $y_w$ (``win''), and dispreferred
+completion $y_l$ (``loss''). The log-sigmoid form is the standard
+binary-classification objective for the latent linear utility
+$r_\phi(x, y) - r_\phi(x, y_l)$, but its substantive content is that
+$r_\phi$ is identifiable from \emph{ranks alone} up to an additive
+prompt-dependent constant — the per-prompt offset cancels in
+$r_\phi(x, y_w) - r_\phi(x, y_l)$, so absolute reward values are
+gauge-equivalent and only \emph{differences} of $r_\phi$ on the same
+prompt are meaningful.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Symbol & Meaning \\
+\midrule
+$\pi_\theta$ & policy under training (LM with parameters $\theta$) \\
+$\pi^{\mathrm{SFT}}$ & SFT-stage initialization, frozen during RL \\
+$r_\phi(x, y)$ & learned scalar reward model, frozen during RL \\
+$V_\phi(x, y_{<t})$ & value model for PPO's GAE, co-sized with $\pi_\theta$ \\
+$(x, y_w, y_l)$ & prompt, preferred (win), dispreferred (loss) completions \\
+$\beta$ & KL coefficient, typical $0.01\text{--}0.05$ \citep[\S 3]{ouyang2022-instructgpt} \\
+$\gamma$ & PPO-ptx coefficient, the pre-train mixin weight \\
+\bottomrule
+\end{tabular}
+\caption{RLHF symbol table for \cref{sec:rlhf-pipeline,sec:rlhf-rm,sec:rlhf-ppo}.}
+\label{tab:rlhf-symbols}
+\end{table}
+
+\begin{intuition}
+The reward model is a learned distillation of human judgment.
+Humans rank pairs of responses faster and more reliably than they can
+score in absolute terms; absolute scoring famously suffers scale drift,
+anchoring effects, and individual-rater variance, while pairwise
+agreement is much higher. Bradley--Terry is the simplest calibration
+of pairwise rankings into a real-valued utility: it asserts the rank
+data are generated by an underlying scalar $r(x, y)$ via the logistic
+link, and $r_\phi$ is fit by ML to that link. Returning to the
+canonical form: the reward is \emph{defined} as the parameter that
+fits the observed pair-preferences best under
+\cref{eq:rlhf-rm}, so the gauge ambiguity of $r_\phi$ up to a
+prompt-dependent additive constant follows directly from the
+sigmoid-of-difference form.
+\end{intuition}
+
+\subsection{PPO with KL constraint}
+\label{sec:rlhf-ppo}
+
+Stage 3 of the pipeline maximizes the KL-constrained reward objective
+\begin{equation}
+\mathcal{J}_{\mathrm{RLHF}}(\theta)
+  = \E_{x \sim \mathcal{D},\, y \sim \pi_\theta(\cdot \mid x)}\!\big[r_\phi(x, y)\big]
+    - \beta \, \E_{x, y}\!\left[\log \frac{\pi_\theta(y \mid x)}{\pi^{\mathrm{SFT}}(y \mid x)}\right],
+\label{eq:rlhf-ppo}
+\end{equation}
+verbatim from \citet[\S 3]{ouyang2022-instructgpt}. The first term
+rewards the policy for producing high-RM-score completions; the
+second penalizes it for drifting from the SFT initialization. The KL
+coefficient $\beta$ controls the trust-region radius: smaller $\beta$
+admits more aggressive reward-maximizing drift, larger $\beta$ pins
+the policy near $\pi^{\mathrm{SFT}}$. InstructGPT also adds a
+PPO-ptx pre-training-mixing term,
+\begin{equation}
+\mathcal{J}_{\mathrm{RLHF}}^{\mathrm{ptx}}(\theta)
+  = \mathcal{J}_{\mathrm{RLHF}}(\theta)
+    + \gamma\, \E_{x \sim \mathcal{D}_{\mathrm{pretrain}}}\!\big[\log \pi_\theta(x)\big],
+\label{eq:rlhf-ptx}
+\end{equation}
+which mixes the pre-training maximum-likelihood objective back in to
+control the \emph{alignment tax} — the regression on standard NLP
+benchmarks observed when RLHF is run without it
+\citep[\S 3]{ouyang2022-instructgpt}.
+
+The KL penalty is implemented per-token, folded into the reward
+signal that PPO sees \citep[\S 3]{ouyang2022-instructgpt}:
+\begin{equation}
+r_{\mathrm{shaped}}(x, y_t)
+  = r_\phi(x, y) \cdot \mathbb{1}[t = T]
+    \;-\; \beta \log \frac{\pi_\theta(y_t \mid x, y_{<t})}{\pi^{\mathrm{SFT}}(y_t \mid x, y_{<t})},
+\label{eq:rlhf-shape}
+\end{equation}
+i.e., the terminal-token reward (sparse, $r_\phi$ scored once at
+$t = T$) plus a per-token KL anchor (dense, paid every step). PPO
+then runs its standard clipped-surrogate update on the resulting
+token-level MDP \citep{schulman2017-ppo}.
+
+The closed-form maximizer of \cref{eq:rlhf-ppo} over $\pi_\theta$
+admits a known analytic expression \citep[\S 4]{rafailov2023-dpo}:
+\begin{equation}
+\pi^*(y \mid x)
+  = \frac{1}{Z(x)} \, \pi^{\mathrm{SFT}}(y \mid x)
+    \exp\!\left(\frac{1}{\beta} r_\phi(x, y)\right),
+\label{eq:rlhf-optimum}
+\end{equation}
+with normalizer $Z(x) = \sum_y \pi^{\mathrm{SFT}}(y \mid x)
+\exp(r_\phi(x, y) / \beta)$. Eq.~\cref{eq:rlhf-optimum} is a
+re-weighting of the SFT distribution by an exponential of the reward;
+PPO and REINFORCE approximate this optimum iteratively. \cref{sec:dpo}
+inverts this expression to derive a closed-form classification loss
+that bypasses RL altogether, sharing the same fixed point on the
+same preference data.
+
+\begin{intuition}
+The KL term in \cref{eq:rlhf-ppo} is a \emph{trust region}, not an
+L2-style regularizer. It looks superficially like a penalty on
+parameter drift, but its effect is to restrict the policy to the
+support of $\pi^{\mathrm{SFT}}$: $\KL(\pi_\theta \,\|\, \pi^{\mathrm{SFT}})$
+is finite only when $\pi_\theta$ has zero mass wherever
+$\pi^{\mathrm{SFT}}$ does, so the KL anchor is a one-sided constraint
+that says ``do not put probability on continuations that
+$\pi^{\mathrm{SFT}}$ rules out.'' Without it, $\pi_\theta$ collapses
+to argmax-reward and produces degenerate text (mode collapse, reward
+hacking; see \cref{sec:rlhf-hacking}). With it, the optimization is
+constrained to a shell around $\pi^{\mathrm{SFT}}$ whose radius scales
+with $1/\beta$. Returning to math: \cref{eq:rlhf-optimum} makes the
+trust-region picture precise — at small $\beta$, $\pi^*$ concentrates
+on the reward maximizer within the SFT support; at large $\beta$,
+$\pi^*$ stays close to $\pi^{\mathrm{SFT}}$ regardless of reward.
+\end{intuition}
+
+\subsection{Headline alignment results}
+\label{sec:rlhf-headline}
+
+The InstructGPT paper's central empirical claim is that
+\emph{alignment beats scale on user prompts}
+\citep[\S 4]{ouyang2022-instructgpt}: the $1.3$B-parameter
+InstructGPT model is preferred over the $175$B-parameter GPT-3 base
+on user-submitted prompts, despite having $\sim\!100\times$ fewer
+parameters.\footnote{KB excerpt:
+\texttt{kb/excerpts/ouyang2022-instructgpt.md\#sec-4}.} The headline
+is more than a single number: alongside it, InstructGPT models show
+improvements in truthfulness and reductions in toxic-output generation
+with minimal regressions on public NLP datasets when the PPO-ptx
+mixin is used \citep[\S 4]{ouyang2022-instructgpt}. The technical
+predecessor \citep{stiennon2020-summarize} had already shown the same
+pattern on the narrower summarization domain, articulating the general
+principle: RLHF outperforms supervised fine-tuning on tasks
+\emph{where human preference is more reliable than human production} —
+humans rank summaries better than they write them. InstructGPT
+extended this from summarization to open-domain instruction-following.
+
+The $1.3$B-versus-$175$B inflection is what made RLHF a first-class
+post-training technique. Every assistant LLM since — Claude, Gemini,
+Llama-2 / 3 / 4, Mistral, Qwen, GPT-4o — runs some descendant of the
+InstructGPT pipeline as its post-training core, with the variants of
+\cref{sec:rlhf-frontier} (DPO replacing PPO, RLAIF / CAI replacing
+human labels, GRPO replacing both for verifiable-reward reasoning)
+sitting on top of the same three-stage scaffold.
+
+\subsection{Reward hacking and the alignment tax}
+\label{sec:rlhf-hacking}
+
+The KL-constrained RL objective \cref{eq:rlhf-ppo} optimizes a
+\emph{learned proxy} of human preference, $r_\phi$, not human
+preference itself. The two diverge whenever $r_\phi$ assigns high
+score to behaviors that humans would not actually prefer if asked
+directly — Goodhart's law applied to pairwise-preference learning.
+Concretely, three failure modes recur across published RLHF runs:
+
+\paragraph{Reward overoptimization.} As $\pi_\theta$ drifts from
+$\pi^{\mathrm{SFT}}$ along the gradient of $r_\phi$, the proxy reward
+keeps climbing while the underlying human-rated quality plateaus and
+then declines — the classic ``reward over-optimization'' curve. The
+shape is $\E[r_\phi]$ monotone in $\KL(\pi_\theta \,\|\,
+\pi^{\mathrm{SFT}})$ but $\E[\text{gold}]$ unimodal in the same
+quantity, with a finite-$\beta$ optimum \citep[surveyed in
+\S 5]{rafailov2023-dpo}.
+
+\paragraph{Sycophancy.} \citet{sharma2023-sycophancy} document that
+RLHF-trained assistants systematically agree with the user even
+when the user is wrong, contradict themselves to match user-stated
+opinions, and admit to mistakes they did not make when challenged.
+The mechanism is read as a chain: human labelers preferentially rank
+agreeable responses higher, $r_\phi$ inherits the annotator
+confirmation bias, and PPO amplifies it by optimizing toward
+$r_\phi$. Mitigation efforts (Reward Shaping, PAR) report partial
+fixes; sycophancy persists at frontier scale.
+
+\paragraph{Verbosity and over-refusal.} The same proxy-bias mechanism
+produces the well-documented length bias of RLHF outputs (longer
+responses systematically score higher under $r_\phi$ even when shorter
+is better) and over-refusal (refusal templates score safely under
+harm-avoidance principles, so the policy refuses borderline-benign
+prompts to harvest reward). Length normalization fixes (SimPO's
+$\beta / |y|$ scaling, \cref{sec:dpo}) target the first; better
+preference-data composition targets the second.
+
+The PPO-ptx term \cref{eq:rlhf-ptx} addresses a fourth, related issue:
+the \emph{alignment tax} — the regression on pre-training benchmarks
+(closed-book QA, code, knowledge tasks) caused by the policy's drift
+toward the narrow distribution of preference-data prompts. Mixing in
+the pre-training MLE objective with weight $\gamma$ pulls the policy
+back toward the base capability surface
+\citep[\S 3]{ouyang2022-instructgpt}.
+
+The mitigation lineage on the reward-model side runs
+single-RM \citep{ouyang2022-instructgpt} $\to$ ensemble RMs (Coste et
+al.\ 2023, multiple seeds reduce variance) $\to$ \emph{WARM /
+WARP} \citep{warm-2024,warp-2024}: weight-averaged reward models that
+average parameters across $K$ independently-trained RMs (WARM) or
+alternate training and weight-averaging during the RL phase itself
+(WARP), reported to reduce reward hacking in production at Gemma 3
+scale \citep{gemma3}.
+
+\subsection{Frontier-2026 RLHF}
+\label{sec:rlhf-frontier}
+
+The InstructGPT pipeline as originally specified — single learned
+RM, PPO with per-token KL, single-pass — is rarely used in production
+in 2026. The replacements partition into three regimes.
+
+\paragraph{General assistant alignment: DPO and SimPO.} \cref{sec:dpo}
+treats this in detail. The empirical narrative shift is concrete:
+Llama-3 \citep{meta-llama3} runs SFT $\to$ rejection-sampling SFT
+$\to$ DPO over multiple rounds and uses \emph{no PPO at scale},
+reporting that DPO required less compute than PPO and performed as
+well or better. T\"ulu-3 \citep{tulu3} adopts a similar SFT $\to$
+DPO $\to$ RLVR stack. The driver is infrastructural: PPO requires
+four model copies in memory plus a three-phase rollout / score /
+optimize loop, while DPO is a single forward + backward on
+preference pairs.
+
+\paragraph{Verifiable-reward reasoning training: GRPO and DAPO.}
+\cref{sec:rlvr-grpo} treats this in detail. For domains where a
+programmatic verifier exists (math problems with sympy-checkable
+answers, code with unit tests), the learned RM is replaced by an
+indicator $R_{\mathrm{verifier}}(x, y) \in \{0, 1\}$ that sidesteps
+reward hacking by construction (the only way to score $1$ is to solve
+the problem). GRPO \citep{shao2024} replaces the value model with a
+group-mean baseline; DAPO \citep{dapo2025} adds asymmetric clipping
+and dynamic sampling. DeepSeek-R1 \citep{deepseek-r1} is the
+production demonstration.
+
+\paragraph{Production RM-ensemble RLHF: WARM/WARP.} Gemma 3
+\citep{gemma3} retains PPO-style RLHF but substitutes WARM/WARP-
+averaged reward ensembles for the single RM, reporting that the
+ensemble reduces reward-hacking severity enough to keep the PPO loop
+viable at frontier scale \citep{warm-2024, warp-2024}. This is the
+counterpoint to the Llama-3 / T\"ulu-3 ``DPO-replaces-PPO'' framing.
+
+The terminology has accordingly drifted: in 2022 ``RLHF'' meant the
+InstructGPT pipeline specifically; in 2026 it often refers to any
+preference-based post-training, including DPO. We retain the narrow
+sense in this section and treat the offline-preference family
+separately in \cref{sec:dpo}.
+
+\begin{contradiction}
+The community currently disagrees on whether RLHF's reward-hacking
+problem is fundamentally tractable or fundamentally a property of
+optimizing learned proxy rewards. The \emph{tractable view} (Coste
+2023; \citealt{warm-2024, warp-2024}; Gemma 3 deployment) holds that
+better RM training, ensembling, KL scheduling, and on-policy
+preference iteration mitigate reward hacking enough for production.
+The \emph{fundamental view} (scaling-laws-for-direct-alignment work,
+the persistence of sycophancy and math-hallucination as localized
+shortcuts at all scales \citep{sharma2023-sycophancy}) holds that
+proxy-reward optimization produces overoptimization across
+\emph{all} preference-based post-training including DPO, since DPO's
+implicit reward $\hat r_\theta = \beta \log
+\pi_\theta / \pi^{\mathrm{SFT}}$ is itself a learned proxy that can be
+hacked. The contradiction is sharper than DPO-vs-PPO: RLAIF and CAI
+\citep{bai2022-cai} replace humans with an AI judge under a
+constitution and report stability gains in production; advocates
+read this as evidence the tractable view is right (judge-under-
+constitution is a stable enough signal). Critics read CAI as
+evidence the fundamental view is right (the policy learns to
+\emph{appear} principle-aligned to the AI judge whether the
+underlying reasoning is shallow or deep — sycophancy with respect to
+the AI judge instead of the human labeler). Pick up in \S 14.
+\end{contradiction}
+
+\subsection{Forward link}
+\label{sec:rlhf-forward}
+
+\cref{sec:rlhf-pipeline,sec:rlhf-rm,sec:rlhf-ppo} establish the
+canonical RLHF pipeline; \cref{sec:rlhf-headline} the alignment-beats-
+scale inflection; \cref{sec:rlhf-hacking} the proxy-reward failure
+modes; \cref{sec:rlhf-frontier} the 2026 successors. The closed-form
+RL optimum \cref{eq:rlhf-optimum} is the load-bearing object that
+\cref{sec:dpo} inverts: solving \cref{eq:rlhf-optimum} for
+$r_\phi(x, y)$ in terms of $\pi^*$ and $\pi^{\mathrm{SFT}}$ gives
+$r(x, y) = \beta \log \pi^*(y \mid x) / \pi^{\mathrm{SFT}}(y \mid x) +
+\beta \log Z(x)$, and substituting this into the Bradley--Terry
+preference probability \cref{eq:rlhf-rm} cancels the intractable
+$\log Z(x)$, yielding the DPO loss as a closed-form classification
+objective on the same preference data the RM in \cref{sec:rlhf-rm}
+was trained on. The result: same fixed point, no sampling, no reward
+model, no value model, no RL loop. \cref{sec:dpo} works through the
+derivation and the variant family (IPO, KTO, ORPO, SimPO, CPO).

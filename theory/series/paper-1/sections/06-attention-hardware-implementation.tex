@@ -1,0 +1,409 @@
+% Paper 1, §6 — Attention hardware-implementation axis
+% Thesis: same scaled dot-product attention; four hardware-implementation
+% strategies (FA1 → FA2 → FA3 → NSA). These are *optimizations*, not
+% different attention formulas — except NSA, which changes which keys
+% participate but preserves the scaled-dot-product form per branch.
+
+\section{Attention hardware-implementation axis: FA1, FA2, FA3, NSA}
+\label{sec:attention-hardware-axis}
+
+\S\ref{sec:attention-mechanism-axis} fixed the attention \emph{formula}
+along the KV-sharing axis (MHA $\to$ MQA $\to$ GQA $\to$ MLA). This
+section fixes the formula --- scaled dot-product attention as defined
+in Eq.~(1) of \citet{vaswani2017} --- and varies the
+\emph{implementation} on the GPU memory hierarchy. The thesis: between
+2022 and 2025 the field walked FlashAttention~1 (block tiling +
+recomputation; \citealp{dao2022}) $\to$ FlashAttention~2 (warp-level
+tile scheduling; \citealp{dao2023}) $\to$ FlashAttention~3
+(asynchronous + low-precision tensor-core scheduling on Hopper;
+\citealp{shah2024}) $\to$ Native Sparse Attention (block-sparse with
+explicit selection; \citealp{yuan2025}). The first three are
+\emph{exact} reorderings of the canonical formula --- bit-equivalent up
+to floating-point reduction order --- and their wall-clock wins come
+entirely from reducing HBM traffic and matching the tensor-core
+schedule. NSA changes \emph{which keys participate} (the per-branch
+$\tilde K_t \subset K$) but preserves the scaled-dot-product form on
+each branch; the gain comes from a $\sim$10$\times$ smaller $N_t$ at
+64K context. This distinction --- exact reordering vs.\ approximate
+sparsification --- is load-bearing when reasoning about quality.
+
+\subsection{Why naive attention is HBM-bound}
+\label{sec:fa-roofline}
+
+The scaled dot-product attention block of \S\ref{sec:attention-mechanism-axis}
+costs $\Theta(B \cdot H \cdot S^2 \cdot d_h)$ FLOPs and, in the naive
+implementation that materializes
+$\boldsymbol{S}, \boldsymbol{P} \in \R^{S \times S}$ in HBM,
+$\Theta(N d + N^2)$ HBM accesses per head (with $N \equiv S$ for
+self-attention)~\citep[\S 3.2 Thm.\ 2]{dao2022}.\footnote{KB excerpt:
+\texttt{kb/excerpts/dao2022.md\#sec-3-2}.} The roofline diagnostic
+asks which side of the inequality
+\begin{equation}
+  \underbrace{\frac{\text{FLOPs}}{\text{HBM bytes}}}_{\text{arithmetic intensity }\ I}
+  \;\;\lessgtr\;\;
+  \underbrace{\frac{\text{peak FLOP/s}}{\text{peak HBM B/s}}}_{\text{ridge point }\ I^*}
+  \label{eq:roofline}
+\end{equation}
+the kernel sits on. Below the ridge ($I < I^*$), wall-clock is set by
+HBM bandwidth: increasing FLOPs is free until the ridge is reached.
+\citet{dao2022} report the A100 ridge at $I^* \approx
+\tfrac{19.5\,\text{TF}}{1.5\text{--}2.0\,\text{TB/s}} \approx 10$
+FLOPs/byte, and the H100 SXM ridge near $I^* \approx 990 / 3.35
+\approx 295$ FLOPs/byte~\citep[\S 2.1]{dao2022}\citep[\S 1]{shah2024}.
+
+For the naive attention block at half precision, the dominant memory
+movement is reading $\boldsymbol{Q}, \boldsymbol{K}, \boldsymbol{V}$ once
+and reading/writing $\boldsymbol{S}, \boldsymbol{P}$ once each:
+$\sim\!4 N d + 4 N^2$ bytes for $\sim\!4 N^2 d$ FLOPs, giving
+$I \approx d / (1 + d/N) \approx d$ for $N \gg d$. With $d = d_h \in
+[64, 128]$, $I$ sits well below both ridges, so the kernel is
+firmly memory-bound. \citet{yuan2025} state the consequence directly
+for long-context decoding: ``attention computation \dots accounts for
+70--80\% of total latency when decoding 64K-length contexts'' on
+softmax architectures~\citep[\S 1]{yuan2025}.\footnote{KB excerpt:
+\texttt{kb/excerpts/yuan2025.md\#sec-1}.}
+
+\begin{intuition}
+``Attention is quadratic in $S$'' is the pop summary, but the
+practical bottleneck is not the FLOP count --- modern accelerators have
+FLOPs to spare. It is the HBM round-trip on the $S \times S$ score
+matrix. Returning to canonical form: peak utilization on a kernel with
+arithmetic intensity $I$ FLOPs/byte is bounded above by
+$\min(\text{peak FLOP/s},\ I \cdot \text{peak HBM B/s})$; for naive
+attention with $I \sim d_h \in [64, 128]$, the second term binds
+across A100, H100, and B200 --- not the first. The four implementations
+in this section all attack the second term.
+\end{intuition}
+
+\subsection{FlashAttention 1: tiling + recomputation}
+\label{sec:fa1}
+
+\citet{dao2022} compute Eq.~(1) of \citet{vaswani2017} \emph{exactly}
+in two steps: tile $\boldsymbol{Q}, \boldsymbol{K}, \boldsymbol{V}$
+into blocks of shapes $B_r \times d_h$ and $B_c \times d_h$ that fit in
+SRAM, and stream a numerically stable \emph{online softmax} across
+$\boldsymbol{K}, \boldsymbol{V}$ tiles so that the full $S \times S$
+matrix is never written to HBM.\footnote{KB excerpt:
+\texttt{kb/excerpts/dao2022.md\#sec-3-1}.} The tile sizes are chosen
+from the SRAM budget $M$:
+\begin{equation}
+  B_c \;=\; \Bigl\lceil \frac{M}{4 d_h} \Bigr\rceil,
+  \qquad
+  B_r \;=\; \min\!\Bigl(\Bigl\lceil \frac{M}{4 d_h} \Bigr\rceil,\ d_h\Bigr),
+  \label{eq:fa1-tile}
+\end{equation}
+so that the four arrays
+$\boldsymbol{Q}_i, \boldsymbol{K}_j, \boldsymbol{V}_j, \boldsymbol{O}_i$
+co-resident on chip total $\sim\!M$
+bytes~\citep[Algorithm~1]{dao2022}. On A100 with $M \approx 192$~KB and
+half-precision, this gives $B_c \approx B_r \approx 192$ at $d_h = 64$,
+$\approx 96$ at $d_h = 128$.
+
+The online softmax decomposition is the algebraic move that makes
+streaming work. For each query tile $\boldsymbol{Q}_i$, maintain
+running statistics $m_i \in \R^{B_r}$ (running row-wise max) and
+$\ell_i \in \R^{B_r}$ (running row-wise softmax denominator), updated
+on each $\boldsymbol{K}_j, \boldsymbol{V}_j$ tile by~\citep[\S
+3.1]{dao2022}
+\begin{equation}
+\begin{aligned}
+  m_i^{\text{new}} &= \max\!\bigl(m_i,\ \mathrm{rowmax}(\boldsymbol{S}_{ij})\bigr), \\
+  \ell_i^{\text{new}} &= e^{m_i - m_i^{\text{new}}} \ell_i
+                       + \mathrm{rowsum}\!\bigl(e^{\boldsymbol{S}_{ij} - m_i^{\text{new}}}\bigr), \\
+  \boldsymbol{O}_i^{\text{new}} &= \mathrm{diag}(\ell_i^{\text{new}})^{-1}
+        \Bigl(\mathrm{diag}(\ell_i)\, e^{m_i - m_i^{\text{new}}}\, \boldsymbol{O}_i
+              + e^{\boldsymbol{S}_{ij} - m_i^{\text{new}}} \boldsymbol{V}_j \Bigr),
+\end{aligned}
+\label{eq:online-softmax}
+\end{equation}
+where $\boldsymbol{S}_{ij} = \boldsymbol{Q}_i \boldsymbol{K}_j^\top /
+\sqrt{d_h}$ is computed on-chip from the resident tiles. After all
+$\lceil S / B_c \rceil$ key/value tiles have been streamed,
+$\boldsymbol{O}_i$ is the exact softmax-attention output for the query
+rows $i$, bit-equivalent to the naive computation up to floating-point
+reduction order.
+
+The backward pass uses the second \citet{dao2022} idea:
+\emph{recomputation}. Instead of materializing
+$\boldsymbol{S}, \boldsymbol{P}$ in HBM during the forward pass and
+reading them back on the backward pass, FlashAttention stores only
+$\boldsymbol{O}$ and the per-row statistics
+$(m, \ell) \in \R^{S \times 2}$ (a factor-$d_h/2$ saving), and
+recomputes $\boldsymbol{S}, \boldsymbol{P}$ from
+$\boldsymbol{Q}, \boldsymbol{K}, \boldsymbol{V}$ tiles in SRAM on the
+backward pass.\footnote{KB excerpt:
+\texttt{kb/excerpts/dao2022.md\#sec-3-1-recompute}.} This is selective
+gradient checkpointing applied at the attention-kernel level: the
+forward FLOP count rises by a factor of $\sim\!2$ on the backward
+recomputation, but HBM bytes drop from $\Theta(N^2)$ to $\Theta(N
+d_h)$, and the kernel moves up the roofline.
+
+The IO complexity result is~\citep[Thm.~2]{dao2022}: standard
+attention requires $\Theta(N d_h + N^2)$ HBM accesses, FlashAttention
+requires $\Theta(N^2 d_h^2 / M)$. For typical $d_h \in [64, 128]$ and
+$M \sim 100$KB, $d_h^2 / M \sim 1/10$ to $1/6$, and Proposition~3
+proves this is asymptotically optimal among exact algorithms. End-to-end
+wall-clock: $\sim\!3\times$ on GPT-2 at $S = 1024$, $\sim\!2.4\times$
+on Long-Range Arena at $S = 1\text{K}\text{--}4\text{K}$, and the first
+Transformer to achieve better-than-chance on Path-X at $S =
+16\text{K}$~\citep[\S 1]{dao2022}.
+
+\subsection{FlashAttention 2: warp-level tile scheduling}
+\label{sec:fa2}
+
+\citet{dao2023} keep the FA1 algorithm and re-engineer the GPU work
+partition.\deepencite{dao2023 \S 3 (excerpt not yet in KB; cite
+``FlashAttention-2: Faster Attention with Better Parallelism and Work
+Partitioning'', Dao 2023, arXiv 2307.08691)} Three changes drive a
+$\sim\!2\times$ wall-clock improvement on A100:
+
+\paragraph{Outer loop over $\boldsymbol{Q}$, inner loop over
+$\boldsymbol{K}, \boldsymbol{V}$.} FA1's outer loop iterates over
+$\boldsymbol{K}, \boldsymbol{V}$ tiles, requiring all warps in a
+threadblock to communicate via shared memory at each iteration to
+update $\boldsymbol{O}_i$. FA2 swaps the loop order: each threadblock
+owns one $\boldsymbol{Q}_i$ tile and streams $\boldsymbol{K}_j,
+\boldsymbol{V}_j$ in the inner loop, so the running
+$(m_i, \ell_i, \boldsymbol{O}_i)$ live in registers and no inter-warp
+softmax-reduction synchronization is needed.
+
+\paragraph{Reduce non-matmul FLOPs.} Tensor cores deliver $16\times$
+the throughput of CUDA cores on matmul; non-matmul ops (softmax
+exponentiation, divisions, scaling) run on CUDA cores and become the
+bottleneck once matmul is well-utilized. FA2 defers the
+$\mathrm{diag}(\ell_i)^{-1}$ rescale of $\boldsymbol{O}_i$ in
+Eq.~\eqref{eq:online-softmax} to the \emph{end} of the inner loop ---
+the rescale only matters for the final output, not the running
+accumulation --- and folds the $1/\sqrt{d_h}$ scale into the
+softmax-mask combine. Both moves reduce CUDA-core FLOPs per output
+element.
+
+\paragraph{Parallelize over the sequence dimension.} FA1 parallelizes
+across batch and heads but not across $S$. For long contexts at small
+batch (the inference and long-document training regimes), this
+underutilizes SMs. FA2 splits the sequence among threadblocks --- each
+threadblock owns a contiguous chunk of $\boldsymbol{Q}_i$ rows --- and
+exploits the fact that with the outer-Q loop the $\boldsymbol{O}_i$
+updates are independent across query rows. This recovers full SM
+occupancy at $B \cdot H \ll \text{(#SMs)}$, the regime that dominates
+modern serving.
+
+The combined effect on A100: $\sim\!2\times$ over FA1, reaching $\sim
+50\text{--}73\%$ of theoretical FP16 matmul peak vs.\ FA1's $\sim
+25\text{--}40\%$. The kernel arithmetic and IO complexity are
+unchanged from \S\ref{sec:fa1}; the win is scheduling.
+
+\subsection{FlashAttention 3: asynchrony and FP8 on Hopper}
+\label{sec:fa3}
+
+H100 / H200 (Hopper, SM\_90a) introduces three hardware capabilities
+that A100's FA2 schedule cannot exploit~\citep{shah2024}: the WGMMA
+warpgroup matmul instruction (asynchronous, with one warpgroup --- 4
+warps, 128 threads --- issuing a single matmul that releases the
+warpgroup to do other work while the tensor core executes), the TMA
+(Tensor Memory Accelerator, an asynchronous DMA engine for global
+$\leftrightarrow$ shared memory transfers), and FP8 tensor-core matmul
+at $2\times$ the FP16 peak FLOP rate.\deepencite{shah2024 \S 3
+(excerpt not yet in KB; cite ``FlashAttention-3: Fast and Accurate
+Attention with Asynchrony and Low-precision'', Shah, Bikshandi, Zhang,
+Thakkar, Ramani, Dao 2024, arXiv 2407.08608, NeurIPS)} FA3 redesigns
+the FA2 schedule around them.
+
+\paragraph{Producer/consumer warp specialization.} A threadblock's
+warps are split into a TMA-issuing producer group --- which loads the
+next $\boldsymbol{K}_{j+1}, \boldsymbol{V}_{j+1}$ tile asynchronously
+into a shared-memory ring buffer --- and one or two consumer
+warpgroups --- which issue WGMMA on the current
+$\boldsymbol{K}_j, \boldsymbol{V}_j$ tile and run softmax. Producer and
+consumer execute concurrently; the latency of the next HBM load is
+hidden behind the matmul of the current tile.
+
+\paragraph{Two-stage WGMMA + softmax interleaving.} Within a consumer
+warpgroup, the two matmuls per tile ($\boldsymbol{Q}_i
+\boldsymbol{K}_j^\top$ to produce $\boldsymbol{S}_{ij}$, and the
+softmax-weighted $\boldsymbol{P}_{ij} \boldsymbol{V}_j$ to update
+$\boldsymbol{O}_i$) are issued asynchronously, and the softmax
+exponentiation/normalization on tile $j$ runs in CUDA cores
+\emph{while} the WGMMA for tile $j+1$ executes on tensor cores.
+Tensor-core and CUDA-core utilization rise simultaneously; the FA2
+constraint that softmax pipelines serially with WGMMA is relaxed.
+
+\paragraph{FP8 path with block-quantization.} Hopper's FP8 tensor cores
+double FP16 throughput. Naive FP8 attention loses accuracy because
+softmax exponentiation amplifies the FP8 quantization error on the
+score matrix. FA3 quantizes $\boldsymbol{Q}, \boldsymbol{K},
+\boldsymbol{V}$ in \emph{per-block} scales --- each $B_c \times d_h$
+key tile gets its own scaling factor stored alongside the tile --- and
+de-quantizes lazily in the WGMMA accumulator. The reported numerical
+error on long-context attention is within $2\times$ of the FP16
+baseline on standard tasks~\citep{shah2024}.
+
+The headline numbers: $\sim\!1.5\text{--}2\times$ over FA2 on H100 in
+FP16/BF16, reaching 75\% of theoretical peak; an additional
+$\sim\!1.5\times$ from FP8 on top, with end-to-end quality preserved
+under per-block quantization. As of 2026-Q2, FA3 is the production path
+on Hopper for every frontier serving stack we have visibility into
+(vLLM, SGLang, TensorRT-LLM).
+
+\subsection{Native Sparse Attention (NSA)}
+\label{sec:nsa}
+
+The first three implementations preserve the attention formula
+exactly. NSA \citep{yuan2025} departs: at long context, it replaces
+the full-sequence keys/values $\boldsymbol{K}_{:t}, \boldsymbol{V}_{:t}$
+with a sparse triple of branch-specific key/value
+sets,\footnote{KB excerpt: \texttt{kb/excerpts/yuan2025.md\#sec-3-2}.}
+\begin{equation}
+  \boldsymbol{o}_t^* \;=\; \sum_{c \in \{\mathrm{cmp}, \mathrm{slc}, \mathrm{win}\}}
+                          g_t^c \cdot \mathrm{Attn}\!\bigl(\boldsymbol{q}_t,
+                                                        \tilde K_t^c,
+                                                        \tilde V_t^c\bigr),
+  \label{eq:nsa-three-branch}
+\end{equation}
+where each branch applies the standard scaled-dot-product attention to
+a different summary of the past, $g_t^c \in [0, 1]$ is a sigmoid gate
+derived from $\boldsymbol{q}_t$ via an MLP, and the total selected
+context $N_t = \sum_c |\tilde K_t^c|$ satisfies $N_t \ll t$.
+
+\paragraph{Compression branch.} A learned MLP $\varphi$ maps each
+length-$l$ block of keys to one compressed key, with stride $d < l$:
+\begin{equation}
+  \tilde K_t^{\mathrm{cmp}} \;=\;
+    \Bigl\{\varphi(\boldsymbol{k}_{i d + 1 : i d + l})
+      \;\big|\; 0 \le i \le \lfloor (t - l) / d \rfloor\Bigr\}
+  \label{eq:nsa-cmp}
+\end{equation}
+\citep[\S 3.3.1]{yuan2025}. With $l = 32, d = 16$, an 8K context
+becomes $\sim\!500$ compressed keys --- coarse-grained, but every
+position covered.
+
+\paragraph{Selection branch.} The compression-attention scores are
+reused as importance scores for selecting the top-$n$ \emph{full-
+resolution} blocks~\citep[\S 3.3.2 Eq.~8--12]{yuan2025}:
+\begin{equation}
+  \boldsymbol{p}_t^{\mathrm{cmp}} \;=\; \softmax\!\bigl(\boldsymbol{q}_t^\top \tilde K_t^{\mathrm{cmp}}\bigr),
+  \qquad
+  \mathcal{I}_t \;=\; \bigl\{i \,\big|\, \mathrm{rank}(\boldsymbol{p}_t^{\mathrm{slc}\prime}[i]) \le n\bigr\},
+  \label{eq:nsa-select}
+\end{equation}
+with $\boldsymbol{p}_t^{\mathrm{slc}\prime}$ summing per-head
+selection-importance scores over GQA-group heads (Eq.~10) so that all
+heads in a GQA group share the same selected blocks. Block size
+$l' = 64$, top-$n = 16$ blocks: 1024 selected keys per query.
+
+\paragraph{Sliding-window branch.} A small fixed-size window of the
+most recent keys (e.g.\ 512) handles local pattern formation in
+isolation~\citep[\S 3.3.3]{yuan2025}, the explicit design rationale
+being that without this branch, compression and selection collapse
+onto local patterns and never learn long-range structure.
+
+\paragraph{Group-centric kernel.} The selection branch's irregular
+gather pattern would defeat FlashAttention's contiguous-tile loading.
+NSA inverts the loop: where FA2/3 load contiguous \emph{query blocks}
+into SRAM, NSA loads all GQA-group heads at \emph{one query position}
+into SRAM and pairs them with that position's selected sparse KV
+blocks~\citep[\S 3.4]{yuan2025}. The GQA-group-shared selection
+(Eq.~\eqref{eq:nsa-select}, Eq.~10 of the paper) makes a single
+sparse-block load serve all heads in the group, recovering the matmul
+arithmetic intensity that naive sparse attention loses.
+
+The reported speedups at 64K context~\citep[Fig.~1]{yuan2025}:
+$11.6\times$ decode, $9.0\times$ forward, $6.0\times$ backward vs.\
+FA2-on-GQA full attention, with NSA matching or exceeding full-attention
+quality on general / LongBench / reasoning benchmarks. The decode
+speedup matters most economically: at 64K, attention is 70--80\% of
+decode latency~\citep[\S 1]{yuan2025}, so an order-of-magnitude
+reduction in attention is roughly an order-of-magnitude reduction in
+total per-token serving cost in the long-context regime.
+
+\subsection{Sliding-window and ring-attention variants}
+\label{sec:sliding-ring}
+
+Two further long-context strategies sit alongside the FA1--3 / NSA
+lineage and compose with it rather than replacing it.
+
+\paragraph{Sliding-window attention.} Mistral 7B
+\citep{jiang2023} uses a fixed window of $W = 4096$ keys per query, so
+the per-layer cost is $O(N W)$ rather than $O(N^2)$. At $L$ layers, the
+\emph{effective} receptive field at the top of the stack is $L \cdot W$
+because each layer extends the window by another $W$ via the residual
+stream --- 32-layer Mistral 7B reaches a $\sim$131K-token effective
+receptive field with a per-layer 4K window. Sliding-window attention
+is implemented as a special case of FA2/3 (the score matrix is
+banded), so the implementation axis remains the
+same.\deepencite{jiang2023 \S 3.1 (sliding-window kernel) --- excerpt
+not yet in KB}
+
+\paragraph{Ring attention.} \citet{ring-attention-2023}
+shard the sequence axis across $P$ devices: device $p$ holds
+$\boldsymbol{Q}_p, \boldsymbol{K}_p, \boldsymbol{V}_p$ for $S/P$
+positions, and the $\boldsymbol{K}, \boldsymbol{V}$ tiles rotate around
+a logical ring of devices via async send/recv during the FA1-style
+outer loop. Each device runs FA-style on-chip tiling locally, so ring
+attention is FA1/2 \emph{plus} a sequence-dimension shard with
+overlapped communication. Communication is hidden behind compute when
+$S / P \cdot d_h$ FLOPs per tile exceeds the inter-device transfer
+time; for $P \le 64$ on H100/H200 this holds at any practically
+interesting $S$.\deepencite{ring-attention-2023 \S 3 --- excerpt not
+yet in KB; cite Liu, Zaharia, Abbeel 2023, arXiv 2310.01889}
+
+Both compose orthogonally: ring-attention shards \emph{sequence}, FA3
+optimizes the \emph{kernel} on each shard, NSA can replace the
+per-shard kernel with the three-branch sparse attention. The
+hardware-implementation axis is composable in this sense, which is one
+reason it stays distinct from the formula-changing axes of
+\S\ref{sec:positional-encoding} and \S\ref{sec:attention-mechanism-axis}.
+
+\begin{contradiction}
+NSA-vs-FA3 head-to-head benchmarks are single-source as of 2026-Q2.
+\citet{yuan2025} report $11.6\times$ decode at 64K, but the comparison
+baseline is FA2-on-GQA, not FA3 with the H100 asynchrony +
+warp-specialization advantages. No published third-party reproduction
+on Hopper has compared NSA's three-branch sparse attention to FA3 on
+matched hardware, matched precision, and matched task suite as of
+2026-05; community indications are that the gap narrows substantially
+when FA3 is the baseline and the context length is closer to 32K than
+64K, but no peer-reviewed measurement has settled the question.
+Treat ``NSA $\gg$ dense FlashAttention at long context'' as a
+DeepSeek-internal result subject to revision until cross-replicated
+\citep{yuan2025}.
+\end{contradiction}
+
+\subsection{Summary and forward link}
+\label{sec:hardware-summary}
+
+The hardware-implementation axis is a separate axis from
+\S\ref{sec:attention-mechanism-axis}'s KV-sharing axis, with one
+empirical asymmetry: FA1/2/3 work with any KV-sharing variant (MHA /
+MQA / GQA, and an MLA-specific kernel exists), but NSA is designed for
+GQA/MQA and would lose its group-centric kernel
+optimization~\citep[\S 3.4]{yuan2025} on MHA. The four implementations
+form a progression in which three properties co-vary: (i) HBM traffic,
+which falls from $\Theta(N^2)$ to $\Theta(N^2 d_h^2 / M)$ between
+naive and FA1, then is unchanged through FA2/3 but masked behind
+asynchronous overlap, then falls again to $\Theta(N N_t d_h^2 / M)$
+under NSA's $N_t \ll N$ block selection; (ii) tensor-core utilization,
+which rises from $\sim\!25\%$ (naive FA1 path on A100) to $\sim\!75\%$
+(FA3 on H100); and (iii) precision, which descends from FP16 to FP8
+under FA3's per-block quantization without quality loss on standard
+tasks.
+
+What does \emph{not} change across this axis is the formula. Up to the
+NSA branch decomposition (Eq.~\eqref{eq:nsa-three-branch}), every
+implementation in this section is computing
+$\softmax(QK^\top/\sqrt{d_h})V$ on the same $Q, K, V$ that the
+KV-sharing axis (\S\ref{sec:attention-mechanism-axis}) and the
+positional axis (\S\ref{sec:positional-encoding}) produced. This is the
+practical reason axes \S\ref{sec:positional-encoding},
+\S\ref{sec:attention-mechanism-axis}, and this section can be reasoned
+about independently in the convergence story of paper~1: a model can
+swap RoPE for YaRN, MHA for MLA, and FA2 for FA3 + NSA without any of
+those choices interfering with the others, because the formula at
+which they agree --- scaled dot-product attention --- is the fixed point.
+
+The next section (\S\ref{sec:ffn-axis}) leaves attention and walks the
+feed-forward axis: ReLU $\to$ GELU $\to$ SwiGLU dense, then dense
+$\to$ Switch $\to$ Mixtral $\to$ DeepSeekMoE fine-grained-with-shared
+experts. The FFN axis is where the second half of the per-layer
+parameter budget sits, and where the routing-vs-dense convergence
+question of frontier-2026 is most contested.
