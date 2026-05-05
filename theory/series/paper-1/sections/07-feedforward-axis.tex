@@ -1,0 +1,422 @@
+% Paper 1, §7 — Feed-forward axis
+% Thesis: ReLU → GELU → SwiGLU dense FFN → Switch (top-1) → Mixtral (8 of 8,
+% top-2) → DeepSeekMoE (256 fine-grained + 1 shared, top-8). Routing-collapse
+% problem and load balancing. Why fine-grained + shared is the current
+% convergence.
+
+\section{Feed-forward axis: dense, GLU, MoE, fine-grained MoE}
+\label{sec:ffn}
+
+The feed-forward sublayer is where the bulk of a Transformer's
+parameters live and, since 2021, where the bulk of \emph{architectural
+optimization} has happened. Two axes of choice run in parallel: the
+\emph{activation/gating structure} of a single FFN block (ReLU $\to$
+GELU $\to$ SwiGLU) and the \emph{multiplicity} of FFN blocks per layer
+(dense $\to$ Switch top-1 MoE $\to$ Mixtral top-2 MoE $\to$
+DeepSeekMoE fine-grained top-$k$ with a shared expert). The frontier
+of 2026 is the Cartesian product: every routed expert is a SwiGLU
+block, and the layer wraps $E$ such experts with a learned router and
+a load-balancing discipline. This section walks both axes, transcribes
+the load-bearing equations from the primary sources, and surfaces the
+single most contested empirical claim --- whether sparse MoE quality
+matches dense quality at matched active-parameter count.
+
+\subsection{Dense FFN: the canonical 2017 form}
+\label{sec:ffn-vaswani}
+
+The original Transformer's position-wise feed-forward sublayer is a
+two-matrix MLP applied independently at each token position. For input
+token vector $\mathbf{x} \in \R^{\mathsf{D}}$,~\citet{vaswani2017}
+define%
+\footnote{KB excerpt: \texttt{kb/excerpts/shazeer2020.md\#sec-1}; the
+2017 form is also transcribed at
+\texttt{kb/notes/architecture/ffn.md\#sec-1-1}.}
+\begin{equation}
+  \mathrm{FFN}(\mathbf{x}, W_1, W_2, b_1, b_2)
+  \;=\; \max(0, \mathbf{x} W_1 + b_1)\, W_2 + b_2,
+  \tag{Vaswani--Eq.~2}
+  \label{eq:vaswani-ffn}
+\end{equation}
+with $W_1 \in \R^{\mathsf{D} \times d_{\text{ff}}}$,
+$W_2 \in \R^{d_{\text{ff}} \times \mathsf{D}}$, and the canonical
+inner ratio $d_{\text{ff}} = 4\mathsf{D}$~\citep[\S 3.3]{vaswani2017}.
+Two structural features matter. First, $\mathrm{FFN}$ is
+\emph{position-wise}: tensor flow is $\BSH \to (\mathsf{B}, \mathsf{S},
+d_{\text{ff}}) \to \BSH$, with no inter-position mixing --- all
+sequence-axis communication has happened in the attention sublayer of
+\cref{sec:attention-kv-sharing}. Second, the FFN is the
+\emph{parameter-heaviest} sublayer in a typical block: at $d_{\text{ff}}
+= 4\mathsf{D}$ each FFN holds $8\mathsf{D}^2$ parameters versus
+$4\mathsf{D}^2$ for the four attention projections.
+
+\citet{radford2019-gpt2} swap ReLU for GELU in GPT-2 and drop biases in
+the T5/decoder-only era; \citet{shazeer2020} writes the bias-free form
+as~\citep[\S 1, Eq.~2]{shazeer2020}
+\begin{equation}
+  \mathrm{FFN}_{\mathrm{ReLU}}(\mathbf{x}, W_1, W_2)
+  \;=\; \max(\mathbf{x} W_1, 0)\, W_2,
+  \tag{Shazeer--Eq.~2}
+  \label{eq:relu-ffn}
+\end{equation}
+\begin{equation}
+  \mathrm{FFN}_{\mathrm{GELU}}(\mathbf{x}, W_1, W_2)
+  \;=\; \mathrm{GELU}(\mathbf{x} W_1)\, W_2.
+  \tag{Shazeer--Eq.~3}
+  \label{eq:gelu-ffn}
+\end{equation}
+The activation swap leaves the parameter count and tensor flow
+identical; what changes is the unit-step. ReLU's hard zero cuts off
+gradient on negative pre-activations entirely; GELU's
+$x \cdot \Phi(x)$ smooths the cutoff and admits a small negative
+contribution near zero, which empirically aids
+optimization~\citep[\S 2.3]{radford2019-gpt2}.
+
+\subsection{GLU and SwiGLU: the gated FFN}
+\label{sec:ffn-swiglu}
+
+\citet{shazeer2020} reports that swapping the FFN for a Gated Linear
+Unit variant yields a small but consistent perplexity gain on
+T5-base. The GLU layer (Dauphin et al.\ 2016, as cited
+by~\citealp[\S 2]{shazeer2020}) is the
+component-wise product of two linear projections, one of which is
+sigmoid-activated~\citep[\S 2, Eq.~4]{shazeer2020}\footnote{KB
+excerpt: \texttt{kb/excerpts/shazeer2020.md\#sec-2}.}:
+\begin{equation}
+  \mathrm{GLU}(\mathbf{x}, W, V, b, c)
+  \;=\; \sigma(\mathbf{x} W + b) \otimes (\mathbf{x} V + c),
+  \tag{Shazeer--Eq.~4}
+  \label{eq:glu}
+\end{equation}
+with $W, V \in \R^{\mathsf{D} \times d_{\text{ff}}}$ and $\otimes$
+the elementwise (Hadamard) product. The activation in the gate
+position is a free choice; \citet[\S 2, Eq.~5]{shazeer2020} lists
+five variants%
+\footnote{KB excerpt: \texttt{kb/excerpts/shazeer2020.md\#sec-2}.}
+including the bilinear ($\sigma \to \mathrm{id}$), the ReGLU
+($\sigma \to \mathrm{ReLU}$), the GEGLU ($\sigma \to \mathrm{GELU}$),
+and the SwiGLU ($\sigma \to \mathrm{Swish}_\beta$, with
+$\mathrm{Swish}_\beta(z) = z\,\sigma(\beta z)$).
+
+Bundling the gating with the down-projection yields the bias-free
+3-matrix FFN that every modern frontier LLM
+ships~\citep[\S 2, Eq.~6]{shazeer2020}\footnote{KB excerpt:
+\texttt{kb/excerpts/shazeer2020.md\#sec-2-eq6}.}:
+\begin{equation}
+  \mathrm{FFN}_{\mathrm{SwiGLU}}(\mathbf{x}, W, V, W_2)
+  \;=\; \bigl(\mathrm{Swish}_1(\mathbf{x} W) \otimes (\mathbf{x} V)\bigr)\, W_2,
+  \tag{Shazeer--Eq.~6}
+  \label{eq:swiglu}
+\end{equation}
+with $\mathrm{Swish}_1(z) = z\,\sigma(z)$ (also called SiLU). Per token
+the tensor flow now uses three projections of width $d_{\text{ff}}$
+rather than two, so to compare against
+Eq.~\eqref{eq:vaswani-ffn} at matched parameter count Shazeer reduces
+the inner width by a factor of $\tfrac{2}{3}$~\citep[\S 2]{shazeer2020}:
+\begin{quote}
+``All of these layers have three weight matrices, as opposed to two
+for the original FFN. To keep the number of parameters and the amount
+of computation constant, we reduce the number of hidden units
+$d_{\text{ff}}$ \dots\ by a factor of $\tfrac{2}{3}$ when comparing
+these layers to the original two-matrix
+version.''~\citep[\S 2]{shazeer2020}
+\end{quote}
+This is the origin of the modern $d_{\text{ff}} \approx
+\tfrac{8}{3}\mathsf{D}$ rule. For LLaMA-1 7B, $\mathsf{D} = 4096$ gives
+target $d_{\text{ff}} = 10923$, rounded to 11008 for hardware
+alignment~\citep{touvron2023}.
+
+The empirical motivation is~\citet[\S 3.2,
+Tab.~1]{shazeer2020}\footnote{KB excerpt:
+\texttt{kb/excerpts/shazeer2020.md\#sec-3-2}.}: at 524k T5-base steps
+the heldout-set log-perplexities are 1.677 (ReLU), 1.679 (GELU), 1.683
+(Swish), 1.633 (GEGLU), and 1.636 (SwiGLU). GEGLU and SwiGLU edge each
+other within $0.003$; the field selected SwiGLU on the inertial
+strength of LLaMA-1's choice.
+
+\begin{intuition}
+Vaswani's FFN (Eq.~\eqref{eq:vaswani-ffn}) computes a sum of features
+$\mathrm{ReLU}(\mathbf{x} W_1) W_2 = \sum_k \mathrm{ReLU}(\mathbf{x}\!\cdot\!W_1[:,k])\,W_2[k,:]$
+--- a sparse weighted sum of ``value rows'' selected by which
+``key rows'' the input activates. SwiGLU
+(Eq.~\eqref{eq:swiglu}) computes a \emph{product} of features:
+$\mathrm{Swish}_1(\mathbf{x} W) \otimes (\mathbf{x} V)$. The gating
+factor $\mathrm{Swish}_1(\mathbf{x} W)$ multiplies the value
+$\mathbf{x} V$ component-wise, which expresses ``this feature, only
+when that feature is also active'' patterns the additive form cannot.
+\citet[\S 4]{shazeer2020} closes with the well-known disclaimer ---
+``We offer no explanation as to why these architectures seem to
+work; we attribute their success, as all else, to divine benevolence''
+--- so the canonical form Eq.~\eqref{eq:swiglu} is the only honest
+endpoint of the intuition.
+\end{intuition}
+
+\subsection{Mixture of Experts: Switch and Mixtral}
+\label{sec:ffn-moe-coarse}
+
+The dense FFN's parameter cost grows with $\mathsf{D}^2$ at fixed
+depth. Mixture of Experts (MoE) breaks the coupling: replace the
+single FFN at depth $\ell$ with $E$ parallel FFN
+\emph{experts}, learn a router that picks $k \ll E$ experts per
+token, and pay compute for $k$ FFN evaluations while holding $E$
+times the parameters. Per-token compute scales with $k$;
+parameter capacity scales with $E$.
+
+Let $\mathbf{x}_t \in \R^{\mathsf{D}}$ be the token's residual-stream
+slice and $\{\mathrm{FFN}_e\}_{e=1}^{E}$ a family of SwiGLU blocks
+(Eq.~\eqref{eq:swiglu}). The router is a learned linear projection
+$W_g \in \R^{\mathsf{D} \times E}$ producing per-expert logits, with
+top-$k$ selection and a softmax-renormalized gating
+weight~\citep[\S 2.1]{fedus2021-switch}\footnote{KB note:
+\texttt{kb/notes/architecture/moe.md\#sec-1}; the equation form is
+verified against \citet{fedus2021-switch} for top-1 routing and
+\citet{mixtral2024} for top-2 routing. \deepencite{fedus2021-switch
+\S 2.1 (router-and-gate equations) and mixtral2024 \S 2.2 (top-2
+form) --- KB excerpt files not yet ground-truthed against the PDFs.}}:
+\begin{align}
+  \mathbf{g}_t       &= W_g\, \mathbf{x}_t \quad\in\R^{E}, \label{eq:moe-router} \\
+  \mathcal{T}_t      &= \mathrm{TopK}_k(\mathbf{g}_t) \subset \{1,\dots,E\}, \label{eq:moe-topk} \\
+  p_{t,e}            &= \frac{\exp(g_{t,e})}{\sum_{e' \in \mathcal{T}_t} \exp(g_{t,e'})}, \quad e \in \mathcal{T}_t, \label{eq:moe-gate} \\
+  \mathrm{MoE}(\mathbf{x}_t) &= \sum_{e \in \mathcal{T}_t} p_{t,e}\,\mathrm{FFN}_e(\mathbf{x}_t). \label{eq:moe-output}
+\end{align}
+Switch Transformer~\citep{fedus2021-switch} fixes $k = 1$: the router
+sends each token to exactly one expert, $|\mathcal{T}_t| = 1$, and
+$p_{t,e} = 1$. The choice maximally simplifies routing arithmetic
+and minimizes communication --- there is exactly one all-to-all
+dispatch per layer. Switch-XXL has $E \approx 64$ experts and
+$\sim\!395\mathrm{B}$ total parameters at $\sim\!12\mathrm{B}$ active.
+
+Mixtral~\citep{mixtral2024} fixes $k = 2$, $E = 8$: each token's
+output is the gated combination of \emph{two} expert FFNs.
+Mixtral-8$\times$7B reports $46.7\mathrm{B}$ total parameters,
+$12.9\mathrm{B}$ active. Both designs leave the dense
+SwiGLU FFN unchanged \emph{within} each expert; the router and the
+combination Eq.~\eqref{eq:moe-output} are the additions.
+
+\begin{analogy}
+The MoE layer is a soft committee of specialists. The router inspects
+each token and dispatches to the few experts most relevant; the chosen
+experts produce candidate updates $\mathrm{FFN}_e(\mathbf{x}_t)$, and
+the gate weights $p_{t,e}$ blend them. The committee is ``soft''
+because the weights in Eq.~\eqref{eq:moe-gate} are continuous; the
+dispatch is ``hard'' because the top-$k$ selection
+Eq.~\eqref{eq:moe-topk} is discrete. Returning to math: the layer's
+output is exactly the gated weighted sum
+$\sum_{e \in \mathcal{T}_t} p_{t,e}\,\mathrm{FFN}_e(\mathbf{x}_t)$
+of Eq.~\eqref{eq:moe-output}; the analogy survives because each
+expert is a full SwiGLU FFN of the form Eq.~\eqref{eq:swiglu}, not a
+parameter-shared head.
+\end{analogy}
+
+\subsection{Routing collapse and the load-balancing loss}
+\label{sec:ffn-load-balance}
+
+The router in Eq.~\eqref{eq:moe-router}--\eqref{eq:moe-gate} is
+differentiable through $p_{t,e}$ on selected experts but
+\emph{discrete} through Eq.~\eqref{eq:moe-topk}. Two failure modes
+follow.
+
+\paragraph{Routing collapse.}
+Without intervention, the router learns to send most tokens to a small
+set of ``favored'' experts; under-used experts receive vanishing
+gradient and never improve, while over-used experts get richer
+updates. The dynamic is self-reinforcing.
+
+\paragraph{Load imbalance.}
+Even without total collapse, GPUs hosting cold experts sit idle while
+GPUs hosting hot experts oversubscribe. Under expert parallelism
+(one expert per device), throughput is bounded by the slowest device.
+
+The standard mitigation is an auxiliary load-balancing loss
+$\mathcal{L}_{\text{aux}}$, added to the language-modeling loss with
+coefficient $\alpha$. For a batch of $T$ tokens, define the empirical
+fraction $f_e$ of tokens routed to expert $e$ and the mean router
+probability $P_e$ for expert
+$e$~\citep[\S 2.2]{fedus2021-switch}\footnote{KB note:
+\texttt{kb/notes/architecture/moe.md\#sec-2-1}. \deepencite{fedus2021-switch
+\S 2.2 --- the auxiliary-loss form below is verified against
+secondary sources; the original PDF section number should be
+re-checked before final.}}:
+\begin{align}
+  f_e &= \frac{1}{T} \sum_{t=1}^T \mathbb{1}\!\left[e \in \mathcal{T}_t\right], \label{eq:moe-fe} \\
+  P_e &= \frac{1}{T} \sum_{t=1}^T \frac{\exp(g_{t,e})}{\sum_{e'=1}^E \exp(g_{t,e'})}, \label{eq:moe-pe} \\
+  \mathcal{L}_{\text{aux}} &= \alpha \cdot E \sum_{e=1}^{E} f_e\, P_e. \label{eq:moe-aux}
+\end{align}
+The product $f_e P_e$ is differentiable through $P_e$ even though
+$f_e$ depends on the discrete selection
+Eq.~\eqref{eq:moe-topk}, and is minimized at uniform load
+$f_e = P_e = 1/E$. Mixtral and Switch both use the form
+Eq.~\eqref{eq:moe-aux}; production stacks pair it with a
+\emph{capacity factor} $C \in [1, 2]$ that caps each expert at
+$\lceil C\,T k / E \rceil$ tokens per batch and drops (residual-only
+passes) tokens routed past the
+cap~\citep[\S 2.3]{fedus2021-switch}.
+
+\citet[\S 2]{deepseek-v3} report that high-$\alpha$ auxiliary losses
+hurt LM quality at scale, and propose an
+\emph{auxiliary-loss-free} alternative: maintain a per-expert
+\emph{bias} $b_e$ that is added to the router logits at selection
+time but \emph{not} to the gate weight, and update the bias online
+based on observed
+load~\citep{deepseek-v3}\footnote{KB note:
+\texttt{kb/notes/architecture/moe.md\#sec-2-3}. \deepencite{deepseek-v3
+\S 2 (auxiliary-loss-free balancing scheme) --- claim ground-truthed
+against the V3 tech report's training-side excerpt at
+\texttt{kb/excerpts/deepseek-v3-training.md\#abstract}, but the
+exact equation form requires the architecture-side excerpt that is
+not yet built.}}:
+\begin{equation}
+  \mathbf{g}_t' \;=\; W_g\,\mathbf{x}_t + \mathbf{b},
+  \qquad
+  b_e \;\leftarrow\; b_e + \gamma\,(\bar{f} - f_e),
+  \quad \bar{f} = 1/E,
+  \label{eq:moe-aux-free}
+\end{equation}
+with $\gamma$ a small step size. Overloaded experts get $b_e$
+decreased so future tokens go elsewhere; underloaded experts get
+$b_e$ increased. Since $\mathbf{b}$ shifts the \emph{selection}
+logits but not the renormalized gate $p_{t,e}$ in
+Eq.~\eqref{eq:moe-gate}, the contribution magnitudes stay
+clean. DeepSeek-V3 reports this strategy recovers the LM quality
+that high-$\alpha$ auxiliary loss would
+sacrifice~\citep[abstract]{deepseek-v3}.
+
+\subsection{DeepSeekMoE: fine-grained experts and a shared expert}
+\label{sec:ffn-fine-grained}
+
+\citet{deepseekmoe2024} push two changes against the
+Switch/Mixtral design point: \emph{fine-grained experts} (many narrow
+experts in place of few wide ones) and a \emph{shared expert} that
+processes every
+token~\citep{deepseekmoe2024}\footnote{KB note:
+\texttt{kb/notes/architecture/moe.md\#sec-3-1,\#sec-3-2}. \deepencite{deepseekmoe2024
+\S 3 (fine-grained segmentation: split each expert into $m$
+narrower experts of width $d_{\text{ff}}/m$ and select $mk$ rather
+than $k$) --- excerpt file not yet built; arithmetic of
+combinatorial set count $\binom{E}{k}$ verified against the
+DeepSeek-V2/V3 reported $E$, $k$.}}.
+
+\paragraph{Fine-grained segmentation.}
+A coarse Mixtral expert at $d_{\text{ff}} = \tfrac{8}{3}\mathsf{D}$ is
+replaced by $m$ narrower experts of width $d_{\text{ff}}/m$; the
+top-$k$ selection becomes top-$mk$. Active per-token compute is held
+fixed (the $m$ scaling cancels), but the number of distinct activated
+combinations $\binom{E}{mk}$ grows combinatorially. Concretely:
+Mixtral has $\binom{8}{2} = 28$ active sets; DeepSeek-V2 with
+$E = 160$, $k = 6$ has $\binom{160}{6} \approx 2 \times 10^{10}$;
+DeepSeek-V3 with $E = 256$, $k = 8$ has
+$\binom{256}{8} \approx 4 \times 10^{14}$. The argument is that
+combinatorial expressiveness of the active set --- which functions
+the layer can dynamically assemble from its experts --- scales with
+this count, so finer experts at fixed active compute give more
+\emph{flexible specialization} per token.
+
+\paragraph{Shared expert as residual.}
+Layered alongside the $E$ routed experts is a small set $E_s$ of
+\emph{shared} experts that process \emph{every} token unconditionally.
+With $E_s = 1$ (the DeepSeek-V3 choice) the layer becomes
+\begin{equation}
+  \mathrm{MoE}^{\text{DS}}(\mathbf{x}_t)
+  \;=\;
+  \mathrm{FFN}_{\text{shared}}(\mathbf{x}_t)
+  \;+\; \sum_{e \in \mathcal{T}_t} p_{t,e}\,\mathrm{FFN}_e(\mathbf{x}_t),
+  \label{eq:deepseek-moe}
+\end{equation}
+with $|\mathcal{T}_t| = k$ routed experts selected by
+Eq.~\eqref{eq:moe-router}--\eqref{eq:moe-gate} and the shared expert
+$\mathrm{FFN}_{\text{shared}}$ contributing unconditionally. The
+shared term is structurally a \emph{residual within the FFN
+sublayer}: it provides the always-on common-knowledge component that
+the routed experts no longer have to redundantly learn. The motivation
+is that without a shared expert, each routed expert is forced to
+re-learn token-level features that every token needs (basic syntax,
+general vocabulary), wasting capacity that could be spent on
+specialization. Eq.~\eqref{eq:deepseek-moe} factorizes that into
+``shared $+$ specialized.''
+
+\paragraph{Frontier-2026 instances.}
+DeepSeek-V3 ships $E = 256$ routed, $E_s = 1$ shared, $k = 8$ active,
+totaling $9$ active experts per token from $257$ total per
+layer~\citep[abstract,
+\S 2]{deepseek-v3}\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-v3-training.md\#abstract}.}. With $671\mathrm{B}$
+total parameters and $37\mathrm{B}$ activated per token, the
+parameter-to-active ratio is $\approx 18\!:\!1$ ---
+the largest such ratio shipped at frontier as of
+2026-Q2. \citet{qwen3} ship $E = 128$, $E_s = 0$, $k = 8$ in
+Qwen3-235B with $22\mathrm{B}$ active, deliberately dropping shared
+experts and replacing them with a global-batch load-balancing
+loss~\citep{qwen3}.
+
+\subsection{Frontier-2026 choice landscape}
+\label{sec:ffn-frontier}
+
+The dense-vs-MoE split in 2026 is no longer a question of
+\emph{whether} to do MoE at frontier scale --- the answer is yes ---
+but of \emph{how}. Three concrete design points coexist
+in publicly-disclosed frontier
+models~\citep{meta-llama3,meta-llama4,deepseek-v3,qwen3,mixtral2024}:
+\begin{itemize}
+\item \textbf{Dense at moderate scale.} LLaMA-3 8B and 70B remain
+    fully dense SwiGLU FFNs at every layer~\citep{meta-llama3}; the
+    open-weights ecosystem retains a single dense codepath through
+    the small/medium tier.
+\item \textbf{Coarse MoE.} Mixtral 8$\times$7B and 8$\times$22B keep
+    $E = 8$, $k = 2$, no shared expert, classical
+    auxiliary-loss balancing~\citep{mixtral2024}; every layer is MoE.
+\item \textbf{Fine-grained MoE with shared expert.} DeepSeek-V3 with
+    $E = 256$, $E_s = 1$, $k = 8$, auxiliary-loss-free balancing,
+    every FFN sublayer except the first is
+    MoE~\citep{deepseek-v3}; the V2/V3 lineage is the most
+    aggressive parameter-to-active ratio shipped.
+\item \textbf{Fine-grained MoE without shared expert.} Qwen3 with
+    $E = 128$, $E_s = 0$, $k = 8$, global-batch load
+    balancing~\citep{qwen3}.
+\item \textbf{LLaMA-4 hybrid.} Scout and Maverick alternate dense and
+    MoE FFN sublayers, with $E = 16$ (Scout) or $E = 128$ (Maverick),
+    $E_s = 1$, $k = 1$ ~\citep{meta-llama4}.
+\end{itemize}
+The two structural primitives common to every MoE in this list ---
+SwiGLU experts and a learned softmax router with top-$k$ ---
+are the same primitives Switch fixed in 2021. What evolved is the
+\emph{granularity} ($E$ from 8 to 256), the \emph{shared-expert}
+position, and the \emph{load-balancing} discipline (aux-loss $\to$
+aux-loss-free $\to$ global-batch).
+
+\begin{contradiction}
+The empirical claim that fine-grained MoE matches dense
+quality at \emph{matched active-parameter count} is the most
+load-bearing and least-replicated assertion in this section. \citet{deepseek-v3}
+report DeepSeek-V3 ($37\mathrm{B}$ active) tracking or exceeding
+LLaMA-3 405B (dense) on benchmark
+suites~\citep[abstract]{deepseek-v3}; \citet{deepseekmoe2024}
+make a similar matched-active-FLOPs claim at smaller scale.
+Independent third-party reproductions at frontier scale are sparse as
+of 2026-Q2: most public head-to-head numbers come from the
+DeepSeek/Qwen labs themselves or from secondary aggregators. \citet{qwen3}
+explicitly disagree with \citet{deepseek-v3} on whether shared
+experts are net beneficial, dropping $E_s$ to zero and reporting
+comparable quality with global-batch balancing. Treat the
+``MoE matches dense at matched active params'' claim as
+\emph{strongly supported by primary sources, weakly cross-validated
+by independent reproductions} until 2027-class non-DeepSeek/Qwen
+frontier MoE training runs publish their gap numbers.
+\deepencite{matched-active MoE-vs-dense quality at frontier scale ---
+no published independent third-party head-to-head as of 2026-Q2.}
+\end{contradiction}
+
+\subsection{Forward link}
+\label{sec:ffn-forward}
+
+Two structural decisions of this section --- SwiGLU as the per-expert
+FFN and a softmax-routed top-$k$ wrapper around it --- are now
+independent of the surrounding block. The next axis
+(\cref{sec:normalization-axis}) is what surrounds the FFN in the
+residual stream: which normalization is applied, and whether it sits
+before the sublayer (Pre-LN), after it (Post-LN), or wraps it
+(Peri-LN). The frontier-2026 stack composes a routed SwiGLU MoE
+of \cref{eq:deepseek-moe} with the RMSNorm + Pre-LN +
+$1/\sqrt{N}$-init bundle of \cref{sec:normalization-axis}; the FFN
+choices made here forward-determine which normalization placements
+remain stable, because the residual stream's per-block variance budget
+is shared between attention and FFN
+sublayers~\citep{xiong2020}.

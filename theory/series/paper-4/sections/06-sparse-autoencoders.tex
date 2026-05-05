@@ -1,0 +1,319 @@
+% Paper 4, §6 — Sparse autoencoders: the unsupervised feature framing
+% Thesis: SAEs commit to features as sparse linear directions in residual
+% space. TopK (Gao 2024) and JumpReLU (Rajamanoharan 2024) are the
+% production-grade variants; Gemma Scope is the open-suite scale
+% demonstration; transcoders bridge the framing into circuit analysis.
+
+\section{Sparse autoencoders}
+\label{sec:sparse-autoencoders}
+
+A sparse autoencoder (SAE) makes a specific commitment about what a
+feature \emph{is}: a direction $\mathbf{d}_i \in \mathbb{R}^n$ in
+activation space such that, on any given input, the activation
+$\mathbf{x}$ is well-approximated by a sparse linear combination of a
+small subset of such directions drawn from an overcomplete dictionary
+$\{\mathbf{d}_i\}_{i=1}^M$ with $M \gg n$. The commitment is strong —
+features are linear, additive, and identifiable from activations alone
+without supervision — and the methodological payoff is that activations
+acquire an addressable, named basis on which downstream interpretability
+work (probing, patching, circuit tracing) can land. This section covers
+the two production-grade architectures (Top-K \citep{gao2024-topk-saes},
+JumpReLU \citep{rajamanoharan2024-jumprelu}), the open scale
+demonstration (Gemma Scope \citep{gemma-scope-2024}), and the structural
+cousin (transcoders \citep{dunefsky2024-transcoders}) that carries the
+framing into the circuit-tracing pipeline of \S\ref{sec:circuits}. The
+canonicality question raised by these commitments is taken up in
+\S\ref{sec:sae-canonical}.
+
+\subsection{The framing: dictionary learning on activations}
+\label{sec:sae-framing}
+
+Given an activation $\mathbf{x} \in \mathbb{R}^n$ — typically the
+residual stream at some layer $\ell$, or an MLP/attention-output vector
+— an SAE is a pair of an encoder and a decoder
+\citep[\S 2, Eq.~1--2]{rajamanoharan2024-jumprelu}\footnote{KB excerpt:
+\texttt{kb/excerpts/rajamanoharan2024-jumprelu.md\#sec-2}.}:
+\begin{align}
+  \mathbf{f}(\mathbf{x}) &:= \sigma\!\left(\mathbf{W}_{\text{enc}}\,\mathbf{x} + \mathbf{b}_{\text{enc}}\right),
+  \label{eq:sae-encoder}\\
+  \hat{\mathbf{x}}(\mathbf{f}) &:= \mathbf{W}_{\text{dec}}\,\mathbf{f} + \mathbf{b}_{\text{dec}},
+  \label{eq:sae-decoder}
+\end{align}
+where $\mathbf{W}_{\text{enc}} \in \mathbb{R}^{M \times n}$,
+$\mathbf{W}_{\text{dec}} \in \mathbb{R}^{n \times M}$, and the encoder
+activation $\sigma$ is the architectural choice that defines the SAE
+family. The columns of $\mathbf{W}_{\text{dec}}$, written
+$\mathbf{d}_i$, are the \emph{decoder feature directions}; the
+expansion factor $M / n$ is typically $8$--$1000$. The training
+objective always combines reconstruction and sparsity:
+\begin{equation}
+  \mathcal{L}(\mathbf{x})
+  \;=\;
+  \underbrace{\|\mathbf{x} - \hat{\mathbf{x}}(\mathbf{f}(\mathbf{x}))\|_2^2}_{\mathcal{L}_{\text{reconstruct}}}
+  \;+\;
+  \mathcal{L}_{\text{sparsity}}.
+  \label{eq:sae-loss}
+\end{equation}
+The sparsity term and the activation $\sigma$ jointly determine the
+position the SAE occupies on the $L_0$-vs-reconstruction Pareto
+frontier, and that frontier is, empirically, the only training axis
+that matters: every modern SAE family is an attempt to push the
+Pareto curve down-and-left at fixed compute
+\citep[\S 1]{rajamanoharan2024-jumprelu}.
+
+The original recipe of \citet{templeton2024-scaling-monosemanticity}
+following \citet{gao2024-topk-saes}'s baseline uses ReLU encoder with
+an $\ell_1$ sparsity penalty $\lambda \|\mathbf{f}\|_1$
+\citep[\S 2.2, Eq.~1]{gao2024-topk-saes}\footnote{KB excerpt:
+\texttt{kb/excerpts/gao2024-topk-saes.md\#sec-2-2-baseline}.}. Two
+known issues motivate the TopK and JumpReLU successors. First,
+\emph{shrinkage}: $\ell_1$ biases all positive activations toward zero,
+so reconstructions systematically underestimate true feature
+magnitudes \citep[\S 2.3]{gao2024-topk-saes}. Second,
+\emph{reparameterization non-invariance}: scaling encoder rows up and
+decoder columns down preserves $\mathbf{W}_{\text{dec}}\mathbf{f}$ but
+changes $\|\mathbf{f}\|_1$, so the $\ell_1$ penalty is degenerate
+without a unit-norm constraint on $\mathbf{d}_i$
+\citep[\S 3]{rajamanoharan2024-jumprelu}.
+
+\subsection{Top-K SAEs (Gao et al.\ 2024)}
+\label{sec:sae-topk}
+
+\citet{gao2024-topk-saes} replace the ReLU+$\ell_1$ recipe with a
+$k$-sparse activation \citep[after][]{gao2024-topk-saes}: keep the
+top-$K$ pre-activations, zero the rest. The encoder becomes
+\citep[\S 2.3, Eq.~2]{gao2024-topk-saes}\footnote{KB excerpt:
+\texttt{kb/excerpts/gao2024-topk-saes.md\#sec-2-3}.}
+\begin{equation}
+  \mathbf{f}(\mathbf{x}) \;=\; \mathrm{TopK}\!\left(\mathbf{W}_{\text{enc}}(\mathbf{x} - \mathbf{b}_{\text{pre}})\right),
+  \label{eq:topk}
+\end{equation}
+and because the sparsity is enforced exactly --- $L_0 = K$ at every
+token by construction --- the loss reduces to
+$\mathcal{L} = \|\mathbf{x} - \hat{\mathbf{x}}\|_2^2$ with the $\ell_1$
+penalty removed entirely. The four claimed benefits are direct
+consequences of this design choice
+\citep[\S 2.3]{gao2024-topk-saes}: (i) no shrinkage bias from $\ell_1$;
+(ii) $L_0$ is set directly rather than tuned via $\lambda$, simplifying
+sweeps and model comparison; (iii) the empirical sparsity-reconstruction
+frontier improves over ReLU+$\ell_1$, with the gap widening at scale
+\citep[Fig.~2b]{gao2024-topk-saes}; (iv) clamping small activations to
+zero increases the monosemanticity of random activating examples
+\citep[\S 4.3]{gao2024-topk-saes}.
+
+The cost is the \emph{dead-latent problem}: at large $M$, latents that
+fail to fire early in training never recover. \citet{gao2024-topk-saes}
+report that without mitigation, ``up to 90\% dead
+latents''~\citep[\S 2.4]{gao2024-topk-saes} appear at the largest
+scales\footnote{KB excerpt:
+\texttt{kb/excerpts/gao2024-topk-saes.md\#sec-2-4}.}. Two ingredients
+fix it: encoder rows are initialized as the transpose of decoder
+columns; and an auxiliary ``AuxK'' loss models the residual
+reconstruction error using the top-$k_{\text{aux}}$ \emph{dead}
+latents, forcing them to reactivate. With these, even a
+$16$M-latent SAE on GPT-4 residual-stream activations trained for $40$B
+tokens keeps only $7\%$ of latents
+dead~\citep[\S 1, \S 2.4]{gao2024-topk-saes}\footnote{KB excerpt:
+\texttt{kb/excerpts/gao2024-topk-saes.md\#sec-1-headline}.}. Optimal
+compute follows a clean power law $L(C) = 0.09 + 0.056\,C^{-0.084}$ on
+the MSE-vs-compute frontier \citep[Fig.~1, \S 3]{gao2024-topk-saes}, so
+the top-K family scales predictably to GPT-4-class models.
+
+\subsection{JumpReLU SAEs (Rajamanoharan et al.\ 2024)}
+\label{sec:sae-jumprelu}
+
+\citet{rajamanoharan2024-jumprelu} take a different route to the same
+goal: replace ReLU with a learned-threshold step,
+\begin{equation}
+  \mathrm{JumpReLU}_{\boldsymbol{\theta}}(z) \;:=\; z\,H(z - \theta),
+  \label{eq:jumprelu}
+\end{equation}
+where $H$ is the Heaviside step function and
+$\boldsymbol{\theta} \in \mathbb{R}^M_+$ is a \emph{per-feature learned
+threshold} below which encoder pre-activations are set to zero
+\citep[\S 2, Eq.~4]{rajamanoharan2024-jumprelu}\footnote{KB excerpt:
+\texttt{kb/excerpts/rajamanoharan2024-jumprelu.md\#sec-2-activations}.}.
+The full SAE encoder is
+$\mathbf{f}(\mathbf{x}) := \mathrm{JumpReLU}_{\boldsymbol{\theta}}(\mathbf{W}_{\text{enc}}\mathbf{x} + \mathbf{b}_{\text{enc}})$
+\citep[\S 3, Eq.~8]{rajamanoharan2024-jumprelu}, and sparsity is
+trained directly via an $L_0$ penalty rather than its $\ell_1$ proxy:
+\begin{equation}
+  \mathcal{L}(\mathbf{x})
+  \;=\;
+  \|\mathbf{x} - \hat{\mathbf{x}}(\mathbf{f}(\mathbf{x}))\|_2^2
+  \;+\;
+  \lambda\,\|\mathbf{f}(\mathbf{x})\|_0.
+  \label{eq:jumprelu-loss}
+\end{equation}
+Equation~\eqref{eq:jumprelu-loss} is non-differentiable both in
+$\boldsymbol{\theta}$ (because of $H$) and in $\|\cdot\|_0$, which
+\citet{rajamanoharan2024-jumprelu} resolve with
+\emph{straight-through estimators}: the backward pass replaces the
+discontinuous derivative with a kernel-density-estimated surrogate of
+the derivative of the expected loss, separately for $\boldsymbol{\theta}$
+and for the $L_0$ term \citep[\S 3]{rajamanoharan2024-jumprelu}. The
+key design point is that this avoids the shrinkage bias of $\ell_1$
+entirely while keeping the encoder elementwise --- no partial sort, no
+batchwise communication --- so a JumpReLU SAE trains as cheaply as a
+plain ReLU SAE.
+
+The empirical headline: at any fixed sparsity level on Gemma 2 9B
+residual-stream, MLP-output, and attention-output activations, JumpReLU
+SAEs ``provide reconstructions that are at least as good as, and often
+slightly better than, TopK SAEs'' and consistently dominate Gated SAEs
+\citep[\S 1]{rajamanoharan2024-jumprelu}\footnote{KB excerpt:
+\texttt{kb/excerpts/rajamanoharan2024-jumprelu.md\#sec-1-pareto}.}. The
+caveat is interpretability, not reconstruction: both TopK and JumpReLU
+produce a small fraction of \emph{high-frequency} latents (firing on
+$>10\%$ of tokens, fewer than $0.06\%$ of a $131$K-width SAE) which
+manual ratings find systematically less interpretable
+\citep[\S 1]{rajamanoharan2024-jumprelu}\footnote{KB excerpt:
+\texttt{kb/excerpts/rajamanoharan2024-jumprelu.md\#sec-1-caveat}.}.
+Pareto-winning on reconstruction-at-fixed-sparsity does not imply
+Pareto-winning on per-feature interpretability.
+
+\begin{intuition}
+A sparse autoencoder is a search for the directions in activation space
+such that most points use only $K$ of them. The encoder asks ``which
+$K$ dictionary atoms best explain this activation?''; the decoder
+reassembles the activation as a $K$-sparse linear combination
+$\hat{\mathbf{x}} = \sum_{i \in S(\mathbf{x})} f_i\,\mathbf{d}_i$ with
+$|S(\mathbf{x})| = K$. The choice of activation $\sigma$ in
+Eq.~\eqref{eq:sae-encoder} is the choice of \emph{how} to enforce that
+$K$: TopK does it by argmax (exactly $K$ active per token); JumpReLU
+does it by a learned per-feature threshold (approximately $K$ on
+average, learned). Both reduce to the same canonical form
+$\hat{\mathbf{x}} = \sum_i f_i\,\mathbf{d}_i$ with $\mathbf{f}$
+sparse --- the dictionary-learning math of
+Eq.~\eqref{eq:sae-encoder}--\eqref{eq:sae-decoder}.
+\end{intuition}
+
+\subsection{Gemma Scope: the open scale demonstration}
+\label{sec:sae-gemma-scope}
+
+Until 2024, large-scale SAE work was largely Anthropic-internal
+(\citealp{templeton2024-scaling-monosemanticity} on Claude 3 Sonnet)
+or OpenAI-internal (\citealp{gao2024-topk-saes} on GPT-4). \emph{Gemma
+Scope} \citep{gemma-scope-2024} is the open-release inflection: a
+suite of JumpReLU SAEs trained on \emph{all} layers and sublayers ---
+residual stream, MLP output, attention output --- of Gemma 2 2B and
+9B base models, plus selected layers of Gemma 2 27B. The release
+contains ``more than 400 sparse autoencoders in the main release, with
+more than 30 million learned features in total''
+\citep[\S 1]{gemma-scope-2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/gemma-scope-2024.md\#sec-1}.}, trained on
+$4$--$16$B tokens each at widths $\{16.4\text{K}, 65.5\text{K},
+131\text{K}, 1\text{M}\}$. The compute headline:
+\begin{quote}
+\itshape
+We used over 20\% of the training compute of GPT-3 (Brown et al., 2020),
+saved about 20 Pebibytes (PiB) of activations to disk, and produced
+hundreds of billions of sparse autoencoder parameters in
+total~\citep[\S 1]{gemma-scope-2024}.
+\end{quote}
+The justification for breadth is methodological:
+\citet[\S 1]{gemma-scope-2024} argue that
+``a comprehensive suite is essential for enabling more ambitious
+applications of interpretability, such as circuit analysis,'' which
+require feature dictionaries at every site through which causal
+information flows.
+
+A load-bearing implementation detail for the cross-method work in
+\S\ref{sec:circuits}: \citet[\S 4.1]{gemma-scope-2024} report that
+delta-loss is consistently higher for residual-stream SAEs than for
+MLP- or attention-sublayer SAEs at matched FVU, because
+``even small errors in reconstructing the residual stream can have a
+significant impact on LM loss, whereas relatively large errors in
+reconstructing a single MLP or attention sub-layer's output have a
+limited impact on the LM loss'' \citep[\S 4.1]{gemma-scope-2024}.
+Residual SAEs sit on the model's communication bus and any
+reconstruction error compounds; sublayer SAEs sit on additive
+contributions and absorb error locally. Circuit-analysis work that
+re-inserts SAE reconstructions in place of the original activations
+must account for this: residual-SAE reconstructions are the
+high-leverage failure mode.
+
+The release explicitly disclaims a converged evaluation framework:
+``as of now there is no consensus on what constitutes a reliable metric
+for the quality of a sparse autoencoder or its learned latents and
+[\dots] this is an ongoing area of research and debate''
+\citep[\S 4]{gemma-scope-2024}. Gemma Scope reports several metrics
+(delta-loss, FVU, downstream-task evaluation) precisely because no
+single one is canonical --- a frontier point we develop in
+\S\ref{sec:sae-canonical}.
+
+\subsection{Transcoders: from feature decomposition to circuit primitive}
+\label{sec:sae-transcoders}
+
+A \emph{transcoder} \citep{dunefsky2024-transcoders} is structurally an
+SAE but trained on a different objective: rather than reconstructing an
+activation, it learns to mimic an MLP sublayer's input-to-output
+mapping with a sparse hidden representation in between. The
+architecture
+\citep[\S 3.1, Eq.~3--5]{dunefsky2024-transcoders}\footnote{KB excerpt:
+\texttt{kb/excerpts/dunefsky2024-transcoders.md\#sec-3-1}.} is:
+\begin{align}
+  \mathbf{z}_{\text{TC}}(\mathbf{x})
+  &= \mathrm{ReLU}\!\left(\mathbf{W}_{\text{enc}}\,\mathbf{x} + \mathbf{b}_{\text{enc}}\right),
+  \label{eq:transcoder-encoder}\\
+  \mathrm{TC}(\mathbf{x})
+  &= \mathbf{W}_{\text{dec}}\,\mathbf{z}_{\text{TC}}(\mathbf{x}) + \mathbf{b}_{\text{dec}},
+  \label{eq:transcoder-decoder}
+\end{align}
+trained against the MLP function the transcoder is meant to replace:
+\begin{equation}
+  \mathcal{L}_{\text{TC}}(\mathbf{x})
+  \;=\;
+  \underbrace{\|\mathrm{MLP}(\mathbf{x}) - \mathrm{TC}(\mathbf{x})\|_2^2}_{\text{faithfulness}}
+  \;+\;
+  \lambda_1\,\|\mathbf{z}_{\text{TC}}(\mathbf{x})\|_1.
+  \label{eq:transcoder-loss}
+\end{equation}
+The structural difference from an SAE is one substitution in the
+faithfulness term: an SAE-on-MLP-output minimizes
+$\|\mathrm{MLP}(\mathbf{x}) - \hat{\mathbf{x}}\|_2^2$ where
+$\hat{\mathbf{x}}$ depends on the \emph{post}-MLP activation, and so
+the SAE's feature dictionary is a decomposition of that
+\emph{specific} activation. A transcoder's $\mathrm{TC}(\mathbf{x})$
+depends on the \emph{pre}-MLP input $\mathbf{x}$, and so its feature
+dictionary is a decomposition of the MLP \emph{function}, not its
+particular output \citep[\S 1]{dunefsky2024-transcoders}\footnote{KB
+excerpt: \texttt{kb/excerpts/dunefsky2024-transcoders.md\#sec-1-comparison}.}.
+
+The methodological consequence \citep[\S 1]{dunefsky2024-transcoders}:
+the connection from a pre-MLP feature $f_i$ (associated with decoder
+column $\mathbf{d}_i$) to a post-transcoder feature $f_j$ (associated
+with encoder row $\mathbf{e}_j$) factorizes into an
+\emph{input-dependent} term (the activations $f_i(\mathbf{x})$ and
+$f_j(\mathbf{x})$ at the input of interest) and an \emph{input-invariant}
+term (the bilinear weight product
+$\mathbf{e}_j^\top\mathbf{d}_i$ that holds for any input). This is the
+factorization that the cross-layer transcoder of
+\citet{lindsey2025-circuit-tracing} generalizes to skip-layer feature
+flow, and it is the architectural primitive on which the
+attribution-graph construction of \S\ref{sec:circuit-attribution} is
+built. As an analytical tool, transcoders bridge two questions: SAEs
+ask ``what features are present in an activation?''; transcoders ask
+``what features does this MLP \emph{compute}, and how do they depend
+on its inputs?''. The latter is the question circuit analysis needs
+answered.
+
+\subsection{Forward link: are these features canonical?}
+\label{sec:sae-forward}
+
+The architectures of this section --- ReLU+$\ell_1$, Top-K, JumpReLU,
+and transcoders --- give us a working pipeline for converting
+polysemantic neuron-basis activations into a sparse, named feature
+basis at scale. What they do not give us, on their own, is a guarantee
+that the basis is unique. Two independent SAE training runs at
+different widths $M$ on the same activations may produce different
+feature inventories \citep{leask2025-sae-not-canonical}; a feature in
+a wider SAE may decompose into a combination of features in a narrower
+one (\emph{non-atomicity}); features present in a wider SAE may have no
+counterparts in the narrower (\emph{incompleteness}). The
+``true features'' framing implicit in
+\citet{templeton2024-scaling-monosemanticity} treats SAE features as
+the model's underlying units of computation; the
+\citet{leask2025-sae-not-canonical} critique argues this is unwarranted.
+Section~\ref{sec:sae-canonical} takes up the canonicality question
+directly, both for SAEs and for the transcoders that inherit it.

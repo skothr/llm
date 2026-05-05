@@ -1,0 +1,576 @@
+% Paper 2, §3 — Scaling laws
+% Anchors: kb/notes/scaling/{kaplan-laws,chinchilla,scaling-frontier,mu-transfer}.md
+%          kb/excerpts/{kaplan2020,hoffmann2022-chinchilla,yang2022-mup,
+%                       scaling-laws-precision-2024,meta-llama3,meta-llama4,
+%                       deepseek-v3-training,qwen3,gemini2-5}.md
+
+\section{Scaling laws}
+\label{sec:scaling-laws}
+
+A scaling law is a fitted functional form $L(N, D, C)$ relating
+cross-entropy loss to parameter count, training tokens, and training
+compute, together with a closed-form recipe for how to spend a fixed
+$C$ across $N$ and $D$. The fitted form is empirical; the recipe is
+prescriptive; the two are routinely conflated, and most of the
+``Kaplan-vs-Chinchilla'' confusion in 2022--2024 was conflation. The
+thesis of this section is that the \emph{functional forms} from
+\citet{kaplan2020} and \citet{hoffmann2022-chinchilla} are essentially
+agreed; the \emph{compute-allocation prescription} flipped from
+``train very large models, stop well short of convergence''
+\citep[\S 1.1]{kaplan2020} to ``scale parameters and tokens equally''
+\citep[\S 3.4]{hoffmann2022-chinchilla} on the strength of one
+methodological correction (matching the LR-schedule horizon to the
+actual training-token count); and the \emph{frontier-2026 practice}
+sits an order of magnitude beyond Chinchilla on tokens-per-parameter
+because inference cost has displaced pre-training cost as the dominant
+objective \citep[\S 3.2]{deepseek-v3}. We then layer on
+\textmu-Transfer \citep{yang2022-mup} as the hyperparameter-transfer
+technology that makes any of these recipes tunable at frontier scale,
+and the precision-aware extension of
+\citet{scaling-laws-precision-2024} as the open precision $\times$ data
+trade-off that the over-training strategy collides with.
+
+The compute approximation we will use throughout is the
+\citet[\S 2.1, eq.\ 2.1]{kaplan2020}\footnote{KB excerpt:
+\texttt{kb/excerpts/kaplan2020.md\#sec-2-1-definitions}.} per-token
+forward FLOP count $C_{\text{forward}} \approx 2N$, with the backward
+pass roughly twice the forward, summing to
+\begin{equation}
+C \;\approx\; 6\,N\,D \quad \text{FLOPs}
+\label{eq:6nd}
+\end{equation}
+total non-embedding training compute, valid when $d_{\text{model}}
+\gtrsim n_{\text{ctx}}/12$ \citep[\S 2.1]{kaplan2020}. Every scaling
+result in this section is stated against \cref{eq:6nd}.
+
+\subsection{Kaplan power laws}
+\label{sec:scaling-kaplan}
+
+\citet{kaplan2020} fitted decoder-only Transformer LMs on WebText2
+across $N \in [768,\, 1.5 \times 10^9]$ non-embedding parameters and
+$D \in [22\text{M},\, 23\text{B}]$ tokens, GPT-2 BPE tokenizer,
+context length $1024$, Adam (Adafactor at $N > 1\text{B}$), and a
+cosine LR schedule with $3000$-step warmup decaying to zero
+\citep[\S 2.2]{kaplan2020}. The headline finding is that
+cross-entropy loss obeys a \emph{power law} in each of $N, D, C_{\min}$
+when the other two are not the bottleneck.
+
+\paragraph{The three single-axis laws.}
+Verbatim from \citet[\S 1.2, eqs.\ 1.1--1.3]{kaplan2020}\footnote{KB
+excerpt: \texttt{kb/excerpts/kaplan2020.md\#sec-1-2-equations}.}:
+\begin{align}
+L(N) &\;=\; \left(\frac{N_c}{N}\right)^{\alpha_N},
+   & \alpha_N \approx 0.076,\;\; N_c \approx 8.8 \times 10^{13}, \tag{1.1} \\
+L(D) &\;=\; \left(\frac{D_c}{D}\right)^{\alpha_D},
+   & \alpha_D \approx 0.095,\;\; D_c \approx 5.4 \times 10^{13}, \tag{1.2} \\
+L(C_{\min}) &\;=\; \left(\frac{C_c^{\min}}{C_{\min}}\right)^{\alpha_C^{\min}},
+   & \alpha_C^{\min} \approx 0.050,\;\; C_c^{\min} \approx 3.1 \times 10^{8}\,\text{PF-days}. \tag{1.3}
+\end{align}
+Here $N$ counts \emph{non-embedding} parameters
+\citep[\S 1.3]{kaplan2020},\footnote{KB excerpt:
+\texttt{kb/excerpts/kaplan2020.md\#sec-1-3-notation}.}
+$D$ is tokens, $C_{\min}$ is the compute that would be expended at a
+batch much smaller than the critical-batch power-law $B_{\text{crit}}(L)$
+\citep[\S 5.1]{kaplan2020}. The exponents are small: $\alpha_N \approx
+0.076$ means doubling $N$ at fixed $D$ improves loss by a factor
+$2^{-0.076} \approx 0.949$, i.e.\ $\approx 5\%$ relative.
+
+\paragraph{The joint $L(N, D)$ form.}
+The two single-axis laws are unified into a single equation
+\citep[\S 1.2, eq.\ 1.5]{kaplan2020}\footnote{KB excerpt:
+\texttt{kb/excerpts/kaplan2020.md\#sec-1-2-joint}.}:
+\begin{equation}
+L(N, D) \;=\; \left[\left(\frac{N_c}{N}\right)^{\alpha_N/\alpha_D} + \frac{D_c}{D}\right]^{\alpha_D}.
+\label{eq:kaplan-joint}
+\tag{1.5}
+\end{equation}
+The exponent combination $\alpha_N/\alpha_D \approx 0.74$ is what
+delivers Kaplan's sublinear-in-$N$ data prescription: to avoid the
+overfitting penalty, $D$ should grow as $D \propto N^{0.74}$
+\citep[\S 1.2]{kaplan2020}. Doubling $N$ requires only $\sim 1.67\times$
+more data.
+
+\paragraph{The compute-allocation rule.}
+Combined with the critical-batch power law and \cref{eq:6nd},
+\cref{eq:kaplan-joint} implies a closed-form for how a fixed compute
+budget $C_{\min}$ should be split across $N$, batch size $B$, and
+training steps $S$ \citep[\S 1.2, eqs.\ 1.7--1.8]{kaplan2020}:
+\begin{equation}
+N \propto C_{\min}^{\alpha_C^{\min}/\alpha_N}, \quad
+B \propto C_{\min}^{\alpha_C^{\min}/\alpha_B}, \quad
+S \propto C_{\min}^{\alpha_C^{\min}/\alpha_S}, \quad
+D = B \cdot S.
+\label{eq:kaplan-alloc}
+\tag{1.7}
+\end{equation}
+Plugging in the measured exponents \citep[\S 1.2]{kaplan2020}:
+\begin{equation}
+N \propto C_{\min}^{0.73}, \quad
+B \propto C_{\min}^{0.24}, \quad
+S \propto C_{\min}^{0.03}, \quad
+D \propto C_{\min}^{0.27}.
+\label{eq:kaplan-073}
+\end{equation}
+Reading: a $10\times$ compute budget should buy a $\sim 5.4\times$
+larger model, $\sim 1.7\times$ larger batch, and only $\sim 1.07\times$
+more steps --- almost no extra training time, dramatically more
+parameters. This is the prescription the GPT-3 generation took
+literally: $175\text{B}$ parameters trained on $\sim 300\text{B}$
+tokens, tokens-per-parameter $\approx 1.7$. Findings 1--3 of
+\citet[\S 1.1]{kaplan2020}\footnote{KB excerpt:
+\texttt{kb/excerpts/kaplan2020.md\#sec-1-1-bullets}.} (performance
+depends on scale not shape; smooth power laws over six orders of
+magnitude; universality of overfitting) are still considered correct.
+Finding~5 (``train very large, stop short of convergence'') is the one
+that flipped.
+
+\subsection{Chinchilla and the parametric loss}
+\label{sec:scaling-chinchilla}
+
+\citet{hoffmann2022-chinchilla} re-ran the scaling sweep with one
+methodological change: for each parameter count $N$, they trained $4$
+models with cosine LR schedules whose horizon \emph{matched the actual
+training-token count}, varying that horizon by a factor of $16$
+\citep[\S 3.1]{hoffmann2022-chinchilla}.\footnote{KB excerpt:
+\texttt{kb/excerpts/hoffmann2022-chinchilla.md\#sec-3-1}.} They then
+attacked the compute-optimal allocation problem
+\begin{equation}
+\min_{N, D} L(N, D) \quad \text{subject to} \quad 6 N D = C
+\label{eq:cc-problem}
+\end{equation}
+three independent ways and found the answers agreed within bootstrap
+error.
+
+\paragraph{Approach 1 --- minimum over training curves.}
+For each $N \in \{75\text{M}, 250\text{M}, 500\text{M}, 1\text{B},
+2.5\text{B}, 5\text{B}, 10\text{B}\}$, fit $4$ runs at $4$ different
+horizons; at $1500$ log-spaced FLOP values, find the $(N, D)$ pair
+with lowest loss. Fit power laws $N_{opt} \propto C^a$,
+$D_{opt} \propto C^b$, obtaining $a = 0.50$, $b = 0.50$
+\citep[\S 3.1]{hoffmann2022-chinchilla}.
+
+\paragraph{Approach 2 --- IsoFLOP profiles.}
+At $9$ fixed FLOP budgets $C \in [6 \times 10^{18},\, 3 \times 10^{21}]$,
+sweep $N$ and read off the loss-vs-$N$ parabola minimum to get
+$N_{opt}(C)$. Fit $a = 0.49$, $b = 0.51$
+\citep[\S 3.2]{hoffmann2022-chinchilla}.\footnote{KB excerpt:
+\texttt{kb/excerpts/hoffmann2022-chinchilla.md\#sec-3-2}.}
+
+\paragraph{Approach 3 --- parametric loss fit.}
+Pose a closed-form risk decomposition for the loss
+\citep[\S 3.3, eq.\ 2]{hoffmann2022-chinchilla}\footnote{KB excerpt:
+\texttt{kb/excerpts/hoffmann2022-chinchilla.md\#sec-3-3}.}:
+\begin{equation}
+\hat{L}(N, D) \;\triangleq\; E + \frac{A}{N^{\alpha}} + \frac{B}{D^{\beta}},
+\label{eq:cc-paraloss}
+\tag{2}
+\end{equation}
+verbatim from the paper. The first term $E$ is the irreducible loss
+(entropy of natural text on the eval distribution); $A/N^{\alpha}$ is
+the capacity-limited residual of a perfectly-trained $N$-parameter
+model; $B/D^{\beta}$ is the optimization-limited residual of finite
+training steps over a finite sample
+\citep[\S 3.3]{hoffmann2022-chinchilla}. Fit $(A, B, E, \alpha, \beta)$
+by L-BFGS on the Huber loss with $\delta = 10^{-3}$
+\citep[\S 3.3, eq.\ 3]{hoffmann2022-chinchilla}:
+\begin{equation}
+\min_{A,B,E,\alpha,\beta} \;\sum_{\text{Runs } i}
+   \mathrm{Huber}_\delta\!\left(\log \hat{L}(N_i, D_i) - \log L_i\right).
+\label{eq:cc-fit}
+\tag{3}
+\end{equation}
+Minimizing \cref{eq:cc-paraloss} under the $C \approx 6 N D$
+constraint yields the compute-optimal frontier in closed form
+\citep[\S 3.3, eq.\ 4]{hoffmann2022-chinchilla}:
+\begin{equation}
+N_{opt}(C) \;=\; G \!\left(\frac{C}{6}\right)^{a}, \qquad
+D_{opt}(C) \;=\; G^{-1}\!\left(\frac{C}{6}\right)^{b},
+\label{eq:cc-frontier}
+\tag{4}
+\end{equation}
+with
+\begin{equation}
+G \;=\; \left(\frac{\alpha A}{\beta B}\right)^{\!1/(\alpha + \beta)},
+\quad a \;=\; \frac{\beta}{\alpha + \beta}, \quad
+b \;=\; \frac{\alpha}{\alpha + \beta},
+\qquad a + b \;=\; 1\ \text{identically.}
+\label{eq:cc-abG}
+\end{equation}
+The split $(a, b)$ is the empirical question. Approach 3 gives
+$a = 0.46$, $b = 0.54$ \citep[\S 3.3]{hoffmann2022-chinchilla}.
+
+\paragraph{All three approaches agree, and disagree with Kaplan.}
+Table~\ref{tab:cc-table-2} summarizes
+\citep[\S 3, Table 2]{hoffmann2022-chinchilla}:\footnote{KB excerpt:
+\texttt{kb/excerpts/hoffmann2022-chinchilla.md\#sec-3-table-2}.}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Approach & $a$ ($N_{opt} \propto C^{a}$) & $b$ ($D_{opt} \propto C^{b}$) \\
+\midrule
+1.\ Minimum over training curves & $0.50$ \tiny{$(0.488, 0.502)$} & $0.50$ \tiny{$(0.501, 0.512)$} \\
+2.\ IsoFLOP profiles             & $0.49$ \tiny{$(0.462, 0.534)$} & $0.51$ \tiny{$(0.483, 0.529)$} \\
+3.\ Parametric $\hat{L}$ fit      & $0.46$ \tiny{$(0.454, 0.455)$} & $0.54$ \tiny{$(0.542, 0.543)$} \\
+\midrule
+\textbf{\citet{kaplan2020}}      & $\mathbf{0.73}$ & $\mathbf{0.27}$ \\
+\bottomrule
+\end{tabular}
+\caption{Three independent estimates of the compute-allocation
+exponents in $N_{opt} \propto C^{a}$, $D_{opt} \propto C^{b}$, all
+within bootstrap of $a \approx b \approx 1/2$, vs.\ Kaplan's
+$0.73/0.27$ split. Bracketed numbers are 10th/90th percentile
+bootstrap intervals. After
+\citet[\S 3, Table 2]{hoffmann2022-chinchilla}.}
+\label{tab:cc-table-2}
+\end{table}
+
+\paragraph{The 70B vs.\ 280B test.}
+\citet{hoffmann2022-chinchilla} fixed total compute at the Gopher
+budget ($\approx 5.76 \times 10^{23}$ FLOPs) and trained Chinchilla at
+$N = 70\text{B}$, $D = 1.4\text{T}$ (tokens-per-parameter $= 20$),
+versus Gopher at $N = 280\text{B}$, $D = 300\text{B}$ (tokens-per-
+parameter $\approx 1.07$) \citep[\S 4.1, Table 4]{hoffmann2022-chinchilla}.
+Same depth ($L = 80$); half the width ($d_{\text{model}}: 16384 \to
+8192$); doubled max LR; halved batch. Chinchilla beats Gopher on
+every Pile subset, +0.6\,pp average across BIG-bench, and lifts MMLU
+from 60.0\% to 67.5\% \citep[\S 4.2]{hoffmann2022-chinchilla}.\footnote{KB
+excerpt: \texttt{kb/excerpts/hoffmann2022-chinchilla.md\#sec-4-2}.}
+The headline rule of thumb falls out of \cref{eq:cc-frontier}'s Approach-1
+projection: tokens-per-parameter $\approx 20$ at compute optimum, with
+a slow drift toward more data at very large scale --- $20.0$ at $400$M,
+$20.2$ at $1$B, $21.1$ at $175$B, $21.2$ at $1$T \citep[\S 3, Table
+3]{hoffmann2022-chinchilla}.\footnote{KB excerpt:
+\texttt{kb/excerpts/hoffmann2022-chinchilla.md\#sec-3-table-3}.}
+
+\subsection{Why Kaplan over-allocated to parameters --- the LR-horizon bug}
+\label{sec:scaling-lrhorizon}
+
+The methodological core of \citeauthor{hoffmann2022-chinchilla}'s
+correction is one sentence \citep[\S 2]{hoffmann2022-chinchilla}\footnote{KB
+excerpt: \texttt{kb/excerpts/hoffmann2022-chinchilla.md\#sec-2-disagree-kaplan}.}:
+
+\begin{quote}
+For a fixed learning rate cosine schedule to 130B tokens, the
+intermediate loss estimates (for $D' \ll 130\text{B}$) are therefore
+overestimates of the loss of a model trained with a schedule length
+matching $D'$.
+\end{quote}
+
+In \citet{kaplan2020}'s sweep, every model was trained with a cosine
+LR decay reaching zero at a fixed total token horizon, regardless of
+how many tokens that individual run actually consumed
+\citep[\S 2.2]{kaplan2020}. The intermediate-loss readouts at $D'
+\ll 130\text{B}$ were therefore taken from a model whose LR was
+\emph{still high} --- mid-training, not at its endpoint. A model
+genuinely trained to $D'$ with an LR schedule that decays to zero at
+$D'$ achieves a lower final loss than the same model trained to $D'$
+with a $130\text{B}$-horizon schedule. Kaplan inferred his $L(D)$
+scaling from the latter, biased upward, runs.
+
+\begin{intuition}
+Kaplan's setup was, in effect, ``take a partially-trained model and
+ask how much loss is left.'' That penalizes smaller-$D$ runs because
+they are not yet at their LR-decay endpoint --- their loss is the
+loss of an in-progress run, not of a converged-to-its-token-budget
+run. The lesson is that what we measure is the loss \emph{at training
+endpoint}, where endpoint $\equiv$ end of LR schedule. Conflating
+``tokens consumed'' with ``training endpoint'' was the trap. Returning
+to canonical form: when \citet{hoffmann2022-chinchilla} matched the
+LR-decay horizon to $D'$ for every run in
+\cref{eq:cc-fit}, the apparent advantage of more-$N$-less-$D$ in
+\cref{eq:kaplan-073} disappeared and the exponents $(a, b)$ flipped
+from $(0.73, 0.27)$ to $\approx (0.50, 0.50)$.
+\end{intuition}
+
+The functional forms (1.1)--(1.5) are unaffected --- they fit either
+sweep --- but the \emph{numerical exponents} extracted from
+\cref{eq:kaplan-alloc} change qualitatively. This is the cleanest
+example we have in LLM scaling of an apparent recipe being driven by
+the optimization protocol, not by the architecture. Notation note:
+Kaplan's $N$ is non-embedding parameters
+\citep[\S 1.3]{kaplan2020}; Hoffmann's $N$ is total parameters; the
+constant offset is small at frontier scale (vocab embedding $\approx$
+$0.5\%$--$5\%$ of total) but matters when comparing exponents and
+constants across papers.
+
+\subsection{Frontier 2024--2026 --- past Chinchilla}
+\label{sec:scaling-frontier}
+
+The post-Chinchilla industry move is to train substantially smaller
+models on substantially more tokens than \cref{eq:cc-frontier}
+prescribes. Llama~3 8B was trained on $\approx 15\text{T}$ tokens
+\citep{meta-llama3}, giving tokens-per-parameter $\approx 1875$ ---
+roughly $94\times$ over the Chinchilla optimum (\cref{tab:frontier-NDC}).
+Llama~3 70B at the same $\approx 15\text{T}$-token budget is at
+$\approx 214$ tokens-per-parameter, $\sim 11\times$ over Chinchilla.
+DeepSeek-V3 trained $671\text{B}$ total / $37\text{B}$ active-MoE on
+$14.8\text{T}$ tokens \citep[\S 1, \S 2]{deepseek-v3}, putting active
+tokens-per-parameter at $\approx 400$.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Model & $N_{\text{active}}$ & $D$ (tokens) & $D / N_{\text{active}}$ & vs.\ Chinchilla \\
+\midrule
+Chinchilla 70B (2022)        & $70$B    & $1.4$T   & $20.0$  & $1.0\times$  \\
+Llama 2 70B (2023)           & $70$B    & $2$T     & $28.6$  & $1.4\times$  \\
+Llama 3 70B (2024)           & $70$B    & $\sim 15$T & $\sim 214$ & $\sim 11\times$ \\
+Llama 3 8B  (2024)           & $8$B     & $\sim 15$T & $\sim 1875$ & $\sim 94\times$ \\
+DeepSeek-V3 (2024) MoE       & $37$B    & $14.8$T  & $\sim 400$ & $\sim 20\times$ \\
+\bottomrule
+\end{tabular}
+\caption{Tokens-per-active-parameter for selected frontier-scale
+models, all post-Chinchilla. Llama 3 numbers from
+\citet{meta-llama3}; DeepSeek-V3 from \citet[\S 2]{deepseek-v3}; the
+Chinchilla baseline from \citet[\S 4.1]{hoffmann2022-chinchilla}. The
+``vs.\ Chinchilla'' column is $D / (20\,N_{\text{active}})$.}
+\label{tab:frontier-NDC}
+\end{table}
+
+\paragraph{Why over-train.}
+The objective Chinchilla optimizes is pre-training compute,
+$C_{\text{train}}$. The cost a deployed-model lab actually pays is
+\begin{equation}
+\text{Total cost} \;=\; C_{\text{train}} \;+\; N_{\text{queries-served}} \cdot C_{\text{inf-per-query}}.
+\label{eq:total-cost}
+\end{equation}
+When $N_{\text{queries-served}}$ is large --- consumer chat products,
+API serving --- the second term dominates, and the optimum shifts
+toward smaller $N$ (lower $C_{\text{inf-per-query}}$) with proportionally
+more $D$. Llama 3 8B's $\sim 1875$ tokens-per-parameter is the endpoint
+of this re-objective for ``small dense model destined for billions of
+queries.'' Crucially, the Chinchilla parametric loss \cref{eq:cc-paraloss}
+\emph{still applies} along this trajectory: $\hat{L}(N, D)$ keeps
+decreasing in $D$ at fixed $N$, just sub-optimally on the
+$C_{\text{train}}$ margin. Over-training is not a refutation of
+Chinchilla; it is a different objective.
+
+\paragraph{Reasoning models as a second compute axis.}
+DeepSeek-R1 \citep{deepseek-r1}, the OpenAI o-series, and Gemini~2.5
+\citep{gemini2-5} demonstrated that test-time compute is now a
+deployable scaling axis: production reasoning models expose
+configurable thinking budgets (Gemini's \texttt{thinkingBudget}
+parameter; Qwen 3's thinking-mode toggle via system prompt
+\citep{qwen3}), running $5\!\times\!\!-\!\!100\!\times$ the
+non-thinking cost per query for hard math, code, and agent loops. The
+empirical surface for the joint $(C_{\text{train}}, C_{\text{test}})$
+trade-off is documented but no closed-form scaling law captures it
+across the multi-axis frontier as of 2026.
+
+\subsection{\textmu P and \textmu Transfer --- HP transfer across width}
+\label{sec:scaling-mup}
+
+A scaling recipe is only as useful as the hyperparameters fed to it.
+At frontier scale every full pretraining run costs millions of dollars,
+so iterating an HP sweep on the target model is intractable. The
+Maximal Update Parametrization (\textmu P) of \citet{yang2022-mup} is
+the parametrization in which optimal hyperparameters are
+\emph{width-invariant}, enabling \textmu Transfer: tune the master LR,
+Adam betas, schedule shape, and per-layer multipliers on a small proxy
+model, then copy them zero-shot to the full-scale target. The headline
+demonstration: tuning at $40\text{M}$ proxy scale and transferring to
+GPT-3 6.7B with total tuning cost equal to $7\%$ of one pretraining
+run \citep[abstract]{yang2022-mup}.\footnote{KB excerpt:
+\texttt{kb/excerpts/yang2022-mup.md\#abstract}.}
+
+\paragraph{The \textmu P scaling rules.}
+Each linear layer falls into one of three categories by width
+behavior: \emph{input weights and biases} (finite input dim, infinite
+output dim --- e.g.\ embeddings); \emph{output weights} (infinite
+input dim, finite output dim --- e.g.\ the unembedding head); and
+\emph{hidden weights} (infinite both --- e.g.\ attention QKV/O,
+FFN). \textmu P is exactly the per-category rescaling
+\citep[\S 4, Table 3]{yang2022-mup}\footnote{KB excerpt:
+\texttt{kb/excerpts/yang2022-mup.md\#sec-4-table-3}.}:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+                  & Input weights \& biases & Output weights         & Hidden weights \\
+\midrule
+Init.\ Var.       & $1/\text{fan\_in}$       & $\mathbf{1/\text{fan\_in}^{2}}$ & $1/\text{fan\_in}$ \\
+SGD LR            & $\mathbf{\text{fan\_out}}$ & $\mathbf{1/\text{fan\_in}}$    & $1$ \\
+Adam LR           & $1$                       & $\mathbf{1/\text{fan\_in}}$    & $\mathbf{1/\text{fan\_in}}$ \\
+\bottomrule
+\end{tabular}
+\caption{The \textmu P scaling rules. Bold cells are the differences
+from standard parametrization (SP), in which init variance is
+$1/\text{fan\_in}$ everywhere and the LR is uniform. After
+\citet[\S 4, Table 3]{yang2022-mup}.}
+\label{tab:mup-table-3}
+\end{table}
+
+The effective per-weight LR is $\eta_W = \eta \cdot
+(\text{Table~\ref{tab:mup-table-3} entry for } W)$ at width $n$, where
+$\eta$ is the dimensionless master LR transferred from the proxy.
+For Transformers, \textmu P adds one structural change
+\citep[\S 4, Definition 4.1]{yang2022-mup}\footnote{KB excerpt:
+\texttt{kb/excerpts/yang2022-mup.md\#sec-4-definition-4-1}.}:
+
+\begin{definition}[\textmu P for Transformer; \citealp{yang2022-mup}]
+The Maximal Update Parametrization (\textmu P) for a Transformer is
+given by Table~\ref{tab:mup-table-3} and $1/d$ attention instead of
+$1/\sqrt{d}$, i.e.\ the attention logit is calculated as $q^\top k / d$
+instead of $q^\top k / \sqrt{d}$ where query $q$ and key $k$ have
+dimension $d$.
+\end{definition}
+
+\begin{analogy}
+\textmu P is the ``right'' parametrization in the same sense the
+$1/\sqrt{n}$ factor in the CLT is the right scaling: $1/\sqrt{n}$ is
+the unique rescaling for which $\frac{1}{\sqrt{n}}(x_1 + \cdots + x_n)
+\to \mathcal{N}(0, 1)$ has a non-trivial limit
+\citep[\S 2]{yang2022-mup}.\footnote{KB excerpt:
+\texttt{kb/excerpts/yang2022-mup.md\#sec-2-clt}.} Width plays the role
+of $n$. The \textmu P assignment of $(\text{init}, \text{LR},
+\text{multiplier})$ per layer category is the unique stable choice
+that preserves $\Theta(1)$-magnitude weight updates --- ``feature
+learning'' --- in the infinite-width limit; SP either has trivial
+NTK-regime dynamics or blows up. Returning to math: under SP, after
+even one Adam step, attention pre-softmax scores $q^\top k$ acquire
+correlation across $i$, so $\mathrm{Var}(q^\top k) = \Theta(d)$ by
+Law-of-Large-Numbers (not CLT), and the Vaswani $1/\sqrt{d_k}$
+rescaling makes the logits $\Theta(\sqrt{d})$ --- they blow up with
+width \citep[\S 5]{yang2022-mup}. \textmu P's $1/d$ scaling absorbs the
+extra factor exactly. Vaswani's $1/\sqrt{d_k}$ remains correct
+\emph{at initialization} (uncorrelated $q, k$); \textmu P's $1/d$ is
+correct \emph{during training}.
+\end{analogy}
+
+\paragraph{What transfers.}
+\citet[\S 6]{yang2022-mup}\footnote{KB excerpt:
+\texttt{kb/excerpts/yang2022-mup.md\#sec-6-what-transfers}.} report
+that across width, master LR, Adam betas, LR schedule shape, per-layer
+init multipliers, and most parameter multipliers transfer; across batch
+size, sequence length, and training-step count they transfer
+empirically within ``reasonable ranges'' (batch $\geq 32$, seqlen
+$\geq 128$, steps $\geq 5000$). What does \emph{not} transfer:
+regularization (weight decay, dropout) and any HP that interacts with
+the regularization-vs-optimization trade-off, since regularization
+strength depends on data size, not just on width
+\citep[\S 6]{yang2022-mup}. Across depth the transfer is partial:
+optimal init standard deviation does not transfer well across depth;
+practical recipe is to fix init at the target depth and sweep the
+remaining HPs \citep[\S 6.1]{yang2022-mup}.
+
+\begin{contradiction}
+Strict \citep[Definition 4.1]{yang2022-mup} \textmu P is rare in
+production. Cerebras has explicit practitioner guides and Microsoft
+(Phi-4) and Graphcore (u-\textmu P, \citealp{u-mup2024}) disclose
+usage; Anthropic and OpenAI do not. Meta's Llama 4 tech report
+\citep{meta-llama4} cites a ``MetaP'' scheme for cross-scale HP
+transfer with thin published detail. The community's working
+assumption is that frontier labs apply some subset of
+Table~\ref{tab:mup-table-3}'s rules (typically the LR scalings) but
+keep Vaswani's $1/\sqrt{d_k}$ attention rather than \textmu P's $1/d$,
+making them ``\textmu P-inspired'' rather than strict-Definition-4.1
+variants. Independent positive results outside the
+Microsoft/Cerebras/Graphcore ecosystem at $10\text{B}{+}$ scale are
+scarce; whether the loose variants retain the unique-feature-learning
+guarantee is open.
+\end{contradiction}
+
+\subsection{Precision-aware scaling}
+\label{sec:scaling-precision}
+
+\citet{scaling-laws-precision-2024} extend the Chinchilla parametric
+form \cref{eq:cc-paraloss} with precision as a third axis. The core
+construction reduces to an \emph{effective parameter count}
+$N_{\text{eff}}(N, b_{\text{train}})$ that is decreasing in $N$ when
+training precision $b_{\text{train}}$ falls below a threshold:
+training in low precision is, in this picture, equivalent to training
+a smaller-$N$ model in full precision, with the equivalence-mapping
+fitted from sub-frontier sweeps. Combined with a post-training
+quantization-loss model, the joint result is that \emph{over-trained
+models are harder to quantize} --- the more $D$ a model has consumed
+relative to $N$, the larger the post-quantization loss penalty at a
+given deployment precision.\deepencite{scaling-laws-precision-2024 \S
+4: effective-parameter form $N_{\text{eff}}(N, b_{\text{train}})$ and
+the over-training $\to$ harder-to-quantize prediction.}
+
+This collides directly with the over-training strategy of
+\cref{tab:frontier-NDC}: the same Llama-3 8B that gains inference-cost
+efficiency from being small dense + token-heavy is, by the
+\citet{scaling-laws-precision-2024} prediction, more difficult to
+quantize at deployment time --- partially offsetting the very gain
+that motivated the strategy. The industry response has been native
+low-precision training: pre-train at the precision you will deploy,
+not above it. DeepSeek-V3 reports zero irrecoverable loss spikes over
+$14.8\text{T}$ tokens of FP8 pre-training
+\citep[abstract]{deepseek-v3}; Llama 4 likewise discloses FP8
+pre-training. u-\textmu P \citep{u-mup2024} integrates \textmu P with
+unit-scaling so per-tensor activation magnitudes are predictable,
+enabling FP8 without dynamic rescaling. The full multi-axis
+$(N, D, C, b_{\text{train}}, b_{\text{deploy}})$ frontier is
+incompletely mapped at frontier scale; we return to the
+mixed-precision recipe in \cref{sec:mixed-precision}.
+
+\subsection{Frontier-2026 scaling map}
+\label{sec:scaling-map}
+
+Tying the threads together: scaling at the 2026 frontier is a
+four-axis surface $(C_{\text{train}}, C_{\text{test}}, b, q)$ where
+$C_{\text{train}}$ is pre-training FLOPs, $C_{\text{test}}$ is
+inference-time-compute budget, $b$ is training/deployment precision,
+and $q$ is the quality-mixture composition of $D$ (covered separately
+in \cref{sec:pre-training-data}; see Data Mixing Laws there). Frontier
+labs jointly optimize all four. Where they agree: Chinchilla's
+parametric form \cref{eq:cc-paraloss} fits, the $C \approx 6 N D$
+formula is universal, \textmu P-inspired HP transfer is broadly
+adopted (with disclosure asymmetry; see \cref{sec:scaling-mup}), FP8
+or lower is the new training-precision floor where the stack supports
+it. Where they diverge: tokens-per-parameter is now a
+deployment-conditional choice in $[20, 2000]$ rather than a
+universal $\approx 20$, and the $C_{\text{train}}$-vs-$C_{\text{test}}$
+split is a per-product tuning that no closed-form law yet predicts.
+
+\begin{contradiction}
+Kaplan-vs-Chinchilla, on the methodological question, is settled:
+the $0.73/0.27$ split was an LR-schedule artifact, the corrected
+$\approx 0.50/0.50$ stands on three independent fits within bootstrap
+of each other \citep[\S 3, Table 2]{hoffmann2022-chinchilla}. But
+multiple ``optimal'' definitions are now in play. Pre-training-FLOP-
+optimal (Chinchilla, $D / N \approx 20$); inference-cost-aware (Llama
+3, $D / N$ in the hundreds to thousands; \citealp{meta-llama3});
+inference-time-compute-aware (the o-series, R1, Gemini 2.5
+\citep{gemini2-5}, Qwen 3 \citep{qwen3} with $C_{\text{test}}$
+exposed); precision-aware (\citealp{scaling-laws-precision-2024} with
+the over-training $\to$ harder-to-quantize trade-off pulling against
+Llama-3-style $D/N \approx 1875$). The functional form
+\cref{eq:cc-paraloss} survives; the prescription that comes out of
+\cref{eq:cc-frontier} is now objective-conditional. ``Chinchilla is
+wrong'' is a mis-framing; ``Chinchilla solves a different objective
+than the one the industry actually optimizes'' is accurate. The
+unresolved open question is the joint $(C_{\text{train}},
+C_{\text{test}}, b, q)$ scaling law --- documented empirically, not
+captured in closed form.
+\end{contradiction}
+
+\subsection{Forward link}
+\label{sec:scaling-forward}
+
+The scaling laws of this section dictate the budget split
+$(N, D)$ at fixed $C$ and the HP-transfer protocol that makes any
+chosen point trainable; they do not specify \emph{the optimizer} that
+spends the FLOPs or the schedule that matches the LR-decay horizon
+identified in \cref{sec:scaling-lrhorizon}. The next section
+(\cref{sec:optimization}) walks the optimizer axis: AdamW as the
+production default, the training-loss-conditional speedup claims of
+Lion and Sophia that did not hold on downstream evaluation, Muon's
+Newton-Schulz-orthogonalized matrix update as the only published
+optimizer with $\sim 2\times$ compute-efficiency lift at LLM scale,
+and the WSD (Warmup-Stable-Decay) schedule that pairs with continual
+pre-training and merging in \cref{sec:adaptation-and-merging}.
+Optimizer choice and precision choice will turn out to be \emph{not}
+orthogonal --- Muon's update RMS exceeds BF16's high-precision range
+without weight decay, exactly the optimizer$\times$precision coupling
+\cref{sec:scaling-precision} flagged --- and the LR-schedule lesson
+from \cref{sec:scaling-lrhorizon} reappears as the WSD cooldown phase
+that loads quality data over the final tokens.
