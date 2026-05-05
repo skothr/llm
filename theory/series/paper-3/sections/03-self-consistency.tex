@@ -238,8 +238,9 @@ underlying answer can land in different vote bins, splitting the
 correct cluster and causing a wrong answer to win by plurality. This
 is the dominant production failure mode of CoT pipelines
 \citep[\S 2.4]{wang2022-self-consistency}; mitigations are robust
-parsers, structured-output decoders (\cref{sec:structured-output} of
-Paper 1), and trained answer-format consistency.
+parsers, structured-output decoders (Paper~1's inference-adjuncts
+section on structured-output / FSM-constrained decoding), and
+trained answer-format consistency.
 
 \paragraph{Temperature too high or too low.}
 \citet[\S 4.3]{wang2022-self-consistency} ablate $T$ and find an

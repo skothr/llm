@@ -54,8 +54,15 @@ def bib_entry(p: dict) -> str:
     else:
         entry_type = "misc"
 
+    # BibTeX separates authors with ` and `, not commas. The KB convention is
+    # surname-only comma lists, so convert. Skip if the string already uses
+    # ` and ` (idempotent) or is "Unknown".
+    bib_authors = authors
+    if " and " not in authors and authors != "Unknown":
+        bib_authors = " and ".join(name.strip() for name in authors.split(",") if name.strip())
+
     fields = [
-        f"  author = {{{authors}}}",
+        f"  author = {{{bib_authors}}}",
         f"  title  = {{{title}}}",
     ]
     if year:

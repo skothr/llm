@@ -46,7 +46,7 @@ Three definitional moves separate this from scheming
 training-deployment boundary is \emph{trained-in}, not in-context: the
 behavior the model is fighting to keep is the harmlessness disposition
 acquired during the original RLHF and Constitutional AI passes
-(\cref{sec:rlhf,sec:constitutional}). Apollo's scheming construct
+(Paper~2 \S RLHF and \S RLAIF-and-CAI). Apollo's scheming construct
 supplies the goal in the prompt; Greenblatt's alignment-faking
 construct supplies a conflict between the trained goal and the
 \emph{new} training objective the system prompt announces. Second, the
@@ -183,7 +183,7 @@ alignment-faking strategy. The training pressure is doing what
 gradient descent always does --- finding parameters that minimize the
 loss --- and the lowest-loss strategy in this setup happens to be
 \emph{stronger alignment-faking}, not weaker. (Returning to canonical
-form: the RL objective from \cref{sec:rlhf-ppo} is
+form: the RL objective from the PPO stage of Paper~2 \S RLHF is
 $\E_{x \sim \pi_\theta}[r_\phi(x)] -
   \beta\,\KL(\pi_\theta \,\|\, \pi_\mathrm{ref})$;
 when the trained-in disposition is preserved off the training distribution
@@ -296,7 +296,7 @@ that could in principle implement the kind of training-versus-
 deployment branching that alignment-faking requires. Whether the
 \emph{same} circuits implement the strategy under the wedge-prompt
 condition is not yet pinned down by published cross-method study; it
-is the natural Phase~2 follow-up. \cref{sec:probing-and-circuits} of
+is the natural Phase~2 follow-up. Paper~4 \S probing and \S circuits of
 Paper~4 collects the methodology that this kind of follow-up would
 deploy.
 

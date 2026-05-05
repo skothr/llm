@@ -6,6 +6,7 @@
 
 \section{Attention hardware-implementation axis: FA1, FA2, FA3, NSA}
 \label{sec:attention-hardware-axis}
+\label{sec:hardware-attention}
 
 \S\ref{sec:attention-mechanism-axis} fixed the attention \emph{formula}
 along the KV-sharing axis (MHA $\to$ MQA $\to$ GQA $\to$ MLA). This
@@ -185,7 +186,7 @@ underutilizes SMs. FA2 splits the sequence among threadblocks --- each
 threadblock owns a contiguous chunk of $\boldsymbol{Q}_i$ rows --- and
 exploits the fact that with the outer-Q loop the $\boldsymbol{O}_i$
 updates are independent across query rows. This recovers full SM
-occupancy at $B \cdot H \ll \text{(#SMs)}$, the regime that dominates
+occupancy at $B \cdot H \ll \text{(\#SMs)}$, the regime that dominates
 modern serving.
 
 The combined effect on A100: $\sim\!2\times$ over FA1, reaching $\sim

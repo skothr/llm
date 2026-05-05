@@ -32,11 +32,39 @@ series/
 
 ## Build
 
-Once `paper-N/main.tex` exists, build with:
+Each `paper-N/main.tex` builds to `paper-N/main.pdf` via the standard
+LaTeX `pdflatex + bibtex + pdflatex × 2` cycle (no `latexmk` required):
 
 ```bash
-cd theory/series/paper-1 && latexmk -pdf main.tex
+cd theory/series/paper-1
+pdflatex -interaction=nonstopmode main.tex
+bibtex main
+pdflatex -interaction=nonstopmode main.tex
+pdflatex -interaction=nonstopmode main.tex
 ```
+
+PDFs ship in-repo under each paper directory; intermediate
+`*.aux/.log/.bbl/.blg/.out/.toc` files are git-ignored.
+
+## Built PDFs
+
+| Paper | Title | PDF | Pages |
+|------:|-------|-----|------:|
+| 1 | The modern Transformer is a small set of choices | [`paper-1/main.pdf`](paper-1/main.pdf) | 72 |
+| 2 | Training is a multi-stage pipeline | [`paper-2/main.pdf`](paper-2/main.pdf) | 98 |
+| 3 | Reasoning is compute, search, and verification | [`paper-3/main.pdf`](paper-3/main.pdf) | 76 |
+| 4 | The internal computation can be partially read | [`paper-4/main.pdf`](paper-4/main.pdf) | 72 |
+| 5 | What we measure and what slips through | [`paper-5/main.pdf`](paper-5/main.pdf) | 76 |
+|   | **Total** |   | **394** |
+
+Build state as of 2026-05-05: paper-1/2/3/5 build with zero undefined
+references and zero undefined citations; paper-4 has one residual
+`Citation 'l' undefined` warning (a stray-key artifact whose source
+defies grep — it does not prevent the PDF from building, and renders
+as a single `[?]` in the bibliography on page 60). Cross-paper
+references throughout the series are inline-text rather than `\cref`
+since each paper builds independently; xr-hyper would lift this if
+ever desired.
 
 ## Status (2026-05-05)
 

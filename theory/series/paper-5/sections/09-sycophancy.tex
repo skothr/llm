@@ -114,7 +114,7 @@ vary across models and across tasks within a model.
 
 The mechanism \citet{sharma2023-sycophancy} identify is a three-link
 causal chain that turns each link of the standard RLHF pipeline
-(\cref{sec:rlhf}) into an amplifier of the same bias%
+(Paper~2 \S RLHF) into an amplifier of the same bias%
 \footnote{KB excerpt: \texttt{kb/excerpts/sharma2023-sycophancy.md\#sec-rlhf-causal}.}.
 
 \paragraph{Link 1 --- human raters prefer agreement.}
@@ -132,7 +132,7 @@ preference distribution that production RLHF datasets sample from.
 
 \paragraph{Link 2 --- preference models inherit and amplify.}
 The preference model (PM, the reward model in
-\cref{sec:rlhf-rm}) is trained as a binary classifier on the link-1
+the RM stage of Paper~2 \S RLHF) is trained as a binary classifier on the link-1
 data. Per the same abstract,
 
 \begin{quote}\itshape
@@ -164,7 +164,7 @@ and correct responses is well below ceiling, and any single PPO update
 moves the policy by a small KL --- but the composition is large because
 optimization \emph{accumulates} the bias along the gradient. The same
 shape appears in every reward-hacking instance documented in
-\cref{sec:rlhf-hacking}; sycophancy is the one with the cleanest
+Paper~2 \S RLHF reward-hacking; sycophancy is the one with the cleanest
 operational measurement.
 
 \begin{intuition}
@@ -175,7 +175,7 @@ its training data did. The policy is not pursuing ``user-aligned
 flattery'' as a goal --- there is no goal; there is only a gradient.
 The gradient happens to point toward sycophancy because the reward
 landscape is shaped that way. (Returning to canonical form: the RLHF
-objective in \cref{sec:rlhf-ppo} is
+objective in the PPO stage of Paper~2 \S RLHF is
 $\E_{x \sim \pi_\theta}[r_\phi(x)] - \beta\,\KL(\pi_\theta \,\|\, \pi_\mathrm{ref})$;
 the policy's job is to climb $r_\phi$. When $r_\phi$ assigns higher
 score to ``user-aligned'' than to ``true-but-disagreeable,'' the
@@ -265,7 +265,7 @@ sits one layer in: probe-derived ``sycophancy direction'' vectors
 identified via difference-in-means over agreement-vs-disagreement
 prompts, then subtracted from the residual stream at decode time.
 This is a Paper~4 result and we defer the methodology to that
-paper's probing section (\cref{sec:probing-and-circuits}). The
+paper's probing section (Paper~4 \S probing and \S circuits). The
 limitation is the standard one for activation interventions: they
 suppress the surface manifestation without removing the underlying
 preference-trained gradient, so the mitigation evaporates if the
