@@ -1,0 +1,387 @@
+% Paper 5, §12 — Watermarking and provenance
+% Anchors: kb/notes/alignment/watermarking-and-provenance.md
+%          kb/excerpts/kirchenbauer2023-watermark.md
+
+\section{Watermarking and provenance}
+\label{sec:watermarking}
+
+The threats covered in \cref{sec:scheming,sec:alignment-faking} concern
+what the model \emph{does}; the threat in this section concerns what
+\emph{has been done} --- the question of whether a given span of text
+was produced by a particular language model at all. Watermarking is the
+sampling-time intervention that embeds a statistical signal into the
+token stream, designed to be invisible to a casual human reader and
+algorithmically detectable from a short keyed test. Provenance is the
+broader project of certifying the origin of generated content;
+watermarking is the technical primitive most-discussed for text. The
+thesis of this section is that the canonical Kirchenbauer 2023
+construction --- a hash-keyed green/red partition of the vocabulary at
+each step, with a soft logit nudge toward the green list, scored by a
+per-token z-statistic --- has the \emph{cryptographic} part of the
+problem solved. The 2024 production deployments (Google's
+SynthID-Text, OpenAI's deferred deployment) carry that construction
+forward. What the field does not yet have is a watermark robust to a
+determined removal attempt: paraphrase, fine-tuning, and collusion
+each define an attack surface where the signal degrades by amounts
+that vendors and academics characterize differently.
+
+\subsection{The green/red-list construction}
+\label{sec:watermarking-construction}
+
+\citet{kirchenbauer2023-watermark} fix the canonical construction%
+\footnote{KB excerpt: \texttt{kb/excerpts/kirchenbauer2023-watermark.md\#sec-greenred}.}
+\citep[\S{}abstract]{kirchenbauer2023-watermark}:
+
+\begin{quote}\itshape
+The watermark works by selecting a randomized set of ``green'' tokens
+before a word is generated, and then softly promoting use of green
+tokens during sampling.
+\end{quote}
+
+The construction is stateless beyond a small hash window. Let $V$ be
+the vocabulary, $\gamma \in (0, 1)$ a partition fraction, and
+$\delta > 0$ a logit-bias constant. At generation step $t$, with
+preceding tokens $s^{(1)}, \ldots, s^{(t-1)}$:
+
+\begin{enumerate}
+\item Hash a fixed-width suffix --- in the simplest variant
+$s^{(t-1)}$ alone --- through a keyed pseudo-random function to seed
+an RNG.
+\item Partition $V$ into a green list $G_t \subset V$ of size
+$\gamma|V|$ and a red list $V \setminus G_t$ of size
+$(1 - \gamma)|V|$.
+\item Add $\delta$ to the logit of every $v \in G_t$ before the
+softmax: $\tilde{\ell}_v = \ell_v + \delta \cdot \mathbb{1}[v \in G_t]$.
+\item Sample $s^{(t)}$ from the modified distribution.
+\end{enumerate}
+
+The default settings reported in the paper are $\gamma = 0.25$ and
+$\delta = 2.0$%
+\footnote{KB excerpt: \texttt{kb/excerpts/kirchenbauer2023-watermark.md\#sec-greenred}.}.
+Three properties of this construction are load-bearing for everything
+that follows. First, the partition $G_t$ depends only on the keyed hash
+of a small recent window, so generation has $O(|V|)$ overhead per step
+and detection is parallelizable. Second, $\delta$ is added before the
+softmax, so the scheme is a \emph{soft} promotion: low-entropy positions
+where one token's logit dominates by more than $\delta$ are effectively
+unaffected, and high-entropy positions get a measurable nudge. Third,
+the green list is determined by the secret key plus the candidate text,
+not by any property of the model --- detection needs the keyed hash
+function and the candidate string, nothing more
+\citep[\S{}abstract]{kirchenbauer2023-watermark}:
+
+\begin{quote}\itshape
+The watermark can be embedded with negligible impact on text quality,
+and can be detected using an efficient open-source algorithm without
+access to the language model API or parameters.
+\end{quote}
+
+This third property --- \emph{detector-only-needs-the-key} --- is what
+distinguishes the Kirchenbauer scheme from earlier classifier-based
+AI-text-detection efforts. The detector is a fixed statistical test,
+not another model. False-positive rates are derived from the test
+statistic, not measured on a held-out set.
+
+\subsection{Detection: the per-token z-score}
+\label{sec:watermarking-detection}
+
+Given a candidate text $s$ of length $T$, the detector recomputes the
+green list at each position from the keyed hash and counts the number
+of green-listed tokens $|s|_G$. Under the null hypothesis that $s$ was
+not watermarked, each token is in $G_t$ independently with probability
+$\gamma$, so $|s|_G$ is binomially distributed with mean $\gamma T$ and
+variance $T \gamma (1 - \gamma)$. The normalized test statistic is the
+one-sided z-score%
+\footnote{KB excerpt: \texttt{kb/excerpts/kirchenbauer2023-watermark.md\#sec-detection}.}
+\citep[\S{}sec-detection]{kirchenbauer2023-watermark}:
+\[
+z \;=\; \frac{|s|_G - \gamma T}{\sqrt{T \gamma (1 - \gamma)}}.
+\]
+A large $z$ rejects the null with a one-sided $p$-value computed
+directly from the normal CDF. At $\gamma = 0.25$, a span of $T = 200$
+tokens with $|s|_G = 100$ greens (against a null mean of $50$) yields
+$z = (100 - 50)/\sqrt{200 \cdot 0.25 \cdot 0.75} \approx 8.16$,
+corresponding to a one-sided $p < 10^{-15}$ --- comfortably below any
+deployment-relevant false-positive budget. The paper exposes the
+$p$-value as the deployment knob: a publisher willing to tolerate one
+false positive in $10^6$ pieces of long-form content sets the
+$z$-threshold accordingly and reads off the minimum span required for
+detection at a given watermark strength.
+
+The same calculation gives the false-positive rate (FPR) directly: at
+threshold $z^\star$, $\mathrm{FPR} = 1 - \Phi(z^\star)$, where $\Phi$
+is the standard normal CDF. This is the structurally cleanest piece of
+the construction: FPR control is by the test statistic alone, not by
+held-out data, so a deployer can guarantee FPR without access to the
+generation distribution at all.
+
+\subsection{The spike-entropy detection bound}
+\label{sec:watermarking-spike-entropy}
+
+The detection-rate analysis is where the construction earns its
+information-theoretic frame. The paper%
+\footnote{KB excerpt: \texttt{kb/excerpts/kirchenbauer2023-watermark.md\#abstract};
+the precise constants in the bound are pending direct PDF anchor
+verification.}
+\citep[\S{}abstract]{kirchenbauer2023-watermark}:
+
+\begin{quote}\itshape
+We propose a statistical test for detecting the watermark with
+interpretable p-values, and derive an information-theoretic framework
+for analyzing the sensitivity of the watermark.
+\end{quote}
+
+The sensitivity result that organizes \cref{sec:watermarking-construction}
+is that detection power scales not with the Shannon entropy of the
+model's distribution, but with a sharper functional --- the
+\emph{spike entropy} at parameter $\gamma$. For a distribution
+$p$ over $V$, define%
+\footnote{The functional form is the one cited in
+\texttt{kb/notes/alignment/watermarking-and-provenance.md} \S 1; the
+exact paper-side anchor is flagged for the deepening pass.}
+\deepencite{kirchenbauer2023-watermark §sensitivity-bound}:
+\[
+S_\gamma(p) \;=\; \sum_{v \in V} \frac{p_v}{1 + \gamma' \, p_v},
+\]
+with $\gamma'$ a constant tied to the partition fraction $\gamma$ and
+the bias $\delta$ in the manner the sensitivity analysis specifies. The
+substantive content of the bound, sketched here at the form level
+rather than at the constant level: the expected fraction of green
+tokens in the watermarked sample is
+\[
+\E[\,|s|_G \,/\, T\,] \;=\; \gamma + c(\gamma, \delta) \cdot S_\gamma(p) \cdot (1 - \gamma) + o(\cdot),
+\]
+with $c(\gamma, \delta)$ an increasing function of $\delta$ that the
+paper computes. The qualitative claim is that detection accumulates
+faster on samples drawn from \emph{spiky} distributions (low spike
+entropy, one or a few tokens carrying most of the mass) than on
+samples drawn from flat distributions, and that this dependence is
+captured by $S_\gamma$ rather than by the standard Shannon
+$H(p) = -\sum_v p_v \log p_v$. The two functionals can disagree: a
+distribution with high Shannon entropy that is nevertheless
+concentrated on a moderate number of green-list tokens watermarks
+better than the Shannon entropy alone would predict.
+
+\begin{intuition}
+The watermark is a stochastic side-channel that the model itself
+supplies. At each step, the model's softmax expresses how much
+flexibility it has --- how many distinct tokens are roughly
+acceptable in this position. Watermarking taxes that flexibility by a
+constant $\delta$ in favor of a hash-keyed green list. At a low-entropy
+position --- a factual lookup, a code keyword, a closing punctuation
+mark --- there is no flexibility for the watermark to spend, and the
+nudge does nothing. At a high-entropy position --- a stylistic
+adverb, an open-ended sentence continuation --- the watermark is
+nearly free, because the model would have been almost indifferent
+between the green and red alternatives. The detection bound is the
+quantitative statement of this picture: the watermark accumulates
+exactly where the entropy is, and the right entropy functional is
+$S_\gamma$, the entropy reweighted by how much logit-bias $\delta$
+can move per token. (Returning to canonical form: the per-token
+z-score in \cref{sec:watermarking-detection} is the statistic; the
+$S_\gamma$-dependence is the rate at which it accumulates over $T$.)
+\end{intuition}
+
+The implication for deployment is that watermarking is not uniformly
+applicable across content types. Long-form prose, creative writing,
+and conversational responses carry high spike entropy in most
+positions and are watermarkable at the per-paragraph scale. Code,
+verbatim citation, structured data extraction, and short factual
+answers carry low spike entropy and are effectively unwatermarkable in
+their generation regions --- the green-list nudge cannot be
+distinguished from the model's natural sampling%
+\footnote{KB note: \texttt{kb/notes/alignment/watermarking-and-provenance.md\#1}
+\S~1 (\textsc{intuition}).}.
+
+\subsection{Soft promotion and the distortion-detectability tradeoff}
+\label{sec:watermarking-soft}
+
+The choice of a $\delta$-additive logit bias rather than a hard
+partition is the design decision that makes the rest workable. The
+paper%
+\footnote{KB excerpt: \texttt{kb/excerpts/kirchenbauer2023-watermark.md\#sec-soft}.}
+discusses three failure modes of a hard partition that restricts
+generation to $G_t$ alone: it heavily distorts high-entropy
+generation by forcing the model away from its natural distribution,
+it makes low-entropy positions impossible to watermark because no
+green-list-friendly alternative exists, and it is trivially detectable
+by frequency analysis even without the key. The soft scheme avoids
+all three by accepting a quantitative tradeoff: larger $\delta$ gives
+a stronger watermark per token but introduces a measurable bias in
+the marginal output distribution. The paper reports
+``negligible impact on text quality'' at the default
+$(\gamma, \delta) = (0.25, 2.0)$
+\citep[\S{}abstract]{kirchenbauer2023-watermark}; deployment is a
+choice of where to sit on this curve.
+
+The same soft-promotion intuition explains why hard-partition
+watermarks have not survived as the field-default. A scheme that
+forces green-only generation gives the strongest possible per-token
+signal but breaks at exactly the positions deployers care about ---
+factual answers, code, citations, structured outputs --- because at
+those positions the green list either contains the right answer (in
+which case the scheme reduces to passthrough) or does not (in which
+case the scheme either refuses to generate or generates a wrong
+answer). The $\delta$-additive form lets the scheme degrade
+gracefully at low-entropy positions and accumulate signal at
+high-entropy ones, which is the empirical operating point modern
+deployments target.
+
+\subsection{Production: SynthID-Text and OpenAI's deferred deployment}
+\label{sec:watermarking-production}
+
+By 2024, two production-scale text-watermarking efforts had landed in
+public conversation. Google DeepMind's \textbf{SynthID-Text} (Dathathri
+et al., \emph{Nature} 2024) replaces the logit-bias step with a
+\emph{tournament} over candidate tokens%
+\footnote{KB note: \texttt{kb/notes/alignment/watermarking-and-provenance.md\#3-synthid-text-dathathri-et-al-2024-nature}.}
+\deepencite{dathathri2024-synthid §method, citation-pending}: at each
+step the sampler draws $N$ candidate next-tokens, pairs them, evaluates
+a hash-derived watermark function $g$ on each, and advances the higher
+$g$-value candidate; after $\log_2 N$ rounds, a single token wins. The
+detection statistic averages $g$-values across the generated tokens and
+flags spans whose average is above the no-watermark baseline. Two modes
+are reported: a \emph{distortionary} mode that visibly biases the
+output distribution and a \emph{non-distortionary} mode that, under
+a sufficient-candidate-diversity assumption, leaves the marginal
+distribution statistically unchanged \deepencite{dathathri2024-synthid
+§distortion-modes, citation-pending}. SynthID-Text is reported as
+deployed in the Gemini App, the first production-scale text-watermark
+deployment by a frontier lab; detection code accompanied the
+\emph{Nature} publication%
+\footnote{KB note: \texttt{kb/notes/alignment/watermarking-and-provenance.md\#3-3-production-deployment}.}.
+
+OpenAI publicly described a watermark prototype in 2023--2024 but
+\emph{deferred deployment} on the basis of robustness and policy
+concerns; the available account is a vendor blog post rather than a
+peer-reviewed publication, so this paper treats it as a tier-B signal
+rather than a tier-A claim
+\deepencite{openai2024-watermark-deferral, citation-pending}.
+The 2024 picture is therefore one production system shipping a
+Kirchenbauer-lineage watermark at scale, one large vendor with a
+working prototype not deployed, and a several-arXiv-paper academic
+literature on the spike-entropy / paraphrase / fine-tune attack
+surface. The Kirchenbauer construction is the common ancestor of the
+shipped scheme and the deferred one.
+
+\subsection{The attack surface}
+\label{sec:watermarking-attacks}
+
+Three named attacks define the open frontier: paraphrase, fine-tuning,
+and collusion. Each pressures a different invariant of the construction.
+
+\textbf{Paraphrase attacks} round-trip the watermarked text through a
+different model (or a non-watermarked instance of the same model) and
+re-emit it. Kirchenbauer's own follow-up
+\deepencite{kirchenbauer2024-reliability §paraphrase, citation-pending}
+reports that even after strong human paraphrasing, the watermark
+remains detectable at $T \approx 800$ tokens at a $10^{-5}$
+false-positive rate, because paraphrasing preserves enough short
+n-gram structure that the green-list hash continues to land on green
+tokens at above-chance rates --- just slowly. The countervailing
+position from \citet{sadasivan2023-detection}
+\deepencite{sadasivan2023-detection §main-result, citation-pending}
+argues that any watermark detectable from \emph{short} spans must be
+removable by a paraphrase attacker with a comparable-quality model;
+the disagreement is over what ``deployable'' requires, not over the
+asymptotic detection rate%
+\footnote{KB note: \texttt{kb/notes/alignment/watermarking-and-provenance.md\#2-2-the-fundamental-limit}
+\S~2.2.}.
+
+\textbf{Fine-tuning attacks} retrain the watermarked model (or a base
+model) on a small corpus of unrelated text, with the goal of disrupting
+whichever internal feature the watermark relies on. For a green/red
+construction, the watermark is not a model feature --- it is a
+sampling-time intervention --- so fine-tuning the base weights does
+not directly remove the keyed hash. What fine-tuning can disrupt is
+the \emph{deployment context} that applies the intervention: a
+fine-tuned model derived from a watermarked model's checkpoints loses
+the watermark unless the fine-tuned deployer also runs the
+green-list sampler. The vendor and academic claims diverge on what
+fine-tune budget defeats which schemes
+\deepencite{watermark-fine-tune-survey, citation-pending}, with the
+disagreement structured around whether the relevant attack surface is
+the keyed sampling layer (in which case fine-tuning is irrelevant) or
+the deployer's pipeline (in which case fine-tuning to a fork that
+omits the sampler breaks the watermark trivially).
+
+\textbf{Collusion attacks} mix watermarked outputs with unwatermarked
+text from another source, diluting the green-token rate below the
+detection threshold. The detector's z-score is the per-token statistic
+of \cref{sec:watermarking-detection}: at $\gamma = 0.25$, a $50$/$50$
+mix of watermarked and unwatermarked text has expected green rate
+$0.5 \cdot E_{\mathrm{wm}} + 0.5 \cdot \gamma$, where $E_{\mathrm{wm}}$
+is the watermark's natural green rate. The detector applied to the
+full mixed span sees a degraded $z$ that scales with the mixed-span
+length and the mixing fraction; if the deployer can segment the text
+into pure-watermarked spans, detection recovers, but the segmentation
+problem is itself adversarial%
+\footnote{KB note: \texttt{kb/notes/alignment/watermarking-and-provenance.md\#5}
+\S~5 (frontier).}.
+
+\begin{contradiction}
+\textbf{Watermarking robustness against fine-tuning.} The Kirchenbauer
+2024 reliability paper \deepencite{kirchenbauer2024-reliability
+§paraphrase-and-finetune, citation-pending} reports that the
+green-list watermark survives moderate fine-tuning at the cost of a
+slower detection accumulation rate, and the Google SynthID-Text
+deployment account
+\deepencite{dathathri2024-synthid §robustness, citation-pending}
+makes a similar claim for the tournament-sampling variant. Independent
+adversarial analyses --- notably the SRI Lab ETH probing study of
+SynthID%
+\footnote{KB note: \texttt{kb/notes/alignment/watermarking-and-provenance.md\#3-3-production-deployment}
+\S~3.3 (\textsc{contradiction}).}
+\deepencite{eth-synthid-probe-2024, citation-pending}
+--- find that aggressive paraphrase and fine-tune budgets do defeat
+deployed schemes in the short-form regime. The two camps are not
+numerically far apart on the asymptotic rate. They disagree on whether
+the threat model that matters is a casual user trying to bypass an
+enterprise content policy (vendor framing, where the watermark holds)
+or a determined adversary with a comparable-quality model and a
+modest fine-tune budget (academic framing, where the watermark
+degrades rapidly). As of 2026-Q2, the field does not yet have a
+public adversarial benchmark where attacker-fine-tune-budget is the
+$x$-axis and detector-AUC is the $y$-axis with multiple watermark
+schemes plotted together; \cref{sec:contradictions} flags this as
+the evidence that would close the dispute.
+\end{contradiction}
+
+\subsection{Limits and forward link}
+\label{sec:watermarking-forward}
+
+What watermarking can and cannot do is now empirically clear in
+outline. It can supply discovery-grade provenance on long-form
+prose --- enough signal that, given a few hundred tokens and a keyed
+detector, a publisher can reject AI-generated content with a tunable
+false-positive rate. It can plausibly support compliance-style
+``marking'' obligations under regulations like the EU AI Act
+Article 50 transparency requirement
+\deepencite{eu-ai-act-art-50, citation-pending}, where the requirement
+is that synthetic content carry a marking, not that the marking
+withstand adversarial removal. What it cannot yet do is forensic
+attribution under adversarial pressure on short text, robust survival
+through arbitrary paraphrase by a comparable-quality model, or
+cross-vendor interoperability the way image-and-audio C2PA
+provenance does for non-text media. Open-weights models are an
+additional structural limit: a user running an open-weights model
+locally can simply disable the watermark sampler, so coverage of the
+deployed watermark fleet caps at the closed-source share of generated
+text \deepencite{open-weights-watermark-coverage-2024, citation-pending}
+--- and that share is shrinking as open weights catch up to frontier
+closed-weights at the capability axes a deployer would actually use.
+
+The structural location of watermarking in the layered defense view
+is the deployment-side adjacency: like \cref{sec:scalable-oversight}'s
+debate / scalable-oversight protocols, watermarking is an intervention
+applied at or after generation time, not a property of the model's
+training. The two share the constraint that they have to work
+\emph{against} a model whose capability is still rising. The
+contradiction surfaced in this section --- the divergence between
+vendor-friendly and academic-adversarial fine-tune-robustness claims
+--- joins the alignment-evaluation contradictions of
+\cref{sec:scheming,sec:alignment-faking} and the eval-instrument
+contradictions of \cref{sec:knowledge-benchmarks,sec:adversarial-robustness}
+in the concentrated discussion of \cref{sec:contradictions},
+density-ranked alongside the others as one of the open questions
+the next round of evaluation infrastructure has to attack directly.

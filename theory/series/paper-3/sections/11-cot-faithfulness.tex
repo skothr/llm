@@ -1,0 +1,352 @@
+% Paper 3, §11 — CoT faithfulness: does the trace cause the answer?
+% Anchors: kb/notes/reasoning/chain-of-thought.md §4 faithfulness
+%          kb/notes/reasoning/test-time-compute.md §6 interpretability-questions
+%          kb/excerpts/{arcuschin2025-cot-wild,shen2025-faithcot-bench,
+%                       mehta2026-faithfulness-scaling}.md (excerpts skeleton-only
+%                       as of 2026-05; \deepencite where load-bearing).
+% Forward refs: §8 R1 (sec:r1-family), §12 PRM survival (sec:prm-survival),
+%               §14 contradictions catalogue (sec:contradictions).
+% Cross-paper: Paper 4 §interpretability uses CoT as a probe surface;
+%              Paper 5 §alignment treats CoT as a monitorable channel.
+
+\section{CoT faithfulness: does the trace cause the answer?}
+\label{sec:cot-faithfulness}
+
+The decoding factorisation $z \sim p_\theta(\cdot \mid x)$,
+$y \sim p_\theta(\cdot \mid x, z)$ that
+\cref{eq:cot-decode} introduces is a generative model: the trace is
+sampled, then the answer is sampled conditional on the trace. As a
+\emph{statistical} dependence claim this is uncontroversial. The
+\emph{causal} claim — that perturbing $z$ propagates to a different $y$
+— is not the same statement, and the 2025--2026 wave of empirical work
+finds that the gap between the two can be substantial. \textbf{CoT
+faithfulness} is the operational name for the question: does the trace
+$z$ in fact carry the information that determines $y$, or has $y$
+already been chosen by some other mechanism with $z$ generated as a
+post-hoc rationalisation that happens to be human-readable? This
+section makes the question precise, summarises the three load-bearing
+2025--2026 measurements (Arcuschin et al.\ ``CoT in the wild'', Shen et
+al.\ FaithCoT-Bench, Mehta et al.\ on whether scaling improves
+faithfulness), states the open contradiction with R1-style
+reasoning-training framings (\cref{sec:r1-family}), and draws the
+cross-paper threads: Paper~4's interpretability programme uses CoT as a
+probe surface and Paper~5's alignment programme treats CoT as a
+monitorable channel — both are compromised to the extent that traces
+are unfaithful.
+
+\subsection{Operational definition: from conditional to causal}
+\label{sec:faith-def}
+
+Following the protocol shared across
+\citet{arcuschin2025-cot-wild,shen2025-faithcot-bench,
+mehta2026-faithfulness-scaling} and the KB note's framing,%
+\footnote{KB note:
+\texttt{kb/notes/reasoning/chain-of-thought.md\#4}.} the trace $z$ is
+\emph{faithful} to the answer $y$ on input $x$ when an intervention on
+$z$ that should change the answer in fact does, and an intervention
+that should not does not. Formally, fix $x$ and let
+$\mathcal{I}: z \mapsto z'$ be an intervention map. The trace is
+faithful with respect to $\mathcal{I}$ when
+\begin{equation}
+  p_\theta\!\bigl(y \mid x, z\bigr) \;\neq\; p_\theta\!\bigl(y \mid x, z' = \mathcal{I}(z)\bigr)
+  \label{eq:faith-causal}
+\end{equation}
+under interventions $\mathcal{I}$ that change the load-bearing content
+of the trace (e.g., flipping an arithmetic step, contradicting an
+intermediate conclusion, deleting the chain), and is faithful in the
+opposite direction when \cref{eq:faith-causal} fails to hold under
+interventions that should be answer-irrelevant (e.g., paraphrasing the
+trace into different words but the same content). The discrepancy
+between $p_\theta(y \mid x, z)$ and $p_\theta(y \mid x, z')$ — measured
+by an answer-distribution distance such as the answer-marginal total
+variation or the binary indicator $\mathbb{1}[\hat y(z) \neq \hat y(z')]$
+— is the empirical surface of the faithfulness question.
+
+Three intervention families dominate the 2025--2026 literature
+\citep[\S 3]{shen2025-faithcot-bench}:%
+\footnote{Excerpt status:
+\texttt{kb/excerpts/shen2025-faithcot-bench.md} is abstract-only as of
+2026-05; \deepencite{shen2025-faithcot-bench §3, citation-pending}}
+\begin{enumerate}
+\item \textbf{Paraphrase $z'$.} Same content, different surface form. A
+faithful trace channel should leave the answer distribution unchanged;
+the failure mode is the model committing to a different $y$ when an
+incidental phrase in $z$ is swapped.
+\item \textbf{Contradict $z'$.} Replace one or more steps with an
+explicit contradiction (e.g., flip an inequality, negate a numeric
+claim). A faithful trace channel should propagate the contradiction
+into a changed $y$; the failure mode is the answer surviving an
+internally-inconsistent trace.
+\item \textbf{Truncate $z'$.} Drop the tail of $z$ before the trace
+reaches its conclusion. A faithful trace channel should yield a
+substantially worse $y$; the failure mode is the answer being recoverable
+from the prompt $x$ alone, with $z$'s contribution to $p_\theta(y \mid
+x, z)$ approximating $p_\theta(y \mid x)$.
+\end{enumerate}
+The third intervention is the cleanest operational test. If
+$\mathcal{D}\!\bigl(p_\theta(y \mid x, z),\, p_\theta(y \mid x)\bigr)$
+— some divergence between the trace-conditioned and trace-free answer
+distributions — is small, the trace is \emph{not contributing} to the
+answer, regardless of how reasonable it reads.
+
+\begin{intuition}
+Faithfulness is a Granger-causality-like test on the trace channel:
+does conditioning on $z$ \emph{change} our prediction of $y$ relative
+to conditioning on $x$ alone, and do interventions on $z$ propagate
+to $y$ in the directions content-causality would predict? Returning
+to math: \cref{eq:faith-causal} compares two answer distributions
+indexed by counterfactual traces $z$ and $z' = \mathcal{I}(z)$, and
+the operational metric is a divergence between them. The Granger
+analogy is loose — Granger causality is a statement about temporal
+predictive precedence in linear time series, not about generative
+counterfactuals — but the canonical machinery is the same: hold the
+prompt fixed, vary the candidate cause, and measure the response in
+the answer distribution.
+\end{intuition}
+
+\subsection{Arcuschin et al.: CoT in the wild is not always faithful}
+\label{sec:faith-arcuschin}
+
+\citet{arcuschin2025-cot-wild} run the cleanest naturalistic-prompt
+measurement of unfaithful CoT to date.%
+\footnote{Excerpt status:
+\texttt{kb/excerpts/arcuschin2025-cot-wild.md} is abstract-only as of
+2026-05; \deepencite{arcuschin2025-cot-wild abstract,
+citation-pending}} The methodological contribution is to drop the
+artificial-bias scaffolding that earlier faithfulness work
+(e.g., adding a known-misleading hint to the prompt) used to elicit
+unfaithful traces, and instead measure rates on naturalistic, unbiased
+prompts — the regime production users actually inhabit. The headline
+per-model rationalisation rates: \textbf{GPT-4o-mini 13\%},
+\textbf{Haiku 3.5 7\%} on production non-thinking models;
+\textbf{Sonnet 3.7 thinking 0.04\%}, \textbf{Gemini 2.5 Pro 0.14\%},
+\textbf{R1 0.37\%} on thinking-on configurations
+\citep[abstract]{arcuschin2025-cot-wild}.%
+\footnote{KB note:
+\texttt{kb/notes/reasoning/chain-of-thought.md\#4.1}.} The
+non-thinking-vs-thinking gap is roughly two orders of magnitude in
+measured unfaithfulness rate and is the empirical anchor of the
+faithfulness scaling question \cref{sec:faith-mehta} returns to.
+
+A second contribution is the diagnosis of \emph{unfaithful illogical
+shortcuts} on hard math problems: the model produces a long, plausibly
+structured trace whose intermediate steps are individually defensible
+but whose chain does not in fact derive the emitted answer; the answer
+appears to be reached by a separate route the trace does not document.
+\citep[\S 4]{arcuschin2025-cot-wild}.%
+\footnote{\deepencite{arcuschin2025-cot-wild §4, citation-pending}}
+This is the failure mode that breaks the simplest reading of
+\cref{eq:cot-decode}: the conditional $y \sim p_\theta(\cdot \mid x,
+z)$ is well-defined, but the de-facto computation of $y$ does not
+flow through the trace tokens.
+
+\subsection{Shen et al.\ FaithCoT-Bench: instance-level measurement}
+\label{sec:faith-bench}
+
+\citet{shen2025-faithcot-bench} promote faithfulness measurement from a
+per-distribution rate to a \textbf{per-instance} discriminative
+problem.%
+\footnote{Excerpt status:
+\texttt{kb/excerpts/shen2025-faithcot-bench.md} is abstract-only as of
+2026-05; \deepencite{shen2025-faithcot-bench abstract,
+citation-pending}} Their FINE-CoT dataset contributes
+$> 1{,}000$ expert-annotated trajectories from four LLMs across four
+domains, with $> 300$ labelled unfaithful, against which they
+benchmark eleven detectors covering three paradigms:
+\begin{itemize}
+\item \textbf{Counterfactual detectors} apply intervention maps
+$\mathcal{I}$ from \cref{sec:faith-def} and measure the answer-distribution
+shift; an unfaithful trace is one where content-changing interventions
+fail to change $y$ \citep[\S 3]{shen2025-faithcot-bench}.
+\item \textbf{Logit-based detectors} read internal model signals
+(token-level entropies, attention to trace tokens vs.\ prompt tokens)
+to predict per-instance unfaithfulness without explicit intervention
+\citep[\S 3]{shen2025-faithcot-bench}.
+\item \textbf{LLM-as-judge detectors} present the trajectory to a
+separate language model and ask whether the trace's stated reasoning
+in fact derives the emitted answer
+\citep[\S 3]{shen2025-faithcot-bench}.
+\end{itemize}
+The headline empirical finding: detection is \textbf{harder in
+knowledge-intensive domains and on more advanced models}
+\citep[abstract]{shen2025-faithcot-bench}. The intuition is uncomfortable
+for the field's defaults: the very models whose trace-dependent answer
+quality is best are the ones whose unfaithfulness is hardest to detect
+mechanistically, because their traces are surface-coherent enough that
+LLM-as-judge fails and their internal logit signal does not visibly
+collapse on the unfaithful instances.
+
+A second methodological point of FaithCoT-Bench is that
+\emph{instance}-level measurement, not aggregate rate, is the
+load-bearing object. A model with average rationalisation rate $0.14\%$
+\citep[\S 4]{mehta2026-faithfulness-scaling} could still be unfaithful
+on the specific subpopulation of prompts where the user actually depends
+on trace transparency (high-stakes decisions, monitorable-channel
+deployments — Paper~5's alignment surface). Aggregate measurement
+underweights tail risk.
+
+\subsection{Mehta et al.: does inference scaling improve faithfulness?}
+\label{sec:faith-mehta}
+
+\citet{mehta2026-faithfulness-scaling} ask the most consequential 2026
+question for the paper's thesis: does \emph{scaling} the inference-time
+compute axis (\cref{sec:test-time-compute}) — specifically,
+self-consistency at $N > 1$ — \emph{also} improve faithfulness, or are
+accuracy gains and faithfulness gains decoupled?%
+\footnote{Excerpt status:
+\texttt{kb/excerpts/mehta2026-faithfulness-scaling.md} is abstract-only
+as of 2026-05; \deepencite{mehta2026-faithfulness-scaling abstract,
+citation-pending}} The study runs four frontier models
+(\textbf{GPT-5.2, Claude Opus 4.5, Gemini-3-flash-preview,
+DeepSeek-v3.2}) on $100$ GSM8K problems at varying self-consistency
+budgets and measures both task accuracy and a per-trajectory
+faithfulness score in parallel.
+
+The headline result is non-monotonic: \textbf{inference scaling does
+not uniformly improve faithfulness}
+\citep[abstract]{mehta2026-faithfulness-scaling}. The Claude Opus 4.5
+configuration provides the cleanest illustration: accuracy
+\emph{decreases} from $78\% \to 74.3\%$ while measured faithfulness
+\emph{rises} from $0.270 \to 0.891$ at
+$N = 5$.\footnote{KB index:
+\texttt{kb/index/papers.json} — abstract.
+\deepencite{mehta2026-faithfulness-scaling §4 (or wherever the per-model
+table lives in the PDF; section anchor pending population), citation-pending}}
+For \cref{eq:cot-decode}'s reading of self-consistency this is a
+puzzle: more samples should average out per-sample noise in the
+\emph{trace} channel, leaving the conditional $p_\theta(y \mid x, z)$
+better-determined; but at the same time, the votes are over the
+\emph{answer} channel, and the relationship between trace-channel
+quality and answer-channel quality is exactly what faithfulness
+measurement is testing. Mehta et al.'s finding is that the two channels
+move differently per model.
+
+The operational implication: \textbf{self-consistency must be tested
+per-model before deployment}
+\citep[abstract]{mehta2026-faithfulness-scaling} for any application
+that depends on traces being a faithful read of the model's
+computation. The framework's thesis — that inference compute, search,
+and verification are co-designed levers (\cref{sec:test-time-compute,sec:process-reward-models})
+— picks up a fourth operational variable here: the
+\emph{interpretability cost} of the inference-compute leg, which the
+2026 evidence reports is not a free externality of accuracy.
+
+\subsection{The contradiction with reasoning-training framings}
+\label{sec:faith-contradiction}
+
+The clean read of \citet{deepseek-r1}'s GRPO outcome — long traces
+emerge from RLVR, accuracy rises in lockstep with trace length,
+truncating the trace destroys the gain — is that the trace is a
+\emph{causal substrate}: the model is doing genuine compute on the
+trace channel and the answer is being read off the result. The
+Arcuschin and Mehta evidence complicates this read at two scales.
+
+\begin{contradiction}
+\textbf{Reasoning-training as causal-trace evidence vs.\ unfaithful-trace
+evidence.} \citet[\S 2.2]{deepseek-r1} report that RLVR training grows
+average response length from $\sim 200$ to $\sim 10{,}000$ tokens with
+AIME 2024 pass\@1 climbing $15.6\% \to 71\%$,%
+\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}.} a correlation
+that the simplest reading attributes to the trace's content driving
+the answer's correctness. Yet \citet{arcuschin2025-cot-wild} find R1
+itself exhibits a measurable rationalisation rate of $0.37\%$
+\citep[abstract]{arcuschin2025-cot-wild} on naturalistic prompts, and
+the unfaithful-illogical-shortcut failure mode of
+\cref{sec:faith-arcuschin} is a regime where trace tokens are emitted
+in the right format but the answer is not in fact a function of them.
+\citet{mehta2026-faithfulness-scaling}'s scaling-of-faithfulness result
+sharpens the tension: one frontier model's accuracy drops while its
+faithfulness rises under self-consistency, a pattern incompatible with
+the simple reading that traces are a causal substrate at all scales.
+The 2026 picture is regime-dependent and the question is unresolved;
+\cref{sec:contradictions} catalogues this alongside the other live
+faithfulness contradictions of \cref{sec:faith-arcuschin,sec:faith-mehta}.
+\end{contradiction}
+
+A second sub-tension within the empirical wave itself: the per-rate
+gap of two orders of magnitude between non-thinking and thinking
+configurations \citep[abstract]{arcuschin2025-cot-wild} cannot be
+cleanly attributed to long-CoT SFT, RLVR post-training, or general
+scale by published 2025--2026 ablations
+\citep[\S 4]{mehta2026-faithfulness-scaling}; the controlled
+ablation that varies one of these factors at fixed others has not been
+run at frontier scale.%
+\footnote{KB note:
+\texttt{kb/notes/reasoning/chain-of-thought.md\#4.1}.} The reason
+matters: if the gap is RLVR-driven, it is benchmarkable and tunable
+through the training pipeline of \cref{sec:rlvr}; if it is scale-driven,
+faithfulness is on a separate scaling curve from accuracy, and Mehta et
+al.'s non-monotonic per-model results are the first signal of where the
+two curves cross.
+
+\subsection{Cross-paper consequences: probe surface and monitor channel}
+\label{sec:faith-cross-paper}
+
+The faithfulness question lands twice in later papers, and §11's
+resolution shapes both.
+
+\paragraph{Paper~4 — CoT as a probe surface.}
+The interpretability programme of Paper~4 reads internal computation
+through several methods: logit lenses, linear probes, sparse
+autoencoders, activation patching, and circuit tracing. CoT traces are
+the \emph{output-side} probe surface for that programme — they are
+human-readable, token-aligned with the residual stream, and stable
+under repeated decoding. The faithfulness question gates this use:
+\textbf{if traces are unfaithful, the probe surface is decoupled from
+the underlying computation}. Paper~4's §interpretability returns to
+this section as a precondition for treating CoT-as-probe as a primary
+methodology, and uses Mehta et al.'s per-model variation to argue that
+probe-surface validity must be re-established model-by-model rather
+than assumed from the family.
+
+\paragraph{Paper~5 — CoT as an alignment monitor.}
+The alignment programme of Paper~5 treats the CoT channel as a
+\emph{monitorable surface}: detectors that read traces look for
+warning signs of misalignment, scheming, sycophancy, and
+alignment-faking before the answer is committed. The
+canonical 2024 result on alignment-faking
+\citep{greenblatt2024-alignment-faking} demonstrates that a model can
+behave correctly on observable outputs while internally pursuing a
+divergent objective; if the trace channel is unfaithful in
+\cref{eq:faith-causal}'s sense, this monitoring approach has a blind
+spot exactly where it most needs to see. Paper~5's §alignment cites
+forward to this section as the empirical bound on CoT-as-monitor: a
+$0.04$--$0.37\%$ unfaithfulness rate on thinking models
+\citep[abstract]{arcuschin2025-cot-wild} is small in aggregate but
+consequential at scale, and the per-instance harder-on-advanced-models
+finding of \citet{shen2025-faithcot-bench} is the most direct warning
+that the channel degrades exactly in the regime where alignment
+monitoring matters most.
+
+The shared structural point across both papers: \emph{aggregate
+unfaithfulness rates do not bound deployment risk}. The instance-level
+distribution matters, and the 2025--2026 evidence is that the unfaithful
+instances cluster in knowledge-intensive domains and on advanced models
+\citep[abstract]{shen2025-faithcot-bench} — the same regime where
+downstream uses of the trace channel are most consequential.
+
+\subsection{Forward link: does the verifier signal still matter?}
+\label{sec:faith-forward}
+
+The structural adjacency to \cref{sec:prm-survival} is direct. Both
+sections ask the same shape of question: \emph{has the post-2024
+training pipeline absorbed a function the field used to assign to an
+external module?} For verifiers (PRMs), the question is whether
+process-reward signal still earns its inference and training cost once
+RLVR-trained policies internalise step-level verification. For traces,
+the question is whether the CoT channel still earns its interpretability
+and monitoring premium once the policy has been RL-trained to optimise
+the answer-channel directly. The 2026 evidence, in both cases, is that
+the absorption is partial and regime-dependent: PRMs continue to add
+value at inference time (\cref{sec:prm-thinkprm,sec:prm-survival}) while
+their training-time value shrinks, and traces continue to drive answers
+on the on-distribution majority of instances while their reliability
+degrades exactly on the harder, higher-stakes tail.
+\Cref{sec:contradictions} catalogues both contradictions as twin live
+frontiers, and the closing thesis of the paper —
+\cref{sec:test-time-compute}'s triangle is co-designed in 2026 — must
+inherit the qualifier that two of its three legs are operationally
+sound but interpretively contested. \Cref{sec:prm-survival} carries the
+verifier half of the question forward; this section's evidence is the
+trace half.

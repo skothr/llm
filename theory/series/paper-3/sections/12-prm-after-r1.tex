@@ -1,0 +1,338 @@
+% Paper 3, §12 — Process supervision after R1: do PRMs still help?
+% Anchors: kb/notes/reasoning/process-supervision.md §3-5
+%          kb/excerpts/{lightman2023-prm800k,thinkprm2025,deepseek-r1}.md
+%          (zheng2025-prm-survey, she2025-r-prm have only stub or
+%           abstract-level coverage in the KB as of 2026-05;
+%           load-bearing claims are flagged \deepencite.)
+
+\section{Process supervision after R1: do PRMs still help?}
+\label{sec:prm-survival}
+
+\Cref{sec:process-reward-models} introduced the verifier leg of the
+reasoning triangle on a 2023 generator: PRM-best-of-$N$ dominates
+ORM-best-of-$N$ at matched $N$ on PRM800K-grade verifiers, with
+min-aggregation as the strongest aggregator and PRM-weighted
+self-consistency as a budget-friendly compromise
+\citep[\S 4]{lightman2023-prm800k}. Two years later, the strongest
+open-weight reasoning model --- DeepSeek-R1 --- reached its headline
+AIME 2024 jump using \emph{terminal verifier rewards only} and
+explicitly abstained from any neural reward model, whether outcome- or
+process-based, in the RL loop \citep[\S 2.2]{deepseek-r1}.\footnote{KB
+excerpt: \texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}.} The
+question this section confronts is the one \cref{sec:process-reward-models}
+deferred: in the post-R1 era, do PRMs still earn their training
+and inference cost?
+
+The 2025--2026 picture is mixed. PRMs continue to add value at
+\emph{inference} time in a number of measured settings (best-of-$N$
+reranking, search guidance) on reasoning-trained policies; their value
+as a \emph{training} signal beyond verifier-only RLVR is contested,
+with both diminishing-returns evidence and continued-gain claims
+surveyed by \citet{zheng2025-prm-survey}.\deepencite{zheng2025-prm-survey
+\S2--3 (excerpt skeleton-only as of 2026-05; PDF acquisition pending)}
+This section walks the evidence on both sides, formalises the
+generative-PRM dominance claim and its 2026 caveats, and frames the
+contradiction that \cref{sec:contradictions} catalogues.
+
+\subsection{R1 is the data point}
+\label{sec:prm-survival-r1}
+
+\Citet[\S 2.1, \S 2.2]{deepseek-r1} train R1-Zero with the GRPO
+objective of \cref{eq:grpo-objective} under a rule-based reward:
+\begin{equation}
+  r_i \;=\; \mathbb{1}\!\left[\, \mathrm{verify}(x, o_i) = \mathsf{true}\,\right]
+  \;+\; \alpha\,\mathbb{1}\!\left[\, \mathrm{format}(o_i) = \mathsf{ok}\,\right],
+  \label{eq:r1-rule-reward}
+\end{equation}
+where $\mathrm{verify}(\cdot)$ is an answer-match check on math
+problems and a unit-test / compiler check on code, and
+$\mathrm{format}(\cdot)$ scores adherence to the
+\verb|<think>...</think><answer>...</answer>| schema. No PRM appears
+in \cref{eq:r1-rule-reward}; no neural reward model of any kind appears
+in the loop. The DeepSeek authors are explicit about the choice%
+\footnote{KB excerpt: \texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}.}
+\citep[\S 2.2]{deepseek-r1}:
+\begin{quote}
+\itshape
+[W]e abstain from applying neural reward models — whether outcome-based
+or process-based — to reasoning tasks. This decision is predicated on
+our observation that neural reward models are susceptible to reward
+hacking during large-scale reinforcement learning.
+\end{quote}
+The headline empirics are well-known: AIME 2024 pass@1 from
+$15.6\%$ to $77.9\%$ during RL, and to $86.7\%$ with self-consistency
+at inference time \citep[\S 2.3]{deepseek-r1}.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} A reasoning model
+that does not place at the AIME human-competitor level cannot be
+explained by ``the missing PRM''; the gap is
+already closed without one. This is the load-bearing data point that
+reframes the post-2023 PRM literature from ``does process supervision
+beat outcome supervision?'' (settled by \citet{lightman2023-prm800k} on
+the 2023 generator) to ``is process supervision still net-positive on
+top of verifier-only RLVR?''
+
+\begin{intuition}
+RLVR can be read as ORM-with-a-perfect-verifier. The R1 reward
+\cref{eq:r1-rule-reward} is precisely the outcome reward
+$R^O_\phi(x, z, y) \in \{0, 1\}$ of \cref{eq:orm-loss} with the learned
+classifier replaced by an exact symbolic check. Returning to math:
+where \citet{lightman2023-prm800k} compared learned-ORM-best-of-$N$
+against learned-PRM-best-of-$N$, R1 substitutes the learned ORM with a
+zero-error verifier and pushes the resulting binary signal through GRPO
+rather than through reranking. The ORM half of the 2023 comparison has
+been replaced by something strictly stronger; whether the PRM half
+still wins requires re-running the experiment on this new generator
+class.
+\end{intuition}
+
+\subsection{Inference-time PRMs on reasoning-trained policies}
+\label{sec:prm-survival-inference}
+
+The cleaner part of the 2025--2026 picture: PRMs as inference-time
+re-rankers and search guides on reasoning-trained policies. Two
+consistent findings appear across the surveyed literature.
+
+\paragraph{Generative PRMs dominate discriminative ones on
+verifiable-step domains.} \Citet{thinkprm2025} report that ThinkPRM, a
+generative verifier (\cref{eq:thinkprm-gen}) fine-tuned on $1\%$ of
+PRM800K labels and self-generated synthetic verification traces,
+beats discriminative PRMs trained on the full PRM800K on ProcessBench,
+MATH-500, and AIME 2024 under best-of-$N$ selection and reward-guided
+search; out-of-domain it beats the full-PRM800K discriminative baseline
+by $8\%$ on a GPQA-Diamond subset and $4.5\%$ on
+LiveCodeBench, and beats LLM-as-a-Judge by $7.2\%$ on ProcessBench at
+matched verification-token budget \citep[abstract]{thinkprm2025}.%
+\footnote{KB excerpt: \texttt{kb/excerpts/thinkprm2025.md\#headline}.}
+The mechanism is the one foreshadowed in \cref{sec:prm-thinkprm}: the
+verifier's CoT can apply algebraic-verification, type-checking, and
+dimensional-analysis steps that a feed-forward classifier head cannot
+internalise from labelled examples alone \citep[\S 5]{thinkprm2025}.%
+\footnote{KB excerpt: \texttt{kb/excerpts/thinkprm2025.md\#sec-5}.} The
+2025 PRM survey \citep{zheng2025-prm-survey} echoes the framing while
+adding a domain caveat: generative PRMs win where each step has a
+verifiable certificate (algebraic equality, equation-of-motion balance,
+type compatibility) the verifier's CoT can actually
+apply.\deepencite{zheng2025-prm-survey \S3 (excerpt skeleton-only as of
+2026-05)}
+
+\paragraph{Reasoning-aware discriminative PRMs close part of the gap at
+lower inference cost.} \Citet{she2025-r-prm} train a discriminative PRM
+that emits a short reasoning preamble before scoring; the architecture
+remains a verdict head but the input is enriched by a brief
+verifier-reasoning prefix. The reported gain is
+distribution-shift-robustness rather than peak-benchmark
+performance.\deepencite{she2025-r-prm \S3 (excerpt skeleton-only as of
+2026-05)} Operationally, this collapses the
+\cref{eq:thinkprm-gen}-vs-\cref{eq:prm-signature} dichotomy of
+\cref{sec:prm-thinkprm}: as the preamble length $L_{\text{preamble}}$
+grows, R-PRM converges to ThinkPRM; as it shrinks to zero, R-PRM
+recovers the discriminative classifier. The cost
+profile for best-of-$N$ scales as $O(N \times L_{\text{preamble}})$,
+intermediate between the $O(N)$ classifier and the
+$O(N \times L_{\text{verify}})$ generative verifier. \Citet{cao2025-edu-prm}
+add an orthogonal axis (entropy-driven step boundaries) which we treat
+in \cref{sec:prm-r-edu}; both threads belong to the same finding ---
+the post-2023 PRM landscape is more multi-axial than the
+PRM800K-grade-classifier baseline implied.
+
+The \emph{combined} reading: at inference time, the strongest 2026
+PRMs are generative, are trained with two orders of magnitude fewer
+human labels than PRM800K (offset by self-generated synthetic
+verification traces), and continue to outperform vanilla
+discriminative PRMs on competition math benchmarks. Inference-time
+process supervision did not vanish post-R1; it shifted form.
+
+\subsection{Training-time PRMs after R1: where the contradiction lives}
+\label{sec:prm-survival-training}
+
+The training-time picture is the contested one. Three positions are
+attested in 2025--2026.
+
+\paragraph{Position A: PRM-shaped GRPO is theoretically attractive but
+empirically risky.} The middle ground of
+\cref{sec:prm-r-edu} (and
+\cref{eq:r1-rule-reward}'s sparse-binary critique) is the
+\emph{denser} reward of substituting or augmenting $r_i$ with a
+per-step or per-trace PRM score. Several R1-replication
+efforts try this approach
+\citep[\S 4]{thinkprm2025}.\footnote{KB note:
+\texttt{kb/notes/reasoning/process-supervision.md\#4.2}.} The known
+failure mode is \emph{process hacking}: a misaligned PRM rewards
+locally-plausible-looking steps without the trace converging on the
+correct answer --- the step-level analogue of the outcome-hacking
+failure mode that \citet[\S 2.2]{deepseek-r1} cite as their reason for
+abstaining from neural reward models entirely. When the PRM aligns
+well, dense signal beats sparse signal for credit assignment; when it
+misaligns, the policy exploits the gap.
+
+\paragraph{Position B: PRM-best-of-$N$ over R1-class outputs still
+adds gains, but smaller ones.} \Citet{thinkprm2025} report continued
+PRM-best-of-$N$ gains over reasoning-trained policies on AIME 2024
+and MATH-500; \citet{zheng2025-prm-survey} find the same pattern
+across surveyed measurements ``until the base model becomes a strong
+reasoning model itself,'' at which point the marginal external-PRM
+gain shrinks.\deepencite{zheng2025-prm-survey \S4 discussion of
+post-R1 measurements (excerpt skeleton-only as of 2026-05)} The
+mechanism: as the policy's own internal verification --- the
+self-reflection and ``aha moment'' behaviours of
+\citet[\S 2.3]{deepseek-r1}\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aha}.} --- approaches the
+PRM's signal, the verifier-fidelity gap that the PRM exploits closes.
+This does not zero out, but it does erode: the same external PRM that
+delivered $20$-point pass@$N$ gains over a 2023 GPT-4 generator on
+PRM800K-MATH delivers smaller gains over an R1-distill at matched $N$.
+
+\paragraph{Position C: process-vs-outcome RL is the wrong question;
+the question is which signal is cheap to verify.} The third position,
+implicit in \cref{eq:r1-rule-reward}, is that the binary outcome reward
+of RLVR is cheap because the verifier is exact (an answer-match check,
+a compiler), not because outcome supervision is intrinsically superior
+to process supervision. Where exact outcome verification is available
+--- competition math, code, formal logic --- the choice between
+sparse-but-zero-error and dense-but-noisy is unbalanced; the binary
+verifier wins on robustness alone, even if dense signal would
+theoretically reduce credit-assignment noise. Where exact outcome
+verification is \emph{not} available --- open-domain QA, scientific
+reasoning, planning --- neither RLVR nor PRM-shaped RLVR has a clean
+empirical answer in 2026. This reframing is consistent with the survey
+\citep{zheng2025-prm-survey} but is sharper than its conclusion.
+
+\begin{contradiction}
+\textbf{PRMs as a training-time signal beyond verifier-only RLVR ---
+unresolved.} The 2023 PRM800K-era result that PRM > ORM at matched
+$N$ \citep[Fig.\ 4]{lightman2023-prm800k} was established on a
+non-reasoning-trained generator. As the policy class moves to
+RLVR-trained reasoning models, the ORM in that comparison is replaced
+by a zero-error symbolic verifier (\cref{eq:r1-rule-reward}); the PRM
+in that comparison must now beat the generator's own internal
+verification. \Citet{thinkprm2025} report inference-time gains;
+\citet{zheng2025-prm-survey} catalogue mixed empirics, with most
+PRMs improving test-time-compute performance ``until the base model
+becomes a strong reasoning model itself.'' R1 itself ships with
+\emph{no} PRM in the headline RL loop \citep[\S 2.2]{deepseek-r1}.
+The PRM-after-R1 question splits into two: (i) at \emph{inference
+time}, generative PRMs (ThinkPRM, R-PRM) continue to add value; (ii)
+at \emph{training time}, whether PRM-shaped RLVR beats verifier-only
+RLVR at matched compute is benchmark-specific and unsettled.
+\Cref{sec:contradictions} returns to this as the most consequential
+open contradiction of the verifier leg.
+\end{contradiction}
+
+\subsection{Process-vs-outcome RL: when does the per-step signal pay?}
+\label{sec:prm-survival-cost}
+
+A useful book-keeping question: at fixed total RL compute, when does
+the per-step PRM signal pay for the labelling and verifier-inference
+cost? Three terms are in tension.
+
+\paragraph{Labelling cost.} Human PRM800K-style labelling is
+$O(\text{problems} \times T \times c_{\text{annot}})$, where
+$c_{\text{annot}}$ is annotation cost per step. Math-Shepherd-style
+automatic labelling (\cref{sec:prm-mathshepherd}) collapses this to
+$O(\text{problems} \times T \times K \times L_{\text{rollout}})$
+inference tokens; ThinkPRM-style 1\%-PRM800K + synthetic-verification
+collapses it further to $O(\text{problems}_{1\%} \times T \times c_{\text{annot}}
++ \text{synthetic verification traces})$.
+
+\paragraph{Verifier-inference cost in the RL loop.} Per RL step, a
+PRM-shaped reward requires $G \times T$ verifier passes (one per step
+of each of $G$ rollouts) at cost
+\begin{equation}
+  C_{\text{PRM-RL}} \;=\; G \times \E[T] \times C_{\text{verify-step}},
+  \label{eq:prm-rl-cost}
+\end{equation}
+versus the verifier-only RLVR cost of $G \times C_{\text{verify-final}}$,
+which for an answer-match check is essentially $C_{\text{regex}}
+\approx 0$. With a generative verifier, $C_{\text{verify-step}}
+\propto L_{\text{verify}}$ tokens; on a long-CoT trace with $T \in
+[10, 100]$ and $L_{\text{verify}} \in [10^2, 10^3]$ tokens, the PRM-RL
+verifier-inference cost can dwarf the policy-rollout cost itself.
+
+\paragraph{Signal density.} The benefit side. PRM-shaped GRPO replaces
+a single binary $r_i$ with a $T$-vector of step scores; under a
+well-aligned PRM, the gradient identifies the worst step locally
+rather than back-propagating one outcome label across an entire
+$10^3$--$10^4$-token trace, which is the credit-assignment story of
+\cref{sec:prm-commitment}.
+
+The pay-off condition is roughly that the credit-assignment gain
+exceeds the $G \times T \times L_{\text{verify}}$ verifier-inference
+overhead and the process-hacking risk. As of 2026-Q2 there is no
+published empirical curve that establishes the crossover point on a
+reasoning-trained generator at frontier scale; \cref{sec:contradictions}
+records this as an open frontier question.
+
+\begin{intuition}
+Process supervision is dense supervision, and dense supervision pays
+off when the labelling signal is reliable. The 2023 PRM800K
+demonstration was on human labels (very reliable, very expensive);
+2024 Math-Shepherd was on rollout-completion-rate labels (cheap,
+moderately reliable); 2025 ThinkPRM is on a generative verifier's
+self-graded signal (cheap, reliability tied to the verifier's own
+quality). Returning to math: the PRM-shaped GRPO objective replaces
+$\hat A_{i,t} = (R_i - \mu)/\sigma$ from \cref{eq:grpo-advantage} with a
+per-step advantage $\hat A_{i,t} = R^P_\phi(x, s^{(i)}_{1:t}) - \bar R^P$
+that pays off in proportion to $R^P_\phi$'s alignment with ground truth.
+When alignment is high, dense beats sparse; when alignment slips, the
+policy hacks the gap.
+\end{intuition}
+
+\subsection{What the post-R1 evidence actually says}
+\label{sec:prm-survival-evidence}
+
+A summary, scoped to what \cref{sec:process-reward-models}'s anchors
+plus the 2025--2026 PRM survey support:
+
+\begin{enumerate}
+\item \textbf{R1 reached AIME 2024 pass@1 of $77.9\%$ with no PRM in
+the RL loop} \citep[\S 2.3]{deepseek-r1}. This single data point
+establishes that strong reasoning is achievable from verifier-only
+RLVR; the PRM is not a precondition.
+\item \textbf{Inference-time generative PRMs continue to outperform
+discriminative PRMs} on verifiable-certificate benchmarks
+\citep[abstract]{thinkprm2025}. The dominance shifts from a
+training-data-volume axis (PRM800K) to a verifier-compute axis
+($L_{\text{verify}}$).
+\item \textbf{The marginal value of an external PRM at inference time
+shrinks as the base model becomes a strong reasoning model itself}
+\citep{zheng2025-prm-survey}. Mechanism: the policy's internal
+verification approaches the PRM's signal, closing the
+verifier-fidelity gap.\deepencite{zheng2025-prm-survey \S4 discussion}
+\item \textbf{PRM-shaped RLVR has no clean empirical advantage over
+verifier-only RLVR at frontier scale as of 2026-Q2.} The R1 authors
+abstain from neural reward models on reward-hacking grounds; the
+2025 survey reports mixed empirics.
+\item \textbf{R-PRM and EDU-PRM} \citep{she2025-r-prm,cao2025-edu-prm}
+demonstrate that the discriminative-vs-generative split is not the
+only PRM design axis: reasoning preambles and entropy-driven step
+boundaries each yield gains at lower verifier cost than full
+generative ThinkPRM, suggesting the design space is more
+multi-axial than the 2023--2024 literature
+implied.\deepencite{she2025-r-prm \S3 and cao2025-edu-prm \S3
+(excerpt skeleton-only as of 2026-05)}
+\end{enumerate}
+
+What the evidence does \emph{not} settle: whether the verifier leg of
+the reasoning triangle is best instantiated as a search-time PRM, a
+training-time PRM-shaped reward, or a verifier-only RLVR signal
+combined with self-consistency. The three options coexist in the 2026
+frontier model line-up (\cref{sec:frontier-snapshot}) without a
+consensus winner.
+
+\subsection{Forward link}
+\label{sec:prm-survival-forward}
+
+The PRM-after-R1 question splits cleanly into an inference-time half
+(answered: generative PRMs continue to add value, with diminishing
+returns as the policy's own verification improves) and a training-time
+half (open: PRM-shaped RLVR vs verifier-only RLVR has no settled
+empirical winner). \Cref{sec:frontier-snapshot} provides the
+2026 snapshot table of which frontier reasoning models actually ship
+PRMs --- and the headline answer is ``almost none in the headline RL
+loop, several at inference time.'' \Cref{sec:contradictions} then
+collects this section's contradiction alongside the CoT-faithfulness
+question (\cref{sec:cot-faithfulness}), the
+RLVR-generalisation-vs-memorisation question
+(\cref{sec:rlvr,sec:r1-family}), and the search-vs-RL fixed-compute
+tradeoff (\cref{sec:search-vs-rl}) as the open frontier of the
+verifier leg.
