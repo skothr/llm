@@ -570,7 +570,7 @@
       "year": 2023,
       "venue": "arXiv (COLM 2024)",
       "url": "https://arxiv.org/abs/2312.00752",
-      "local_file": null,
+      "local_file": "theory/sources/papers/gu2023_mamba.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [
         "architecture/state-space-models"
@@ -3041,7 +3041,7 @@
       "year": 2019,
       "venue": "NAACL 2019",
       "url": "https://arxiv.org/abs/1810.04805",
-      "local_file": null,
+      "local_file": "theory/sources/papers/devlin2019_bert.pdf",
       "excerpts_file": null,
       "notes_referenced_by": [
         "architecture/transformer-overview"
@@ -3525,7 +3525,7 @@
       "year": 2022,
       "venue": "NeurIPS 2022",
       "url": "https://arxiv.org/abs/2204.14198",
-      "local_file": null,
+      "local_file": "theory/sources/papers/alayrac2022_flamingo.pdf",
       "excerpts_file": "kb/excerpts/alayrac2022-flamingo.md",
       "notes_referenced_by": [
         "architecture/multimodal-llm-extensions"
@@ -3543,8 +3543,8 @@
       "year": 2016,
       "venue": "arXiv:1607.06450",
       "url": "https://arxiv.org/abs/1607.06450",
-      "local_file": null,
-      "excerpts_file": null,
+      "local_file": "theory/sources/papers/ba2016_layernorm.pdf",
+      "excerpts_file": "kb/excerpts/ba2016-layernorm.md",
       "notes_referenced_by": [
         "architecture/normalization",
         "architecture/transformer-overview"
@@ -3562,7 +3562,7 @@
       "year": 2024,
       "venue": "ICML 2024",
       "url": "https://arxiv.org/abs/2404.19737",
-      "local_file": null,
+      "local_file": "theory/sources/papers/gloeckle2024_mtp.pdf",
       "excerpts_file": "kb/excerpts/gloeckle2024-mtp.md",
       "notes_referenced_by": [
         "architecture/transformer-overview",
@@ -3581,7 +3581,7 @@
       "year": 2018,
       "venue": "EMNLP 2018 demos",
       "url": "https://arxiv.org/abs/1808.06226",
-      "local_file": null,
+      "local_file": "theory/sources/papers/kudo2018_sentencepiece.pdf",
       "excerpts_file": "kb/excerpts/kudo2018-sentencepiece.md",
       "notes_referenced_by": [
         "architecture/tokenization"
@@ -3599,7 +3599,7 @@
       "year": 2017,
       "venue": "EACL 2017",
       "url": "https://arxiv.org/abs/1608.05859",
-      "local_file": null,
+      "local_file": "theory/sources/papers/press2017_tied-embed.pdf",
       "excerpts_file": "kb/excerpts/press2017-tied-embed.md",
       "notes_referenced_by": [
         "architecture/embeddings-and-tying"
