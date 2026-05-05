@@ -12,14 +12,16 @@ Phase 5 brainstorm document committed. KB now 54 draft / 0 stubs._
 
 | Slice | Count | Notes |
 |------|------:|------|
-| Papers in `kb/index/papers.json` | 187 | 88 with `excerpts_file`, 174 with `notes_referenced_by` |
+| Papers in `kb/index/papers.json` | 187 | 98 with `excerpts_file`, 174 with `notes_referenced_by` |
 | Topic leaves | 54 | 9 areas; **all 54 draft, 0 stubs** |
-| Excerpt files (`kb/excerpts/*.md`) | 88 | most still abstract-level (see Phase 2.5 gap) |
+| Excerpt files (`kb/excerpts/*.md`) | 98 | majority now PDF-grounded (Phase 2.5 deepening) |
+| PDFs on disk (`theory/sources/papers/`) | ~76 | up from 28 at session start |
 | Synthesis notes (`kb/notes/*/*.md`) | 54 | one per leaf |
 | Cross-area contradictions surfaced | 99 | reasoning + architecture lead |
 | Glossary entries | ~500 | pre-existing + pilot + 9 area fragments + 2 stubfill fragments |
 | Timeline entries | pre-2017 → 2026-H1 | 41 unique cited keys, all resolve in `papers.json` |
 | Cited paper-keys (inline §) | 124 | up from 74 |
+| Excerpt anchors cited (dual-cite) | 313 | up from 2 (Phase 4 regex was too narrow) |
 
 ## Phase outcomes
 
@@ -97,19 +99,24 @@ Phase 5 brainstorm document committed. KB now 54 draft / 0 stubs._
 
 ## Recommended next session
 
-(B) is now done; (C) is now drafted. The two remaining tracks:
+(B), (C), and most of (A) are now done. Tracks ahead:
 
-- **(A) Phase 2.5 — excerpt deepening.** Re-pull missing PDFs to
-  `theory/sources/papers/`, deepen abstract-level excerpts to
-  §/eq.-anchored, backfill `[kb/excerpts/<key>#anchor]` citations
-  across draft notes. Highest leverage for citation provenance — and
-  a hard precondition for actually starting any LaTeX paper.
+- **(A2) Phase 2.5 — finishing pass on the still-thin excerpts.** ~26
+  excerpts whose body was WebFetch-derived now have local PDFs on disk
+  (the orchestrator batch-fetched what subagents couldn't). A focused
+  re-deepening pass would lift them from abstract+thin to §-anchored.
+  Optional — Paper-1's primary cite list is already PDF-grounded.
 - **(F) Phase 5 implementation kickoff.** User picks a series shape
   (A-E in `theory/plans/2026-05-04-latex-series-brainstorm.md`) — Shape
   C (5 thesis papers) is the recommendation. Once chosen, write the
   per-paper outline + implementation plan for Paper 1, hand off to
   a writing-plans round, then implement.
+- **(G) Subagent sandbox-permission fix.** Three of four Phase 2.5
+  agents had `curl` blocked at the user-permission layer (sandbox
+  override didn't release it). Reasoning agent worked around with
+  Python urllib. Future heavy-fetch subagents should be told to use
+  `python3 -c "import urllib.request; …"` rather than curl, OR the
+  user can adjust permissions. Documented in
+  `plans/_phase2/subagent-playbook.md` would prevent the rediscovery.
 
-Suggested order: A first, F second. Without Phase 2.5 the LaTeX series
-will inherit the abstract-level provenance gap — workable for early
-drafts but it shows.
+Recommended order: F is now unblocked; A2 is optional polish.
