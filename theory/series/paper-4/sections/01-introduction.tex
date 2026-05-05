@@ -1,0 +1,236 @@
+% Paper 4, §1 — Introduction
+% Thesis: interpretability is method-plural because the underlying object —
+% a frontier transformer's internal computation — is plural. Five methods
+% (lens, probes, SAEs, activation patching, circuit tracing) commit
+% differently along four axes: correlational vs causal, component- vs
+% feature-level, supervised vs unsupervised, static-readout vs intervention.
+% "Partially read" claim: human-legible structure for some behaviors, on some
+% models, with cross-method agreement on some claims. Closing question for
+% §11/§12: when do two methods *have* to agree, and what does it mean when
+% they don't?
+
+\section{Introduction}
+\label{sec:introduction}
+
+Interpretability is method-plural. A modern frontier transformer is, at
+the level of weights and activations, a stack of attention and MLP
+sublayers writing into a residual stream of dimension $D \in \{2048,
+4096, 8192, 16384\}$ over sequences of length $S$ up to $\sim10^6$
+tokens, with parameter counts from $10^9$ to $10^{12}$ and a vocabulary
+of $|\mathcal{V}| \in \{32\text{k}, 128\text{k}, 256\text{k}\}$ tokens
+(Paper~1 \S2). The mechanistic-interpretability program asks what that
+stack is \emph{computing} --- not just what it predicts, but what
+intermediate representations it builds, which of those representations
+it uses, and how those representations compose into the behaviors we
+care about. The field has not converged on a single method for
+answering that question, and this paper argues it should not. The
+underlying object is plural: the same residual-stream activation
+$\mathbf{h}^{(\ell, t)} \in \mathbb{R}^D$ at layer $\ell$, position
+$t$ is simultaneously a partial vocabulary distribution
+\citep{belrose2023-tuned-lens}, a vector of linearly decodable
+properties \citep{marks-tegmark-2023-truth}, a sparse combination of
+overcomplete features \citep{gao2024-topk-saes}, a node in a causal
+graph \citep{meng2022-rome}, and a participant in a sparse
+behavior-implementing subgraph \citep{wang2022-ioi}. Each of those is
+a real fact about $\mathbf{h}^{(\ell, t)}$, observable with a
+different instrument, and load-bearing for a different question. The
+methodological pluralism is principled, not transitional.
+
+This paper is a method-by-method comparison of the five interpretability
+techniques that have stabilized into the field's canon between roughly
+2017 and 2026. Method-pluralism is the throughline, but the
+load-bearing claim is sharper: the underlying transformer's internal
+computation can be \emph{partially} read --- we can extract
+human-legible structure for \emph{some} behaviors, on \emph{some}
+models, with cross-method agreement on \emph{some} claims --- and the
+field is honest about which behaviors, which models, and which claims.
+Complete reverse-engineering of a frontier model is not on the table
+in 2026; partial, locally-faithful, cross-method-validated explanation
+is.
+
+\subsection{Five methods, four commitments}
+\label{sec:five-methods}
+
+Five interpretability methods anchor the literature, in roughly the
+order they crystallized:
+
+\begin{description}
+  \item[Lens techniques (\S\ref{sec:logit-lens-family}).] Project an
+    intermediate residual-stream state $\mathbf{h}^{(\ell, t)}$ through
+    the model's own pre-unembed normalization and unembedding $W_U$ to
+    obtain a layer-$\ell$ ``as-if-final'' distribution over
+    $\mathcal{V}$. The \emph{logit lens}
+    \citep{nostalgebraist2020-logit-lens} is the no-training baseline;
+    the \emph{tuned lens} \citep{belrose2023-tuned-lens} fixes
+    documented cross-model failures with a per-layer affine translator.
+  \item[Probes (\S\ref{sec:probing}).] Train a (typically linear)
+    classifier $\hat y = \sigma(\mathbf{w}^\top \mathbf{h}^{(\ell, t)} +
+    b)$ on \emph{frozen} activations to predict an external property
+    $y$ \citep{alain-bengio-2017}. High accuracy is the (correlational)
+    signal that $y$ is linearly decodable from $\mathbf{h}^{(\ell, t)}$.
+  \item[Sparse autoencoders (\S\ref{sec:sparse-autoencoders}).]
+    Decompose activations $\mathbf{x} \in \mathbb{R}^n$ into a sparse
+    linear combination of $M \gg n$ learned dictionary directions
+    $\{\mathbf{d}_i\}$ via an encoder--decoder pair under a joint
+    reconstruction-plus-sparsity loss \citep{gao2024-topk-saes}. The
+    commitment: features are linear, additive, and identifiable from
+    activations alone, without supervision.
+  \item[Activation patching (\S\ref{sec:patching}).] The canonical
+    causal intervention. The three-run protocol of
+    \citet{meng2022-rome} caches the clean run, records the corrupted
+    run, then substitutes one component's clean activation into the
+    corrupted run; the indirect effect $\mathrm{IE}_C = m_{\text{pt}} -
+    m_{*}$ is the causal estimator \citep{zhang2023-apatching}. ROME
+    \citep{meng2022-rome} extends this from diagnostic to weight-level
+    surgery (\S\ref{sec:rome}).
+  \item[Circuit tracing (\S\ref{sec:circuits}).] Compose the previous
+    methods into a sparse, causal subgraph $C \subseteq M$ of the
+    model's full computational graph that explains an identifiable
+    capability. \citet{wang2022-ioi} hand-reverse-engineered
+    indirect-object identification in GPT-2 small;
+    \citet{conmy2023-acdc} automated the discovery as iterative
+    edge-pruning; \citet{lindsey2025-circuit-tracing} scaled the
+    program to production Claude 3.5 Haiku via cross-layer transcoders.
+\end{description}
+
+These five do not partition cleanly along a single axis. They commit
+along (at least) four:
+
+\begin{enumerate}
+  \item \textbf{Correlational vs causal.} Lenses and probes read off
+    activations and report what is \emph{decodable}; activation
+    patching, ROME, and circuit tracing intervene on activations or
+    weights and report what is \emph{used}. The correlation--causation
+    gap (\S\ref{sec:correlation-causation}) is the
+    methodological seam: a high-accuracy probe is consistent with the
+    decoded property being computed and consumed, computed and
+    discarded (\emph{vestigial information}), or being a confound
+    outside the model entirely \citep{belinkov2022-probing-survey}.
+  \item \textbf{Component-level vs feature-level.} Activation patching
+    and circuit-tracing-via-attention-heads identify
+    \emph{components} (heads, MLPs, hidden states) that mediate a
+    behavior; SAEs and feature-level circuit tracing identify
+    \emph{directions} in residual-stream space, which can be smaller
+    or larger than any component basis. The two granularities answer
+    different questions.
+  \item \textbf{Supervised vs unsupervised.} Probes train against
+    labels; SAEs train against the activations themselves. Lenses
+    train against the model's own final-layer output (a form of
+    self-supervision). The supervision signal determines which
+    properties the method can find: a probe finds what it is asked to
+    find; an SAE finds what its sparsity prior considers a feature.
+  \item \textbf{Static readout vs intervention.} Lenses, probes, and
+    SAEs are static --- they compute on cached activations without
+    perturbing the forward pass. Activation patching, ROME, and
+    circuit-validation knockouts are interventional. The static
+    methods scale gracefully; the interventional methods carry the
+    causal load.
+\end{enumerate}
+
+The methods are not strictly ranked. Lenses are the cheapest readout
+($L \cdot (D^2 + D)$ tuned-lens parameters --- under $10^9$ for
+Pythia~12B \citep{belrose2023-tuned-lens}); probes are next; SAEs sit
+at training-pretraining-fraction compute (Gemma Scope at $\sim20\%$ of
+GPT-3 pretraining \citep{gemma-scope-2024}); activation patching costs
+$O(N_{\text{components}})$ forward passes per input pair; circuit
+tracing on production models inherits the SAE/transcoder training cost
+\emph{plus} the per-task graph-pruning cost. The compute envelope is
+itself a methodological commitment: a method that is too expensive to
+run does not enter the field's working vocabulary.
+
+\begin{intuition}
+The five methods are five different instruments aimed at the same
+residual stream. The lens reads what the model is about to predict;
+the probe reads what the model has computed; the SAE reads how the
+model has decomposed what it computed; activation patching tests
+which of those computations the model uses; circuit tracing
+composes all four into a sparse, causal explanation of a specific
+behavior. Returning to canonical form: each method is a different
+projection of the activation tensor $\mathbf{h}^{(\ell, t)} \in
+\mathbb{R}^{B \times S \times D}$, and ``method-plural'' is the
+recognition that no single projection is sufficient.
+\end{intuition}
+
+\subsection{What ``partially read'' means}
+\label{sec:partially-read}
+
+The thesis sentence --- \emph{the internal computation can be
+partially read} --- has three quantifiers. \emph{Some behaviors}: the
+GPT-2-small IOI circuit \citep{wang2022-ioi}, GPT-2-XL factual recall
+\citep{meng2022-rome}, and selected Claude 3.5 Haiku capabilities
+\citep{lindsey2025-circuit-tracing} are reverse-engineered to a
+mechanism-level account; almost everything else a frontier model does
+is not. \emph{Some models}: SAEs are fully released for the Gemma~2
+family at 2B/9B/27B \citep{gemma-scope-2024}; tuned lenses cover the
+GPT-2 / Pythia / LLaMA-1 lineage \citep{belrose2023-tuned-lens} but
+have not all been published for Llama 3/4, Qwen 2.5/3, DeepSeek-V3, or
+Gemma 3 (\S\ref{sec:scaling-snapshot}). \emph{Some claims}: the
+mid-layer-MLP localization of factual recall, the IOI circuit's
+26-head decomposition, and the linear decodability of truth on
+LLaMA-family models are claims multiple methods agree on; the
+canonicality of SAE features
+\citep{leask2025-sae-not-canonical}, the existence of a single truth
+direction across datasets \citep{marks-tegmark-2023-truth}, and the
+reproducibility of attribution-graph findings outside the originating
+lab are claims the methods disagree on.
+
+The closing question of this paper, taken up in
+\S\ref{sec:cross-method}, is the diagnostic version of that disagreement:
+\emph{when do two methods have to agree, and what does it mean when
+they don't?} When two methods answer the same question about the same
+mechanism --- e.g., activation patching and ACDC on IOI --- they
+\emph{have} to agree, and divergence is a falsification signal for at
+least one method's assumptions. When two methods answer different
+questions --- e.g., a probe (decodable?) and patching (used?) --- they
+\emph{can} disagree without either being wrong, and the disagreement
+is principled. Distinguishing the two cases is a load-bearing
+methodological skill that this paper tries to teach.
+
+\subsection{Roadmap}
+\label{sec:roadmap}
+
+The paper is organized to make the method-pluralism legible.
+\S\ref{sec:substrate} fixes the substrate and notation: the residual
+stream as a linear additive bus, attention as QK+OV, MLPs as candidate
+key--value associative memories, the unembedding $W_U$ as the
+canonical readout, and the formal definitions of \emph{feature} (a
+direction $\mathbf{d} \in \mathbb{R}^D$) and \emph{circuit} (a
+subgraph satisfying \citet{wang2022-ioi}'s
+faithfulness/completeness/minimality criteria) used throughout.
+
+\S\S\ref{sec:logit-lens-family}--\ref{sec:circuits} present the five
+methods and their immediate critical literature.
+\S\ref{sec:logit-lens-family} covers lenses; \S\ref{sec:probing}
+covers probes; \S\ref{sec:correlation-causation} formalizes the
+correlation--causation gap and the activation-intervention
+resolution; \S\ref{sec:truth-directions} works the truth-direction
+case study; \S\ref{sec:sparse-autoencoders} covers SAE architectures;
+\S\ref{sec:sae-canonicality} takes up the canonicality question raised
+by \citet{leask2025-sae-not-canonical}; \S\ref{sec:patching} covers
+activation patching; \S\ref{sec:rome} covers ROME and the
+interpretability-to-surgery bridge; \S\ref{sec:circuits} covers
+circuit tracing from IOI to Haiku.
+
+\S\S\ref{sec:cross-method}--\ref{sec:contradictions} are the
+cross-method synthesis. \S\ref{sec:cross-method} catalogs the
+convergence and divergence cases method-by-method and behavior-by-behavior;
+\S\ref{sec:scaling-snapshot} surveys what scales (SAEs, probes,
+attribution graphs in narrow regimes) and what does not yet (manual
+circuit hunts, full activation patching at frontier scale, lens
+coverage of MLA / MoE / NSA architectures), with a 2026 frontier
+snapshot table of which method covers which model;
+\S\ref{sec:contradictions} concentrates the live disagreements ---
+SAE canonicality, lens cross-model unreliability, probe correlation
+vs causation, truth-direction multiplicity, circuit-tracing
+reproducibility past Anthropic-2025 --- and names, for each, the
+experiment that would resolve it.
+
+The reader who wants the headline of each method in isolation can
+read \S\ref{sec:substrate} and any single
+\S\ref{sec:logit-lens-family}--\S\ref{sec:circuits}. The reader who
+wants the comparative argument should read
+\S\ref{sec:substrate} through \S\ref{sec:contradictions} in order:
+the cross-method evidence is what makes ``the internal computation
+can be partially read'' a defensible claim rather than a hopeful
+slogan, and that evidence is built incrementally across the paper's
+arc.

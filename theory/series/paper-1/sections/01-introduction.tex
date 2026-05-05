@@ -1,0 +1,219 @@
+% Paper 1, §1 — Introduction
+% Pass-C synthesis section. Names the axes, previews §2-§14, sets up the
+% "convergence vs model-zoo bias" question that §13 answers. Cites only the
+% small canonical set (vaswani2017, radford2019-gpt2, hoffmann2022-chinchilla,
+% deepseek-v2, deepseek-v3) as instructed; all per-axis primary cites are
+% already in their respective sections.
+
+\section{Introduction}
+\label{sec:introduction}
+
+The Transformer is not one architecture; it is a family parameterized
+by a small set of orthogonal choices. From the 2017 encoder-decoder
+of \citet{vaswani2017} through the GPT-2 decoder-only collapse
+\citep{radford2019-gpt2}, the Chinchilla-era dense scaling regime
+\citep{hoffmann2022-chinchilla}, and the 2024-2026 frontier models
+typified by DeepSeek-V2 and V3 \citep{deepseek-v2,deepseek-v3}, the
+field has converged on a recognisable skeleton -- a stack of
+identical blocks alternating an attention sublayer and a feed-forward
+sublayer over a residual stream of shape $\BSH$ -- while exploring
+each sublayer along an independent axis. \textbf{The thesis of this
+paper is that those axes are few, locally separable, and now well
+enough understood to write down. Naming them is a precondition for
+saying anything precise about the open architectural questions of
+2026.}
+
+We organise the architecture along ten axes:
+
+\begin{enumerate}
+  \item \emph{Tokenization, embedding, and unembedding} --- the
+    discrete-token interface, including subword choice and the
+    tied-versus-untied I/O decision (\S\ref{sec:tokenization-embedding}).
+  \item \emph{Positional encoding} --- the mechanism that breaks
+    self-attention's permutation symmetry, with a clean lineage from
+    sinusoidal through rotary
+    (\S\ref{sec:positional-encoding}).
+  \item \emph{KV-sharing} --- how the $\mathsf{H}$ attention heads
+    share their key and value projections; a single axis with four
+    named waypoints (\S\ref{sec:attention-kv-sharing}).
+  \item \emph{Attention implementation} --- holding the
+    scaled-dot-product formula fixed and varying the GPU schedule
+    (\S\ref{sec:attention-hardware-axis}).
+  \item \emph{Feed-forward block} --- the activation/gating structure
+    of a single FFN and the dense-vs-MoE multiplicity
+    (\S\ref{sec:ffn}).
+  \item \emph{Normalization} --- layer norm versus RMS norm, and where
+    in the residual stream the norm sits
+    (\S\ref{sec:normalization-axis}).
+  \item \emph{State-space alternative} --- the SSM and SSM-attention
+    hybrid path that does \emph{not} use scaled dot-product attention
+    as the per-token mixer (\S\ref{sec:state-space-and-hybrids}).
+  \item \emph{Multi-token output} --- the architectural and
+    inference-time choices that break the
+    one-forward-pass-per-token coupling
+    (\S\ref{sec:multi-token-output}).
+  \item \emph{Multimodal extension} --- how non-text inputs reach the
+    residual stream (\S\ref{sec:multimodal}).
+  \item \emph{Inference adjuncts} --- the KV-cache lifecycle,
+    quantization regime, and constrained-decoding apparatus that
+    constrain which choices the prior axes can take in production
+    (\S\ref{sec:inference-adjuncts}).
+\end{enumerate}
+
+The axes are orthogonal in the precise sense that, at the math layer,
+a frontier model is specified by an \emph{independent} choice on each
+of (1)-(10) plus a small number of scale dials ($L$, $\mathsf{D}$,
+$\mathsf{H}$, $d_h$, $\mathsf{V}$, $E$ for MoE). What this paper
+documents is that 2026 frontier models are converging on a small
+neighbourhood in this product space.
+
+\begin{intuition}
+The picture is a small parameter space, not a survey. A frontier 2026
+model is a point in a product
+$\Pi_{\text{axis-1}} \times \cdots \times \Pi_{\text{axis-10}}$,
+where each factor $\Pi_{\text{axis-}k}$ is a discrete set with at most
+five reasonable choices. Returning to canonical math: the residual
+stream stays $\BSH$ throughout, the attention sublayer's per-head
+workspace stays $\BHSdh$, and the LM head still maps to logits of
+shape $\bsv$. What changes per axis is \emph{which projection,
+parameterisation, or schedule} fills each box. The convergence claim
+of \S\ref{sec:frontier-snapshot} is the claim that the realised set
+of axis-tuples in 2026 production models is a small subset of the
+combinatorial space.
+\end{intuition}
+
+The convergence story is concrete enough to be falsified. Across the
+axes above, there is now a recognisable \emph{frontier preset}:
+SentencePiece or tiktoken-family BPE with $\mathsf{V}$ in the
+$128\text{k}$--$256\text{k}$ range and untied I/O embeddings; RoPE at
+every layer with one of a small family of long-context extension
+schemes; GQA or MLA on the attention sublayer with the FlashAttention-3
+kernel as the default schedule; SwiGLU as the per-expert FFN, dense or
+sparse-MoE depending on scale; RMSNorm in a Pre-LN (often Peri-LN)
+placement with $1/\sqrt{N}$ residual scaling at initialisation; and
+either single-token output with speculative decoding bolted on, or
+DeepSeek-V3-style multi-token-prediction heads. We document each axis
+with the canonical equation transcribed verbatim and the lineage cited
+to primary sources, then in \S\ref{sec:frontier-snapshot} cross-tabulate
+the frontier models on the same axes to make the convergence visible
+in a single figure.
+
+\subsection*{The open question this paper does and does not answer}
+
+A natural objection -- which we take seriously, and which any
+synthesis paper of this kind must -- is that the convergence we
+document might be \emph{model-zoo bias}: an artefact of the small set
+of frontier labs whose architectures are publicly disclosed. Every
+ground-truth axis tuple in our table comes from a paper or technical
+report; Anthropic, OpenAI, and xAI have not published architecture
+details for their frontier models, and the list of disclosed
+architectures is dominated by Meta, DeepSeek, Mistral, Qwen, and
+Google open-weight releases. We address this question directly in
+\S\ref{sec:frontier-snapshot}; we do not preview the answer here. We
+do flag that the question is the load-bearing one for the paper's
+empirical claim, not a quibble.
+
+\subsection*{What this paper is and is not}
+
+\paragraph{What it is.} A monograph on architectural convergence in
+frontier LLMs from 2017 to 2026, organised by axis rather than by
+year or by lab. Every load-bearing technical claim is cited to a
+primary source (paper or technical report); every equation is
+transcribed verbatim from the cited paper, in the tensor-shape
+notation fixed in \S\ref{sec:prequel-and-canonical}; and every
+unresolved disagreement between sources is tagged
+\texttt{[CONTRADICTION]} and gathered for direct discussion in
+\S\ref{sec:contradictions}. The shape of the writing is dense rather
+than discursive: the goal is that a reader who already knows what an
+attention block does can locate, in one place, the canonical math for
+each axis at each waypoint and a sourced statement of where the field
+sits in 2026.
+
+\paragraph{What it is not.} A tutorial, a survey, or a complete
+catalogue. Pre-2017 deep-learning history is sketched in
+\S\ref{sec:prequel} only as far as needed to motivate the 2017
+canonical; we cite \citet{vaswani2017} for the ConvSeq2Seq comparison
+and proceed. Training, post-training, reasoning, interpretability, and
+evaluation are deferred to Papers~2--5 of this series; this paper is
+strictly architectural, with the (deliberate) exception of
+\S\ref{sec:inference-adjuncts}, which folds inference-time concerns in
+because they constrain which architectural choices the prior axes can
+take.
+
+\subsection*{Roadmap}
+
+\S\ref{sec:prequel-and-canonical} is the foundation: it sketches the
+pre-2017 lineage that the Transformer replaced (RNN seq2seq, additive
+attention, ConvSeq2Seq) and then states the 2017 canonical encoder--
+decoder of \citet{vaswani2017} with every variable defined, every
+shape labeled, and the four equations on which
+\S\S\ref{sec:tokenization-embedding}--\ref{sec:inference-adjuncts}
+will pivot transcribed verbatim. The remaining body sections then
+walk one axis each, in roughly the order the axis enters the
+forward pass:
+
+\begin{itemize}
+  \item \S\ref{sec:tokenization-embedding} walks subword tokenization
+    (BPE, SentencePiece, tiktoken-family byte-level), the tied-versus-
+    untied I/O embedding decision and its scale-dependence, the
+    vocabulary-size sweep from $\sim 32\text{k}$ to $256\text{k}$, and
+    the still-open tokenizer-free contender (BLT).
+  \item \S\ref{sec:positional-encoding} traces sinusoidal $\to$
+    learned $\to$ T5 relative bias $\to$ ALiBi $\to$ RoPE $\to$ NoPE,
+    explains why RoPE became dominant, and treats long-context
+    extension (NTK-aware, YaRN, LongRoPE) as a positional question.
+  \item \S\ref{sec:attention-kv-sharing} is the anchor section on the
+    KV-sharing axis: MHA $\to$ MQA $\to$ GQA $\to$ MLA, with the
+    cache-cost-vs-quality trade curve and the
+    \texttt{[CONTRADICTION]} that MLA's quality match against MHA at
+    frontier scale is single-source from DeepSeek-V2.
+  \item \S\ref{sec:attention-hardware-axis} keeps the attention
+    \emph{formula} fixed and varies the GPU schedule:
+    FlashAttention-1 $\to$ FA2 $\to$ FA3 $\to$ Native Sparse Attention
+    (NSA), foregrounding the distinction between exact tile-reordering
+    and approximate sparsification.
+  \item \S\ref{sec:ffn} walks dense ReLU $\to$ GELU $\to$ SwiGLU and
+    the dense-vs-MoE multiplicity (Switch top-1 $\to$ Mixtral top-2
+    $\to$ DeepSeekMoE fine-grained-plus-shared), with the
+    routing-collapse problem and load-balancing mathematics.
+  \item \S\ref{sec:normalization-axis} walks LayerNorm $\to$ RMSNorm
+    along the type axis and Post-LN $\to$ Pre-LN $\to$ DeepNorm /
+    Peri-LN along the placement axis, motivating frontier-2026's
+    RMSNorm + Pre-LN with $1/\sqrt{N}$ residual init.
+  \item \S\ref{sec:state-space-and-hybrids} steps off the attention
+    scaffold entirely: S4/S5 $\to$ Mamba $\to$ Mamba-2 along the SSM
+    lineage, and the SSM-attention hybrid family (Jamba, Samba,
+    Zamba2, Hymba) that the 2024-2026 long-context literature has
+    shifted toward.
+  \item \S\ref{sec:multi-token-output} draws the distinction between
+    inference-only speculative decoding \citep[Leviathan et al. 2023;
+    EAGLE; Medusa]{deepseek-v3} and the architectural choice of
+    multi-token prediction (MTP), with DeepSeek-V3 as the worked
+    integration.
+  \item \S\ref{sec:multimodal} catalogues the three-piece pattern --
+    vision encoder, projector, LLM body -- across the cross-attention
+    bridge (Flamingo), linear-projection (LLaVA), and native-
+    multimodal (Llama 4, Gemini, GPT-4o-class) integrations.
+  \item \S\ref{sec:inference-adjuncts} folds in the architectural
+    constraints imposed by KV-cache lifecycle (paged attention),
+    quantization regimes (INT8, INT4, FP8, NVFP4, BitNet), and
+    structured-output enforcement (logit bias, Outlines FSM,
+    XGrammar).
+\end{itemize}
+
+\S\ref{sec:frontier-snapshot} cross-tabulates the frontier-2026
+disclosed models -- DeepSeek V3, Llama 4, Mistral Large, Qwen3,
+Gemini-class, Claude-class, GPT-class -- on the ten axes, colour-coded
+to show where they agree and where they diverge; this is where the
+``model-zoo bias'' question gets its direct answer.
+\S\ref{sec:contradictions} concentrates the
+\texttt{[CONTRADICTION]} markers from the body into one place: MLA
+versus MHA at scale, NSA versus FA3 head-to-head, SSM-hybrid quality
+at frontier, the dense-MoE quality gap at matched active parameters,
+the long-context extrapolation method comparison, and MTP at
+non-DeepSeek scale. For each, we name what evidence would close the
+question and predict whether 2027-class models will. The closing
+thesis is that the open architectural questions are now \emph{localised}
+-- one or two axes at a time, with the rest of the skeleton stable --
+which is what makes the convergence claim non-trivial. We turn first
+to the foundation: \S\ref{sec:prequel-and-canonical}.

@@ -1,0 +1,245 @@
+% Paper 3, §1 — Introduction: the reasoning triangle
+% Anchors: kb/notes/reasoning/{chain-of-thought,test-time-compute,
+%            inference-time-search,process-supervision,reasoning-training}.md
+%          kb/notes/scaling/inference-time-compute-scaling.md
+%          kb/notes/post-training/rlvr-and-grpo.md
+%          kb/excerpts/{deepseek-r1,wei2022-cot,kojima2022,
+%            wang2022-self-consistency,snell2024,lightman2023-prm800k,
+%            shao2024,dapo2025,s1-2025,rstar-math2025}.md
+% Cross-paper: Paper 1 §architecture (long-context attention, KV-cache cost
+%              of long traces); Paper 2 §RL-stage (RLHF→RLVR transition).
+
+\section{Introduction: the reasoning triangle}
+\label{sec:introduction}
+
+Between the late-2022 release of \citet{wei2022-cot} and the early-2025
+release of \citet{deepseek-r1}, the publicly reported pass@1 of an
+open-weight model on AIME 2024 --- a contest of fifteen graduate-style
+mathematics problems --- moved from indistinguishable-from-noise to
+$77.9\%$, and to $86.7\%$ under majority vote over $64$ samples
+\citep[\S 2.3]{deepseek-r1}.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} The same checkpoint,
+DeepSeek-R1-Zero, started its reinforcement-learning phase from a
+$15.6\%$ baseline on the same benchmark
+\citep[\S 2.3]{deepseek-r1}.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} The size of the
+jump --- and the comparable jumps reported by OpenAI's o1, Google's
+Gemini~2.5-thinking, Anthropic's Claude~3.7 extended-thinking mode,
+Alibaba's QwQ, and the Qwen3-thinking series in the months following
+--- is the clearest empirical event in language-model research between
+2022 and 2026. It is also the event around which the literature is
+most prone to one-leg explanations: ``the model thinks in chains''; ``a
+verifier ranks its samples''; ``a reinforcement-learning loop trains
+it.'' Each one-leg story is partially right and structurally
+incomplete.
+
+The thesis of this paper is that the 2022--2026 reasoning gains are
+best understood as a \emph{triangle of co-designed levers}. The three
+legs:
+
+\begin{enumerate}
+\item \textbf{Inference-time compute} — chain-of-thought
+  \citep{wei2022-cot,kojima2022}, sampling-based aggregation
+  \citep{wang2022-self-consistency}, and the elevation of test-time
+  compute from prompting trick to scaling axis by
+  \citet{snell2024}.\footnote{KB excerpt:
+  \texttt{kb/excerpts/snell2024.md\#sec-1-flops-matched}.}
+
+\item \textbf{Verifier signals} — process reward models that score
+  partial reasoning at step granularity \citep{lightman2023-prm800k}
+  and the tree-search families (beam, BFS, MCTS) that turn those
+  scores into search trajectories \citep{rstar-math2025}.
+
+\item \textbf{Reinforcement learning on verifiable rewards (RLVR)} ---
+  group-relative policy optimisation over programmatically-checkable
+  outcomes \citep{shao2024}, with DAPO's four targeted modifications
+  \citep{dapo2025} as the current open-recipe state of the art.
+\end{enumerate}
+
+Frontier reasoning models in 2026 ship all three. They differ in
+mixture, in budget, in disclosure, and in which leg is treated as the
+primary product surface (R1 ships the long-CoT trace; o1 ships a
+hidden reasoning channel and an exposed effort knob; Gemini 2.5
+exposes a literal \texttt{thinkingBudget}). They do not, as of
+2026-Q2, differ in shipping fewer than three legs. Treating any one
+leg in isolation reproduces an incomplete reading of the headline
+gains, of which mechanism the gains generalise from, and of which open
+questions remain.
+
+\begin{intuition}
+A useful one-line picture is that the three legs are dual to each
+other across the train/inference boundary. RLVR \emph{shapes} a policy
+whose long-CoT output is worth amplifying; inference-time compute
+\emph{amplifies} that policy by spending more sampling, search, or
+trace-length budget; verifier signals \emph{rerank} the amplified
+trajectories. Pull any one leg and the other two lose a lot of their
+explanatory power: long-CoT without an RL phase that taught the model
+to use it is short-CoT in a costume; a strong verifier without a
+proposer that produces diverse-and-mostly-right candidates does not
+have anything to verify; an RL loop without a verifiable reward
+collapses back to RLHF and its 2023-vintage pathologies. Returning to
+canonical math: the GRPO objective transcribed in
+\cref{sec:rlvr-grpo-objective} is structurally a re-weighted
+maximum-likelihood update over verifier-passed trajectories sampled
+from the current policy, with KL anchoring to a reference. All three
+legs appear in that single objective.
+\end{intuition}
+
+The triangle framing also locates this paper relative to two of its
+companions. Paper~2 establishes a six-stage post-training pipeline in
+which RLHF is succeeded by RL-on-verifiable-rewards as a distinct
+stage, with different load-bearing variables (programmatic verifier
+instead of learned reward, group baseline instead of value network).
+That cross-reference is the inheritance route: \cref{sec:rlvr-grpo-dapo}
+deepens Paper~2's RLVR treatment in the reasoning-specific direction
+(long traces, terminal verifiers, R1-style protocols). Paper~1 is the
+architectural precondition: the 10K-token reasoning traces that
+\cref{sec:r1-family} reports as the operational signature of an
+RL-trained reasoning model are tractable only because Paper~1's
+long-context attention (sliding-window, FlashAttention-2/3,
+KV-compression) makes their KV cache survivable.\footnote{The
+KV-cache cost of a $10^4$-token trace at full $\BHSdh$ shape is
+non-trivial. The architectural choices of Paper~1 are what determine
+whether a frontier reasoning model is feasible as a deployment
+artefact, not only as a research curiosity.} Without those two
+predecessors the triangle's three legs are a vocabulary; with them,
+they are a co-designed system.
+
+\subsection{What this paper does, section by section}
+\label{sec:intro-roadmap}
+
+The body of the paper walks the triangle from each leg's historical
+entry point through its anchor mechanisms to the live contradictions
+the literature has not yet closed.
+
+\Cref{sec:cot-phenomenon} starts with the phenomenon: \citet{wei2022-cot}
+and \citet{kojima2022} on chain-of-thought as a few-shot and zero-shot
+prompting recipe, the decoding factorisation $z \sim p_\theta(\cdot
+\mid x), y \sim p_\theta(\cdot \mid x, z)$ that every later
+test-time-compute strategy in the paper inherits, and the
+emergence-with-scale finding that distinguished CoT from
+compute-monotonic prompting tricks. \Cref{sec:self-consistency}
+continues with the cheapest extension: \citet{wang2022-self-consistency}'s
+sample-$N$-and-majority-vote, no verifier needed --- still a competitive
+baseline well into the R1 era, where it lifts R1-Zero's AIME 2024 from
+$77.9\%$ to $86.7\%$ \citep[\S 2.3]{deepseek-r1}.
+
+\Cref{sec:inference-compute-scaling} is the first anchor section: the
+\citet{snell2024} reframing of test-time compute as a scaling axis with
+its own functional form, comparable to Chinchilla on the training
+side. The compute-optimal definition (Eq.~1 of
+\citet{snell2024}), the proposer/verifier decomposition that unifies
+every other section of the paper, and the FLOPs-matched headline that
+test-time compute substitutes for $\sim\!14\times$ pretraining FLOPs on
+easy and intermediate prompts but not on the hardest tail, all live
+there.
+
+\Cref{sec:process-reward-models} formalises the verifier leg.
+\citet{lightman2023-prm800k}'s process reward model is the canonical
+artefact; the four trace-aggregation rules (min, product, last-step,
+weighted-mean) and the headline that min-aggregation is strongest are
+the load-bearing mechanics. The post-2023 PRM lineage --- Math-Shepherd
+on automated step labelling, ThinkPRM and R-PRM on generative
+verifiers that themselves reason --- closes the section.
+\Cref{sec:tree-search} is the second anchor section: the search-tree
+datastructure over partial reasoning prefixes, the canonical reasoning-MCTS
+recurrence transcribed from \citet{rstar-math2025}, the four MCTS
+phases (selection, expansion, simulation, backup), and ReST-MCTS\textsuperscript{*}
+as the AlphaZero-style outer loop in which MCTS rollouts harvest
+correct trajectories that re-train the proposer and the verifier.
+
+\Cref{sec:rlvr-grpo-dapo} is the third anchor section and the third
+triangle leg. The verifier reward
+$R_\mathrm{verifier}(x,y) = \mathbb{1}[\,\mathrm{verify}(x,y) =
+\mathsf{true}\,]$, the GRPO objective \citep[\S 4.1]{shao2024} with
+group-relative advantage replacing a value network, and DAPO's four
+targeted modifications \citep[\S 2]{dapo2025} are the section's
+mechanics. The empirical proof point that \cref{sec:r1-family} unfolds
+in detail --- DeepSeek-R1-Zero's continuous GRPO climb --- is the
+cleanest single number in the literature for the proposition that the
+three legs compose under one training loop.
+
+\Cref{sec:budget-forcing} treats test-time scaling that does not lean
+on parallel sampling or search: \citet{s1-2025}'s minimum recipe of
+$1{,}000$ long-CoT exemplars plus a budget-forcing rule that appends
+\texttt{Wait} to extend thinking, isolating the
+\emph{reasoning-architecture} axis (the \texttt{<think>...</think>}
+phase as a structurally distinct decode-time region) from the
+base-architecture axis. \Cref{sec:search-vs-rl} confronts the
+operational tradeoff the triangle implies: at fixed total compute,
+when does the marginal FLOP go to inference search, to RLVR training,
+or to pretraining? The honest answer in 2026 is benchmark-specific and
+base-model-specific; that section transcribes what is settled and
+demarcates what is anecdotal.
+
+\Cref{sec:cot-faithfulness} addresses the most consequential live open
+question: does the trace $z$ causally drive the answer $y$, or is it
+post-hoc rationalisation that happens to be human-readable? The
+2025--2026 wave (Arcuschin et al.\ on naturalistic prompts, Shen et
+al.\ on FaithCoT-Bench, Mehta et al.\ on whether faithfulness improves
+with scale) finds substantial unfaithfulness on naturalistic
+distributions; whether it improves with scale is contested.
+\Cref{sec:prm-survival} returns to the verifier leg with a sharper
+question: post-R1, do PRMs still pay for themselves? R1's headline
+result was achieved with terminal verifier rewards only, and the
+2025--2026 PRM literature is split between diminishing-returns
+findings and continued-gain findings.
+
+\Cref{sec:r1-family} sits between \cref{sec:rlvr-grpo-dapo} and
+\cref{sec:budget-forcing} as the empirical proof point: the four-stage
+R1 protocol (cold-start SFT $\to$ GRPO with verifiable rewards $\to$
+rejection-sampling SFT on harvested traces $\to$ general-domain RL),
+the R1-Zero ablation that strips the cold-start to isolate what the
+SFT initialisation contributes, and the open-weight distillation track
+that produced the post-R1 reasoning ecosystem (R1-Distill-Qwen-7B/14B/32B,
+the Tülu~3 lineage, OpenR1, QwQ, Qwen3-thinking).
+
+The final two sections close the loop. \Cref{sec:frontier-snapshot}
+catalogues which 2026-frontier models ship which combination of legs
+at what budget; the table is intended as the most-screenshotted figure
+of the paper. \Cref{sec:contradictions} concentrates the
+\textsf{[CONTRADICTION]} markers from \cref{sec:cot-phenomenon}--\cref{sec:prm-survival}
+into one place and forecasts which of them are likely to close in the
+next model generation.
+
+\subsection{The open question this paper forwards}
+\label{sec:intro-open-question}
+
+The thesis commits the paper to one position --- the legs are
+co-designed in the strong sense, not three independent gains that
+happen to ship together --- and one open question that
+\cref{sec:contradictions} returns to:
+
+\begin{quote}
+\emph{Is the triangle a real co-design, or three independent gains we
+happen to ship together?}
+\end{quote}
+
+The strong-co-design claim is that the legs interlock causally: RLVR
+without long-CoT sampling cannot find the signal that lengthens
+traces, long-CoT without RLVR is mechanistically possible but
+empirically weaker, and verifier signals are what convert sampling
+diversity into a reranked answer that propagates training reward.
+The independent-gains claim is that the three legs each work in
+isolation and the field has co-shipped them only for engineering
+reasons. The 2025 \citet{rlvr-limits-2025} result --- RLVR sharpens
+pass@1 within base-model competency but does not expand pass@$K$ ---
+sits exactly on this fault line: under the strong-co-design reading,
+RLVR is doing the right thing (it shapes a policy whose sampling and
+verification are then meaningful); under the independent-gains
+reading, RLVR is doing less than the headline numbers suggest because
+the underlying capability already exists in the base model and only
+the trace-length needed to express it is being elicited.
+\Cref{sec:contradictions} catalogues five further contradictions on
+the same axis (PRM utility post-R1, CoT faithfulness scaling,
+search-vs-RL tradeoff geometry, AIME contamination, MCTS-vs-beam at
+matched budget). The paper's position is that none of them are closed
+as of 2026-Q2; the engineering question of how to ship a frontier
+reasoning model is, by contrast, well past the point where any single
+leg is optional.
+
+The remainder of the paper makes that position defensible at
+mechanism, equation, and empirical-benchmark granularity. We begin in
+\cref{sec:cot-phenomenon} with the historical entry point that every
+later leg of the triangle inherits: the chain-of-thought decoding
+pattern.
