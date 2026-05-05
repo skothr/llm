@@ -1,0 +1,683 @@
+% Paper 2, §2 — Pre-training data
+% Anchors: kb/notes/training/{pre-training-data,synthetic-data-and-distillation}.md
+%          kb/excerpts/{fineweb2024,data-mixing-laws-2024,phi4,
+%                       deepseek-v3-training}.md
+
+\section{Pre-training data}
+\label{sec:pre-training-data}
+
+Pre-training data is no longer ``the corpus'' --- a single dump of
+filtered web text against which architecture and optimizer choices
+are evaluated. It is a pipeline with its own engineering surface,
+its own ablation regime, and its own scaling law. The 2024 inflection
+point is FineWeb \citep{fineweb2024}, which decomposes the dataset
+into a chain of stages (web extraction, language and quality
+heuristics, deduplication, custom filters), each judged by training a
+$1.71$B-parameter / $\sim 28$B-token ``ablation model'' on the
+candidate output and comparing downstream task scores
+\citep[\S 3.1]{fineweb2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-3-1-proxy}.} The mixture
+choice on top of those curated domains has its own functional form:
+\citet{data-mixing-laws-2024} fit a closed-form relation
+$L_i(\mathbf{r}) = c_i + k_i \exp(\sum_j t_{ij} r_j)$ between
+mixture proportions and per-target-domain validation loss, predicting
+loss on unseen mixtures from a small number of fitted runs
+\citep[\S 1, eq.\ 1]{data-mixing-laws-2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/data-mixing-laws-2024.md\#sec-1-functional}.} The
+synthetic-data turn closes the loop: Phi-4 \citep{phi4} reports
+$\sim 400$B synthetic tokens spanning $50$ generation pipelines,
+$14$B parameters surpassing GPT-4o on STEM evaluations
+\citep[\S 1, Table 1]{phi4}, and explicitly argues that synthetic
+sequences are a \emph{lower-noise} next-token-prediction signal than
+organic web text.
+
+The thesis of this section is that the curate $\to$ ablate $\to$ mix
+loop has displaced ``find more web text'' as the active design
+surface. We walk the FineWeb pipeline end-to-end with concrete
+numbers, transcribe the Data Mixing Law equation and its coefficient
+interpretation, present FineWeb-Edu's distill-then-classify pattern,
+and set up two contradictions that resolve in
+\cref{sec:contradictions-frontier}: the global-vs-individual-snapshot
+deduplication result that disproves ``more dedup is better''
+\citep[\S 3.4]{fineweb2024} and the unresolved synthetic-fraction
+question raised by Phi-4's $\sim\!80\%$-synthetic mix versus
+Tülu-3's organic-heavier post-training data
+\citep{tulu3}. The section closes with the token-budget choice that
+\cref{sec:scaling-laws} immediately operates on: Chinchilla's
+$D \approx 20\,N$ versus Llama-3-8B's $D / N \approx 1875$
+over-train, and the precision-aware tension with \cref{sec:mixed-precision}
+that the over-train objective creates.
+
+\subsection{The two design problems and their symbols}
+\label{sec:data-setup}
+
+A pre-training dataset is a finite multiset $\mathcal{D} =
+\bigsqcup_{j=1}^{M} \mathcal{D}_j$ partitioned into $M$ source domains
+(web crawl, code, math, books, scientific papers, etc.). The
+\emph{mixture} is a probability vector $\mathbf{r} = (r_1, \dots,
+r_M)$ on the simplex $\Delta^{M-1}$, with $r_j \geq 0$ and
+$\sum_{j=1}^{M} r_j = 1$, where $r_j$ is the fraction of the
+per-step token budget drawn from $\mathcal{D}_j$
+\citep[\S 2]{data-mixing-laws-2024}. Two design problems sit on top
+of this object:
+
+\begin{enumerate}
+\item \textbf{Per-domain curation.} What counts as $\mathcal{D}_j$,
+how is it filtered, deduplicated, and quality-scored, what tokens
+make it into the multiset.
+\item \textbf{Mixture choice.} Given curated domains, what
+$\mathbf{r}$ minimizes loss / maximizes downstream metric at the
+target $(N, D)$ scale.
+\end{enumerate}
+
+The two problems compose: curation determines what each
+$\mathcal{D}_j$ contains; mixing determines how the per-step token
+budget is partitioned across them. \Cref{tab:data-shapes} fixes
+notation for the rest of the section.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Symbol & Type & Meaning \\
+\midrule
+$\mathcal{D}$ & multiset & full pre-training corpus \\
+$\mathcal{D}_j$ & multiset & source-$j$ domain partition, $j \in \{1, \dots, M\}$ \\
+$M$ & $\Z_+$ & number of source domains in the mixture \\
+$\mathbf{r}$ & $\Delta^{M-1}$ & mixture proportions, $r_j \geq 0$, $\sum_j r_j = 1$ \\
+$L_i(\mathbf{r})$ & $\R$ & validation loss on held-out target domain $i$ \\
+$c_i, k_i$ & $\R$ & per-target-domain irreducible / amplitude parameters \\
+$t_{ij}$ & $\R$ & transfer coefficient from train-domain $j$ to val-domain $i$ \\
+$N$ & $\Z_+$ & model parameters (\cref{sec:scaling-laws}'s $N$) \\
+$D$ & $\Z_+$ & total training tokens \\
+$D / N$ & $\R_+$ & tokens-per-parameter ratio (\cref{tab:frontier-NDC}) \\
+\bottomrule
+\end{tabular}
+\caption{Symbols used in \cref{sec:pre-training-data}. Mixture
+$\mathbf{r}$ lives on the simplex $\Delta^{M-1}$; the Data Mixing
+Law \cref{eq:dml} fits per-target-domain $(c_i, k_i, t_{i,1\ldots M})$
+from a small set of pilot runs, then predicts $L_i(\mathbf{r})$ on
+unseen mixtures.}
+\label{tab:data-shapes}
+\end{table}
+
+\subsection{The FineWeb pipeline, end to end}
+\label{sec:data-fineweb}
+
+\citet{fineweb2024} document the design choices behind a
+$15$T-token English web corpus derived from $96$ Common Crawl
+snapshots (2013-summer through 2024-04)
+\citep[\S 3.4]{fineweb2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-3-4-minhash}.} Each pipeline
+choice is judged by an \emph{ablation model} of $1.71$B parameters
+trained on $\sim 28$B tokens (roughly the Chinchilla-optimal
+$D \approx 20\,N$ point for that $N$) under fixed architecture,
+optimizer, batch size, and seed --- the only thing that varies is
+the data version
+\citep[\S 3.1]{fineweb2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-3-1-proxy}.} ``We trained
+two models for each dataset version, each using a different but
+equal-sized random subset of the full data and a different
+initialization seed, and then compared average scores''
+\citep[\S 3.1]{fineweb2024}. The downstream-task score \emph{slope}
+under this small-scale protocol is the only signal the pipeline
+trusts.
+
+\paragraph{Stage 1 --- text extraction (trafilatura over WET).}
+Common Crawl ships two formats: raw WARC and pre-extracted WET.
+\citet[\S 3.2]{fineweb2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-3-2-text}.} report that
+``WET files retained too much boilerplate and menu text,'' and that
+re-extracting from WARCs with the open-source \texttt{trafilatura}
+library yields $\sim 25\%$ more text and a measurable ablation-model
+gain. Custom text extraction is computationally expensive; the
+ablation lift justifies the cost.
+
+\paragraph{Stage 2 --- base filter.}
+The base-filter pipeline reuses RefinedWeb's setup
+\citep[\S 3.3]{fineweb2024}:\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-3-3-base}.} URL block-list
+for adult content, a fastText language classifier keeping only
+English with score $\geq 0.65$, and the quality / repetition filters
+from MassiveText at original thresholds. Applied across the $96$
+snapshots, this leaves ``roughly $36$ trillion tokens of data when
+tokenized with the GPT-2 tokenizer''
+\citep[\S 3.3]{fineweb2024}. The $0.65$ language-ID threshold is a
+load-bearing decision: pushing higher cuts low-confidence multilingual
+content (which often \emph{is} good English with code-switched
+proper nouns); pushing lower admits genuinely off-language documents.
+At $0.65$ the ablation models lose nothing detectable on standard
+English-language benchmarks.
+
+\paragraph{Stage 3 --- MinHash deduplication, individually per snapshot.}
+\citet[\S 3.4]{fineweb2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-3-4-minhash}.} compute
+MinHash signatures from each document's $5$-grams using $112$ hash
+functions arranged as $14$ buckets of $8$ hashes each. Two documents
+are flagged as duplicates if they collide in any of the $14$ buckets
+on all $8$ hashes simultaneously. The Jaccard threshold this scheme
+targets is given by the standard MinHash analysis: a pair of
+documents with Jaccard similarity $J$ collides in a single bucket of
+$8$ hashes with probability $J^{8}$, and at least one of $14$
+buckets agrees with probability
+\begin{equation}
+P(\text{flagged duplicate} \mid J) \;=\; 1 - (1 - J^{8})^{14},
+\label{eq:minhash}
+\end{equation}
+which crosses $0.5$ at $J \approx 0.75$
+\citep[\S 3.4]{fineweb2024}, hence ``targeting documents that are
+at least $75\%$ similar.'' Flagged pairs are clustered transitively
+(if $A \sim B$ and $B \sim C$, then $A, B, C$ form one cluster), and
+one document per cluster survives.
+
+\begin{intuition}
+\label{intuit:minhash}
+MinHash trades exactness for parallelism: instead of computing
+$O(|\mathcal{D}|^2)$ pairwise Jaccard similarities, each document is
+hashed into $14$ small buckets (8 hashes each) and only intra-bucket
+collisions are checked. The bucket-based collision rule
+\cref{eq:minhash} implements a cheap probabilistic threshold on the
+true Jaccard. Returning to canonical form: with $14 \times 8$
+hashes, pairs at $J = 0.9$ collide $> 99\%$ of the time, pairs at
+$J = 0.5$ collide $\sim 5\%$ of the time, and the curve crosses $0.5$
+at $J \approx 0.75$. The $14 \times 8$ choice is the
+\emph{precision/recall} dial on this curve --- more buckets sharpen
+recall at fixed Jaccard, more hashes per bucket sharpen precision.
+\end{intuition}
+
+\paragraph{The global-vs-individual deduplication finding.}
+The naive prior holds that more aggressive dedup is monotonically
+better. \citet[\S 3.4]{fineweb2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-3-4-global}.} directly
+disprove it. Their first attempt was global MinHash dedup across all
+$96$ snapshots simultaneously. ``When applied to the oldest
+snapshots, this process removed as much as $90\%$ of the original
+base filtered data,'' and the ablation models trained on the survivors
+were \emph{worse}, not better, than models trained on individually-
+deduplicated snapshots. The interpretation: documents that appear in
+multiple snapshots are over-represented because they are useful ---
+they are linked, mirrored, archived, and reposted. Global dedup
+removes these, leaving a residue dominated by content that appeared
+only \emph{once}, which on average is lower-quality (ad copy, SEO
+spam, transient pages). FineWeb's final pipeline therefore
+deduplicates each snapshot independently, leaving cross-snapshot
+duplicates intact, producing $\sim 20$T tokens before custom filters
+\citep[\S 3.4]{fineweb2024}.
+
+\begin{contradiction}
+\label{contra:global-vs-indiv-dedup}
+``More deduplication is monotonically better'' is empirically false
+on FineWeb-scale data \citep[\S 3.4]{fineweb2024}. Global MinHash
+across $96$ Common Crawl snapshots makes the trained model
+\emph{worse} than per-snapshot MinHash, because what is
+duplicated-across-snapshots is signal (linkage, archival, mirroring)
+and what is unique-per-snapshot tilts toward noise. The result is
+single-source on FineWeb's specific corpus and ablation protocol;
+whether it generalizes to non-web corpora (curated books, code) or
+to other dedup metrics (suffix-array exact, semantic-embedding
+fuzzy) is open. We return to this in
+\cref{sec:contradictions-frontier} alongside the
+\cref{sec:scaling-laws} over-training contradiction; both turn on
+the question of what ``more'' means once a pipeline is composed.
+\end{contradiction}
+
+\paragraph{Stage 4 --- C4 filters minus the curly-brace rule.}
+\citet[\S 3.7]{fineweb2024} apply ``a selection of C4 filters'' on
+top of the deduplicated text. The C4 paper's terminal-punctuation
+and short-line rules largely transfer; FineWeb \emph{omits} C4's
+``curly-brace'' filter, which would remove most code-bearing
+documents and which their ablation showed to hurt downstream
+benchmarks (presumably because code documents help English
+benchmarks via cross-domain transfer \citep[\S 3.2,
+$t_{ij}$]{data-mixing-laws-2024}). The decision is local --- one
+ablation comparison --- but illustrates the protocol: every C4
+filter was tested individually, and only those whose removal hurt
+downstream were retained.
+
+\paragraph{Stage 5 --- custom filters from histogram inspection.}
+The largest single filter-design lift comes from
+\citet[\S 3.6]{fineweb2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-3-6-custom}.} They collect
+$50$ document-level statistics (line length distribution, terminal
+punctuation rate, character-level repetition, word-level repetition,
+\dots) on a high-quality corpus (individually deduplicated 2013-48
+snapshot) and a low-quality corpus (the same snapshot
+\emph{globally} deduplicated, the residue from the previous
+finding). For each statistic, they identify regions of the histogram
+where the low-quality corpus has higher density than the high-quality
+corpus, and convert those regions into filter thresholds. The three
+filters that survived ablation are
+\begin{align}
+&\text{filter A:} \quad &&\frac{\#\{\text{lines ending with terminal punctuation}\}}{\#\{\text{lines}\}} \;\leq\; 0.12, \nonumber \\
+&\text{filter B:} \quad &&\frac{\#\{\text{characters in duplicated lines}\}}{\#\{\text{characters}\}} \;\geq\; 0.10, \nonumber \\
+&\text{filter C:} \quad &&\frac{\#\{\text{lines $\leq 30$ chars}\}}{\#\{\text{lines}\}} \;\geq\; 0.67. \nonumber
+\end{align}
+Documents satisfying \emph{any} of A, B, or C are removed. Together
+the three remove $\sim 22\%$ of remaining tokens and lift the
+aggregate ablation score by $\sim 1$ percentage point at the $28$B-
+token scale \citep[\S 3.6]{fineweb2024}. The $0.12$ terminal-punctuation
+threshold is notably looser than C4's original $0.30$ (which removed
+$\sim 30\%$ of tokens vs.\ FineWeb's $10.14\%$); the gentler cut
+preserves more code, technical text, and structured content while
+still removing the worst SEO-spam densities.
+
+\paragraph{Final pipeline: $15$T tokens.}
+Combining the choices --- WARC + trafilatura, base filter,
+per-snapshot MinHash, selected C4 filters, custom filters A--C ---
+yields the $15$T-token FineWeb release
+\citep[\S 3.7]{fineweb2024}. This number is the empirical asymptote
+that several frontier labs have independently converged on: Llama 3
+trained on $\sim 15$T tokens \citep{meta-llama3}, DeepSeek-V3 on
+$14.8$T \citep[abstract]{deepseek-v3}.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-v3-training.md\#abstract}.}
+
+\begin{intuition}
+\label{intuit:ablation-meter}
+The $1.71$B / $28$B-token ablation model is too small to score
+meaningfully against any production benchmark in absolute terms ---
+its MMLU accuracy is below random-with-formatting-noise. The design
+relies instead on the \emph{signed direction} of
+$\Delta L(\text{candidate}_A, \text{candidate}_B)$ being stable
+across scale: if a filter helps the ablation by $+0.5$pp on
+HellaSwag, it should help the production model on the same task.
+This holds for most heuristic decisions \citep[\S 3.1]{fineweb2024}.
+The global-vs-individual dedup case in
+\cref{contra:global-vs-indiv-dedup} is interesting precisely because
+the ablation pointed toward the counterintuitive answer and the
+counterintuitive answer kept holding at production scale. Returning
+to canonical form: the protocol bets on the transfer relation
+$\mathrm{sgn}\bigl(\Delta L(A, B; N{=}1.71\text{B}, D{=}28\text{B})\bigr) =
+\mathrm{sgn}\bigl(\Delta L(A, B; N{=}\text{prod}, D{=}\text{prod})\bigr)$
+holding component-wise across the pipeline's design choices.
+\end{intuition}
+
+\subsection{Data Mixing Laws --- the functional form on $\mathbf{r}$}
+\label{sec:data-mixing}
+
+Curation determines what each $\mathcal{D}_j$ contains; mixing
+determines how training-step tokens partition across them.
+\citet{data-mixing-laws-2024} establish that, under fixed model size
+and training-token budget, the validation loss on held-out target
+domain $i$ is a closed-form function of the training-mixture
+proportions. Verbatim from
+\citet[\S 1, eq.\ 1; \S 3.2, eq.\ 7]{data-mixing-laws-2024}\footnote{KB
+excerpt: \texttt{kb/excerpts/data-mixing-laws-2024.md\#sec-1-functional}.}:
+\begin{equation}
+L_i(\mathbf{r}_{1\ldots M}) \;=\; c_i \,+\, k_i \,\exp\!\left(
+   \sum_{j=1}^{M} t_{ij}\,r_j
+\right),
+\label{eq:dml}
+\tag{1}
+\end{equation}
+where $L_i$ is validation loss on domain $i$, $\mathbf{r} \in
+\Delta^{M-1}$ is the training mixture, and $(c_i, k_i, t_{i, 1\ldots
+M})$ are scalar parameters fit per-target-domain. The form is the
+unique exponential-of-linear shape compatible with two principles
+\citep[\S 3.2]{data-mixing-laws-2024}:\footnote{KB excerpt:
+\texttt{kb/excerpts/data-mixing-laws-2024.md\#sec-3-2-multi}.}
+
+\begin{itemize}
+\item \emph{Compatibility}: at $M = 2$, \cref{eq:dml} reduces to the
+two-domain log-linear law $L_i(r) = c_i + k_i \exp(t_{ii} r)$
+empirically verified on $70$M and $160$M models trained on
+GitHub + Pile-CC at $30$B tokens
+\citep[\S 3.1, eq.\ 6]{data-mixing-laws-2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/data-mixing-laws-2024.md\#sec-3-1-pilot}.}
+\item \emph{Symmetry}: any permutation of training-domain indices
+should leave the functional form invariant; \cref{eq:dml} is
+symmetric under permutations of $\{r_j, t_{ij}\}$ jointly.
+\end{itemize}
+
+\paragraph{Coefficient interpretation.}
+\citet[\S 3.2]{data-mixing-laws-2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/data-mixing-laws-2024.md\#sec-3-2-coefficients}.}
+read off the meaning of each fitted parameter:
+\begin{itemize}
+\item $c_i$ --- ``losses that are not reducible by adjusting the data
+mixture,'' i.e., the irreducible loss for target domain $i$. No
+choice of $\mathbf{r}$ on $\Delta^{M-1}$ can drop $L_i$ below $c_i$.
+\item $k_i$ --- amplitude scaling the exponential term. At
+$\sum_j t_{ij} r_j = 0$ (a flat-zero-sensitivity mixture), $L_i =
+c_i + k_i$.
+\item $t_{ij}$ --- ``the interaction'' between training domain $j$
+and validation domain $i$. \emph{Negative} $t_{ij}$ means training
+on more $j$ \emph{lowers} validation loss on $i$; \emph{positive}
+$t_{ij}$ means training on $j$ \emph{hurts} $i$.
+\end{itemize}
+
+The off-diagonal $t_{ij}$ is the load-bearing object: it upgrades the
+folklore that ``more code helps math'' from a heuristic to a
+\emph{measurable per-pair coefficient}. A fitted
+$t_{\text{math} \leftarrow \text{code}} < 0$ predicts how much
+adding code tokens to the mix lowers held-out math validation loss,
+and the prediction can be tested.
+
+\paragraph{Nested scaling laws --- making the fit affordable.}
+Fitting \cref{eq:dml} directly at the target $(N, D)$ requires
+many full-scale runs and is unaffordable at frontier scale.
+\citet[\S 1, \S 2]{data-mixing-laws-2024} stack a power-law of
+training-step ($L = c + k\,S^{\alpha}$) inside a power-law of
+model-size, inside the mixing law \cref{eq:dml}, so that small-model
+short-step experiments at varied $\mathbf{r}$ predict large-model
+end-of-training $L_i(\mathbf{r})$. The headline empirical
+demonstration: a $1$B-parameter model trained for $100$B tokens on
+RedPajama, with mixture chosen by the nested fit, reaches loss
+matching the same model trained for \emph{$48\%$ more steps} on
+RedPajama's default mixture
+\citep[abstract]{data-mixing-laws-2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/data-mixing-laws-2024.md\#abstract}.} Equivalently,
+the mixing-law-tuned recipe matches the $148$B-token-budget loss at
+$100$B tokens spent --- a $1.48\times$ data efficiency at fixed
+target loss.
+
+\begin{analogy}
+\label{analogy:dml-as-response-surface}
+\Cref{eq:dml} is a response-surface model on the simplex
+$\Delta^{M-1}$: the per-target-domain loss is a fitted exponential
+in $\mathbf{r}$, with the fit's coefficients carrying physical
+meaning ($c_i$ as floor, $t_{ij}$ as transfer affinity). The pipeline
+that uses it is straight design-of-experiments: pilot runs at a
+diverse set of $\mathbf{r}$ values, fit $(c_i, k_i, t_{i, 1\ldots
+M})$ per held-out $i$, then optimize the predicted $L_i$ at the
+target $(N, D)$ via the nested scaling-law extrapolation. Returning
+to canonical form: the design problem is
+$\mathbf{r}^* = \arg\min_{\mathbf{r} \in \Delta^{M-1}}
+\sum_i w_i\,\hat{L}_i(\mathbf{r})$ for target weights $w_i$ on each
+held-out domain \citep[\S 2, eq.\ 5]{data-mixing-laws-2024}, with
+$\hat{L}_i$ the nested-scaling-law extrapolation of \cref{eq:dml}.
+This is data-mixture engineering as a constrained convex program,
+not a heuristic.
+\end{analogy}
+
+\subsection{Quality classifiers --- FineWeb-Edu's distill-then-classify}
+\label{sec:data-edu}
+
+After heuristic filtering produces a $15$T-token web corpus, a
+\emph{quality classifier} can extract a higher-density subset.
+\citet[\S 4]{fineweb2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/fineweb2024.md\#sec-4-edu}.} demonstrate the
+pattern at scale, producing FineWeb-Edu ($1.3$T tokens) from the full
+$15$T base. The pipeline is four stages:
+
+\begin{enumerate}
+\item \textbf{Annotate.} Sample $460{,}000$ random documents from
+FineWeb's CC-MAIN-2024-10 snapshot; prompt Llama-3-70B-Instruct to
+score each on a $0$--$5$ ``educational quality'' rubric.
+\item \textbf{Train.} Fit a small linear regressor on
+\texttt{Snowflake-arctic-embed-m} embeddings of the documents,
+targeting the Llama-3-70B scores. $20$ epochs, learning rate
+$3 \times 10^{-4}$, embedding/encoder layers frozen
+\citep[\S 4]{fineweb2024}. F1 = $82\%$ on validation at score
+threshold $\geq 3$.
+\item \textbf{Score.} Run the regressor over the full $15$T-token
+FineWeb. Cost: $\sim 6{,}000$ H100 GPU hours.
+\item \textbf{Threshold.} Keep documents with regressor score
+$\geq 3$, yielding $\sim 1.3$T tokens.
+\end{enumerate}
+
+The result outperforms FineWeb on knowledge- and reasoning-intensive
+benchmarks (MMLU, ARC, OpenBookQA) at matched
+training-token-for-training-token comparison
+\citep[abstract]{fineweb2024}. The pattern's economic structure is
+\emph{amortized teacher cost}: the $\sim 6$K-H100-hour annotation
+step is paid once at corpus-build time and recovered every step of
+every downstream pre-training run that uses the filtered corpus.
+This is the path that several frontier labs (Llama 3, Phi-3) used
+internally before FineWeb-Edu published it.\deepencite{nemotron-cc-2024
+\S abstract: NVIDIA's $6.3$T-token Nemotron-CC corpus uses an
+analogous classifier-filtering plus rephrasing pipeline; cited as
+the closest published parallel to FineWeb-Edu's distill-then-classify
+recipe.} The KB note flags FineWeb-Edu, DCLM-Baseline, and
+Nemotron-CC as a coherent 2024-class lineage of classifier-driven
+distillation \citep[\S
+1]{fineweb2024}.\footnote{KB note:
+\texttt{kb/notes/training/pre-training-data.md\#variants}.}
+
+\subsection{Synthetic-data-as-bulk --- the Phi-4 inversion}
+\label{sec:data-synthetic}
+
+FineWeb-Edu uses a teacher LLM as a \emph{labeler}: the teacher's
+judgment is amortized into a frozen filter. Phi-4 \citep{phi4}
+inverts the role: the teacher LLM becomes the \emph{generator} of a
+substantial fraction of the pre-training corpus. The Phi-4 abstract
+\citep[abstract]{phi4}\footnote{KB excerpt:
+\texttt{kb/excerpts/phi4.md\#abstract}.} states the recipe explicitly:
+
+\begin{quote}
+phi-4 [\dots] strategically incorporates synthetic data throughout
+the training process. While previous models in the Phi family largely
+\emph{distill} the capabilities of a teacher model (specifically
+GPT-4), phi-4 substantially \emph{surpasses} its teacher model on
+STEM-focused QA capabilities, giving evidence that our data-generation
+and post-training techniques go beyond distillation.
+\end{quote}
+
+Phi-4's pre-training and mid-training corpus contains $\sim 400$B
+synthetic tokens generated through ``$50$ broad types of synthetic
+datasets, each one relying on a different set of seeds and different
+multi-stage prompting procedure''
+\citep[\S 2.2]{phi4}.\footnote{KB excerpt:
+\texttt{kb/excerpts/phi4.md\#sec-2-2-pipelines}.} Three pipeline
+primitives recur:
+
+\begin{enumerate}
+\item \emph{Seed curation.} Web/code/book passages filtered for
+educational and reasoning value, then segmented and re-scored.
+Question banks are filtered by plurality voting --- discard
+questions where teacher samples all agree (too easy) or entirely
+disagree (too hard / ambiguous), keeping the middle band
+\citep[\S 2.2]{phi4}.\footnote{KB excerpt:
+\texttt{kb/excerpts/phi4.md\#sec-2-2-seeds}.}
+\item \emph{Rewrite and augment.} Seeds transformed into exercises,
+dialogues, and structured reasoning tasks via multi-step prompting.
+\item \emph{Self-revision.} A model critiques and improves its own
+output under reasoning / factual rubrics
+\citep[\S 2.2]{phi4}.\footnote{KB excerpt:
+\texttt{kb/excerpts/phi4.md\#sec-2-2-rewrite}.}
+\end{enumerate}
+
+The headline empirical claim: a $14$B-parameter Phi-4 surpasses its
+teacher GPT-4o on the GPQA ($56.1$ vs.\ $50.6$) and MATH ($80.4$ vs.\
+$74.6$) benchmarks \citep[\S 1, Table 1]{phi4}.\footnote{KB excerpt:
+\texttt{kb/excerpts/phi4.md\#sec-1-stem}.}
+
+\paragraph{The variance-of-next-token-loss intuition.}
+\citet[\S 2.1]{phi4}\footnote{KB excerpt:
+\texttt{kb/excerpts/phi4.md\#sec-2-1-purpose}.} argue that synthetic
+data is \emph{lower-noise} as a next-token-prediction signal than
+organic web text:
+
+\begin{quote}
+In organic datasets, the relationship between tokens is often
+complex and indirect. Many reasoning steps may be required to
+connect the current token to the next, making it challenging for the
+model to learn effectively from next-token prediction. By contrast,
+each token generated by a language model is by definition predicted
+by the preceding tokens, making it easier for a model to follow the
+resulting reasoning patterns. In this way, synthetic data may act as
+a form of ``spoonfeeding,'' presenting challenges in a digestible
+and progression-oriented manner.
+\end{quote}
+
+\begin{intuition}
+\label{intuit:spoonfeeding}
+The argument is a claim about the conditional variance of the
+next-token loss. Let $\ell_t = -\log \pi_\theta(x_t \mid x_{<t})$ be
+the per-token loss; on organic text, $\ell_t$ has high variance
+because the local prefix may not contain enough information to
+predict $x_t$ even at the data-generating distribution (long-range
+dependencies, references to context not present in the window,
+implicit world knowledge). On synthetic text generated by a related
+language model under autoregressive sampling, $x_t$ is by
+construction predictable from $x_{<t}$ at the teacher's
+distribution, so the entropy
+$H(x_t \mid x_{<t})$ at the data-generating distribution is lower.
+Returning to canonical form: under the SFT-style decomposition of
+\cref{sec:scaling-laws}'s parametric loss, this corresponds to a
+smaller $E + B/D^{\beta}$ tail at fixed $D$ when $D$ is sourced from
+$\pi_{\text{teacher}}$ rather than from organic web text --- the
+\emph{irreducible-plus-finite-data} terms shrink because the
+generating distribution is closer to a tractable one. The
+``spoonfeeding'' analogy is exactly this: same number of training
+tokens, lower per-token loss variance, faster effective learning.
+\end{intuition}
+
+\paragraph{The synthetic-fraction question.}
+Phi-4 chose roughly $80\%$ synthetic tokens in its pre-training mix
+for a $14$B reasoning-focused model
+\citep[\S 1, \S 2.2]{phi4}.\footnote{KB note:
+\texttt{kb/notes/training/synthetic-data-and-distillation.md\#sec-1-1}.}
+At the post-training surface, Tülu-3 \citep{tulu3} ships an
+organic-heavier mix on Llama-3 base, with synthetic generation used
+selectively rather than as bulk. No published large-scale controlled
+ablation isolates the optimal synthetic fraction across model scale,
+domain, and training-stage (pre-train vs.\ mid-train vs.\ SFT).
+
+\begin{contradiction}
+\label{contra:synthetic-fraction}
+The synthetic-fraction question splits the field. Phi-4
+\citep[abstract]{phi4} argues for synthetic-as-bulk
+($\sim\!80\%$ of pre-training tokens) on the
+variance-of-next-token-loss grounds in
+\cref{intuit:spoonfeeding}. Tülu-3 \citep{tulu3} ships an
+organic-heavier post-training mix without claiming the Phi-4 ratio
+generalizes. Recursive-synthetic concerns from the broader
+literature \citep[\S 1]{phi4} warn that training on a model's own
+outputs can degrade tail distributions
+(model-collapse).\deepencite{shumailov2024-collapse \S 2: recursive
+synthetic-only training accumulates loss in the data distribution's
+tails; cited as the principal counter-evidence to
+synthetic-as-bulk.} The synthetic-fraction at frontier scale is one
+of the open questions
+\cref{sec:contradictions-frontier} returns to: there is no
+controlled $14$B-vs-$70$B Phi-style ablation, no
+synthetic-pipeline-mixture analogue of \cref{eq:dml}, and no
+published study isolating
+recursive-synthetic-mode-collapse from the
+quality-of-teacher-pipeline gain.
+\end{contradiction}
+
+\subsection{Token budget --- $D / N$ as the bridge to scaling}
+\label{sec:data-budget}
+
+Curation gives us $\mathcal{D}$; mixing gives us $\mathbf{r}$;
+neither answers \emph{how many tokens to train on}. That choice
+belongs to \cref{sec:scaling-laws}, but \cref{sec:pre-training-data}
+must specify the input it provides.
+
+\paragraph{Chinchilla's $D \approx 20\,N$.}
+\citet[\S 4.1, Table 4]{hoffmann2022-chinchilla} fit the
+compute-optimal frontier and report $D / N \approx 20$ at the
+Gopher-scale FLOP budget, with a slow drift upward at larger scale
+($D / N \approx 21.2$ at $1$T parameters)
+\citep[\S 3, Table 3]{hoffmann2022-chinchilla}. The
+\cref{sec:scaling-laws} parametric form
+$\hat{L}(N, D) = E + A / N^{\alpha} + B / D^{\beta}$ has its
+constrained minimum at $D \approx 20\,N$ for the fitted exponents.
+
+\paragraph{The over-training inversion.}
+The post-Chinchilla industry move is to substantially over-train
+small dense models for inference economics. Llama-3 8B trained on
+$\sim\!15$T tokens \citep{meta-llama3} sits at $D / N \approx 1875$
+--- roughly $94\times$ over Chinchilla's recipe. The reasoning is
+that the cost a deployed-model lab actually pays is
+$C_{\text{train}} + N_{\text{queries}} \cdot C_{\text{inf-per-query}}$,
+and when the second term dominates, the optimum shifts toward
+smaller $N$ with proportionally more $D$
+(\cref{tab:frontier-NDC}). Crucially, the parametric loss
+$\hat{L}(N, D)$ keeps decreasing in $D$ at fixed $N$ --- just
+suboptimally on the pre-training-FLOP margin. Over-training is not
+a refutation of Chinchilla; it solves a different objective.
+
+\paragraph{Forward link.}
+Two threads of this section feed forward. \Cref{sec:scaling-laws}
+takes $D$ and $N$ as the load-bearing variables of the
+$L(N, D)$ functional form: the FineWeb $\sim 15$T-token web
+ceiling and the Phi-4 $\sim 400$B synthetic supplement set the
+\emph{numerator} of the over-training $D / N$ ratio.
+\Cref{sec:mixed-precision} takes $D$ as input to the
+precision-aware scaling-law tension: \citet{scaling-laws-precision-2024}
+predict that over-trained models (large $D / N$) are
+\emph{harder to quantize} at deployment time, partially offsetting
+the inference-cost gain that motivates the over-training in the
+first place \citep[\S 4]{scaling-laws-precision-2024}.\deepencite{scaling-laws-precision-2024 \S
+4: effective-parameter form $N_{\text{eff}}(N, b_{\text{train}})$
+and the over-training $\to$ harder-to-quantize prediction;
+forward-referenced from \cref{sec:scaling-precision}.} The data
+pipeline's choice of $D$ thus has a downstream cost that the
+$\hat{L}(N, D)$ formula does not see.
+
+\subsection{Variants and lineage}
+\label{sec:data-lineage}
+
+\Cref{tab:data-lineage} summarizes the open-corpus lineage from C4
+through the 2024-class pipelines.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrrl}
+\toprule
+Corpus & Tokens & Year & Distinctive choice \\
+\midrule
+C4                          & $0.75$T & 2020 & first open web pipeline; line-level rules \\
+The Pile                    & $0.825$T & 2020 & $22$ hand-picked sources; manual mixture \\
+RefinedWeb (Falcon)         & $5$T    & 2023 & web-only; aggressive global dedup \\
+RedPajama-V1 / V2           & $1.2$T / $30$T & 2023/24 & open Llama-1 reproduction; V2 returns CC at scale \\
+Dolma (OLMo)                & $3$T    & 2024 & $7$ open sources \\
+\textbf{FineWeb}            & $\mathbf{15}$\textbf{T} & \textbf{2024} & \textbf{ablation-model-driven design} \citep{fineweb2024} \\
+\textbf{FineWeb-Edu}        & $\mathbf{1.3}$\textbf{T} & \textbf{2024} & \textbf{distill-then-classify} \citep{fineweb2024} \\
+DCLM-Baseline               & $4$T    & 2024 & fastText-on-instruction-data classifier-filtering \\
+Nemotron-CC                 & $6.3$T  & 2024 & rephrased + classifier-filtered web (NVIDIA) \\
+\midrule
+DeepSeek-V3 (proprietary)   & $14.8$T & 2024 & \cite{deepseek-v3} reports diverse + high-quality \\
+Llama-3 (proprietary)       & $\sim 15$T & 2024 & \cite{meta-llama3}; tokenizer 128K \\
+Phi-4 (synthetic-bulk)      & $\sim 400$B syn & 2024 & $50$ pipelines \citep{phi4} \\
+\bottomrule
+\end{tabular}
+\caption{Open-corpus lineage and selected proprietary contemporaries.
+Three trends: ($i$) total tokens grew $\sim\!20\times$ in four years;
+($ii$) the curation interface shifted from hand-picked sources
+(Pile) to ablation-driven heuristics (FineWeb) to classifier-driven
+distillation (FineWeb-Edu, DCLM, Nemotron-CC); ($iii$) multiple
+labs now report $\sim 15$T as the diminishing-returns ceiling on
+high-quality English web text \citep[\S
+4]{deepseek-v3}.\protect\footnote{KB note:
+\texttt{kb/notes/training/pre-training-data.md\#variants}.}}
+\label{tab:data-lineage}
+\end{table}
+
+\subsection{Forward link}
+\label{sec:data-forward}
+
+Pre-training data is now a pipeline with three load-bearing surfaces:
+curation, mixing, and synthetic-fraction. Curation is empirical
+ablation: \citet{fineweb2024}'s $1.71$B / $28$B-token protocol
+selects each filter on its sign-of-effect on downstream evaluation,
+producing the $15$T-token FineWeb release through a chain of
+WARC-trafilatura extraction, $0.65$ language-ID filtering, $14
+\times 8$ MinHash deduplication \emph{per snapshot} (not globally,
+\cref{contra:global-vs-indiv-dedup}), three quantile-derived custom
+filters, and an optional Llama-3-70B distill-then-classify pass.
+Mixing is a fittable functional form: \cref{eq:dml}'s
+exponential-of-linear in $\mathbf{r}$, with per-target-domain
+$(c_i, k_i, t_{ij})$ recoverable from a small set of pilot runs and
+extrapolated to the target $(N, D)$ via nested scaling laws
+\citep{data-mixing-laws-2024}. Synthetic-fraction is the open
+contradiction (\cref{contra:synthetic-fraction}): Phi-4's
+$\sim\!80\%$ for $14$B reasoning vs.\ Tülu-3's organic-heavier
+post-training mix, with no controlled frontier-scale ablation.
+
+The next section, \cref{sec:scaling-laws}, takes the token-count $D$
+and parameter-count $N$ this section produces and asks how
+cross-entropy loss scales in $(N, D, C)$, why Kaplan's
+compute-allocation rule was overturned by Chinchilla's matched
+LR-horizon re-fit, and why the frontier-2024 industry sits an order
+of magnitude past Chinchilla on $D / N$ for inference economics.
+\Cref{sec:mixed-precision} then takes the same $D$ and asks how the
+precision $\times$ token-count interaction \citep[\S
+4]{scaling-laws-precision-2024} pulls against over-training: the
+larger $D / N$ a deployed model has consumed, the harder it is to
+quantize at deployment time. The pipeline of this section is the
+input to both.

@@ -1,0 +1,331 @@
+% Paper 4, §13 — Scaling interpretability and frontier-2026 snapshot
+% Thesis: each of the five methods has a different scaling envelope. SAEs
+% scale on documented L(C), L(N,K) laws; probes are graceful by construction;
+% attribution graphs scale to production but expensively and only inside the
+% originating lab; manual circuit hunts and full activation patching do not
+% yet scale to frontier-2026 architectures (MLA / fine-grained MoE / NSA).
+% This section is the compute-and-coverage map of the paper.
+
+\section{Scaling interpretability and frontier-2026 snapshot}
+\label{sec:scaling-snapshot}
+
+The five methods of \S\S\ref{sec:logit-lens-family}--\ref{sec:circuits}
+were originally exhibited on small open models: GPT-2 small (124M
+parameters) for \citet{wang2022-ioi}'s indirect-object-identification
+circuit, GPT-2 XL (1.5B) for \citet{meng2022-rome}'s ROME tracing,
+Pythia 410M--12B for \citet{belrose2023-tuned-lens}'s tuned-lens
+benchmarks. The 2024--2026 question --- and the operational question for
+anyone who wants interpretability evidence on a model people actually
+deploy --- is which of these methods carry to 2--27B open-weights models
+(the Gemma 2 / LLaMA 3 / Qwen 2.5 family) and to production frontier
+models (Claude 3.5 Haiku, GPT-4 class). The answer is method-dependent,
+not uniform: SAEs scale on documented laws, probes scale by construction,
+attribution graphs scale to production but only inside Anthropic, and
+manual circuit hunts scale not at all. This section is the
+compute-and-coverage map; \S\ref{sec:scaling-snapshot-table} consolidates
+it into a single snapshot table that becomes the figure-of-record for
+the paper.
+
+\subsection{What scales}
+\label{sec:scaling-yes}
+
+\paragraph{SAEs scale on documented laws.}
+\citet{gao2024-topk-saes} report clean scaling laws for sparse
+autoencoders trained with a TopK activation: a compute--loss law
+$L(C)$ at fixed sparsity, and a width--sparsity law $L(N, K)$ at fixed
+compute, where $N = M$ is the dictionary size and $K$ the per-token
+$L_0$ \citep[\S 1, \S 3]{gao2024-topk-saes}\footnote{KB excerpt:
+\texttt{kb/excerpts/gao2024-topk-saes.md\#sec-1-headline}.}. The headline
+demonstration is a 16M-latent SAE trained on GPT-4 residual-stream
+activations with $\sim 7\%$ dead latents under the AuxK
+mitigation~\citep[\S 2.4]{gao2024-topk-saes}\footnote{KB excerpt:
+\texttt{kb/excerpts/gao2024-topk-saes.md\#sec-2-4}.}; the law is
+predictive enough to guide budget allocation between $N$ and training
+tokens at the design stage rather than empirically. \citet{gemma-scope-2024}
+exercise the architectural cousin --- JumpReLU SAEs of
+\citet{rajamanoharan2024-jumprelu} --- at the open-weights end of the
+same scaling envelope: more than $400$ SAEs spanning every layer and
+sublayer of Gemma~2 2B and 9B (residual stream, MLP output, attention
+output) plus selected layers of Gemma~2 27B, with widths
+$\{16.4\text{K}, 65.5\text{K}, 131\text{K}, 1\text{M}\}$, totaling
+$>\!30$M learned features and roughly $20\%$ of GPT-3's pretraining
+compute~\citep[\S 1]{gemma-scope-2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/gemma-scope-2024.md\#sec-1}.}. The CC-BY-4.0 release
+on HuggingFace plus the Neuronpedia interactive demo
+\deepencite{Neuronpedia integration: \texttt{neuronpedia.org/gemma-scope},
+not in papers.json} converted SAE-based interpretability from an
+Anthropic-internal capability into an externally reproducible one.
+
+\paragraph{Probes scale gracefully.}
+A linear probe is trained on cached activations (so the model itself is
+called once to produce activations, then the probe runs on a CPU);
+mass-mean probing (\S\ref{sec:mass-mean}) is closed-form
+$\mathbf{d}_{\mathrm{MM}} = \boldsymbol{\mu}_+ - \boldsymbol{\mu}_-$ and
+requires no training at all~\citep{marks-tegmark-2023-truth}. Probe
+\emph{cost} is dominated by the activation cache, not the probe fit;
+the activation cache scales linearly with dataset size and is
+embarrassingly parallel across prompts. The same property carries the
+direction-ablation operator
+$\mathbf{h} \mapsto \mathbf{h} - (\mathbf{h}^\top \hat{\mathbf{d}}_y)\,\hat{\mathbf{d}}_y$
+and the addition operator $\mathbf{h} \mapsto \mathbf{h} + \alpha\,
+\hat{\mathbf{d}}_y$ of \S\ref{sec:ablate-add}: both are $O(D)$ per token
+and survive whatever architectural innovations the underlying model
+adds, because they act on the residual stream rather than on any
+particular sublayer.
+
+\paragraph{Attribution graphs scale to production --- expensively, and
+inside one lab.}
+\citet{lindsey2025-circuit-tracing}'s cross-layer-transcoder framework
+reports the only published end-to-end mechanistic-interpretability
+result on a production model (Claude 3.5 Haiku). The compute argument
+is two-part: per-task cost on the replaced model is one forward pass
+plus one backward pass --- cheap relative to activation patching's
+$O(N_{\mathrm{components}})$ forward passes per (clean, corrupted) pair
+(\S\ref{sec:patching-protocol}) --- but the amortized cost is the
+cross-layer transcoder training, estimated at the same order as SAE
+training in \citet{gemma-scope-2024} ($\sim\! 20\%$ of the underlying
+model's pretraining compute). The Anthropic 2025-06 open release of
+the circuit-tracing tooling and its Neuronpedia integration
+\deepencite{Anthropic open-source release of circuit-tracer 2025-06,
+not in papers.json} converted the methodology from a strictly internal
+capability into one external groups can in principle exercise on open
+models. As of 2026, no externally-trained attribution-graph result on a
+frontier model has been published; the contradiction this raises about
+reproducibility is the load-bearing one of \S\ref{sec:contradictions}.
+
+\subsection{What does not scale (yet)}
+\label{sec:scaling-no}
+
+\paragraph{Manual circuit hunts.}
+The IOI reverse-engineering of \citet{wang2022-ioi} took graduate-student
+months of work to identify $26$ heads in $7$ functional classes inside a
+$1.6\%$-of-(head, position)-pairs subgraph on a $124$M-parameter model.
+The same effort would need to scale roughly with the number of heads
+and layers --- $L \cdot H$ on a frontier-2026 model is $\sim 80$--$120$
+times that of GPT-2 small --- and the exhaustive case-by-case behavioral
+testing that gave the IOI claim its load-bearing status does not have an
+obvious automated analog. \citet{conmy2023-acdc} automate the
+\emph{discovery} step (iterative path-patching with a KL-divergence
+threshold), but the automation produces larger and less interpretable
+subgraphs, and the human-in-the-loop labeling that decided ``this head
+class is a Name Mover'' on IOI does not transfer.
+
+\paragraph{Full activation patching.}
+The three-run protocol of \S\ref{sec:patching-protocol} requires
+$O(N_{\mathrm{components}})$ forward passes per (clean, corrupted) pair
+to fill a causal-trace heatmap. On GPT-2 XL, $N_{\mathrm{components}}$
+is order-$10^4$ at head granularity and $10^5$ at single-(head,
+position); on a frontier-2026 model with $\sim 80$ layers, $\sim 64$
+heads per layer, and $\sim 8\text{K}$ context, full-coverage patching
+is on the order of $10^7$ forward passes per task. Attribution patching
+\citep[forum signal, \deepencite{nanda2023-attribution-patching
+blog post; not in papers.json}] linearizes the indirect effect via the
+first-order Taylor approximation
+$\mathrm{IE}_C \approx \langle \nabla_{\mathbf{h}} m,
+\Delta \mathbf{h} \rangle$
+(\S\ref{sec:patching-attribution}) and reduces this to a small constant
+number of passes, but the linearization fails in non-linear regions of
+the loss landscape, so it is a discovery aid rather than a faithful
+substitute for direct intervention.
+
+\paragraph{Lens coverage of frontier-2026 architectures.}
+\citet{belrose2023-tuned-lens}'s tuned-lens benchmarks cover Pythia
+410M--12B and GPT-2 / GPT-Neo / BLOOM; \texttt{logitlens4llms-2025}
+extends the framework to Qwen-2.5 and LLaMA-3.1
+(\S\ref{sec:lens-trajectory}). Tuned lenses for the rest of the
+frontier-2026 lineup --- LLaMA 3/4, full Qwen 2.5/3, DeepSeek-V3,
+Gemma 3 --- are not all published as of 2026. The relevant
+architectural shift for the lens framework is not raw scale (the
+distillation loss
+$\mathcal{L}(\ell) = \E_{\mathbf{x}}[D_{\mathrm{KL}}(\mathcal{M}_{>\ell}
+(\mathbf{h}_\ell) \| \mathrm{TunedLens}_\ell(\mathbf{h}_\ell))]$ is
+indifferent to model size) but the substrate: DeepSeek-V3 combines MLA
+\citep{deepseek-v2}'s low-rank-compressed KV with fine-grained MoE
+\citep{deepseekmoe2024}; NSA \citep{yuan2025} bakes attention sparsity
+into pretraining. The residual stream remains well-defined in all of
+these, but the assumption that a single per-layer affine translator
+$(A_\ell, \mathbf{b}_\ell)$ suffices to absorb basis drift may need
+re-examination on a per-architecture basis. The empirical work that
+would close this gap --- training tuned lenses across the frontier-2026
+lineup and reporting the per-architecture distillation-loss curves ---
+is not yet in the literature.
+
+\begin{contradiction}
+\textbf{The interpretability-coverage gap is widening, not closing.}
+The frontier-2026 architecture snapshot (Paper~1, §13) catalogs MLA,
+fine-grained MoE, NSA-sparse attention, sliding-window layers, and
+hybrid attention/SSM stacks as the substrate of the deployed lineup.
+The lens benchmarks of \citet{belrose2023-tuned-lens} predate this
+substrate; the SAEs of \citet{gemma-scope-2024} and the attribution
+graphs of \citet{lindsey2025-circuit-tracing} cover specific models in
+the lineup but not the lineup as a class; manual circuits and full
+activation patching are exhibited only on $\le$1.5B-parameter
+GPT-family models. The gap between ``what frontier models do'' and
+``what we have interpretability evidence about frontier models doing''
+is not narrowing on net: it is widening, because architectural
+innovation outpaces the per-architecture interpretability work needed
+to catch up. The 2025-06 Anthropic open release of circuit-tracing
+tooling and the Gemma Scope CC-BY-4.0 release are corrective forces;
+whether they correct fast enough is a load-bearing empirical question
+about the field's coverage trajectory.
+\end{contradiction}
+
+\subsection{Production interpretability pipelines, 2026}
+\label{sec:scaling-pipelines}
+
+Three pipelines are in active use as of 2026, each anchored on one of
+the methods above.
+
+\paragraph{Anthropic --- circuit tracer + Neuronpedia.}
+The cross-layer-transcoder + Jacobian-attribution pipeline of
+\citet{lindsey2025-circuit-tracing}, open-sourced in 2025-06 and
+integrated with Neuronpedia for interactive feature browsing
+\deepencite{Anthropic 2025-06 open-source release; Neuronpedia
+integration; not in papers.json}. The substantive findings on Claude
+3.5 Haiku --- forward-planning rhyme features, multi-step factual
+chains (``Texas'' $\to$ ``Austin''), refusal-circuit features,
+partial-cross-lingual feature overlap --- are reported in
+\citet{lindsey2025-biology} and remain Anthropic-internal as evidence
+\deepencite{lindsey2025-biology HTML-only; verbatim transcription
+pending Phase 2}.
+
+\paragraph{OpenAI --- TopK SAEs and the $L(C), L(N, K)$ scaling
+program.}
+The $L(C)$ and $L(N, K)$ laws of \citet{gao2024-topk-saes} are the
+ongoing methodological backbone, plus an evaluation-metric suite (
+$L_0$, reconstruction MSE, downstream-loss recovery, contrastive probe
+recovery)~\citep[\S 1 contributions]{gao2024-topk-saes}\footnote{KB
+excerpt: \texttt{kb/excerpts/gao2024-topk-saes.md\#sec-1-headline}.}.
+The 16M-latent GPT-4 SAE is the existence proof for SAE scaling at
+production-frontier scale; the per-feature interpretability work
+downstream of that release is not all public.
+
+\paragraph{Google DeepMind --- Gemma Scope + JumpReLU + tuned-lens
+benchmarks.}
+The JumpReLU SAE family of \citet{rajamanoharan2024-jumprelu}, the
+Gemma Scope open release of \citet{gemma-scope-2024}, and the Gemma 2
+2B/9B/27B coverage make this the most externally-reproducible pipeline
+of the three. The tuned-lens benchmarks of
+\citet{belrose2023-tuned-lens}, retargeted across the Gemma family,
+provide the cross-method readout layer the lens-as-decoder framing
+needs.
+
+\subsection{Snapshot table}
+\label{sec:scaling-snapshot-table}
+
+Table~\ref{tab:method-scaling} consolidates the per-method coverage as
+of 2026-05. ``Open release'' is the date the method's
+canonical-scale-target artifact (SAE weights, lens parameters,
+attribution-graph tooling) became externally usable; ``2026
+reproduction'' is whether at least one externally-validated result on
+a frontier-2026 model exists.
+
+\begin{table}[t]
+\centering
+\caption{Interpretability methods --- scale, target, and coverage as of
+2026-05. \emph{Target} is the largest model the method has been
+reported on. \emph{Open release} is the date the canonical
+scale-target artifact became externally available; ``\,---\,'' if no
+such release. \emph{2026 reproduction} marks whether the
+canonical-scale finding has been independently reproduced outside the
+originating lab on a frontier-2026 model.}
+\label{tab:method-scaling}
+\small
+\begin{tabularx}{\textwidth}{@{}l l l l l X@{}}
+\toprule
+Method & Canonical paper & Target model & Scale & Open release &
+2026 reproduction \\
+\midrule
+Logit lens & \citet{nostalgebraist2020-logit-lens} \deepencite{nostalgebraist2020-logit-lens
+LessWrong post; not in papers.json} & GPT-2 family & $\le$1.5B &
+no fixed artifact (decoding rule) & yes (GPT-2, BLOOM, GPT-Neo);
+fails on BLOOM/GPT-Neo per \citet{belrose2023-tuned-lens} \\
+Tuned lens & \citet{belrose2023-tuned-lens} & Pythia 12B; GPT-Neo X &
+$\le$20B & training script + benchmarks (2023) &
+partial: \texttt{logitlens4llms-2025} on Qwen-2.5 / LLaMA-3.1; no
+Gemma 3 / DeepSeek-V3 / LLaMA-4 published \\
+Mass-mean probe & \citet{marks-tegmark-2023-truth} &
+LLaMA-2-13B & 13B & code on GitHub (2023) & yes for
+truth, sycophancy variants on LLaMA family; OOD generalization
+unresolved (\S\ref{sec:truth-frontier}) \\
+ReLU+L1 SAE & \citet{templeton2024-scaling-monosemanticity}
+\deepencite{templeton2024-scaling-monosemanticity HTML-only at
+transformer-circuits.pub} & Claude 3 Sonnet & frontier &
+no public weights (Anthropic-internal) & no \\
+TopK SAE & \citet{gao2024-topk-saes} & GPT-4 & 16M-latent & training
+recipe + evaluation suite (2024) & yes at $\le$Gemma 2 27B scale;
+no GPT-4-class external reproduction \\
+JumpReLU SAE & \citet{rajamanoharan2024-jumprelu};
+\citet{gemma-scope-2024} & Gemma 2 27B & 1M-latent & Gemma Scope
+weights, CC-BY-4.0, HF (2024-08) & yes (most reproducible pipeline) \\
+Activation patching & \citet{meng2022-rome};
+\citet{zhang2023-apatching} & GPT-2 XL; LLaMA-7B
+\deepencite{zhang2023-apatching scale extension; PDF-grounded but no
+frontier replication} & 1.5B--7B & toolkits (TransformerLens, etc.)
+& yes for $\le$7B; full-coverage at frontier scale infeasible
+without attribution patching \\
+Manual circuit hunt & \citet{wang2022-ioi};
+\citet{conmy2023-acdc} & GPT-2 small & 124M & ACDC code
+(2023) & yes on GPT-2 small; not yet on frontier-2026 models \\
+Cross-layer transcoder + attribution graph
+& \citet{lindsey2025-circuit-tracing} & Claude 3.5 Haiku & frontier &
+circuit-tracer tooling (2025-06)
+\deepencite{Anthropic open-source release 2025-06; Neuronpedia
+integration; not in papers.json} & no external reproduction as of
+2026 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The table makes the asymmetry explicit. The methods with the most
+favorable scaling --- probes and SAEs --- have the most external
+reproduction; the method with the strongest substantive findings on a
+production frontier model --- attribution graphs --- has none. Three
+of the nine rows depend on tooling or claims that are HTML-only or
+released-but-not-yet-reproduced; the remaining six form a defensible
+shared methodological substrate.
+
+\begin{intuition}
+The five-method picture maps cleanly to the scaling table. Lenses give
+you a cheap readout that may not generalize across architectures (no
+fixed artifact, partial coverage). Probes give you cheap
+correlational evidence with closed-form variants and broad reproduction
+(\S\ref{sec:mass-mean}). SAEs give you a feature dictionary at scale
+under documented laws (the most reproducible pipeline). Activation
+patching gives you causal claims at small scale and degrades to
+linearized approximations beyond. Circuit tracing gives you the
+strongest claims at frontier scale but only inside the originating
+lab. The methodological lesson of \S\ref{sec:cross-method} ---
+method-pluralism is principled because methods answer different
+questions --- has a scaling-table corollary: \emph{method-pluralism
+is also operationally necessary, because no single method covers every
+(model, behavior, evidence-class) cell of the matrix}. Returning to
+canonical form: the per-method costs are $O(D)$ for probes and lenses,
+$O(M D \cdot \text{tokens})$ amortized for SAE training,
+$O(N_{\mathrm{components}})$ per-task for activation patching, and
+$O(\text{transcoder training} + 1\,\text{fwd} + 1\,\text{bwd})$ for
+attribution graphs.
+\end{intuition}
+
+\subsection{Forward link}
+\label{sec:scaling-forward}
+
+The substrate this section reads against is the frontier-2026
+architecture snapshot of \emph{Paper~1, §13}: the MLA / fine-grained
+MoE / NSA-sparse-attention / sliding-window / hybrid-SSM stack that
+defines what production models look like as of 2026. The
+interpretability methods catalogued here have caught up to that
+substrate unevenly, and the two most pressing gaps --- per-architecture
+tuned lenses for the frontier lineup, and external reproduction of
+attribution-graph findings outside Anthropic --- are open empirical
+questions whose closure is the work of the next two years. The
+contradictions surfaced in this section --- circuit-tracing
+reproducibility, lens cross-architecture coverage, the widening gap
+between deployed-model architecture and per-architecture
+interpretability evidence --- are taken up alongside the
+SAE-canonicality and truth-direction contradictions in
+\S\ref{sec:contradictions}, where each is paired with the experiment
+that would resolve it. The thesis of the paper holds against this
+scaling picture: ``\emph{partially read}'' is exactly the right
+phrase, and the qualifier is load-bearing across method, scale, and
+architecture.
