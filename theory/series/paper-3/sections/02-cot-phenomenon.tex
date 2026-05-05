@@ -1,0 +1,294 @@
+% Paper 3, §2 — The CoT phenomenon and its scale-emergence
+% Anchors: kb/notes/reasoning/chain-of-thought.md §1-2
+%          kb/excerpts/{wei2022-cot,kojima2022}.md
+% Forward refs: §3 self-consistency (sec:self-consistency),
+%               §4 inference-time compute (sec:test-time-compute),
+%               §11 faithfulness (sec:cot-faithfulness)
+
+\section{The CoT phenomenon and its scale-emergence}
+\label{sec:cot-phenomenon}
+
+The historical entry point of every leg of the reasoning triangle is a
+single decoding pattern: instead of mapping a problem $x$ directly to an
+answer $y$, the model first produces an intermediate \emph{reasoning
+trace} $z$ and only then commits to $y$. \citet{wei2022-cot} introduced
+this pattern as a few-shot prompting recipe under the label
+\textbf{chain-of-thought (CoT)} prompting, with the headline finding
+that an 8-exemplar CoT prompt raises a 540B-parameter language model on
+the GSM8K math word-problem benchmark to state-of-the-art, surpassing a
+fine-tuned GPT-3 with a verifier
+\citep[abstract]{wei2022-cot}.\footnote{KB excerpt:
+\texttt{kb/excerpts/wei2022-cot.md\#abstract}.} The same pattern was
+shown a few months later to elicit competitive reasoning under
+\emph{zero} hand-written exemplars, by appending the literal trigger
+phrase \emph{``Let's think step by step''} before answer extraction
+\citep[abstract]{kojima2022}.\footnote{KB excerpt:
+\texttt{kb/excerpts/kojima2022.md\#abstract}.} The 2022 community read
+both results as prompting tricks. The 2024--2026 reframing — anchored
+in \citet{snell2024} and the inference-time-compute scaling literature
+that \cref{sec:test-time-compute} formalises — reads them as the first
+empirical instance of \emph{trading inference compute for parameters}.
+This section walks the original mechanism, transcribes the decoding
+factorisation that every later test-time-compute strategy in the paper
+will build on, presents the emergence-with-scale finding that
+distinguished CoT from compute-monotonic prompting, and closes by
+deferring CoT's faithfulness question to \cref{sec:cot-faithfulness}.
+
+\subsection{The decoding factorisation}
+\label{sec:cot-decoding}
+
+Let $x$ denote the problem and $y$ the desired final answer. Direct
+prompting decodes $y \sim p_\theta(\cdot \mid x)$ in a single step. CoT
+prompting introduces an intermediate variable $z$ — the reasoning trace
+— and decodes a two-stage factorisation
+\citep[\S 3.1]{wei2022-cot}:\footnote{KB excerpt:
+\texttt{kb/excerpts/wei2022-cot.md\#sec-3-1}.}
+\begin{equation}
+  z \;\sim\; p_\theta(\cdot \mid x), \qquad y \;\sim\; p_\theta(\cdot \mid x, z).
+  \label{eq:cot-decode}
+\end{equation}
+In practice the trace and answer are emitted jointly by autoregressive
+decoding of a single concatenated sequence $z \cdot y$, where $z$ is a
+natural-language explanation terminating in a stable answer-extraction
+template (e.g.\ \emph{``The answer is~$\langle\cdot\rangle$''}) and $y$
+is recovered post-hoc by a regex on that template
+\citep[\S 3.1]{wei2022-cot}. The KB note for this paper records the
+factorisation as Eq.~1 of \texttt{chain-of-thought.md}.\footnote{KB
+note: \texttt{kb/notes/reasoning/chain-of-thought.md\#1}.}
+
+\paragraph{Tensor shapes and the trace-length budget.} The trace $z$ in
+\cref{eq:cot-decode} is a token sequence whose length empirically spans
+two orders of magnitude across protocols and benchmarks: the original
+GSM8K few-shot CoT exemplars are on the order of $10^2$ tokens per
+trace \citep[\S 3.1]{wei2022-cot}, while the long-CoT reasoning models
+of \cref{sec:r1-family} routinely produce $10^3$--$10^4$ tokens of $z$
+per problem \citep[\S 2.3]{deepseek-r1}. The answer $y$ remains the
+same shape it was under direct prompting (a few tokens). The
+implication for accounting is structural: under \cref{eq:cot-decode}
+the inference-time compute and KV-cache budget are dominated by $z$,
+not by $y$. Decoding a single CoT response of shape
+$\mathsf{S} = |z| + |y| \approx |z|$ at hidden dim $\mathsf{D}$ over
+$\mathsf{L}$ layers carries a per-layer KV-cache cost
+$O(\mathsf{S} \cdot \mathsf{D})$ that is the binding constraint long
+before the model's parameter count is. The architectural prerequisites
+for tractable long traces — long-context attention, KV compression,
+flash attention — are the subject of Paper~1 and re-enter this paper
+in \cref{sec:r1-family} as the precondition for $10^4$-token $z$.
+
+\paragraph{Few-shot exemplar count $K$.} The CoT prompt in
+\citet{wei2022-cot} is a sequence of $K$ in-context demonstrations
+$\{(x_i, z_i, y_i)\}_{i=1}^K$ followed by the query $x_*$, with each
+$z_i$ a hand-written reasoning trace. The arithmetic-reasoning
+benchmarks in \citet{wei2022-cot} use $K = 8$
+\citep[\S 3.1]{wei2022-cot}.\footnote{KB excerpt:
+\texttt{kb/excerpts/wei2022-cot.md\#sec-3-1}.} The exemplars do double
+duty: they (i) shift the model's output distribution toward sequences
+in which $z$ precedes $y$ — the format-conditioning role — and
+(ii) supply task-specific reasoning style. Kojima et al.'s zero-shot
+result below shows the format-conditioning role does not in fact
+require $K > 0$, suggesting the exemplars' marginal contribution at
+sufficient scale is style, not format.
+
+\subsection{Few-shot CoT (Wei et al.\ 2022)}
+\label{sec:cot-fewshot}
+
+The original recipe is the simplest version of \cref{eq:cot-decode}:
+construct a prompt of $K = 8$ exemplars with hand-written reasoning
+traces, decode greedily (or at low temperature) from $p_\theta(\cdot
+\mid \text{prompt}, x_*)$ until the stop pattern, and parse the
+trailing \emph{``The answer is~$\langle\cdot\rangle$''} suffix to
+recover $y_*$ \citep[\S 3.1]{wei2022-cot}. \citet{wei2022-cot} apply
+this protocol to three model families (LaMDA, GPT-3, PaLM) at sizes
+spanning roughly $0.4\text{B}$ to $540\text{B}$ parameters, evaluated
+on three task families: arithmetic word problems (GSM8K, SVAMP, ASDiv,
+AQuA, MAWPS), commonsense (CSQA, StrategyQA, Date, Sports), and
+symbolic reasoning (Last Letter, Coin Flip)
+\citep[\S 3.2]{wei2022-cot}.\footnote{KB excerpt:
+\texttt{kb/excerpts/wei2022-cot.md\#sec-3-2}.} The headline
+\emph{single-number} result is GSM8K at the 540B scale: an 8-exemplar
+CoT prompt achieves state-of-the-art accuracy, surpassing a fine-tuned
+GPT-3 supplemented with a verifier
+\citep[abstract]{wei2022-cot}.\footnote{KB excerpt:
+\texttt{kb/excerpts/wei2022-cot.md\#abstract}.}
+
+\subsection{Zero-shot CoT (Kojima et al.\ 2022)}
+\label{sec:cot-zeroshot}
+
+\citet{kojima2022} report that the entire CoT-eliciting effect can be
+recovered with $K = 0$ — no hand-written exemplars at all — by
+appending the literal string \emph{``Let's think step by step''} to the
+prompt. The protocol is two-stage
+\citep[\S 3]{kojima2022}:\footnote{KB excerpt:
+\texttt{kb/excerpts/kojima2022.md\#sec-3}.}
+\begin{enumerate}
+\item \textbf{Reasoning extraction.} Prompt the model with
+$x_* \,+\,$\emph{``Let's think step by step''} and decode the trace
+$z_*$.
+\item \textbf{Answer extraction.} Prompt the model with
+$x_* \,+\, z_* \,+\,$\emph{``Therefore, the answer is''} and decode
+$y_*$.
+\end{enumerate}
+The two-stage form is the canonical protocol; the trigger phrase is
+\emph{``Let's think step by step''}, identified empirically among
+candidate variants by \citet{kojima2022} as the strongest cue. The
+headline numbers \citep[headline]{kojima2022}\footnote{KB excerpt:
+\texttt{kb/excerpts/kojima2022.md\#headline}.} are striking for a
+purely prompting-side change: with InstructGPT (\texttt{text-davinci-002}),
+MultiArith rises from $17.7\%$ to $78.7\%$ and GSM8K from $10.4\%$ to
+$40.7\%$, with comparable gains on PaLM-540B.
+
+The structural consequence: at sufficient scale the format-conditioning
+role of Wei's $K = 8$ exemplars is already supplied by pretraining and
+instruction-tuning, and a five-word trigger reaches into that latent
+capability without a single demonstration
+\citep[\S 5]{kojima2022}.\footnote{KB excerpt:
+\texttt{kb/excerpts/kojima2022.md\#sec-5}.} The reasoning content is
+not absent in the smaller-prompt setting; it is just not elicited.
+
+\begin{intuition}
+\emph{``Let's think step by step''} is a soft retrieval cue, not a
+reasoning module. Pretraining text — math tutorials, instructional
+material, worked examples — contains many instances of that exact
+phrase preceding step-by-step explanations, so appending it shifts
+the conditional distribution $p_\theta(z, y \mid x_* \,+\, \text{cue})$
+toward sequences in which a trace precedes the answer. Returning to
+math: the cue does not change the family
+\cref{eq:cot-decode}; it only nudges $p_\theta(\cdot \mid x)$ to put
+mass on $z$-then-$y$ continuations rather than on direct-answer
+continuations. The mechanism is a learned co-occurrence
+\citep[\S 5]{kojima2022}, not a discovered reasoning faculty.
+\end{intuition}
+
+\subsection{Emergence with scale}
+\label{sec:cot-emergence}
+
+The single most consequential empirical claim of
+\citet{wei2022-cot} for the rest of this paper is that the gain from
+CoT prompting over direct prompting is itself an
+\emph{emergent} property of model scale. The headline figure
+\citep[\S 3.3, fig.\ 4]{wei2022-cot}\footnote{KB excerpt:
+\texttt{kb/excerpts/wei2022-cot.md\#sec-3-3}.} shows GSM8K accuracy
+plotted against model size for three families (LaMDA, GPT-3, PaLM),
+each with and without the 8-exemplar CoT prompt. Two qualitative
+features survive every replication:
+\begin{itemize}
+\item \textbf{No gain — sometimes a loss — below ${\sim}100\text{B}$
+parameters.} Below the inflection, CoT prompting often
+\emph{underperforms} direct prompting on GSM8K. The model emits a
+trace whose internal arithmetic is brittle, and the trace's errors
+propagate into the answer.
+\item \textbf{Substantial gain at PaLM-540B.} Above the inflection,
+CoT prompting opens a sharp gap over direct prompting — the gap that
+produces the abstract's headline of state-of-the-art GSM8K
+\citep[abstract]{wei2022-cot}.
+\end{itemize}
+\citet[\S 6]{wei2022-cot} explicitly frame this in their limitations
+discussion: the technique's benefit is not a uniform multiplicative
+factor over model scale but a regime-dependent effect that activates
+only past a problem-dependent capacity threshold.\footnote{KB excerpt:
+\texttt{kb/excerpts/wei2022-cot.md\#sec-6}.} The same paper hedges
+that ``chain-of-thought'' need not reflect any cognitive sense of
+``reasoning'' — a hedge that the 2025 faithfulness literature
+(\cref{sec:cot-faithfulness}) makes load-bearing.
+
+\subsection{The post-2024 reframing: prompting trick vs.\ compute axis}
+\label{sec:cot-reframing}
+
+Reading the 2022--2023 reception of CoT in retrospect, the field largely
+treated \cref{eq:cot-decode} as a prompting innovation: a clever
+demonstration of in-context learning, evaluated relative to
+zero-shot or few-shot baselines, on benchmarks chosen to expose
+\emph{prompting} differences. The compute axis was implicit but
+unaccounted-for. Wei's 8-exemplar CoT prompt at 540B emits roughly
+$10^2$ tokens of $z$ per problem; the direct-prompting baseline emits
+roughly $10^0$. The protocols differ by two orders of magnitude in
+inference compute per problem, and the GSM8K gap is the joint product
+of \emph{(i)} the model's latent capacity to use that compute and
+\emph{(ii)} the prompt that elicited the trace.
+
+\citet{snell2024} promote this reading explicitly: test-time compute
+becomes a \emph{scaling-law-shaped} axis with its own functional form,
+on which CoT prompting was the first attested operating point. The
+emergence-with-scale finding of
+\citet[\S 3.3]{wei2022-cot} is then re-readable as the joint shape of
+the inference-compute / parameter-count surface — sub-100B models
+under \cref{eq:cot-decode} cannot convert the extra inference compute
+into accuracy because their per-token reasoning step is too noisy;
+PaLM-540B can. The 2025--2026 reasoning-trained models of
+\cref{sec:r1-family} push the operating point further along the same
+axis: $z$ grows from $10^2$ to $10^4$ tokens, the model is RL-trained
+to use that budget, and the gain over a $10^0$-token direct answer
+becomes the dominant accuracy lever on hard math benchmarks. CoT was
+not magic prompting; it was the first published instance of substituting
+inference compute for parameters along an axis the field would later
+formalise.
+
+\begin{analogy}
+CoT is to direct prompting what stochastic gradient descent with $K$
+inner-loop steps is to a single gradient step: the same model now
+spends additional compute per query before committing to an output,
+and the marginal accuracy returned by that compute is the load-bearing
+quantity. Returning to math: the analogy collapses to
+\cref{eq:cot-decode} — direct prompting collapses $z$ to a length-zero
+trace ($p_\theta(y \mid x)$ alone), CoT prompting decodes a non-trivial
+$|z| > 0$, and \cref{sec:test-time-compute} treats $|z|$ together with
+the sample count $N$ of \cref{sec:self-consistency} as orthogonal
+compute knobs whose joint optimisation is the inference-side
+counterpart of training-side scaling laws \citep[\S 1]{snell2024}.
+\end{analogy}
+
+\subsection{Forward link to faithfulness}
+\label{sec:cot-faith-forward}
+
+A question \cref{eq:cot-decode} raises but does not settle: \emph{does
+$z$ in fact cause $y$?} The factorisation is well-defined as a
+generative model — the trace is sampled, the answer is sampled
+conditional on the trace — but the conditional dependence
+$y \sim p_\theta(\cdot \mid x, z)$ is not the same as a causal claim
+that perturbations to $z$ propagate to $y$. The 2025--2026 faithfulness
+literature \citep{arcuschin2025-cot-wild,shen2025-faithcot-bench,
+mehta2026-faithfulness-scaling} measures this directly and finds the
+answer is regime-dependent.
+
+\begin{contradiction}
+\textbf{Reasoning vs.\ rationalisation.} \cref{eq:cot-decode} treats
+$z$ as a sampled latent that conditions $y$, but the operational
+question is whether perturbations to $z$ that should change $y$ in fact
+do. Production non-thinking models exhibit substantial post-hoc
+rationalisation rates (on the order of $7$--$13\%$ on
+\citet{mehta2026-faithfulness-scaling}'s measurement); thinking models
+exhibit rates two orders of magnitude smaller
+\citep[\S 4]{mehta2026-faithfulness-scaling}.\footnote{KB note:
+\texttt{kb/notes/reasoning/chain-of-thought.md\#4.1}.} Whether the gap
+is caused by long-CoT SFT, by RLVR post-training, or by general scale
+is not separated by the published 2026 ablations. The hedge that
+\citet[\S 6]{wei2022-cot} themselves placed on the cognitive
+interpretation of CoT --- ``chain-of-thought does not necessarily
+reflect model reasoning in any cognitive sense'' --- has aged into the
+load-bearing question of \cref{sec:cot-faithfulness}, which catalogues
+the 2025--2026 evidence and the open ablations needed to settle it.
+\end{contradiction}
+
+\subsection{What this section sets up}
+\label{sec:cot-forward}
+
+The decoding factorisation \cref{eq:cot-decode} is the substrate every
+remaining section of this paper builds on. \Cref{sec:self-consistency}
+takes the cheapest leg of the inference-time compute triangle by
+sampling \cref{eq:cot-decode} $N$ times at $T > 0$ and majority-voting
+the extracted answers, with no verifier or training change; the gain
+is the simplest demonstration that the per-sample noise in $z$ is
+recoverable when the answer space is low-cardinality.
+\Cref{sec:test-time-compute} promotes both the trace length $|z|$ and
+the sample count $N$ from prompting choices to a joint compute axis,
+transcribes \citet{snell2024}'s compute-optimal selection problem, and
+presents the FLOPs-matched headline that on easy and intermediate
+prompts test-time compute substitutes for ${\sim}14\times$ more
+pretraining FLOPs. \Cref{sec:process-reward-models} adds the verifier
+leg by scoring per-step prefixes of $z$, and \cref{sec:rlvr,sec:r1-family}
+add the RL leg by training $p_\theta$ so that the trace distribution
+itself concentrates on correct answers. The CoT phenomenon, in
+\citet{wei2022-cot}'s 2022 form, was the first leg of this triangle to
+appear in the literature; the rest of the paper traces what happens
+when the field stops reading it as a prompting trick and starts
+treating it as a compute axis with its own scaling law.

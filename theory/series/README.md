@@ -43,26 +43,26 @@ cd theory/series/paper-1 && latexmk -pdf main.tex
 | Paper | Title | Outline | LaTeX sections | Pages drafted |
 |------:|-------|:-------:|:--------------:|---------------:|
 | 1 | The modern Transformer is a small set of choices | done | 10/14 | ~50 of 80 |
-| 2 | Training is a multi-stage pipeline | done | 5/14 | ~28 of 100 |
-| 3 | Reasoning is compute, search, and verification | done | 2/14 | ~13 of 80 |
-| 4 | The internal computation can be partially read | done | 2/14 | ~14 of 70 |
-| 5 | What we measure and what slips through | done | 3/14 | ~22 of 70 |
-|   |                                                  |        | **22/70** | **~125 of 400** |
+| 2 | Training is a multi-stage pipeline | done | 6/14 | ~35 of 100 |
+| 3 | Reasoning is compute, search, and verification | done | 4/14 | ~24 of 80 |
+| 4 | The internal computation can be partially read | done | 3/14 | ~19 of 70 |
+| 5 | What we measure and what slips through | done | 5/14 | ~33 of 70 |
+|   |                                                  |        | **28/70** | **~161 of 400** |
 
-### Sections completed (22)
+### Sections completed (28)
 
 - Paper 1: §3 §4 §5 §6 §7 §8 §9 §10 §11 §12
-- Paper 2: §3 §6 §8 §11 §12
-- Paper 3: §3 §5
-- Paper 4: §6 §10
-- Paper 5: §3 §6 §10
+- Paper 2: §3 §6 §7 §8 §11 §12
+- Paper 3: §2 §3 §5 §9
+- Paper 4: §3 §7 §11
+- Paper 5: §3 §4 §5 §6 §10
 
-### Sections remaining (48)
+### Sections remaining (42)
 
 - Paper 1: §1 §2 §13 §14 (4 sections)
-- Paper 2: §1 §2 §4 §5 §7 §9 §10 §13 §14 (9 sections)
-- Paper 3: §1 §2 §4 §6 §7 §8 §9 §10 §11 §12 §13 §14 (12 sections)
-- Paper 4: §1 §2 §3 §4 §5 §7 §8 §9 §11 §12 §13 §14 (12 sections)
-- Paper 5: §1 §2 §4 §5 §7 §8 §9 §11 §12 §13 §14 (11 sections)
+- Paper 2: §1 §2 §4 §5 §9 §10 §13 §14 (8 sections)
+- Paper 3: §1 §4 §6 §7 §8 §10 §11 §12 §13 §14 (10 sections)
+- Paper 4: §1 §2 §4 §5 §6 §8 §9 §10 §12 §13 §14 (11 sections)
+- Paper 5: §1 §2 §7 §8 §9 §11 §12 §13 §14 (9 sections)
 
 After all 70 sections land: bibliography sync, cross-ref resolution, build, polish.

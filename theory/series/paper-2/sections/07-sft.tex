@@ -1,0 +1,416 @@
+% Paper 2, §7 — Supervised fine-tuning
+% Anchors: kb/notes/post-training/sft.md
+%          kb/excerpts/{ouyang2022-instructgpt,phi4,deepseek-r1}.md
+
+\section{Supervised fine-tuning}
+\label{sec:sft}
+
+Supervised fine-tuning (SFT) is the first stage of essentially every
+modern post-training pipeline: cross-entropy maximum-likelihood on
+curated prompt-response pairs, producing the instruction-following
+starting point $\pi^{\mathrm{SFT}}$ that every subsequent stage
+(\cref{sec:rlhf} PPO, \cref{sec:dpo} DPO, \cref{sec:rlvr-grpo} GRPO)
+takes as both initialization and KL anchor
+\citep[\S 3]{ouyang2022-instructgpt}.\footnote{KB excerpt:
+\texttt{kb/excerpts/ouyang2022-instructgpt.md\#sec-3}.} The thesis of
+this section is the one most easily lost in the post-training
+literature: \emph{the loss is plain cross-entropy with prompt-masking,
+and the interesting research questions live in the data, not the
+objective.} The lineage from FLAN's $\sim\!1.8$K reformatted NLP tasks
+\citep{wei2021-flan,chung2022-flan-t5} through InstructGPT's $\sim\!13$K
+labeler-written demonstrations \citep[\S 3]{ouyang2022-instructgpt} to
+T\"ulu-3's $\sim\!939$K mixed-source set \citep{tulu3}, MAGPIE's
+self-synthesis at zero human cost \citep{magpie-2024}, R1-Distill's
+$800$K reasoning-trace transfer \citep[\S 4]{deepseek-r1}, and s1's
+1K-trace + budget-forcing endpoint \citep{s1-2025} is a story about
+data, not loss. We walk that story, give the multi-turn loss-mask
+conventions that production recipes have converged on, set up the
+three open contradictions that \cref{sec:contradictions} discusses in
+full, and end at the boundary of \cref{sec:rlhf}: why SFT precedes RL
+in the canonical pipeline at all.
+
+\subsection{The SFT objective}
+\label{sec:sft-objective}
+
+Given a dataset $\mathcal{D}_{\mathrm{SFT}} = \{(x^{(i)}, y^{(i)})\}_{i=1}^N$
+of prompt-response pairs, SFT trains $\pi_\theta$ to minimize the
+expected negative log-likelihood of the response conditional on the
+prompt:
+\begin{equation}
+\mathcal{L}_{\mathrm{SFT}}(\pi_\theta)
+  = -\E_{(x,y)\sim\mathcal{D}_{\mathrm{SFT}}}
+       \!\big[\log \pi_\theta(y \mid x)\big],
+\label{eq:sft-loss-canonical}
+\end{equation}
+verbatim from \citet[\S 3]{ouyang2022-instructgpt}.\footnote{KB excerpt:
+\texttt{kb/excerpts/ouyang2022-instructgpt.md\#sec-3}.} The
+implementation form, which is what training code actually computes,
+expands the conditional log-probability and folds in a per-token loss
+mask. Concatenate $z = (x, y)$ into one token sequence with the chat
+template; let $m_t \in \{0, 1\}$ be the loss mask with $m_t = 1$ iff
+$z_t$ is a response token. Then
+\begin{equation}
+\mathcal{L}_{\mathrm{SFT}}(\theta)
+  = -\E_{z \sim \mathcal{D}_{\mathrm{SFT}}}
+       \!\left[\sum_{t=1}^{|z|} m_t \, \log \pi_\theta(z_t \mid z_{<t})\right].
+\label{eq:sft-loss-mask}
+\end{equation}
+\Cref{eq:sft-loss-mask} is \cref{eq:sft-loss-canonical} written so that
+prompt-masking is explicit. The two are equivalent: the inner sum
+restricted to $\{t : m_t = 1\}$ is exactly $\log \pi_\theta(y \mid x)$
+under the standard left-to-right factorization
+\citep[\S 3.5]{ouyang2022-instructgpt}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Symbol & Meaning \\
+\midrule
+$x$ & prompt tokens (instruction, system message, prior context) \\
+$y = (y_1, \ldots, y_{|y|})$ & response tokens (assistant turn) \\
+$z = (x, y)$ & concatenated training sequence after chat-template \\
+$m_t \in \{0, 1\}$ & loss mask: $m_t = 1$ iff $z_t$ is a response token \\
+$\pi_\theta$ & policy under training, initialized from a base LM \\
+$\mathcal{D}_{\mathrm{SFT}}$ & SFT dataset, $|\mathcal{D}_{\mathrm{SFT}}| \in [10^3, 10^6]$ \\
+$\pi^{\mathrm{SFT}}$ & resulting model after $1$--$4$ epochs of \cref{eq:sft-loss-mask} \\
+\bottomrule
+\end{tabular}
+\caption{SFT symbol table. Scale numbers compiled from
+\citet[\S 3.4]{ouyang2022-instructgpt} ($\sim\!13$K demonstrations),
+\citet{tulu3} ($\sim\!939$K mixed), and \citet[\S 4]{deepseek-r1}
+($800$K reasoning + non-reasoning).}
+\label{tab:sft-symbols}
+\end{table}
+
+The hyperparameters that distinguish SFT from pre-training are not
+algorithmic but quantitative
+\citep[\S 3.5]{ouyang2022-instructgpt}: SFT runs $1$--$4$ epochs over
+the curated set rather than a single pass; the learning rate is roughly
+$5 \times 10^{-6}$, an order of magnitude below pre-training peak; the
+mixed-precision recipe (BF16 working precision with FP32 master weights,
+\cref{sec:mp-bf16}) is inherited unchanged. Architecturally there is
+\emph{no} change — SFT is a continued-training stage, not a new model.
+Total compute per epoch is $\sim 6 N_{\mathrm{tok}} P$ FLOPs in standard
+mixed-precision training, with $N_{\mathrm{tok}} = \sum_i (|x^{(i)}| +
+|y^{(i)}|)$, two to four orders of magnitude below pre-training.
+
+\begin{intuition}
+SFT is behavior cloning. The model is being shown $(x, y)$ pairs and
+told ``next time you see $x$, write $y$.'' In RL terms,
+$\mathcal{L}_{\mathrm{SFT}}$ is the negative log-likelihood of a
+demonstrator policy $\pi^{\mathrm{demo}}$ under the model — the
+labeler, the teacher LM, or the rejection-sampled own-rollout that
+produced $y$. Returning to math: minimizing \cref{eq:sft-loss-canonical}
+is equivalent, in the infinite-data limit, to minimizing the
+\emph{forward} KL divergence
+$\KL(\pi^{\mathrm{demo}} \,\|\, \pi_\theta)$
+\citep[\S 3.5]{ouyang2022-instructgpt}. Forward KL is mode-covering:
+the trained $\pi_\theta$ must put non-trivial mass wherever
+$\pi^{\mathrm{demo}}$ does, or the loss diverges. RLHF / DPO
+(\cref{sec:rlhf}, \cref{sec:dpo}) instead minimize the \emph{reverse}
+KL, $\KL(\pi_\theta \,\|\, \pi^{\mathrm{SFT}})$, which is mode-seeking:
+$\pi_\theta$ may put zero mass where $\pi^{\mathrm{SFT}}$ has support
+without paying a divergence cost. SFT and RLHF are dual KL directions
+around the demonstrator and the SFT-stage model respectively, which
+is why the two stages compose cleanly: SFT broadens, RL sharpens.
+\end{intuition}
+
+\subsection{Why prompt-masking}
+\label{sec:sft-mask}
+
+Without the mask $m_t$ in \cref{eq:sft-loss-mask}, the SFT loss
+includes $\sum_t \log \pi_\theta(x_t \mid x_{<t})$ — the likelihood of
+the prompt itself. Two things go wrong. First, for a base model the
+prompts are already near-distribution; the gradient through the prompt
+teaches $\pi_\theta$ to \emph{generate user prompts}, which is the wrong
+training signal. Second, when the SFT data is heavily synthetic with
+long instruction templates (Phi-4-style pipelines run with
+multi-paragraph system prompts \citep[\S 2.2]{phi4}\footnote{KB excerpt:
+\texttt{kb/excerpts/phi4.md\#sec-2-2-pipelines}.}), prompt tokens
+dominate the token count and dilute the response-token gradient by
+sometimes an order of magnitude. Prompt-masking is equivalent to
+treating $x$ as a fixed conditioning input rather than a sample to
+model — the standard conditional-likelihood factorization that
+\cref{eq:sft-loss-canonical} encodes implicitly and
+\cref{eq:sft-loss-mask} encodes explicitly.
+
+For multi-turn conversations $(x, y^{(1)}, x^{(2)}, y^{(2)}, \ldots,
+y^{(K)})$ two mask conventions are in use \citep{tulu3}:
+
+\paragraph{Train on all assistant turns.} $m_t = 1$ for every assistant
+token across all $K$ turns; $m_t = 0$ for every user / system / tool-
+result token. T\"ulu-3's default and the production-standard choice in
+2026. Each assistant turn contributes loss; the model learns to
+generate every assistant response in context.
+
+\paragraph{Train on the last assistant turn only.} $m_t = 1$ only for
+$y^{(K)}$. The model sees prior turns as conditioning context but does
+not directly imitate them. A legacy convention that survives in some
+ShareGPT-derived datasets.
+
+The all-turns convention dominates because it gives more loss signal
+per example with no obvious cost, and because the per-turn training
+signal helps the model learn to maintain assistant persona across long
+multi-turn dialogues. Tool-call \emph{results} are universally masked
+out (the model did not generate them); tool-call \emph{invocations}
+are universally included in the loss (the model did generate them, as
+part of its reasoning). Conventions for system messages remain
+unsettled \deepencite{tulu3 §SFT-mask, citation-pending}.
+
+\subsection{The data lineage}
+\label{sec:sft-lineage}
+
+The interesting variation is data, not loss. Five waypoints span the
+space.
+
+\paragraph{FLAN / FLAN-T5 — instruction-tuning as terminal stage
+(2021--22).} \citet{wei2021-flan} reformatted $\sim\!1.8$K NLP tasks
+(classification, QA, summarization, NLI) as natural-language
+instructions and fine-tuned a base LM on them with cross-entropy.
+\citet{chung2022-flan-t5} extended this multi-task instruction-tuning
+with multiple prompting templates and chain-of-thought traces;
+FLAN-T5 became the canonical reference for the pre-RLHF era. SFT was
+the \emph{terminal} post-training stage; no preference signal entered
+the recipe.
+
+\paragraph{InstructGPT — SFT as stage 1 of a multi-stage pipeline
+(2022).} \citet[\S 3]{ouyang2022-instructgpt} re-cast SFT as the
+first of three stages, with stage-2 RM training and stage-3 PPO
+following \cref{eq:sft-loss-canonical}. The data is $\sim\!13$K
+labeler-written prompt-plus-demonstration pairs, drawn from the
+OpenAI API submission stream
+\citep[\S 3.4]{ouyang2022-instructgpt}. The headline empirical fact
+of the paper — that the $1.3$B aligned model is preferred over the
+$175$B GPT-3 base on user prompts \citep[\S 4]{ouyang2022-instructgpt}
+— is what made SFT-then-RL the dominant frame. InstructGPT also
+established the convention that the small LR ($\sim\!10^{-6}$ during
+PPO; $\sim\!5 \times 10^{-6}$ during SFT) and the per-token KL anchor
+together hold the post-training pipeline together.
+
+\paragraph{Llama-3 — rejection-sampling SFT, iterated.}
+\citet{meta-llama3} ship a multi-round SFT loop in which each new round
+is on-policy: from the current $\pi^{\mathrm{SFT}}$, sample $N \in [10,
+30]$ responses per prompt, score with a reward model, keep the top
+$k \in [1, 3]$, and SFT-fine-tune on the kept responses. Iterate over
+$\geq 6$ rounds, alternating with DPO. The total SFT corpus across
+rounds is $\sim\!10^7$ examples — three orders of magnitude above
+InstructGPT. The recipe is best read as ``on-policy SFT filtered by an
+off-policy reward model'': the model learns from its own distribution,
+but only at the points where the RM judges it correct.
+
+\paragraph{T\"ulu-3 — organic-heavy mixed sourcing.} \citet{tulu3}
+publish a fully open SFT recipe at $\sim\!939$K examples, mixing four
+streams: filtered organic data (Reddit Q\&A, StackExchange, FLAN-style
+reformatted tasks), human-written demonstrations, synthetic data from
+strong teacher models, and persona-conditioned generation. The mix is
+balanced explicitly across math, code, reasoning, multi-turn dialogue,
+refusal, and multilingual capability, with iterative human evaluation
+gating the safety-helpfulness ratio. T\"ulu-3 reports clean monotonic
+gains through $\sim\!1$M samples, which sets one boundary of the
+data-quantity contradiction in \cref{sec:sft-contradictions}.
+
+\paragraph{MAGPIE — self-synthesis at zero human cost.}
+\citet{magpie-2024}'s procedure is structurally trivial. Take any
+aligned LM $\pi^{\mathrm{Aligned}}$ (LLaMA-3-Instruct, Qwen-Chat,
+Mistral-Instruct), prompt it with \emph{only} its instruction-template
+prefix (e.g.\ \texttt{<|begin\_of\_text|><|start\_header\_id|>user<|end\_header\_id|>\textbackslash n\textbackslash n})
+with no question, and sample. The model fabricates a user question.
+Append the instruction-template response delimiter and sample again to
+get the answer. SFT on MAGPIE-generated data on Llama-3-8B-base
+recovers most of the performance of Llama-3-8B-Instruct on AlpacaEval
+and MT-Bench at the cost of two forward passes per example
+\citep{magpie-2024}.
+
+\begin{intuition}
+What MAGPIE exposes is that an aligned model carries a
+``user-question prior'' baked into its conditional distribution after
+the system-prompt template: $p(\text{question} \mid
+\text{template-prefix only})$ is itself a useful instruction
+distribution. The base model's unconditional distribution does not
+have this property — it would generate web text. Returning to math:
+SFT on MAGPIE data is just \cref{eq:sft-loss-canonical} with
+$\mathcal{D}_{\mathrm{SFT}}$ constructed by sampling $(x, y)$ from
+$\pi^{\mathrm{Aligned}}(\cdot \mid \text{prefix})$. The aligned model is
+re-used as both data source and a posteriori demonstrator
+$\pi^{\mathrm{demo}}$.
+\end{intuition}
+
+\paragraph{R1-Distill and s1 — reasoning-via-SFT (2025).}
+\citet[\S 4]{deepseek-r1} demonstrate that reasoning capability
+acquired through RL with verifiable rewards (\cref{sec:rlvr-grpo})
+transfers to small dense models through pure SFT.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-4}.} After training R1 by RLVR,
+the team curated $800$K SFT samples ($600$K reasoning + $200$K
+non-reasoning) by sampling from R1 and filtering for correctness;
+SFT-only fine-tuning on Qwen-2.5 / Llama-3 base checkpoints (1.5B,
+7B, 14B, 32B, 70B) yields the ``DeepSeek-R1-Distill'' family. The
+distilled-32B matches or exceeds OpenAI's o1-mini on multiple reasoning
+benchmarks, and the distilled-7B is competitive at 7B scale, all
+without any RL on the small models \citep[\S 4]{deepseek-r1}.
+\citet{s1-2025} push the data-scale axis to its extreme: $\sim\!1$K
+hand-curated reasoning traces from Gemini 2.0 Flash Thinking, plus
+inference-time \emph{budget-forcing}, reaches near-o1-mini on AIME.
+The shared finding is sharp: a small set of clean, fully-worked CoT
+traces is enough to elicit reasoning behavior in a strong base model,
+provided the traces are correct and in the model's preferred style.
+Per-example data quality dominates per-example data quantity at this
+scale.
+
+\paragraph{Phi-4 — synthetic-heavy SFT mix.} \citet[\S 1, \S
+2.1]{phi4}\footnote{KB excerpts:
+\texttt{kb/excerpts/phi4.md\#sec-1-pillars} and
+\texttt{\#sec-2-1-purpose}.} make the strongest published case for a
+synthetic-heavy mix in both pre-training and post-training. The pre-
+training phase uses $\sim\!400$B tokens of synthetic data from $50$+
+multi-stage prompting pipelines \citep[\S 2.2]{phi4},\footnote{KB
+excerpt: \texttt{kb/excerpts/phi4.md\#sec-2-2-pipelines}.} and the
+post-training SFT mix preserves the same synthetic-heavy ratio. The
+underlying intuition, in Phi-4's own framing, is that synthetic data
+acts as ``spoonfeeding'' \citep[\S 2.1]{phi4}: ``each token generated
+by a language model is by definition predicted by the preceding
+tokens, making it easier for a model to follow the resulting reasoning
+patterns.'' Phi-4 surpasses its own teacher GPT-4o on GPQA ($56.1$ vs
+$50.6$) and MATH ($80.4$ vs $74.6$) at $\sim\!30\times$ smaller-class
+\citep[\S 1]{phi4}, evidence that the data-generation pipeline is
+doing more than vanilla distillation.
+
+\subsection{Post-SFT — rejection sampling and iteration}
+\label{sec:sft-iteration}
+
+Modern frontier recipes do not stop at one SFT pass. The Llama-3
+\citep{meta-llama3} and T\"ulu-3 \citep{tulu3} loops alternate SFT
+with preference-RL across multiple rounds, each round producing a new
+$\pi^{\mathrm{SFT}'}$ that becomes the next round's reference. The
+iteration uses rejection-sampling SFT as the on-policy data refresher:
+
+\begin{enumerate}
+\item From the current $\pi^{\mathrm{SFT}}$, sample $N$ responses per
+prompt ($N \in [10, 30]$).
+\item Score each response with a reward model.
+\item Keep the top-$k$ ($k \in [1, 3]$) per prompt.
+\item Run \cref{eq:sft-loss-mask} on the kept responses, producing
+$\pi^{\mathrm{SFT}'}$.
+\item Use $\pi^{\mathrm{SFT}'}$ as initialization and reference for the
+next preference-RL round (\cref{sec:rlhf}, \cref{sec:dpo}).
+\end{enumerate}
+
+The iteration interleaves with the DPO step from \cref{sec:dpo},
+giving the standard 2024-era recipe SFT $\to$ DPO $\to$ rejection-sample
+$\to$ SFT $\to$ DPO $\to$ \ldots. The convergence criterion is
+empirical (preference-win-rate plateau across rounds rather than a
+fixed-point criterion on the loss).
+
+\subsection{Why SFT before RL}
+\label{sec:sft-before-rl}
+
+\Cref{sec:rlhf,sec:dpo,sec:rlvr-grpo} all initialize the policy from
+$\pi^{\mathrm{SFT}}$ and use it as the KL anchor. Why is this stage
+needed at all?
+
+The mechanical reason is that RL needs a reasonable starting policy.
+A base LM produces incoherent or web-style continuations on instruction
+prompts; the rollouts are mostly unscorable, the reward gradient is
+uselessly sparse, and the trust-region constraint
+$\KL(\pi_\theta \,\|\, \pi^{\mathrm{base}})$ is meaningless because
+$\pi^{\mathrm{base}}$ does not concentrate on any ``acting like an
+assistant'' manifold to anchor against. SFT cheaply produces the
+distribution shift from ``language model'' to
+``instruction-follower,'' after which RL refines.
+
+The structural reason follows directly from the KL-direction duality
+of the previous intuition box: SFT minimizes \emph{forward} KL to the
+demonstrator, which is mode-covering and broad; RLHF / DPO minimize
+\emph{reverse} KL to $\pi^{\mathrm{SFT}}$, which is mode-seeking and
+sharp. Running RL on a base LM would have $\pi^{\mathrm{SFT}}$ in
+\cref{eq:rlhf-optimum} replaced by a $\pi^{\mathrm{base}}$ whose mass
+is spread across web continuations rather than instruction-following
+behavior; the closed-form maximizer
+$\pi^*(y \mid x) \propto \pi^{\mathrm{base}}(y \mid x) \exp(r_\phi /
+\beta)$ then fails to concentrate on any usable distribution at
+practical $\beta$. Removing the SFT stage is feasible only when the
+reward signal is strong enough on its own to substitute for the
+distribution shift — DeepSeek-R1-Zero \citep[\S 2]{deepseek-r1}
+removes the SFT cold-start in the verifiable-reward setting, but the
+result has poor readability and language-mixing artifacts that
+motivate the cold-start SFT stage of the production R1 pipeline
+\citep[\S 3]{deepseek-r1}.
+
+\subsection{Three live contradictions}
+\label{sec:sft-contradictions}
+
+Three open contradictions sit on the SFT data axis and propagate
+through the rest of the post-training pipeline. We surface them here
+and pick them up in full in \cref{sec:contradictions}.
+
+\begin{contradiction}
+\textbf{Quantity vs.\ quality.} Two empirical traditions disagree on
+the SFT data scale required to elicit instruction-following.
+\emph{``More is better, with quality gates''} (T\"ulu-3
+\citep{tulu3}, Llama-3 \citep{meta-llama3}, Phi-4 \citep{phi4}):
+scale to $10^6$+ samples with rejection-sampling and reward-model
+filtering, reporting clean monotonic gains.
+\emph{``Few high-quality samples suffice''}
+(LIMA \deepencite{lima-2023 §results, citation-pending}; s1
+\citep{s1-2025}): $1$K--$10$K carefully curated examples are enough
+to elicit instruction-following from a strong base. Both traditions
+are likely correct in different regimes — small-curated-sets work for
+\emph{instruction style and tone}, large-sets are needed for
+\emph{capability breadth} (math, code, multilingual, refusal,
+safety) — but the regime boundary has not been mapped at frontier
+scale.
+\end{contradiction}
+
+\begin{contradiction}
+\textbf{Synthetic fraction.} What fraction of an SFT mix should be
+synthetic vs.\ organic? \citet{phi4} make the strongest synthetic-
+heavy case ($\sim\!80\%$ synthetic by tokens in pre-training, with
+the post-training SFT mix following the same ratio). \citet{tulu3}
+and \citet{meta-llama3} use organic-heavier mixes and report similar
+end-task quality. No paper has run a controlled ablation at frontier
+scale; the closest is the data-mixing-laws line
+\citep{data-mixing-laws-2024}, which addresses pre-training mixtures,
+not SFT. The question is upstream-coupled to the synthetic-vs-organic
+question in \cref{sec:pretrain-data}, and the resolution of one
+likely informs the other.
+\end{contradiction}
+
+\begin{contradiction}
+\textbf{Reasoning-distillation ceiling.} Does pure-SFT-from-strong-
+teacher saturate at the teacher's reasoning frontier, or can it
+surpass through better inference-time strategies? The R1-Distill
+result \citep[\S 4]{deepseek-r1} that the distilled-32B nearly matches
+o1-mini on AIME is the strongest evidence yet that reasoning
+capability is largely transferable through SFT, but the paper itself
+notes that SFT-distilled small models do not exceed their teacher.
+\citet{s1-2025} push back: $\sim\!1$K traces plus budget-forcing
+appears to extract behavior that was not fully exploited at the
+teacher's default inference compute, suggesting the distillation
+ceiling may move with inference-time strategy. Cross-link to Paper~3
+for the inference-time-compute scaling argument that organizes this
+contradiction.
+\end{contradiction}
+
+\subsection{Forward link}
+\label{sec:sft-forward}
+
+\Cref{sec:sft-objective,sec:sft-mask,sec:sft-lineage,sec:sft-iteration,sec:sft-before-rl}
+establish $\pi^{\mathrm{SFT}}$ as the universal starting point for the
+post-training stages that follow, with the forward-KL discipline
+giving a mode-covering broad policy. \Cref{sec:rlhf} now picks up the
+canonical three-stage RLHF pipeline that consumes $\pi^{\mathrm{SFT}}$
+as both initialization and KL anchor: reward-model training under the
+Bradley--Terry log-likelihood, PPO optimization of the KL-constrained
+reward objective, and the closed-form RL optimum
+$\pi^*(y \mid x) \propto \pi^{\mathrm{SFT}}(y \mid x) \exp(r_\phi /
+\beta)$ that turns out — six years later — to be exactly the object
+\cref{sec:dpo}'s DPO derivation inverts. The KL direction flips from
+forward (SFT, mode-covering) to reverse (RLHF / DPO, mode-seeking) at
+the boundary; the mixed-precision recipe and most of the optimization
+machinery (\cref{sec:mixed-precision,sec:optimization}) carry forward
+unchanged. The reasoning-RL pipeline of \cref{sec:rlvr-grpo} departs
+further: the learned reward model is replaced by a programmatic
+verifier, and the cold-start SFT is sometimes elided entirely
+(R1-Zero), at the cost of the readability artifacts noted in
+\cref{sec:sft-before-rl}.

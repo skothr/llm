@@ -1,0 +1,342 @@
+% Paper 5, §5 — Reasoning benchmarks: where saturation does and doesn't happen
+% Anchors: kb/notes/evaluation/reasoning-benchmarks.md
+%          kb/excerpts/{glazer2024-frontiermath,rein2023-gpqa,phan2025-hle}.md
+%          kb/excerpts/hendrycks2021-mmlu.md (saturation backstory)
+
+\section{Reasoning benchmarks: where saturation does and doesn't happen}
+\label{sec:reasoning-benchmarks}
+
+The lineage in \cref{sec:knowledge-benchmarks} measured what a model
+\emph{retrieves}; the lineage in \cref{sec:contamination} measured how
+much the test set has \emph{leaked} into the training distribution.
+This section measures something distinct: \emph{multi-step reasoning}
+on items where the answer is not directly recoverable from a single
+fact or a single web hit. The 2024--2026 reasoning-benchmark surface
+splits cleanly into two regimes. \emph{Contest-style} math
+(AIME~2024, MATH-500) and \emph{graduate-question Q\&A} (GPQA Diamond)
+have saturated at the frontier --- the very regime that Paper~3's
+RLVR/GRPO reasoning-RL lineage was trained against, where the
+verifiable-reward signal is dense and the problem distribution has
+been seen by every lab's training pipeline. \emph{Research-style}
+math (FrontierMath \citep{glazer2024-frontiermath}) and
+\emph{broad-coverage frontier-difficulty exams} (Humanity's Last
+Exam, HLE \citep{phan2025-hle}) have not. The thesis of this section
+is that the gap between these two regimes is the gap between
+in-distribution gains from reasoning-RL and out-of-distribution
+generalization, and the field's 2026 picture is that the latter is
+much weaker than the former.
+
+The shared formal frame is the reasoning-benchmark instance
+$\mathcal{B} = (\rho, A, V)$%
+\footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#1-the-reasoning-benchmark-protocol}.}
+--- a problem statement $\rho$, an answer-format constraint $A$
+(numeric integer, single letter, parsed symbolic expression), and
+a verifier $V(\hat{a}, a^\star) \in \{0, 1\}$ on the model's chosen
+answer. There is no environment, no trajectory, no end-state ---
+$V$ is exact-match or a domain-specific parser, by construction tight
+enough to resist lucky guesses and automated enough to run at scale
+without LLM-as-judge. What separates the four reasoning benchmarks
+below is the difficulty distribution of $\rho$ and the human-effort
+calibration that fixes the saturation timeline.
+
+\subsection{The contest-math regime: AIME and MATH-500}
+\label{sec:reasoning-aime}
+
+Contest-style math is the regime where reasoning-RL has worked best.
+The two canonical benchmarks both predate the post-R1 reasoning
+generation by several years. MATH \deepencite{hendrycks2021-math §1}
+ships $12{,}500$ competition-style problems, most middle- and
+high-school level, with numeric or LaTeX-rendered free-form answers
+checked by symbolic match%
+\footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#3-1-the-post-2024-reasoning-benchmark-map}.};
+\textbf{MATH-500} is the $500$-item subset that the reasoning literature
+adopted as a fast-iterating slice. AIME~2024 is the $30$-problem
+American Invitational Mathematics Exam set with integer answers in
+$[0, 999]$, three hours of human work for a strong competitor, and
+pre-2025 launch numbers in the $\sim 50\%$ range for early
+reasoning-tuned models \deepencite{aime-2024 §1}.
+
+The 2025 reasoning-RL generation moved both numbers decisively. As
+documented in Paper~3's reasoning-RL section
+\deepencite{paper-3 §reasoning-RL}, DeepSeek-R1's RL-only training
+pipeline reports an AIME~2024 jump from a base-model $\sim 16\%$ to
+a final $\sim 80\%$ pass$@1$
+\deepencite{deepseek-r1 §3}, with self-consistency over $64$ samples
+pushing the number above $90\%$. By 2026-Q1 frontier reasoning models
+report AIME~2024 in the $83$--$100\%$ band%
+\footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#3-1-the-post-2024-reasoning-benchmark-map}, \emph{Saturation status} column.},
+with the upper end pinned to perfect on the $30$-problem set --- the
+benchmark has effectively been saturated. MATH-500 follows the same
+arc; published reasoning-model numbers above $95\%$ are common.
+
+Two factors compose the AIME-2024 saturation signal.
+\textbf{Reasoning-RL on verifiable rewards.} AIME's integer-answer
+verifier is the canonical RLVR target: the reward is $\{0, 1\}$ on
+exact-match against the gold integer, no judge model, no
+preference labels, no value head. Paper~3's GRPO/RLVR lineage
+(\deepencite{shao2024 §3}, \deepencite{dapo2025 §2}) is built around
+exactly this signal. In-distribution gains on the trained problem
+distribution are large.
+\textbf{Plausible contamination.} AIME~2024 was published in
+February~2024; the problems and worked solutions appeared in public
+math forums within days. Pre-training corpora and reasoning-RL
+trajectory data assembled in 2024-Q3 onward almost certainly contain
+the items, often with worked solutions inline. \cref{sec:contamination}
+sets up the AIME~2024 timeline as the case study; here the relevant
+implication is that the AIME jump cannot be cleanly attributed to
+RL-induced reasoning generalization versus exposure during training.
+
+\subsection{The graduate-Q\&A regime: GPQA Diamond saturates}
+\label{sec:reasoning-gpqa}
+
+GPQA Diamond \citep{rein2023-gpqa} sits in a different point of the
+reasoning surface than AIME --- $198$ four-way multiple-choice
+questions in graduate-level biology, physics, and chemistry, where
+the difficulty comes from domain depth rather than from a tower of
+algebraic manipulation. \cref{sec:knowledge-gpqa} treats the
+benchmark's launch construction; the reasoning-relevant fact is
+the saturation rate%
+\footnote{KB excerpt: \texttt{kb/excerpts/rein2023-gpqa.md\#sec-ai-baseline}.}.
+At launch (November~2023) the strongest GPT-4-based baseline
+reached $39\%$ \citep[\S{}sec-ai-baseline]{rein2023-gpqa}, just above
+the $34\%$ non-expert-with-web ceiling and well below the
+$\sim 65\%$ PhD-expert baseline%
+\footnote{KB excerpt: \texttt{kb/excerpts/rein2023-gpqa.md\#sec-baseline}.}.
+By 2026-Q1, frontier reasoning models score above $90\%$ on Diamond%
+\footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#3-1-the-post-2024-reasoning-benchmark-map}; cross-referenced from public leaderboards.}
+--- $\sim 25$ percentage points above the human PhD baseline, on a
+benchmark constructed to resist web search at the $34\%$ ceiling. The
+$39\% \to 90\%+$ jump in $\sim 2.5$ years exceeds the AIME
+trajectory in absolute capability gain.
+
+GPQA's own framing places this saturation in tension with its
+intended use. The abstract names the design target as scalable
+oversight%
+\footnote{KB excerpt: \texttt{kb/excerpts/rein2023-gpqa.md\#sec-why}.}
+\citep[\S{}sec-why]{rein2023-gpqa}:
+
+\begin{quote}\itshape
+we need to develop scalable oversight methods that enable humans to
+supervise their outputs, which may be difficult even if the
+supervisors are themselves skilled and knowledgeable.
+\end{quote}
+
+The reasoning-relevant reading is that GPQA was \emph{built to be
+hard} for skilled humans even with web access, on the assumption
+that the items would remain hard for AI for some years. That
+assumption did not survive 2024--2025: the same RL-on-verifiable-
+rewards lineage that closed AIME also closed GPQA Diamond, despite
+the Google-proof construction.
+
+\begin{intuition}
+Contest-style math (AIME, MATH-500) and graduate-Q\&A
+(GPQA Diamond) are different problem distributions but the same
+\emph{distributional kind} from the reasoning-RL training pipeline's
+point of view: closed-form items with a single canonical answer, a
+finite gold set that is in-or-near-distribution to the RL training
+mixture, and a verifier $V(\hat{a}, a^\star)$ tight enough to feed a
+binary reward. RLVR on this kind of distribution generalizes
+\emph{within} the distribution in the way Paper~3's reasoning-RL
+results document. What the FrontierMath gap below shows is that this
+generalization is much weaker out of distribution: the same RL
+pipeline does not transfer to research-mathematician problems that
+demand multi-day proof construction, even though the verifier
+discipline ($V$ as integer-or-symbolic match) is identical.
+(Returning to canonical form: $\mathcal{B} = (\rho, A, V)$ has the
+same shape across all four; what changes is only the difficulty
+distribution of $\rho$ and how much of that distribution the RL
+training mixture has covered.)
+\end{intuition}
+
+\subsection{FrontierMath: research-style math is the OOD bar}
+\label{sec:reasoning-frontiermath}
+
+\citet{glazer2024-frontiermath} construct FrontierMath as the
+deliberate out-of-distribution counterweight%
+\footnote{KB excerpt: \texttt{kb/excerpts/glazer2024-frontiermath.md\#abstract}.}
+\citep[\S{}abstract]{glazer2024-frontiermath}:
+
+\begin{quote}\itshape
+We introduce FrontierMath, a benchmark of hundreds of original,
+exceptionally challenging mathematics problems crafted and vetted by
+expert mathematicians. The questions cover most major branches of
+modern mathematics --- from computationally intensive problems in
+number theory and real analysis to abstract questions in algebraic
+geometry and category theory.
+\end{quote}
+
+Three construction choices distinguish FrontierMath from the
+contest-math line and bear directly on the saturation question.
+\textbf{Unpublished problems.} The problem pool is constructed by
+$60+$ working mathematicians (verified PhD or equivalent), each
+authoring items in their domain; problems are cross-vetted by a
+second mathematician for solvability and uniqueness of answer
+\citep[\S{}sec-verification]{glazer2024-frontiermath}. The set is
+private; items have not appeared in public math forums prior to
+benchmark release, which closes the dominant contamination channel
+that AIME~2024 left open.
+\textbf{Single-canonical-answer parsing.} Each problem has a
+single integer, polynomial, or closed-form expression as its gold
+answer, parseable by an automated checker without LLM-as-judge%
+\footnote{KB excerpt: \texttt{kb/excerpts/glazer2024-frontiermath.md\#sec-verification}.}.
+Problems requiring proof or open-ended argument are excluded, which
+is what enables RLVR-style reward computation on a benchmark that
+otherwise looks like research math.
+\textbf{Multi-day-effort calibration.} The difficulty discipline is
+explicit \citep[\S{}sec-difficulty]{glazer2024-frontiermath}:
+``Solving a typical problem requires multiple hours of effort from a
+researcher in the relevant branch of mathematics, and for the upper
+end questions, multiple days.'' Where MATH problems take a competent
+undergraduate $\sim 30$~min and AIME problems take a strong
+high-schooler $\sim 10$~min, FrontierMath items are calibrated to
+specialist research effort%
+\footnote{KB excerpt: \texttt{kb/excerpts/glazer2024-frontiermath.md\#sec-difficulty}.}.
+
+The headline launch number is the load-bearing one
+\citep[\S{}abstract,\S{}sec-launch-result]{glazer2024-frontiermath}:
+
+\begin{quote}\itshape
+Current state-of-the-art AI models solve under 2\% of problems,
+revealing a vast gap between AI capabilities and the prowess of the
+mathematical community.
+\end{quote}
+
+The under-$2\%$ floor was reported on models that were already at
+$80$--$95\%$ on MMLU and post-saturation on AIME~2024. The gap is
+the OOD bar: the same model class that has saturated the
+contest-style distribution scores in the single digits on the
+research-style one. By the close of 2025, frontier reasoning model
+reports on FrontierMath had moved into the low double digits ---
+single-to-low-double-digit accuracy is the 2026-frontier band on the
+benchmark%
+\footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#3-1-the-post-2024-reasoning-benchmark-map}, \emph{actively discriminative} status as of 2026-05.}
+--- two orders of magnitude below contest-math saturation. The gap
+is the empirical content of the in-distribution-vs-OOD claim.
+
+\begin{contradiction}
+\textbf{Is FrontierMath saturating too?} The benchmark is held by a
+single group (Epoch AI) and graded against a private answer key with
+a domain-specific symbolic checker. The construction is
+contamination-resistant by design, but it is also single-source: the
+field cannot independently replicate either the problem set or the
+grading infrastructure, so reported FrontierMath scores cannot be
+audited by a third party in the way GPQA Diamond and AIME~2024 can.
+Reasoning-model FrontierMath numbers reported in late 2025 and early
+2026 vary substantially across vendor announcements, partly because
+the evaluation protocol --- which problem subset, which compute
+budget, which sampling strategy --- is not fixed by a public spec.
+The contradiction is between (i) the original $<\!2\%$ launch
+number, which is well-bounded and externally verifiable in the loose
+sense that ``almost everyone scored close to zero'' is hard to fake,
+and (ii) the post-2025 numbers in the low double digits, which are
+single-source claims on a single-source benchmark. The field has not
+shipped a replicate FrontierMath-class benchmark with an open
+problem-construction protocol; until it does, FrontierMath
+saturation rate is what its custodians say it is.
+\end{contradiction}
+
+\subsection{HLE as the broad-coverage OOD frontier}
+\label{sec:reasoning-hle}
+
+\citet{phan2025-hle} extend the FrontierMath move from one
+discipline to many. Humanity's Last Exam ships $2{,}500$ questions
+across mathematics, the humanities, and the natural sciences,
+mixing multiple-choice and short-answer items, with a verifier that
+is choice-equality or string-equality-after-normalization --- not
+LLM-as-judge%
+\footnote{KB excerpt: \texttt{kb/excerpts/phan2025-hle.md\#sec-format}.}.
+The motivation paragraph names the gap that HLE fills
+\citep[\S{}abstract]{phan2025-hle}:
+
+\begin{quote}\itshape
+LLMs now achieve over 90\% accuracy on popular benchmarks like MMLU,
+limiting informed measurement of state-of-the-art LLM capabilities.
+\end{quote}
+
+The construction inherits the GPQA / FrontierMath verifier discipline
+\citep[\S{}sec-format]{phan2025-hle}:
+
+\begin{quote}\itshape
+a known solution that is unambiguous and easily verifiable, but
+cannot be quickly answered via internet retrieval.
+\end{quote}
+
+The capability gap at publication is the property the design was
+reaching for \citep[\S{}sec-capability-gap]{phan2025-hle}: ``State-of-
+the-art LLMs demonstrate low accuracy and calibration on HLE,
+highlighting a significant gap between current LLM capabilities and
+the expert human frontier on closed-ended academic questions.'' By
+the close of the Phase~1 sweep window in early 2026, top model
+scores on HLE were in the $\sim 65\%$ band on a benchmark designed
+to resist web retrieval and frontier reasoning at construction time%
+\footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#5-frontier-and-open-questions-as-of-2026-05}.}
+--- substantially below MMLU saturation but well above FrontierMath.
+The position of HLE on the saturation curve is what makes it the
+useful broad-coverage OOD instrument in 2026: it is hard enough that
+contest-math RL transfer does not close it, and broad enough that
+single-domain RL transfer would not close it either, but not so far
+out of distribution as to floor at single digits.
+
+\subsection{What the split tells us about reasoning-RL}
+\label{sec:reasoning-rl-implications}
+
+The four-benchmark surface produces a single load-bearing claim
+about Paper~3's reasoning-RL lineage. Reasoning-RL on verifiable
+rewards \deepencite{paper-3 §RLVR-and-GRPO} delivers large gains on
+problem distributions covered by the RL training mixture --- the
+$16\% \to 80\%+$ AIME~2024 jump documented in
+\citet[\S{}3]{deepseek-r1}, and the parallel saturation of MATH-500
+and GPQA Diamond, are real and they generalize within the contest /
+graduate-Q\&A distributional kind. The same lineage delivers
+single-digit-to-low-double-digit accuracy on FrontierMath, where
+the problem distribution sits two human-effort orders of magnitude
+above the RL training distribution and outside the public
+contest-and-PhD-exam corpus that the RL trajectory data is built
+from. The RL-induced gains do not transfer cleanly into this regime.
+
+This is consistent with a moderate version of the
+in-distribution-RL claim: RLVR-on-verifiable-rewards is doing
+real reasoning-circuit work within its training distribution
+(\deepencite{paper-3 §RLVR-generalization-vs-memorization}), but
+its OOD generalization is much weaker than the AIME-and-GPQA
+trajectories alone would suggest. The $80\%+$ AIME saturation does
+not predict $80\%+$ on FrontierMath; it predicts $1$--$2\%$ on
+FrontierMath, which is what the benchmarks observe. The frontier
+field's read of the gap by mid-2026 is that further AIME-style
+saturation is no longer informative for capability measurement,
+and that the next round of measurement infrastructure has to
+target FrontierMath-and-HLE-class items where the OOD gap is the
+construct \deepencite{glazer2024-frontiermath §sec-saturation}.
+
+The cross-cite to \cref{sec:contamination} is sharper here than
+elsewhere in the paper. \cref{sec:contamination} establishes
+AIME~2024 as the canonical contamination case study: the items and
+worked solutions are public, were almost certainly absorbed into
+2024-Q3+ pre-training corpora and reasoning-RL trajectory data, and
+the line between ``the model knows the problem distribution'' and
+``the model has seen the items'' is fuzzy and field-disputed. The
+implication for AIME-jump interpretation is that the reasoning
+community cannot cleanly attribute the $16\% \to 80\%+$ gain to
+RL-induced reasoning generalization versus contamination-aided
+recall, because both are present and the experimental design does
+not separate them. FrontierMath is the contamination defense the
+contest line lacks; the empirical OOD gap is the part of the
+reasoning-RL story that the contamination defense leaves open.
+
+\subsection{Forward-link: from reasoning to agentic}
+\label{sec:reasoning-forward}
+
+\cref{sec:agentic-benchmarks} shifts the eval surface from single-
+response reasoning to multi-step trajectories in an environment ---
+SWE-Bench, OSWorld, GAIA, $\tau$-Bench. The realism-vs-measurability
+tradeoff that organizes that section is the agentic counterpart of
+the in-distribution-vs-OOD tradeoff that organizes this one: each
+agentic benchmark picks a corner of how much of real deployment
+the eval reproduces, and pays the corresponding price in grading
+reliability. \cref{sec:contradictions-live} catalogues the
+\emph{is FrontierMath saturating too?} contradiction surfaced above
+alongside the field's other live disputes; the closing
+question --- \emph{what would close it?} --- is a public,
+replicable research-style math benchmark whose problem-construction
+and grading infrastructure are open enough to audit, and which the
+field does not yet have.
