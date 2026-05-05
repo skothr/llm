@@ -1,0 +1,369 @@
+% Paper 4, §8 — Are SAE features canonical?
+% Thesis: the decomposition uniqueness question. Leask 2025 (ICLR) gives
+% two pieces of counter-evidence to the Bricken/Templeton "true features"
+% framing — meta-SAEs (non-atomicity) and SAE stitching (incompleteness).
+% Transcoders (Dunefsky 2024) are the structural cousin: they reproduce
+% the *function* of an MLP sublayer rather than its activations, and
+% Lindsey 2025's cross-layer transcoder is the architectural primitive
+% of §11's circuit tracing — but they inherit the canonicality concern.
+
+\section{Are SAE features canonical?}
+\label{sec:sae-canonicality}
+\label{sec:sae-canonical}
+
+The architectures of \S\ref{sec:sparse-autoencoders} give us a working
+pipeline for converting polysemantic neuron-basis activations into a
+sparse, named feature basis at scale. They do not, on their own, tell
+us whether that basis is \emph{the} basis. The implicit framing of the
+production-scale SAE program --- that scaling $M$ and pushing further
+down the $L_0$-vs-reconstruction Pareto curve converges toward a
+canonical decomposition of model activations into atomic, interpretable
+features --- is a load-bearing assumption: if features are
+\emph{canonical}, then SAE features are the units of the model's
+internal computation, and downstream interpretability claims (probes
+cite them, patching targets them, circuits compose them) inherit
+their canonicality. \citet{leask2025-sae-not-canonical} make a direct
+empirical argument that this assumption is unwarranted, with two
+techniques that probe atomicity and completeness separately. We work
+through the argument, then take up \emph{transcoders}
+\citep{dunefsky2024-transcoders} --- structural cousins of SAEs that
+sit at the input-output boundary of an MLP rather than on the
+activation itself --- and show that the additional analytical leverage
+they provide for circuit work in \S\ref{sec:circuits} comes with the
+same canonicality concern inherited unchanged.
+
+\subsection{What ``canonical'' would mean}
+\label{sec:canonical-definition}
+
+\citet[\S 1]{leask2025-sae-not-canonical} fix the terminology before
+attacking the claim\footnote{KB excerpt:
+\texttt{kb/excerpts/leask2025-sae-not-canonical.md\#sec-1-canonical}.}.
+A set of units of analysis is \textbf{canonical} when it is
+simultaneously: \textbf{unique} --- the same set is recovered (modulo
+a known equivalence such as rotation or permutation) by independent
+training runs and across reasonable choices of dictionary size $M$;
+\textbf{complete} --- every feature the model uses is represented;
+and \textbf{atomic} --- each unit is irreducible, not decomposable into
+smaller units in the same dictionary family. The
+\citet{bricken2023-monosemanticity} ``Towards Monosemanticity'' paper
+and the \citet{templeton2024-scaling-monosemanticity} scaling
+follow-up both lean on a strong-form version of this picture: SAE
+features are the \emph{true} units, and a sufficiently scaled SAE
+recovers them. Both citations are HTML-only on
+\texttt{transformer-circuits.pub}; we cite them by paper-key with
+attribution pending Phase~2 transcription
+\deepencite{bricken2023-monosemanticity §2, citation-pending}
+\deepencite{templeton2024-scaling-monosemanticity §1, citation-pending}.
+
+The empirical content of the canonicality claim is testable. If
+features are canonical, then (i) a wider SAE on the same activations
+should not contain features absent from a sufficiently wide narrower
+SAE --- it should refine, not enlarge, the inventory; and (ii) a
+feature in a wide SAE should not decompose into a sparse combination
+of features from a narrower SAE --- it should be a single unit. The
+two techniques of \citet{leask2025-sae-not-canonical} test exactly
+these two predictions, and report failure on both.
+
+\subsection{Meta-SAEs: large-SAE features are not atomic}
+\label{sec:meta-saes}
+
+The first technique trains an SAE on the \emph{decoder matrix} of a
+target SAE rather than on model activations. Each row of the
+meta-SAE's input is a single decoder column $\mathbf{d}_i \in
+\mathbb{R}^n$ from the target SAE; the meta-SAE learns a sparse
+dictionary of \emph{meta-latents} into which the target's feature
+directions decompose. The reported finding\footnote{KB excerpt:
+\texttt{kb/excerpts/leask2025-sae-not-canonical.md\#sec-1-einstein}.}
+is the now-canonical example:
+
+\begin{quote}
+\itshape
+[Figure 1] Decomposition of an SAE latent representing ``Einstein''
+into a set of interpretable meta-latents. \dots\ revealing how a
+complex concept can be represented as a sparse combination of
+meta-latents.~\citep[\S 1]{leask2025-sae-not-canonical}
+\end{quote}
+
+\noindent The Einstein latent in the target SAE decomposes into
+meta-latents corresponding to ``scientist'', ``Germany'', ``famous
+person'', and a ``starts with E-'' feature. Atomicity --- the claim
+that the Einstein direction is irreducible within the SAE's feature
+family --- fails on inspection: it is a sparse combination of more
+elementary directions discovered without looking at any new model
+activations, just at the target SAE's own decoder. The summary
+characterization is direct\footnote{KB excerpt:
+\texttt{kb/excerpts/leask2025-sae-not-canonical.md\#abstract}.}:
+
+\begin{quote}
+\itshape
+Using meta-SAEs --- SAEs trained on the decoder matrix of another
+SAE --- we find that latents in SAEs often decompose into
+combinations of latents from a smaller SAE, showing that larger SAE
+latents are not atomic.~\citep[abstract]{leask2025-sae-not-canonical}
+\end{quote}
+
+\noindent The decoder-matrix substrate is the load-bearing methodological
+choice: meta-SAEs do not introduce new activation data, so the
+decomposition of $\mathbf{d}_\text{Einstein}$ into meta-latent
+directions is a property of the target SAE's learned geometry alone.
+Whatever ``Einstein'' meant inside the target SAE, it meant it as a
+sparse combination of more-elementary directions in
+$\mathbb{R}^n$ --- and the meta-SAE recovers them.
+
+\subsection{SAE stitching: smaller SAEs are incomplete}
+\label{sec:sae-stitching}
+
+The second technique tests completeness by inserting or swapping
+latents from a larger SAE into a smaller one and measuring
+reconstruction performance on held-out activations. The paper's
+classification\footnote{KB excerpt:
+\texttt{kb/excerpts/leask2025-sae-not-canonical.md\#abstract}.} sorts
+larger-SAE latents into two disjoint sets:
+
+\begin{itemize}
+  \item \textbf{Reconstruction latents.} When inserted into the
+    smaller SAE, they can replace --- with comparable behavior ---
+    one or more latents already present. They are coordinate
+    refinements of features the smaller SAE already had.
+  \item \textbf{Novel latents.} When inserted, they
+    \emph{improve} the smaller SAE's reconstruction. They are
+    features the smaller SAE did not have; absent in its dictionary;
+    inaccessible to its forward pass.
+\end{itemize}
+
+\noindent The empirical finding is that novel latents exist in
+non-trivial numbers: scaling $M$ does not just refine, it discovers.
+The methodological consequence
+\citep[\S 1]{leask2025-sae-not-canonical} is that any single-width SAE
+is provably incomplete relative to a sufficiently wider one --- and
+since the field has no a-priori stopping criterion for $M$, the
+``complete dictionary'' premise of the canonicality claim has no
+operational test that any finite SAE can pass. The contrast with
+\citet{bricken2023-monosemanticity}'s earlier \emph{feature-splitting}
+framing is sharp:
+\citeauthor{leask2025-sae-not-canonical} note that under feature
+splitting alone, ``latents from smaller SAEs `split' into multiple,
+more fine-grained latents in larger
+SAEs''~\citep[\S 1]{leask2025-sae-not-canonical}\footnote{KB excerpt:
+\texttt{kb/excerpts/leask2025-sae-not-canonical.md\#sec-1-feature-splitting}.}
+--- a relationship in which the smaller dictionary is \emph{coarser}
+but still complete. Stitching's novel latents fail this picture: some
+larger-SAE features have no coarse-grained counterpart in the smaller
+dictionary at all.
+
+\begin{contradiction}
+\textbf{Are SAE features canonical?} Two lines of evidence strain the
+strong-form ``true features'' framing implicit in
+\citet{bricken2023-monosemanticity} and
+\citet{templeton2024-scaling-monosemanticity}.
+\textsf{(1)~Non-atomicity.} Meta-SAEs trained on the decoder matrix
+$\mathbf{W}_\text{dec}$ of a target SAE recover a sparse decomposition
+of the target's feature directions; an ``Einstein'' latent decomposes
+into ``scientist'', ``Germany'', ``famous person''
+\citep[\S 1]{leask2025-sae-not-canonical}. The target's atoms are not
+atoms.
+\textsf{(2)~Incompleteness.} SAE stitching shows that larger SAEs
+contain \emph{novel latents} --- features absent from smaller SAEs
+that improve reconstruction when transplanted in
+\citep[abstract]{leask2025-sae-not-canonical}. No fixed-width SAE
+qualifies as complete relative to a sufficiently wider trained
+counterpart.
+\textbf{What evidence would close it.} A basis-finding criterion under
+which two independent SAE training runs --- at different widths
+$M_1, M_2$, different sparsity targets, different random seeds, and
+on the same activations --- converge on the same feature inventory
+modulo a known equivalence (rotation, sign, permutation, scale).
+Until that criterion is exhibited and shown to hold empirically, the
+field's working assumption is the pragmatic one
+\citet[\S 1]{leask2025-sae-not-canonical} themselves
+recommend\footnote{KB excerpt:
+\texttt{kb/excerpts/leask2025-sae-not-canonical.md\#sec-1-still-useful}.}:
+``the choice of dictionary size is subjective. We suggest taking a
+pragmatic approach to applying SAEs to mechanistic interpretability
+tasks, trying SAEs of several widths to see which is best
+suited.''~\citep[\S 1]{leask2025-sae-not-canonical}
+\end{contradiction}
+
+\subsection{Transcoders: function approximation, not activation
+decomposition}
+\label{sec:transcoder-canonicality}
+
+The architectural cousin of an SAE relevant to circuit analysis ---
+introduced in \S\ref{sec:sae-transcoders} and reused as the primitive
+of \S\ref{sec:circuits} --- is the \emph{transcoder}
+\citep{dunefsky2024-transcoders}. We restate the loss for reference,
+because the canonicality picture rides on its faithfulness term being
+defined against the MLP \emph{function} rather than against its
+activation\footnote{KB excerpt:
+\texttt{kb/excerpts/dunefsky2024-transcoders.md\#sec-3-1}.}:
+\begin{equation}
+  \mathcal{L}_{\text{TC}}(\mathbf{x})
+  \;=\;
+  \underbrace{\|\mathrm{MLP}(\mathbf{x}) - \mathrm{TC}(\mathbf{x})\|_2^2}_{\text{faithfulness}}
+  \;+\;
+  \lambda_1\,\|\mathbf{z}_{\text{TC}}(\mathbf{x})\|_1
+  \label{eq:transcoder-loss-canonical}
+\end{equation}
+with $\mathrm{TC}(\mathbf{x}) = \mathbf{W}_\text{dec}\,\mathrm{ReLU}(\mathbf{W}_\text{enc}\mathbf{x} + \mathbf{b}_\text{enc}) + \mathbf{b}_\text{dec}$
+from \citet[\S 3.1, Eq.~3--5]{dunefsky2024-transcoders}. The
+contrast with an SAE on the MLP output is one substitution: an SAE
+minimizes $\|\mathrm{MLP}(\mathbf{x}) - \hat{\mathbf{x}}\|_2^2$ where
+$\hat{\mathbf{x}}$ depends on the \emph{post}-MLP activation; a
+transcoder's $\mathrm{TC}(\mathbf{x})$ depends only on the
+\emph{pre}-MLP input $\mathbf{x}$. The transcoder's feature dictionary
+is a decomposition of the MLP \emph{function}, not of any particular
+output \citep[\S 1]{dunefsky2024-transcoders}\footnote{KB excerpt:
+\texttt{kb/excerpts/dunefsky2024-transcoders.md\#sec-1-comparison}.}.
+
+The methodological payoff
+\citep[\S 1]{dunefsky2024-transcoders}\footnote{KB excerpt:
+\texttt{kb/excerpts/dunefsky2024-transcoders.md\#sec-1-input-invariance}.}
+is the \textbf{input-invariance factorization}. The connection from a
+pre-MLP feature $f_i$ (associated with decoder column $\mathbf{d}_i$)
+to a post-MLP transcoder feature $f_j$ (associated with encoder row
+$\mathbf{e}_j$) factors into an input-dependent term --- the
+activations $f_i(\mathbf{x})$ and $f_j(\mathbf{x})$ at the input of
+interest --- and an input-invariant term, the bilinear product
+\begin{equation}
+  W_{j i} \;:=\; \mathbf{e}_j^\top \mathbf{d}_i,
+  \label{eq:transcoder-bilinear}
+\end{equation}
+which holds for any input. The motivating example
+\citet[\S 1]{dunefsky2024-transcoders} give for why this matters is
+worth quoting in full:
+
+\begin{quote}
+\itshape
+SAEs cannot tell us about the general input-output behavior of an MLP
+across all inputs. \dots\ Doing e.g. patching on one input shows that a
+pre-MLP feature for Polish last names is important for causing the
+post-MLP feature to activate. But on other inputs, would features other
+than the Polish last name feature also cause the post-MLP feature to
+fire (e.g. an English last names feature)? Could there be other inputs
+where the Polish last names feature fires but the post-MLP feature does
+not? We can see that without input-invariance, it is difficult to make
+general claims about model
+behavior.~\citep[\S 1]{dunefsky2024-transcoders}
+\end{quote}
+
+\noindent An SAE-on-output answers ``which features explain
+\emph{this} activation?''; a transcoder answers ``which features does
+this MLP \emph{compute}, and how do they depend on its inputs?''. The
+latter is the question circuit analysis needs answered, and the
+cross-layer transcoder of \citet{lindsey2025-circuit-tracing}
+\deepencite{lindsey2025-circuit-tracing §3, citation-pending}
+generalizes the bilinear factorization \eqref{eq:transcoder-bilinear}
+to skip-layer feature flow. That generalization is the architectural
+primitive on which the attribution-graph construction of
+\S\ref{sec:circuit-attribution} is built.
+
+\begin{intuition}
+A transcoder is to an MLP what a sparse Taylor expansion is to a
+smooth function: the original is a dense, hard-to-read black box; the
+transcoder is a sparse linear combination of basis functions
+$\{\mathbf{d}_i\}$ that approximates it everywhere. The
+input-invariance factorization is exactly the statement that
+``coefficients of the expansion'' (the bilinear products
+$\mathbf{e}_j^\top \mathbf{d}_i$) are properties of the function, while
+``where the expansion is being evaluated'' (the activations
+$f_i(\mathbf{x}), f_j(\mathbf{x})$) are properties of the input.
+Returning to canonical math: the Jacobian of a post-transcoder feature
+$f_j$ with respect to a pre-transcoder feature $f_i$ separates into a
+bilinear weight term and a pointwise activation derivative ---
+the structural condition that makes attribution graphs computable in
+closed form rather than by sampling.
+\end{intuition}
+
+\subsection{Inheritance: transcoders carry the SAE canonicality
+problem}
+\label{sec:transcoder-inheritance}
+
+The architectural difference between Eq.~\eqref{eq:transcoder-loss-canonical}
+and the SAE loss of Eq.~\eqref{eq:sae-loss} does not, on its own,
+resolve the canonicality concerns of
+\S\S\ref{sec:meta-saes}--\ref{sec:sae-stitching}. A transcoder is still
+a sparse-dictionary architecture; its feature directions
+$\{\mathbf{d}_i\}$ are still trained against a reconstruction
+objective with a sparsity penalty; nothing in
+Eq.~\eqref{eq:transcoder-loss-canonical} privileges any particular
+basis modulo the rotational/scale freedoms of dictionary learning.
+Two independent transcoders trained on the same MLP at different
+widths $d_\text{features}$ should be expected --- by the same
+arguments \citet{leask2025-sae-not-canonical} make for SAEs --- to
+exhibit incompleteness (the wider transcoder finds function-features
+the narrower one missed) and non-atomicity (a wider feature
+$\mathbf{d}_i^\text{wide}$ admits a sparse decomposition into
+function-features of a narrower transcoder). The
+\citet{leask2025-sae-not-canonical} stitching protocol applied between
+transcoders rather than between SAEs has not, as of 2026, been
+published as a separate experiment, and we flag the inheritance as
+empirically unconfirmed but theoretically expected
+\deepencite{leask2025-sae-not-canonical §1, transcoder-extension-pending}.
+
+The pragmatic consequence for circuit work is real. The bilinear
+factorization of Eq.~\eqref{eq:transcoder-bilinear} is well-defined
+\emph{within} a fixed transcoder: given the
+$(\mathbf{W}_\text{enc}, \mathbf{W}_\text{dec})$ trained for a
+specific MLP, the input-invariant attribution weights $W_{ji}$ are
+deterministic. But the \emph{interpretation} of the post-transcoder
+feature $f_j$ --- what it ``represents'' --- is identified at the
+basis level, and the basis is not canonical. Two attribution graphs
+computed against two different transcoders trained on the same MLP
+will produce different node sets, different edge weights, and
+potentially different qualitative narratives about the underlying
+circuit. This is the \emph{transcoder-canonicality} concern inherited
+from the SAE setting, and the cross-method synthesis of
+\S\ref{sec:cross-method} returns to it: when activation patching at
+the head/MLP level and attribution-graph tracing at the transcoder-feature
+level disagree, one possibility is that the patching result is wrong;
+another is that the attribution graph reads features as canonical that
+the model does not treat as canonical.
+
+\subsection{Where the canonicality question stands}
+\label{sec:canonicality-frontier}
+
+The 2026 community position, as registered by
+\citet[\S 1]{leask2025-sae-not-canonical} and consistent with
+Anthropic's own move from ``true features''
+\deepencite{templeton2024-scaling-monosemanticity §1, citation-pending}
+to circuit-tracing's pragmatic transcoder usage
+\deepencite{lindsey2025-circuit-tracing §1, citation-pending}, is
+\emph{pragmatic}: SAEs and transcoders are useful, basis-dependent
+tools for converting polysemantic activations into legible sparse
+representations, and the right working response to the canonicality
+critique is to vary $M$, retrain, and check that load-bearing
+interpretability claims survive across widths and seeds. This is the
+recommendation \citeauthor{leask2025-sae-not-canonical} themselves
+make: ``trying SAEs of several widths to see which is best
+suited''~\citep[\S 1]{leask2025-sae-not-canonical}.
+
+The \emph{theoretical} question --- whether canonical units exist at
+all, and whether some other dictionary-learning architecture (one
+explicitly designed to converge across widths) could find them ---
+is open. The shape of an answer would be: a basis-finding criterion
+that two independent runs satisfy modulo a known equivalence, and an
+architecture for which the criterion is provably (or at least
+robustly empirically) achievable. Neither is in hand as of 2026.
+
+\subsection{Forward link}
+\label{sec:canonicality-forward}
+
+The transcoder framing of \S\ref{sec:transcoder-canonicality} is the
+architectural primitive of \S\ref{sec:circuits}, where
+\citet{lindsey2025-circuit-tracing}'s cross-layer transcoders provide
+the bilinear-attribution substrate
+\eqref{eq:transcoder-bilinear} on which Anthropic's 2025 attribution
+graphs on Claude 3.5 Haiku are built
+\deepencite{lindsey2025-circuit-tracing §3, citation-pending}. The
+canonicality concern propagates forward: any circuit claim made
+against a transcoder-derived attribution graph is a claim about
+\emph{this} transcoder's features, not about a model-level canonical
+basis. \S\ref{sec:cross-method} takes up the cross-method synthesis
+question --- when two interpretability methods agree on a phenomenon
+(the IOI circuit, factual recall localization), and when they
+disagree (the truth direction across datasets, SAE feature inventories
+across widths) --- and uses the canonicality picture from this
+section to explain why some disagreements are method-internal
+artifacts (one method reads a basis as canonical that another method
+does not) rather than disagreements about the underlying model
+computation.

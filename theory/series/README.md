@@ -45,24 +45,24 @@ cd theory/series/paper-1 && latexmk -pdf main.tex
 | 1 | The modern Transformer is a small set of choices | done | 11/14 | ~56 of 80 |
 | 2 | Training is a multi-stage pipeline | done | 10/14 | ~68 of 100 |
 | 3 | Reasoning is compute, search, and verification | done | 11/14 | ~69 of 80 |
-| 4 | The internal computation can be partially read | done | 7/14 | ~40 of 70 |
-| 5 | What we measure and what slips through | done | 7/14 | ~43 of 70 |
-|   |                                                  |        | **46/70** | **~276 of 400** |
+| 4 | The internal computation can be partially read | done | 9/14 | ~47 of 70 |
+| 5 | What we measure and what slips through | done | 11/14 | ~65 of 70 |
+|   |                                                  |        | **52/70** | **~305 of 400** |
 
-### Sections completed (46)
+### Sections completed (52)
 
 - Paper 1: §2 §3 §4 §5 §6 §7 §8 §9 §10 §11 §12
 - Paper 2: §3 §4 §5 §6 §7 §8 §9 §10 §11 §12
 - Paper 3: §2 §3 §4 §5 §6 §7 §8 §9 §10 §11 §12
-- Paper 4: §3 §4 §5 §6 §7 §9 §11
-- Paper 5: §3 §4 §5 §6 §9 §10 §12
+- Paper 4: §3 §4 §5 §6 §7 §8 §9 §10 §11
+- Paper 5: §3 §4 §5 §6 §7 §8 §9 §10 §11 §12 §13
 
-### Sections remaining (24)
+### Sections remaining (18) — all Pass C
 
 - Paper 1: §1 §13 §14 (3 sections)
 - Paper 2: §1 §2 §13 §14 (4 sections)
 - Paper 3: §1 §13 §14 (3 sections)
-- Paper 4: §1 §2 §8 §10 §12 §13 §14 (7 sections)
-- Paper 5: §1 §2 §7 §8 §11 §13 §14 (7 sections)
+- Paper 4: §1 §2 §12 §13 §14 (5 sections)
+- Paper 5: §1 §2 §14 (3 sections)
 
 After all 70 sections land: bibliography sync, cross-ref resolution, build, polish.
