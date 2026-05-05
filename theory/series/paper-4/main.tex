@@ -1,0 +1,46 @@
+% theory/series/paper-4/main.tex — The internal computation can be partially read
+
+\input{../preamble}
+
+\title{
+  The internal computation can be partially read: \\
+  a method-pluralist account of LLM interpretability, 2016--2026
+}
+\author{Theory KB --- Paper 4 of 5}
+\date{2026-05-04 (draft)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Five interpretability methods --- logit/tuned lenses, probes, sparse
+autoencoders, activation patching, and circuit tracing --- make
+different commitments about what counts as a feature, a circuit, or
+an explanation. Method-pluralism is principled, not a sign of
+immaturity. Cross-method evidence converges in some cases (the IOI
+circuit, factual-recall localization) and diverges in others
+(``truth direction'' across datasets, SAE feature canonicality). We
+walk the methods, the math each commits to, and the evidence pattern
+we should expect to see at each scale.
+\end{abstract}
+
+\tableofcontents
+
+\input{sections/01-introduction}
+\input{sections/02-internal-computation}
+\input{sections/03-logit-lens-family}
+\input{sections/04-probing}
+\input{sections/05-truth-directions}
+\input{sections/06-sparse-autoencoders}
+\input{sections/07-sae-canonicality}
+\input{sections/08-activation-patching}
+\input{sections/09-rome-and-direct-edits}
+\input{sections/10-circuits}
+\input{sections/11-cross-method}
+\input{sections/12-scaling-interpretability}
+\input{sections/13-frontier-2026-snapshot}
+\input{sections/14-contradictions-and-frontiers}
+
+\bibliography{../references}
+
+\end{document}

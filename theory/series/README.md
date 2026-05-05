@@ -1,21 +1,51 @@
-# theory/series/ — LaTeX paper series (deferred)
+# theory/series/ — LaTeX paper series (Shape C)
 
-Placeholder for a future multi-paper LaTeX series. **Outlined only after
-the KB (`theory/kb/`) reaches stable coverage** — see
-`docs/superpowers/specs/2026-05-03-theory-expansion-design.md` §11 (Phase 5).
+Five thesis papers covering modern LLM theory and engineering, drawn from
+the now-stable KB at `theory/kb/`. Decision logged in
+`theory/plans/2026-05-04-latex-series-brainstorm.md` (Shape C, recommended)
+and `SHAPE-C-decision.md` here.
 
 The previous single-LaTeX-doc deliverable (`llm-core-architecture`) is
-archived under `theory/archive/2026-05-03-pre-expansion/`. Its `.tex` source
-is preserved for reference and may be partially reused once the series is
-outlined.
+archived under `theory/archive/2026-05-03-pre-expansion/`. Its `.tex` may
+be partially reused.
 
-## Why deferred
+## Layout
 
-Topic structure for the series should follow from observed research breadth
-in the KB, not from priors held before research begins. Outlining now would
-fix decisions on stale information.
+```
+series/
+├── README.md                       # this file
+├── SHAPE-C-decision.md             # 5-paper structure + cross-cuts
+├── preamble.tex                    # shared LaTeX setup (math, theorems, custom env)
+├── references.bib                  # auto-generated from kb/index/papers.json
+├── paper-1/                        # The modern Transformer is a small set of choices
+│   ├── outline.md
+│   ├── implementation-plan.md
+│   ├── main.tex
+│   └── sections/
+├── paper-2/                        # Training is a multi-stage pipeline
+│   ├── outline.md
+│   ├── ...
+├── paper-3/                        # Reasoning is compute, search, and verification
+├── paper-4/                        # The internal computation can be partially read
+└── paper-5/                        # What we measure and what slips through
+```
 
-## Until then
+## Build
 
-This directory stays empty (apart from this README). Phase 5 brainstorming
-will produce the series outline + per-paper specs.
+Once `paper-N/main.tex` exists, build with:
+
+```bash
+cd theory/series/paper-1 && latexmk -pdf main.tex
+```
+
+## Status
+
+| Paper | Title | Outline | Plan | LaTeX |
+|------:|-------|:-------:|:----:|:-----:|
+| 1 | The modern Transformer is a small set of choices | pending | pending | pending |
+| 2 | Training is a multi-stage pipeline | pending | pending | pending |
+| 3 | Reasoning is compute, search, and verification | pending | pending | pending |
+| 4 | The internal computation can be partially read | pending | pending | pending |
+| 5 | What we measure and what slips through | pending | pending | pending |
+
+(Status table updated as papers land.)

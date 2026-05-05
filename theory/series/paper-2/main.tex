@@ -1,0 +1,45 @@
+% theory/series/paper-2/main.tex — Training is a multi-stage pipeline
+
+\input{../preamble}
+
+\title{
+  Training is a multi-stage pipeline, not a single objective: \\
+  pre-training to alignment in frontier LLMs, 2017--2026
+}
+\author{Theory KB --- Paper 2 of 5}
+\date{2026-05-04 (draft)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Modern frontier-LLM training is a six-stage pipeline: pre-training data
+$\to$ mixed-precision and distributed scaffolding $\to$ supervised
+fine-tuning $\to$ preference-RL (RLHF/DPO/CAI) $\to$ RL on verifiable
+rewards (RLVR/GRPO) $\to$ adaptation and merging. Each stage's
+load-bearing variables --- token count, mixture, precision, batch size,
+KL constraint, verifier signal, merge geometry --- are now well-
+characterized. We argue the pipeline composes; pretending it is one
+objective produces persistently confused empirics.
+\end{abstract}
+
+\tableofcontents
+
+\input{sections/01-introduction}
+\input{sections/02-pretraining-data}
+\input{sections/03-scaling-laws}
+\input{sections/04-optimization}
+\input{sections/05-distributed-training}
+\input{sections/06-mixed-precision}
+\input{sections/07-sft}
+\input{sections/08-rlhf}
+\input{sections/09-dpo-and-offline}
+\input{sections/10-rlaif-and-cai}
+\input{sections/11-rlvr-and-grpo}
+\input{sections/12-adaptation-and-merging}
+\input{sections/13-frontier-2026-snapshot}
+\input{sections/14-contradictions-and-frontiers}
+
+\bibliography{../references}
+
+\end{document}

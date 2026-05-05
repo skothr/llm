@@ -1,0 +1,44 @@
+% theory/series/paper-3/main.tex — Reasoning is compute, search, and verification
+
+\input{../preamble}
+
+\title{
+  Reasoning is compute, search, and verification: \\
+  the inference-time triangle in frontier LLMs, 2022--2026
+}
+\author{Theory KB --- Paper 3 of 5}
+\date{2026-05-04 (draft)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Reasoning gains 2022--2026 are a triangle of (a) inference-time compute
+scaling (chain-of-thought, self-consistency, best-of-$N$), (b) verifier
+signals at inference (process reward models, MCTS, tree search), and
+(c) RL on verifiable rewards using those signals (RLVR, GRPO, DAPO).
+Strong reasoning models co-design all three. Isolating any one
+understates the gains; pretending reasoning is one mechanism produces
+the wrong predictions about scaling.
+\end{abstract}
+
+\tableofcontents
+
+\input{sections/01-introduction}
+\input{sections/02-cot-phenomenon}
+\input{sections/03-self-consistency}
+\input{sections/04-inference-time-compute}
+\input{sections/05-process-reward-models}
+\input{sections/06-tree-search-families}
+\input{sections/07-rlvr-paradigm}
+\input{sections/08-r1-and-reasoning-trained}
+\input{sections/09-test-time-scaling}
+\input{sections/10-search-vs-rl}
+\input{sections/11-cot-faithfulness}
+\input{sections/12-process-supervision-post-r1}
+\input{sections/13-frontier-2026-snapshot}
+\input{sections/14-contradictions-and-frontiers}
+
+\bibliography{../references}
+
+\end{document}

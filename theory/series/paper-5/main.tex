@@ -1,0 +1,46 @@
+% theory/series/paper-5/main.tex — What we measure and what slips through
+
+\input{../preamble}
+
+\title{
+  What we measure and what slips through: \\
+  the eval and alignment landscape for frontier LLMs, 2020--2026
+}
+\author{Theory KB --- Paper 5 of 5}
+\date{2026-05-04 (draft)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The eval and alignment landscape is a layered defense: knowledge-
+benchmark contamination $\to$ reasoning-benchmark validity $\to$
+agentic-benchmark realism $\to$ adversarial-robustness safety
+evaluation $\to$ dangerous-capability evaluation $\to$ alignment-
+threat detection (sycophancy, scheming, alignment-faking). Each
+layer has known failure modes; we name them and track which threats
+current methods can vs cannot detect. The honest summary is sobering:
+many of the most consequential alignment threats are at the edge of
+what current methodology can resolve.
+\end{abstract}
+
+\tableofcontents
+
+\input{sections/01-introduction}
+\input{sections/02-measuring-an-llm}
+\input{sections/03-knowledge-benchmarks}
+\input{sections/04-contamination}
+\input{sections/05-reasoning-benchmarks}
+\input{sections/06-agentic-benchmarks}
+\input{sections/07-safety-adversarial}
+\input{sections/08-safety-dangerous-capability}
+\input{sections/09-sycophancy}
+\input{sections/10-scheming}
+\input{sections/11-alignment-faking}
+\input{sections/12-watermarking-and-provenance}
+\input{sections/13-scalable-alignment}
+\input{sections/14-contradictions-and-frontiers}
+
+\bibliography{../references}
+
+\end{document}
