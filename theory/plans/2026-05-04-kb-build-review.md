@@ -97,6 +97,52 @@ Phase 5 brainstorm document committed. KB now 54 draft / 0 stubs._
   unusually-named keys (no author prefix, or mismatched arXiv ID) before
   citing externally.
 
+## Phase 5 outcome (2026-05-05)
+
+The five-paper LaTeX monograph series at `theory/series/` is built:
+70 of 70 sections written across 10 dispatch waves of ≤6 opus
+section-writer subagents each, ~394 typeset pages total.
+
+| Paper | Title | PDF | Pages |
+|------:|-------|-----|------:|
+| 1 | The modern Transformer is a small set of choices | `paper-1/main.pdf` | 72 |
+| 2 | Training is a multi-stage pipeline | `paper-2/main.pdf` | 98 |
+| 3 | Reasoning is compute, search, and verification | `paper-3/main.pdf` | 76 |
+| 4 | The internal computation can be partially read | `paper-4/main.pdf` | 72 |
+| 5 | What we measure and what slips through | `paper-5/main.pdf` | 76 |
+
+Build cycle is `pdflatex + bibtex + pdflatex × 2` per paper directory;
+`latexmk` is not installed locally and not required.
+
+`papers.json` grew from 191 → 201 entries during Phase 5: all new
+entries are tier-A papers cited by sections that the subagents
+reached for and the orchestrator backfilled with metadata. The
+append-only convention preserves the existing entry order; the
+auto-generated `references.bib` is now sorted alphabetically by key.
+
+Build-state diagnostics at the end of Phase 5: papers 1/2/3/5
+build with zero undefined `\\cref` references and zero undefined
+`\\citep`/`\\citet` citations. Paper 4 has one residual `Citation
+'l' undefined` warning whose source defies grep (likely an
+artifact of natbib's per-page logging interaction with one of the
+later sections); it renders as a single `[?]` in the bibliography
+on page 60 and does not block the PDF.
+
+Cross-paper references throughout the series are inline-text
+("Paper~2 §RLHF") rather than `\\cref{}` since each paper builds
+independently. Wiring up `xr-hyper` would lift the ~10 cross-paper
+inline mentions to clickable PDF links if ever desired; it is a
+~1-hour follow-up, not load-bearing.
+
+`\\deepencite` density is moderate: most are on closed-vendor
+system cards (Llama 4, Mistral Large 2, Gemma 3, OpenAI o-series,
+Claude 3.7, Gemini 2.5), HTML-only Anthropic transformer-circuits
+publications (Bricken 2023, Templeton 2024, Lindsey 2025), or
+explicitly forum-tier signals (nostalgebraist 2020 logit-lens,
+Nanda 2023 attribution-patching). All are flagged for an optional
+Phase 2.5 deepening pass; none is load-bearing for a frontier
+claim.
+
 ## Recommended next session
 
 (B), (C), and most of (A) are now done. Tracks ahead:
