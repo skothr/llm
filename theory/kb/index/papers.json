@@ -3721,6 +3721,24 @@
       ],
       "category": "foundational",
       "summary": "Foundational methodology paper for probing. Introduces 'control tasks' (random labels) as a baseline; argues probe selectivity (gap between real-task and control-task accuracy) is a more honest measure than raw accuracy. Establishes that high-accuracy probes can be reading their own classifier capacity rather than the model's representations."
+    },
+    {
+      "key": "sadasivan2023-detection",
+      "title": "Can AI-Generated Text be Reliably Detected?",
+      "authors": "Sadasivan, Kumar, Balasubramanian, Wang, Feizi",
+      "year": 2023,
+      "venue": "arXiv:2303.11156",
+      "url": "https://arxiv.org/abs/2303.11156",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/watermarking-and-provenance"
+      ],
+      "topics": [
+        "watermarking-and-provenance"
+      ],
+      "category": "landmark",
+      "summary": "Argues that under recursive paraphrasing, even watermark- and statistical-detector-based AI-text detectors converge toward random performance. Establishes the paraphrase-attack vector as a fundamental robustness limit on generation-time watermarking. Often cited as the 'cannot be reliably detected' counter-claim to the watermark-feasibility line."
     }
   ]
 }
