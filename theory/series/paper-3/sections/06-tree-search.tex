@@ -1,0 +1,455 @@
+% Paper 3, §6 — Tree-search families: BFS, DFS, MCTS (anchor section)
+% Anchors: kb/notes/reasoning/inference-time-search.md §1-3
+%          kb/excerpts/rstar-math2025.md (#abstract, #headline, #sec-3, #sec-3-mcts)
+%          kb/excerpts/snell2024.md (#sec-5-2-search)
+%          (zhang2024-rest-mcts, wei2025-tree-search-survey, hu2025-mcts-rag
+%           have no excerpt files yet; load-bearing claims tagged \deepencite.)
+
+\section{Tree-search families: BFS, DFS, MCTS}
+\label{sec:tree-search}
+
+\Cref{sec:inference-compute-scaling} factored test-time compute into a
+proposer leg and a verifier leg; \cref{sec:process-reward-models} built
+out the verifier leg as a per-step scoring function $R^P_\phi$ over
+partial prefixes $s_{1:t}$. The third decomposition --- after sampling
+(\cref{sec:self-consistency}) and sequential revision
+(\cref{sec:snell-tensor-shapes})~--- is \emph{tree search}: explicitly
+construct and explore a tree of partial reasoning prefixes, using the
+PRM as a value function to direct expansion. The taxonomy of the
+2023--2025 literature, surveyed in
+\citet{wei2025-tree-search-survey},\deepencite{wei2025-tree-search-survey
+\S2--3 (taxonomy enumeration; excerpt file pending)} catalogues three
+families that bracket the design space: beam over reasoning steps, BFS
+or level-order expansion, and Monte-Carlo Tree Search. This section
+formalises the search-tree datastructure, transcribes the canonical
+reasoning-MCTS recurrence from
+\citet{rstar-math2025},\footnote{KB excerpt:
+\texttt{kb/excerpts/rstar-math2025.md\#sec-3-mcts}.} walks the four
+phases of an MCTS iteration, situates ReST-MCTS\textsuperscript{*}
+\citep{zhang2024-rest-mcts} as the AlphaZero-shaped reasoning loop,
+notes MCTS-RAG \citep{hu2025-mcts-rag} as the retrieval-extended
+cousin, and closes on the live contradiction between MCTS-headline
+framings and \citet[\S 5--6]{snell2024}'s evidence that BFS-with-PRM is
+competitive at fixed inference budget on math.
+
+\subsection{The search tree as a datastructure over partial traces}
+\label{sec:tree-datastructure}
+
+Fix a problem $x$ and let $z_{1:t} = (s_1, \ldots, s_t)$ denote a
+partial reasoning trace decomposed into $t$ steps, with each step
+$s_i$ a contiguous span of trace tokens (a sentence, an equation
+line, a bullet)%
+\footnote{KB note:
+\texttt{kb/notes/reasoning/inference-time-search.md\#1-formal-definition}.}.
+The \textbf{search tree} has nodes indexed by partial traces $z_{1:t}$
+and edges labelled by the next step $s_{t+1}$, with the root at
+$z_{1:0} = \varnothing$. Three signals attach to the tree:
+\begin{itemize}
+\item the \emph{policy prior}
+$\pi_\theta(s_{t+1} \mid x, z_{1:t})$, which assigns mass to candidate
+next steps under the underlying LLM;
+\item the \emph{value function}
+$V_\phi(x, z_{1:t}) \to \mathbb{R}$, which scores partial states. The
+canonical instantiation is $V_\phi = R^P_\phi$, the per-step PRM of
+\cref{eq:prm-signature};
+\item the \emph{terminal verifier}
+$\mathcal{V}(x, y) \to \{0, 1\}$, which scores complete answers. For
+math and code this is the same rule-based check that defines the RLVR
+reward of \cref{eq:verifier-reward}.
+\end{itemize}
+The three search families differ entirely in how they combine
+$\pi_\theta$ and $V_\phi$ to direct expansion; the datastructure is
+common.
+
+\paragraph{Symbol glossary.} For the rest of this section:
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+Symbol & Meaning \\
+\midrule
+$B$                 & beam width / branching factor at each expansion \\
+$D$                 & maximum search depth (max number of steps) \\
+$L_\text{step}$     & mean per-step token count \\
+$L_\text{ans}$      & mean full-answer trace length, $L_\text{ans} \le D \cdot L_\text{step}$ \\
+$N_\text{rollout}$  & number of MCTS simulation iterations \\
+$N_s$               & MCTS visit count at node $s$ \\
+$Q(s)$              & MCTS running mean rollout outcome through $s$ \\
+$c_\text{puct}$     & UCT exploration constant \\
+$V_\phi$            & learned value function on partial prefixes (typically a PRM) \\
+$\mathcal{V}$       & terminal verifier (rule-based for math/code) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Beam search and BFS-V over reasoning steps}
+\label{sec:tree-beam}
+
+The simplest search family generalises decoder beam search from
+token-level to step-level granularity. Maintain a frontier of $B$
+partial traces; at each depth, expand each by sampling $k$ next-step
+continuations from $\pi_\theta$; rescore the resulting $B \cdot k$
+partials with $V_\phi$; retain the top $B$ by value. Iterating to
+depth $D$ produces $B$ candidate full traces; the highest-$V_\phi$ or
+highest-$\mathcal{V}$ trace is returned.
+
+The cost is
+\begin{equation}
+  C_\text{beam} \;=\; O\!\left( B \cdot k \cdot D \cdot L_\text{step} \right)
+  \quad\text{tokens.}
+  \label{eq:cost-beam}
+\end{equation}
+\citet[\S 5.2]{snell2024} formalise the variant they call
+\textbf{BFS-V}: a level-order beam with $N$ initial samples and beam
+width $M$. The procedure (Snell's quoted text): ``sample $N$ initial
+predictions for the first step in the solution; score the generated
+steps according to the PRM's predicted step-wise reward-to-go estimate;
+filter for only the top $\frac{N}{M}$ highest scoring steps; now from
+each candidate, sample $M$ proposals from the next step, resulting in
+a total of $N/M \times M$ candidate prefixes again. Then repeat steps
+2--4''
+\citep[\S 5.2]{snell2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/snell2024.md\#sec-5-2-search}.} BFS-V differs from
+classical beam only in the per-step scoring object: the PRM's
+reward-to-go on $s_{1:t}$ replaces the language-model log-likelihood,
+and the level-order structure means every depth-$t$ node is fully
+evaluated before any depth-$(t+1)$ node is expanded.
+
+\paragraph{Why beam-class methods are competitive.} Two structural
+properties favour beam-shaped search on reasoning workloads. First,
+the cost in \cref{eq:cost-beam} is linear in $D$ and in $B \cdot k$,
+both directly tunable knobs that compose with the difficulty-bin
+allocation of \cref{sec:snell-difficulty}: spend wider beams on harder
+prompts, narrower on easier ones. Second, the per-step PRM signal is
+\emph{exactly} what beam needs --- a scalar score on a partial prefix
+--- and \cref{sec:prm-prm800k}'s min-aggregation result
+($R^P_\text{min}(z) = \min_t R^P_\phi(x, s_{1:t})$) carries over node
+by node: a beam node's score is the worst PRM score along its
+root-to-node path, and the weakest-link inequality of
+\cref{sec:prm-prm800k} prunes weak branches early. The DFS and
+tree-of-thoughts variants
+\deepencite{yao2023-tree-of-thoughts \S3 (canonical citation pending)}
+add backtracking on a per-node ``promising / not promising''
+heuristic, but the underlying datastructure is the same; they trade
+the level-order regularity of BFS for depth-first traversal under a
+node-evaluation gate.
+
+\subsection{The MCTS recurrence (rStar-Math)}
+\label{sec:tree-mcts}
+
+Monte-Carlo Tree Search adds a fourth ingredient that beam lacks:
+\emph{rollout-derived value estimates} are accumulated at each node and
+used to bias future expansion via an exploration--exploitation rule.
+\citet{rstar-math2025} take MCTS as the central inference-time
+mechanism --- ``a math policy SLM performs test-time search guided by
+an SLM-based process reward model''
+\citep[abstract]{rstar-math2025}\footnote{KB excerpt:
+\texttt{kb/excerpts/rstar-math2025.md\#abstract}.} --- and report 7B
+policies reaching $90.0\%$ on MATH and $53.3\%$ on AIME 2024 after
+four rounds of self-evolution
+\citep[headline numbers]{rstar-math2025}.\footnote{KB excerpt:
+\texttt{kb/excerpts/rstar-math2025.md\#headline}.}
+
+\paragraph{The UCT selection rule.} At each iteration, descend the tree
+from the root by repeatedly choosing the child $s$ that maximises%
+\footnote{KB note:
+\texttt{kb/notes/reasoning/inference-time-search.md\#2-2-mcts-over-reasoning-steps-rstar-math}.}
+\begin{equation}
+  U(s) \;=\; Q(s) \;+\; c_\text{puct}\;
+              \pi_\theta\!\bigl(s \,\big|\, \text{parent}(s)\bigr)\;
+              \frac{\sqrt{N_\text{parent}}}{1 + N_s}.
+  \label{eq:uct}
+\end{equation}
+The first term $Q(s)$ is the running mean of rollout outcomes through
+$s$ (the exploitation term: nodes that have produced correct rollouts
+are preferred). The second term is the PUCT exploration bonus
+\citep{rstar-math2025}\deepencite{rstar-math2025 \S3 (exact constants
+pending PDF acquisition)}: the policy prior
+$\pi_\theta(s \mid \text{parent})$ shapes which children are
+\emph{a~priori} preferred, the
+$\sqrt{N_\text{parent}}/(1 + N_s)$ ratio inflates as the parent has
+been visited many times relative to $s$, and $c_\text{puct}$ dials the
+overall exploration aggressiveness. The constant $c_\text{puct}$ is
+the only free hyperparameter of the rule itself; rStar-Math sets it
+empirically.
+
+\paragraph{The four phases of an MCTS iteration.}
+\begin{enumerate}
+\item \textbf{Selection.} From the root, repeatedly apply
+\cref{eq:uct} to descend until a leaf $\ell$ is reached. ``Leaf'' here
+means a node that has not yet been expanded under MCTS bookkeeping ---
+not necessarily a terminal in the trace sense.
+\item \textbf{Expansion.} Sample $k$ candidate next-steps from
+$\pi_\theta(\cdot \mid x, z_{\ell})$ and add them as children of
+$\ell$, each with $Q = 0$ and $N = 0$.
+\item \textbf{Simulation.} From one of the freshly-expanded children
+$c$, roll out a complete trace under $\pi_\theta$ to a terminal state;
+score the terminal answer with $\mathcal{V}$, and optionally weight
+intermediate states by $V_\phi = R^P_\phi$ to obtain a real-valued
+return $G_c \in [0, 1]$.
+\item \textbf{Backup.} Propagate $G_c$ up the path from $c$ to root,
+incrementing $N_s \mathrel{{+}{=}} 1$ and updating
+$Q(s) \mathrel{{\leftarrow}} Q(s) + (G_c - Q(s))/N_s$ at each visited
+node.
+\end{enumerate}
+After $N_\text{rollout}$ iterations, the answer is selected as either
+the most-visited path from root, the rollout that achieved highest
+return, or a PRM-weighted vote across rollouts; rStar-Math uses the
+last\deepencite{rstar-math2025 \S3.x (answer-selection rule pending PDF)}.
+
+\paragraph{Cost analysis.} Each MCTS iteration costs one rollout (a
+full trace under $\pi_\theta$) plus $O(D)$ tree-traversal operations
+plus $k$ expansion samples. The rollout dominates, so total cost is
+\begin{equation}
+  C_\text{MCTS} \;=\; O\!\left( N_\text{rollout} \cdot D \cdot L_\text{step} \right)
+  \quad\text{tokens,}
+  \label{eq:cost-mcts}
+\end{equation}
+matching the bound assumed by \cref{sec:snell-tensor-shapes}'s strategy
+table. Comparing \cref{eq:cost-beam} and \cref{eq:cost-mcts}: at
+matched depth $D$ and per-step length $L_\text{step}$, $N_\text{rollout}$
+plays the role of $B \cdot k$. The two algorithms differ in
+\emph{how} the budget is spent: beam fans out uniformly at each depth,
+while MCTS allocates iterations adaptively to nodes whose $Q$-values
+suggest the path is promising. On a benign loss landscape (good policy,
+calibrated PRM), the adaptive allocation buys MCTS a constant-factor
+edge; on rough landscapes (under-trained PRM, narrow correct path),
+the same adaptivity can collapse onto a wrong branch.
+
+\begin{intuition}
+MCTS is a \emph{compute-allocator} that lets early rollout outcomes
+re-shape where later rollouts go. Beam search, by contrast, allocates
+the same width to every depth regardless of how the frontier evolves.
+On problems where one branch has a sharp success advantage that
+manifests early in rollouts, MCTS amplifies the signal --- $Q(s)$
+rises, $N_s$ rises, the UCT bonus on alternate children shrinks, and
+$N_\text{rollout}$ increasingly concentrates on the winning subtree.
+On problems where rollout outcomes are noisy or where the success
+signal is buried deep, MCTS spends iterations re-validating
+already-committed paths instead of broadening, and beam can match or
+beat it. Returning to math: \cref{eq:uct}'s exploitation term $Q(s)$
+is a Monte-Carlo estimate of the expected return from $s$, and the
+ratio $\sqrt{N_\text{parent}}/(1 + N_s)$ is the standard PUCT
+exploration bonus from AlphaGo / AlphaZero, here applied in the
+text-step action space rather than the board-position action space.
+\end{intuition}
+
+\subsection{Tensor-shape and operational notes}
+\label{sec:tree-shapes}
+
+The MCTS state is a node $s$ in the trace tree, indexed by its
+root-to-node prefix $z_{1:t}$. The PRM is the value function on the
+prefix: $V_\phi(s) = R^P_\phi(x, s_{1:t}) \in [0, 1]$, with the
+aggregation rules of
+\cref{eq:prm-min,eq:prm-prod,eq:prm-last} carrying over node by node.
+Per-iteration cost decomposes as
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+Operation                          & Cost \\
+\midrule
+Selection (root $\to$ leaf $\ell$) & $O(D)$ tree-traversal ops, no LLM calls \\
+Expansion ($k$ candidate children) & $k \cdot L_\text{step}$ tokens \\
+Simulation (full rollout)          & $D \cdot L_\text{step}$ tokens, plus terminal $\mathcal{V}$ \\
+Backup (root $\leftarrow$ leaf)    & $O(D)$ tree-traversal ops \\
+\bottomrule
+\end{tabular}
+\end{center}
+The \emph{rollout} dominates at typical $k \in [4, 16]$ and
+$D \in [10, 50]$, which is why \cref{eq:cost-mcts} drops the expansion
+and traversal terms. Operationally, the PRM call cost adds a constant
+per simulation step --- $c_\text{verify}$ in
+\cref{sec:snell-tensor-shapes}'s table --- but is normally amortised by
+batched verifier inference across multiple rollouts in flight.
+
+\subsection{ReST-MCTS\textsuperscript{*}: AlphaZero-shaped self-training}
+\label{sec:tree-rest-mcts}
+
+\citet{zhang2024-rest-mcts} elevate MCTS from an inference-time
+mechanism to a \emph{training-data generator}.\deepencite{zhang2024-rest-mcts
+\S3 (excerpt skeleton-only as of 2026-05; PDF acquisition pending)}
+The protocol, drawn from the inference-time-search KB note's
+treatment%
+\footnote{KB note:
+\texttt{kb/notes/reasoning/inference-time-search.md\#2-3-rest-mcts}.}:
+\begin{enumerate}
+\item Run MCTS with the current policy $\pi_\theta^{(r)}$ and PRM
+$V_\phi^{(r)}$ to solve a batch of training problems.
+\item Collect MCTS-discovered correct trajectories (those whose
+terminal $\mathcal{V}(x, y) = 1$).
+\item SFT the policy on these harvested trajectories:
+$\pi_\theta^{(r+1)} \leftarrow \mathrm{SFT}\bigl(\pi_\theta^{(r)};
+\{(x, z, y) : \mathcal{V}(x, y) = 1\}\bigr)$.
+\item Update the PRM $V_\phi^{(r+1)}$ using the new policy's
+trajectory distribution and the trajectory-correctness labels.
+\item Repeat from step 1.
+\end{enumerate}
+The structural identity with AlphaZero
+\deepencite{silver2017-alphazero \S algorithm (canonical citation
+pending; KB note:
+\texttt{kb/notes/reasoning/inference-time-search.md\#7-intuitions-and-analogies})}
+is exact:
+\begin{itemize}
+\item self-play games $\leftrightarrow$ MCTS rollouts on math problems;
+\item board positions $\leftrightarrow$ partial reasoning prefixes
+$z_{1:t}$;
+\item value head $\leftrightarrow$ PRM $V_\phi$;
+\item policy network $\leftrightarrow$ next-step policy $\pi_\theta$;
+\item self-play SFT $\leftrightarrow$ SFT on MCTS-discovered correct
+trajectories.
+\end{itemize}
+rStar-Math \citep{rstar-math2025} runs a structurally similar loop
+across four self-evolution rounds, with one important variation: the
+PRM is replaced by a \emph{process preference model} (PPM) trained
+from preferences over MCTS-discovered step-pairs rather than from
+absolute step-level scores
+\citep[\S 3]{rstar-math2025}.\footnote{KB excerpt:
+\texttt{kb/excerpts/rstar-math2025.md\#sec-3}.} The choice trades
+absolute calibration for a more robust pairwise signal that does not
+require pinning the verifier's score scale; the structural role
+inside the MCTS loop is unchanged.
+
+\begin{analogy}
+ReST-MCTS\textsuperscript{*} is AlphaZero \emph{with text steps}.
+Selection, expansion, simulation, and backup are the same four phases.
+The action space at each tree node is the LLM's next-step distribution
+$\pi_\theta(s_{t+1} \mid x, z_{1:t})$ rather than the board's
+legal-move distribution. The value head is the PRM
+$R^P_\phi(x, s_{1:t})$ rather than the position-evaluation network.
+The self-play loop is replaced by a
+generate-MCTS-trajectories-then-SFT-on-correct-ones loop. Returning to
+math: \cref{eq:uct}'s PUCT formula is the same equation that drives
+AlphaZero's selection, with the policy prior
+$\pi_\theta(s \mid \text{parent})$ playing the role of the
+move-prior network's output and $Q(s)$ playing the role of the
+running-mean win rate. The analogy is load-bearing because it
+explains why the iterative SFT-on-search-discovered-correct loop
+converges: each round's MCTS uses a stronger policy and a stronger
+value head than the last, and the harvested trajectories are
+strictly better-than-policy on average, supplying a positive-gradient
+SFT signal that ratchets the policy upward without ever introducing
+a separate value-network bootstrap.
+\end{analogy}
+
+\subsection{MCTS-RAG: tree search over retrieval and reasoning}
+\label{sec:tree-mcts-rag}
+
+\citet{hu2025-mcts-rag} extend the MCTS state space to include
+\emph{retrieval} actions alongside reasoning
+steps.\deepencite{hu2025-mcts-rag \S3 (excerpt skeleton-only as of
+2026-05; PDF acquisition pending)} Inside an MCTS iteration, the
+expansion step samples either a next reasoning step from
+$\pi_\theta(\cdot \mid x, z_{1:t})$ or a retrieval call into a
+document index, with the choice itself an action under a hybrid
+policy. The value function $V_\phi$ is generalised to score states
+that mix reasoning and retrieved evidence; the terminal verifier
+$\mathcal{V}$ remains domain-specific (a fact-match check on a
+knowledge-grounded QA benchmark, an arithmetic check on a
+calculation-grounded one).
+
+The structural advance: tree search lets the model decide
+\emph{when} to retrieve and \emph{what} to retrieve as part of the
+reasoning trajectory, rather than fixing retrieval as a one-shot
+preprocessing step. The cost analysis of \cref{eq:cost-mcts}
+generalises: the per-step token cost $L_\text{step}$ is now a mixture
+over reasoning-step length and retrieval-call length (typically
+shorter, but with an additional index-lookup latency that the cost
+expression does not capture). MCTS-RAG closes the gap between two
+otherwise-disjoint inference-time-compute literatures --- search-based
+TTC for reasoning and RAG for knowledge access --- under one
+tree-search framework.
+
+\subsection{Search-vs-trained-CoT: the live contradiction}
+\label{sec:tree-search-vs-cot}
+
+The 2024 hypothesis articulated by the early reasoning-MCTS literature
+was that explicit search at inference time was \emph{necessary} for
+strong reasoning performance: a small policy plus heavy MCTS was
+expected to dominate a large policy without search. The 2025--2026
+evidence is more nuanced. \citet[\S 4]{rstar-math2025} demonstrate
+the small-policy-with-heavy-MCTS extreme: a 7B policy plus four rounds
+of MCTS self-evolution reaches 90.0\% on MATH and 53.3\% on AIME 2024,
+matching or exceeding o1-preview at much smaller policy
+scale.\footnote{KB excerpt:
+\texttt{kb/excerpts/rstar-math2025.md\#headline}.} \citet{deepseek-r1}
+demonstrate the opposite extreme: a large policy with RLVR-trained
+long CoT and \emph{no} explicit inference-time search reaches
+77.9\% pass@1 on AIME 2024 and 86.7\% with self-consistency, on the
+strength of trace-length growth from $\sim$200 to $\sim$10\,000 tokens
+during training (\cref{sec:r1-protocol}). The two extremes occupy
+roughly the same accuracy region at very different policy scales and
+inference-time-compute profiles.
+
+The clean reading%
+\footnote{KB note:
+\texttt{kb/notes/reasoning/inference-time-search.md\#5-the-search-vs-trained-cot-debate}.}
+is that explicit search is most valuable where the policy is weak
+(small model, narrow domain, hard tail). At strong policy plus
+standard distributions, internalised search via long CoT is
+competitive at matched compute. This matches the difficulty-bin
+operationalisation of \cref{sec:snell-difficulty}: search wins on
+the hard bin, sampling/refinement wins on the easy bin, and both
+collapse to the same answer on prompts the policy nearly solves.
+
+\begin{contradiction}
+\textbf{BFS-with-PRM vs.\ MCTS at fixed inference budget.}
+\citet[\S 5--6]{snell2024} report BFS-V (the level-order
+beam-with-PRM of \cref{sec:tree-beam}) competitive with or outright
+better than alternative search strategies at matched compute on the
+MATH benchmark with PaLM~2-S\* as the base model
+\citep[\S 5.2]{snell2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/snell2024.md\#sec-5-2-search}.} The implication
+is that the extra MCTS machinery (UCT bookkeeping, rollout-derived
+$Q(s)$ updates, PUCT exploration constant $c_\text{puct}$) does not
+necessarily pay for itself at fixed test-time FLOPs. \citet{rstar-math2025}'s
+headline framing instead foregrounds MCTS as the central mechanism by
+which 7B SLMs match o1-preview, and the AlphaZero structural parallel
+of \cref{sec:tree-rest-mcts} runs entirely through the MCTS recurrence
+of \cref{eq:uct}. Reconciling the two: Snell's evaluation uses a
+non-reasoning-trained base model and a single round of search; rStar-
+Math's MCTS is co-trained with the policy and PRM across four rounds
+of self-evolution \citep[abstract]{rstar-math2025}, so the
+``MCTS'' that wins is a different object from the
+``MCTS'' that ties. Whether the MCTS-vs-BFS gap reverses on
+reasoning-trained base models, on harder benchmarks, or under
+multi-round co-evolution is not closed in 2026; the
+\citet{wei2025-tree-search-survey} taxonomy
+catalogues the disagreement without resolving
+it.\deepencite{wei2025-tree-search-survey \S5 (resolution discussion;
+excerpt file pending)} \Cref{sec:search-vs-rl} returns to the
+search-vs-RL face of the same tradeoff.
+\end{contradiction}
+
+\subsection{Forward link}
+\label{sec:tree-forward}
+
+Tree search is the verifier-leg's most expressive realisation. Its
+cost-per-trajectory dominates self-consistency
+(\cref{sec:self-consistency}) and best-of-$N$
+(\cref{sec:prm-prm800k}), and its operational complexity dominates
+beam search; the question is whether it earns its budget. The answer,
+across \cref{sec:tree-mcts}--\cref{sec:tree-search-vs-cot}, depends
+on the policy's strength, the value function's calibration, and
+whether the search is co-evolved with the policy
+(rStar-Math, ReST-MCTS\textsuperscript{*}) or run once over a fixed
+checkpoint (Snell-style evaluation).
+
+\Cref{sec:rlvr-grpo-dapo} introduces the third leg of the reasoning
+triangle --- RL on verifiable rewards --- which is the
+\emph{training-time} answer to the question this section treated at
+inference: how to spend compute to amplify reasoning. The
+\cref{eq:cost-mcts} cost expression and the \cref{eq:uct} UCT
+recurrence both reappear there in a different role: ReST-MCTS\textsuperscript{*}'s
+search-then-SFT loop and RLVR's group-of-rollouts both \emph{generate}
+training trajectories from a current policy, with the verifier
+$\mathcal{V}$ deciding which trajectories survive. \Cref{sec:search-vs-rl}
+then puts curves on the tradeoff, asking at fixed total compute when
+marginal FLOPs are best spent on more inference search
+(\cref{sec:tree-mcts}), more RLVR training (\cref{sec:rlvr-grpo-dapo}),
+or more pretraining (\cref{sec:snell-flops-matched}). The MCTS-vs-BFS
+contradiction of \cref{sec:tree-search-vs-cot} and the absent
+closed-form $L(\theta, N)$ flagged in \cref{sec:snell-open} are two
+faces of the same open frontier: the search-leg's quantitative
+contribution to inference-time-compute returns is precisely what
+remains unresolved in 2026.

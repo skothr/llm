@@ -1,0 +1,393 @@
+% Paper 4, §5 — The correlation–causation gap, and how the field closed it
+% Thesis: high-accuracy probes are *correlational*. Hewitt & Liang 2019
+% surfaced the methodology critique with control tasks; Belinkov 2022
+% consolidated it into a taxonomy of confounders (probe expressivity,
+% spurious correlation, vestigial information). The 2023+ resolution:
+% pair probes with activation interventions — direction-ablation tests
+% causal use, direction-addition (the activation-steering family) turns
+% probe directions into behavioral controls. Marks–Tegmark 2023 is the
+% canonical worked example. The "patch-then-probe" pipeline composes
+% §9's patching machinery with §4's probes.
+
+\section{The correlation--causation gap}
+\label{sec:correlation-causation}
+
+A high-accuracy probe at layer $\ell$ tells us that property $y$ is
+\emph{linearly decodable} from $\mathbf{h}^{(\ell, t)}$. It does not
+tell us that the model \emph{uses} the decoded direction to compute its
+output \citep{belinkov2022-probing-survey}. The 2017--2019 wave of
+probing methodology summarized in \S\ref{sec:probing} put the
+correlational claim on firm footing; the 2019--2022 wave, anchored by
+\citet{hewitt2019-control-tasks} and consolidated by
+\citet{belinkov2022-probing-survey}, made the gap between
+\emph{decodable} and \emph{used} into a methodological problem the
+field had to confront. The 2023+ wave closes the gap by pairing
+probes with two activation-level interventions: \emph{direction
+ablation} along the probe direction $\hat{\mathbf{d}}_y$, which tests
+whether removing $\mathbf{d}_y$ from the residual stream changes
+behavior, and \emph{direction addition} $\mathbf{h} \mapsto \mathbf{h} +
+\alpha \hat{\mathbf{d}}_y$, the activation-steering family that turns
+a probe direction into an inference-time control surface. This section
+states the critique formally, gives the two intervention operators in
+canonical form, walks through the Marks--Tegmark 2023 truth-direction
+worked example, and shows how the resulting ``patch-then-probe''
+pipeline composes patching (\S\ref{sec:patching}) with probing
+(\S\ref{sec:probing}) into a single causal recipe.
+
+\subsection{The Hewitt--Liang control-task critique}
+\label{sec:control-tasks}
+
+\citet{hewitt2019-control-tasks} surface the load-bearing methodology
+problem: a sufficiently expressive probe can achieve high accuracy
+even when the underlying model does not represent the property in any
+useful way, because the probe itself learns the property from
+low-information features in $\mathbf{h}$. The proposed fix is the
+\emph{control task}: an alternative probing target with the same
+input--output type as the real task but with the labels permuted to be
+informationally meaningless. A part-of-speech control task, for
+instance, assigns each word type a single random label drawn once and
+held fixed across the dataset; the probe is then asked to learn this
+nonsense mapping. The diagnostic is the \emph{selectivity}, defined
+as the gap
+\begin{equation}
+  \mathrm{selectivity}(g, \ell)
+  \;:=\; \mathrm{acc}(g, \ell, \text{real task})
+  \;-\; \mathrm{acc}(g, \ell, \text{control task}).
+  \label{eq:selectivity}
+\end{equation}
+\citep{hewitt2019-control-tasks}. A probe that scores high on both
+real and control tasks has low selectivity: its accuracy is a property
+of the probe's expressivity, not of the model's representation. A
+probe that scores high on the real task but low on the control task
+has high selectivity, and the real-task accuracy can be attributed to
+information the model itself encoded in $\mathbf{h}^{(\ell, t)}$.
+\citet{hewitt2019-control-tasks} argue this should be a non-negotiable
+companion measurement to any probing accuracy reported in the
+literature, and Eq.~\eqref{eq:selectivity} is now the standard
+control alongside the held-out test split of the probing protocol of
+\S\ref{sec:probe-protocol}.
+
+The control-task critique is sharper than ``be careful with deep
+probes.'' Even a linear probe can fail selectivity on a poorly
+initialized model, on noisy activations, or on a label set whose
+distribution is dominated by frequency effects rather than the
+property of interest. Conversely, a high-selectivity probe is not yet
+proof of \emph{causal} use, only of \emph{informational} encoding;
+selectivity rules out \emph{probe-expressivity} confounds, but two
+further confounds remain.
+
+\subsection{Belinkov's three confounders}
+\label{sec:belinkov-taxonomy}
+
+\citet{belinkov2022-probing-survey} consolidates the post-control-task
+critique into a three-confounder taxonomy that has become the
+methodological vocabulary of the
+field\footnote{KB excerpt: \texttt{kb/excerpts/belinkov2022-probing-survey.md\#abstract}.}.
+The first is \citet{hewitt2019-control-tasks}'s
+\textbf{probe-expressivity} confound, addressed by Eq.~\eqref{eq:selectivity}.
+The second is the \textbf{spurious-correlate} confound: even a
+selective probe may be reading a feature $z$ that correlates with
+$y$ in the probing dataset, not $y$ itself. The probe direction
+$\hat{\mathbf{d}}_y$ is then a direction for $z$, and any downstream
+intervention along $\hat{\mathbf{d}}_y$ is an intervention on $z$
+masquerading as one on $y$. The standard mitigation is
+\emph{cross-distribution generalization}: train the probe on dataset
+$\mathcal{D}_1$, evaluate on dataset $\mathcal{D}_2$ chosen to break
+the $z$--$y$ correlation. \citet[\S 1, \S 4]{marks-tegmark-2023-truth}
+make exactly this move the cornerstone of their truth-direction
+analysis, training on \texttt{cities} and evaluating on
+\texttt{neg\_cities}, \texttt{cities\_cities\_conj}, and the
+\texttt{likely} control of nonfactual completions designed to match
+text probability across the true/false split.
+
+The third is \textbf{vestigial information}: the model may have
+computed $y$ at some intermediate stage, but later layers may not use
+the resulting direction; the probe reads the trace, not the driver.
+This is the most insidious confound because it is invisible to both
+selectivity and cross-distribution generalization --- a probe of a
+truly vestigial feature can be high-selectivity \emph{and} robust
+across distributions, because the feature really is encoded by the
+model on those distributions. The only way to distinguish a vestigial
+encoding from a used one is intervention: change the activation,
+hold the rest of the model fixed, observe whether the output behavior
+moves. \citet{belinkov2022-probing-survey}'s ``advances'' section
+catalogs the three intervention families that close this gap ---
+amnesic probing \citep[Elazar et al.\ 2021, surveyed in
+][]{belinkov2022-probing-survey}, causal-mediation analysis (the
+ancestor of the activation-patching protocol of
+\S\ref{sec:patching}), and interchange interventions --- and the
+2023+ probing literature is the inheritor of all three.
+
+\begin{contradiction}
+\textbf{Decodable does not entail used.} A probe with selectivity
+gap of $\Delta = 0.9$ on a held-out test split, generalizing across
+five datasets that break the obvious surface confounders, is still
+\emph{correlational}. The model may compute the property at some
+intermediate layer and discard it; later layers may use a different
+representation; the probe direction may correlate near-perfectly with
+the used representation while not being it. The strongest form of the
+critique \citep[\S abstract]{belinkov2022-probing-survey}: probing
+methodology has historically conflated ``$y$ is in $\mathbf{h}$''
+with ``the model uses $y$ in $\mathbf{h}$,'' and the field's record
+of behavioral interventions that did \emph{not} work after a
+probe-only validation is precisely what motivated the 2023+ pivot to
+intervention-paired probing in \S\ref{sec:ablate-add}.
+\end{contradiction}
+
+\subsection{Direction ablation and direction addition}
+\label{sec:ablate-add}
+
+The 2023+ resolution is to compose probing with one of two
+activation-level interventions, both of which act linearly on the
+residual stream along a unit-norm probe direction
+$\hat{\mathbf{d}}_y \in \mathbb{R}^D$.
+
+\paragraph{Direction ablation.} Project the residual-stream activation
+onto the orthogonal complement of $\hat{\mathbf{d}}_y$:
+\begin{equation}
+  \boxed{\;
+  \mathbf{h} \;\mapsto\;
+  \mathbf{h} \;-\; (\mathbf{h}^\top \hat{\mathbf{d}}_y)\,\hat{\mathbf{d}}_y
+  \;=\; \big(\mathbf{I} - \hat{\mathbf{d}}_y \hat{\mathbf{d}}_y^\top\big)\,\mathbf{h}.
+  \;}
+  \label{eq:direction-ablation}
+\end{equation}
+The operator on the right is the orthogonal projector
+$\mathbf{P}_{\hat{\mathbf{d}}_y^{\perp}} :=
+\mathbf{I} - \hat{\mathbf{d}}_y \hat{\mathbf{d}}_y^{\top}$ onto the
+$(D-1)$-dimensional subspace orthogonal to $\hat{\mathbf{d}}_y$
+\citep{marks-tegmark-2023-truth}. Inserting Eq.~\eqref{eq:direction-ablation}
+into the residual stream at one or more layers and re-running the rest
+of the model removes whatever signal $\hat{\mathbf{d}}_y$ carries,
+leaving every other direction unchanged in the activation. The
+diagnostic question is then simple: if the model's output behavior on
+property $y$ changes substantially under ablation, $\hat{\mathbf{d}}_y$
+is causally implicated; if behavior is unchanged, the direction is
+vestigial or correlated with a separate driver. Eq.~\eqref{eq:direction-ablation}
+is the formal closing move on the vestigial-information confound of
+\S\ref{sec:belinkov-taxonomy}: it does not just check whether
+information is encoded along $\hat{\mathbf{d}}_y$, it checks whether
+the model's downstream computation \emph{depends} on it.
+
+The shape ledger: at one batched residual-stream slice the activation
+is $\mathbf{h} \in \mathsf{B}\!\times\!\mathsf{S}\!\times\!D$, the
+direction is $\hat{\mathbf{d}}_y \in \mathbb{R}^D$, the projection
+$\mathbf{h}^\top \hat{\mathbf{d}}_y$ contracts the $D$-axis to a
+scalar per $(B, S)$ position, and the ablation rewrites $\mathbf{h}$
+in place. The intervention is one matrix subtraction per layer where
+it is applied; cost is dominated by re-running the suffix
+$\mathcal{M}_{>\ell}$ from the modified state.
+
+\paragraph{Direction addition (activation steering).} Add a scaled
+copy of $\hat{\mathbf{d}}_y$ to the residual stream:
+\begin{equation}
+  \boxed{\;
+  \mathbf{h} \;\mapsto\;
+  \mathbf{h} \;+\; \alpha\,\hat{\mathbf{d}}_y,
+  \;}
+  \label{eq:direction-addition}
+\end{equation}
+with $\alpha \in \mathbb{R}$ a steering coefficient that can be
+positive (push the model toward $y = +$) or negative (push toward
+$y = -$) \citep{marks-tegmark-2023-truth}. Direction addition is the
+method underneath the activation-steering family of
+\deepencite{zou2023-representation-engineering §3, citation-pending}
+(representation engineering, which casts steering as a control-theoretic
+intervention on the residual stream's representational subspace) and
+\deepencite{rimsky2024-caa §3, citation-pending} (Contrastive
+Activation Addition, which derives $\hat{\mathbf{d}}_y$ from a
+difference-of-means over contrastive prompt pairs and applies it at a
+chosen layer). The 2025 generalization to behaviorally-singular
+properties that decompose into multi-axis subspaces appears in
+\deepencite{vennemeyer2025-sycophancy-not-one-thing §3,
+citation-pending}, who report that sycophancy in current chat models
+factorizes into three independently steerable directions (agreement,
+praise, genuine-agreement), each detected by mass-mean probing and
+controllable by Eq.~\eqref{eq:direction-addition} at the
+single-direction level.
+
+The relationship between the two operators: ablation in
+Eq.~\eqref{eq:direction-ablation} is the limit of subtraction along
+$\hat{\mathbf{d}}_y$ that takes the projection coefficient to zero,
+while addition in Eq.~\eqref{eq:direction-addition} is a free shift
+along $\hat{\mathbf{d}}_y$ leaving the projection of the original
+$\mathbf{h}$ in place. Ablation tests \emph{necessity} (does removing
+the direction break behavior?); addition tests \emph{sufficiency}
+(does adding the direction induce behavior?). A causally-implicated
+direction passes both tests; a spurious or vestigial direction passes
+neither, or passes only one in a way that fails to compose.
+
+\begin{intuition}
+The ablation operator
+$\mathbf{P}_{\hat{\mathbf{d}}_y^{\perp}} = \mathbf{I} -
+\hat{\mathbf{d}}_y \hat{\mathbf{d}}_y^{\top}$ in
+Eq.~\eqref{eq:direction-ablation} is the same orthogonal projector
+that appears in Gram--Schmidt orthogonalization: subtracting from
+$\mathbf{h}$ its component along $\hat{\mathbf{d}}_y$ leaves a vector
+in the hyperplane normal to $\hat{\mathbf{d}}_y$. Causally probing
+along $\hat{\mathbf{d}}_y$ is, in this sense, asking whether the
+model's downstream computation lives \emph{entirely in that
+hyperplane}: if so, the projection is a no-op and behavior is
+unchanged; if the computation steps out of the hyperplane along
+$\hat{\mathbf{d}}_y$ to produce its answer, the projection blocks
+that step. Returning to canonical form: Eq.~\eqref{eq:direction-ablation}
+is rank-$(D-1)$, the lost rank is exactly $\mathrm{span}(\hat{\mathbf{d}}_y)$,
+and the experiment is whether the model's output changes when this
+rank-1 subspace is zeroed out at the residual stream.
+\end{intuition}
+
+\subsection{The Marks--Tegmark worked example: flipping TRUE/FALSE}
+\label{sec:mt-worked-example}
+
+\citet{marks-tegmark-2023-truth} provide the canonical worked example
+of the resolution. The mass-mean direction
+$\mathbf{d}_{\mathrm{MM}} = \boldsymbol{\mu}_+ - \boldsymbol{\mu}_-$
+introduced in \S\ref{sec:mass-mean} (Eq.~4 of \S\ref{sec:probing}) is
+fit on the \texttt{cities} dataset of LLaMA-2-13B residual-stream
+activations at the period-token of layer 12. Probe accuracy on the
+held-out test split is high; cross-dataset transfer to
+\texttt{neg\_cities}, \texttt{larger\_than}, and \texttt{cities\_cities\_conj}
+is sufficient to argue that $\mathbf{d}_{\mathrm{MM}}$ is not a
+surface artifact of the prompt template
+\citep[\S 1.1, \S 4]{marks-tegmark-2023-truth}\footnote{KB excerpt:
+\texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-1-related},
+\texttt{\#sec-4-misalignment}.}. The closing causal step is the
+ablation experiment from Eq.~\eqref{eq:direction-ablation}: the
+authors apply
+$\mathbf{P}_{\hat{\mathbf{d}}_{\mathrm{MM}}^\perp}$ at the localized
+hidden states identified by the patching pipeline of
+\S\ref{sec:patching} and report:
+\begin{quote}
+Causal evidence obtained by surgically intervening in a LLM's forward
+pass, causing it to treat false statements as true and vice
+versa.\hfill\citep[abstract]{marks-tegmark-2023-truth}\footnote{KB
+excerpt: \texttt{kb/excerpts/marks-tegmark-2023-truth.md\#abstract}.}
+\end{quote}
+The TRUE/FALSE flip is the load-bearing observation. The probe alone
+identifies a direction that linearly separates the two classes
+(\S\ref{sec:probe-setup}); cross-dataset generalization rules out the
+obvious spurious-correlate failure modes (\S\ref{sec:belinkov-taxonomy});
+the ablation in Eq.~\eqref{eq:direction-ablation} demonstrates that
+removing $\mathbf{d}_{\mathrm{MM}}$ from the localized hidden states
+causes the model to systematically misclassify factual statements
+that the unmodified model gets right. By the necessity criterion of
+\S\ref{sec:ablate-add}, the mass-mean direction is causally
+implicated; the model is not just \emph{representing} truth, it is
+\emph{using} the representation. The same paper reports that
+direction-addition (Eq.~\eqref{eq:direction-addition}) along
+$\mathbf{d}_{\mathrm{MM}}$ steers the model's outputs in the predicted
+direction, providing the matching sufficiency
+test\footnote{KB excerpt: \texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-1-contributions}.}.
+
+The strongest form of the conclusion --- ``$\mathbf{d}_{\mathrm{MM}}$
+is the truth direction'' --- is, however, qualified by the misalignment
+finding of \S\ref{sec:truth-directions} (forward link): even the
+mass-mean direction is dataset-dependent in early-mid layers, with
+\texttt{cities} and \texttt{neg\_cities} truth directions
+\emph{antipodal} in early LLaMA-2-13B layers and only aligned by
+late layers \citep[\S 4]{marks-tegmark-2023-truth}\footnote{KB excerpt:
+\texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-4-misalignment}.}.
+The causal-validation argument lifts the load-bearing claim from
+``decodable'' to ``used'' but does not, by itself, resolve whether
+``truth'' is a single linear axis or a multi-axis subspace; the next
+section takes up that geometry directly.
+
+\subsection{The patch-then-probe pipeline}
+\label{sec:patch-then-probe}
+
+The Marks--Tegmark causal pipeline is more than a probe with an
+ablation appended; it is a two-stage composition that uses the
+patching machinery of \S\ref{sec:patching} to choose \emph{where} to
+probe. The first stage is activation patching: sweep the
+(component, token, layer) grid of $\mathrm{AIE}_C$ values
+(Eq.~\ref{eq:aie} of \S\ref{sec:patching-protocol}) on a
+true/false counterfactual benchmark, identify the small group of
+hidden states with high causal mediation, and restrict the probing
+domain to those states. \citet[\S 3]{marks-tegmark-2023-truth} report
+three groups of causally-implicated hidden states for LLaMA-2-13B on
+the \texttt{cities} dataset; the third (group \emph{c}) reads
+directly as TRUE/FALSE under the model's own decoder head, while the
+second (group \emph{b}) sits over the final token of the statement
+and end-of-sentence punctuation and ``store[s] a representation of
+the statement's truth''\footnote{KB excerpt:
+\texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-3-layers}.}.
+
+The second stage is probing within those states. Mass-mean
+(Eq.~\ref{eq:mass-mean} of \S\ref{sec:probing}) is fit on the
+group-\emph{b} activations rather than on the full grid, and the
+ablation of Eq.~\eqref{eq:direction-ablation} is applied at the same
+locations. The composition is what makes the causal argument
+load-bearing: patching localizes the components that carry the
+behavior, probing localizes the direction \emph{within} those
+components, and ablation tests whether that direction is the one the
+model uses. Without the patching stage, the probing direction is
+fit on activations that may or may not be causally relevant; with it,
+the probe's domain is restricted to states that patching has already
+shown to mediate the behavior.
+
+\begin{analogy}
+Patching localizes the \emph{room}; probing localizes the \emph{shelf
+within the room}; ablation tests whether the book on that shelf is
+the one being read aloud. A probe alone tells us a book about $y$ is
+on \emph{some} shelf in the library; patching alone tells us a book
+about $y$ is in \emph{this} room; the composition tells us \emph{this
+book on this shelf in this room} is the one whose absence makes the
+narrator stop reading. Returning to canonical form: patching's $C$ is
+the room (a component subset of the residual-stream grid), the
+probe's $\hat{\mathbf{d}}_y$ is the shelf (a one-dimensional
+subspace of $\mathbb{R}^D$ at that component), and the ablation
+$\mathbf{I} - \hat{\mathbf{d}}_y \hat{\mathbf{d}}_y^\top$ in
+Eq.~\eqref{eq:direction-ablation} tests the causal entailment by
+zeroing the shelf and re-running the suffix $\mathcal{M}_{>\ell}$.
+\end{analogy}
+
+The patch-then-probe pipeline is now the de facto causal-probing
+recipe in the truth-direction literature
+\citep{marks-tegmark-2023-truth}, and the dual-method recipe behind
+many of the cross-method convergence cases catalogued in
+\S\ref{sec:cross-method}. It also exposes the dependencies between
+methods: patching's STR-vs-GN corruption sensitivity
+(\S\ref{sec:patching-corruption}, especially the
+\texttt{[CONTRADICTION]} block on GN mis-localization) and the
+metric-choice pitfalls (\S\ref{sec:patching-metric}) propagate into
+the probe domain, since the localized hidden states are the
+\emph{output} of a patching pass whose recommendations matter.
+
+\subsection{Cross-paper threads and forward link}
+\label{sec:correlation-causation-forward}
+
+Two cross-paper threads sit in the load-bearing path of this section.
+The chain-of-thought-faithfulness question of Paper~3 \S 11 is, in
+the framing of this section, a probing question: a behavioral probe
+of ``the model is using its written reasoning'' is correlational
+unless paired with an intervention --- delete or rewrite the
+intermediate reasoning trace and observe whether the final answer
+changes --- in exactly the necessity-and-sufficiency form of
+\S\ref{sec:ablate-add}. The probe-on-activations and the
+probe-on-CoT-text are different observation modalities, but the
+methodological pattern is the same one this section formalizes, and
+the same set of confounders (probe expressivity, spurious correlate,
+vestigial information) translates across modalities. The alignment
+chapter of Paper~5 consumes behavioral probes as the detection
+methodology for deception, refusal-circumvention, sycophancy, and
+scheming; every claim there of the form ``the model is being
+$y$-deceptive'' depends on a probe that has passed both the
+selectivity and the ablation tests of this section, or it inherits
+the correlational caveat in full.
+
+The forward links within this paper are immediate.
+\S\ref{sec:truth-directions} picks up the truth-direction case study
+at the geometry-of-truth depth, asking when the same model's
+mass-mean direction is dataset-stable and when it is not, and what
+the misalignment in early-mid layers tells us about whether
+``truth'' is a single linear axis or a multi-axis subspace.
+\S\ref{sec:cross-method} returns to the patch-then-probe pipeline as
+one of the field's clearest cross-method convergence stories, with
+\S\ref{sec:patching}'s machinery on the activation-patching side
+and \S\ref{sec:probing}'s machinery on the probing side composing
+into a causal pipeline that neither method supports alone. The
+correlation--causation gap is, in this paper's framing, the cleanest
+example of why method-pluralism is principled: the gap is closed not
+by a better single method, but by composing two methods whose
+individual commitments are insufficient and whose joint commitments
+are not.
