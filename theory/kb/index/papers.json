@@ -3847,6 +3847,24 @@
       ],
       "category": "landmark",
       "summary": "Empirical evaluation of Irving 2018-style debate with LLM debaters and weaker-judge LLMs / non-expert humans. Reports that pitting two more-persuasive LLMs against each other and judging with a weaker model recovers truth on QuALITY-style reading-comprehension tasks better than direct consultation. Partial-and-domain-bounded support for the debate equilibrium hypothesis; counterpoint to the open question whether equilibrium honesty holds in practice."
+    },
+    {
+      "key": "harlap2018-pipedream",
+      "title": "PipeDream: Fast and Efficient Pipeline Parallel DNN Training",
+      "authors": "Harlap, Narayanan, Phanishayee, Seshadri, Devanur, Ganger, Gibbons",
+      "year": 2018,
+      "venue": "arXiv:1806.03377",
+      "url": "https://arxiv.org/abs/1806.03377",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "training/distributed-training"
+      ],
+      "topics": [
+        "distributed-training"
+      ],
+      "category": "foundational",
+      "summary": "Original PipeDream paper. Introduces 1F1B (one-forward-one-backward) pipeline scheduling that minimizes activation memory while maintaining the same throughput as GPipe-style microbatch pipelines. The 1F1B schedule is the foundation that ZeroBubble and DualPipe (DeepSeek-V3) refine for frontier-scale training."
     }
   ]
 }

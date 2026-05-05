@@ -7,6 +7,7 @@
 
 \section{Process supervision after R1: do PRMs still help?}
 \label{sec:prm-survival}
+\label{sec:prm-after-r1}
 
 \Cref{sec:process-reward-models} introduced the verifier leg of the
 reasoning triangle on a 2023 generator: PRM-best-of-$N$ dominates
@@ -38,7 +39,7 @@ contradiction that \cref{sec:contradictions} catalogues.
 \label{sec:prm-survival-r1}
 
 \Citet[\S 2.1, \S 2.2]{deepseek-r1} train R1-Zero with the GRPO
-objective of \cref{eq:grpo-objective} under a rule-based reward:
+objective of \cref{eq:grpo} under a rule-based reward:
 \begin{equation}
   r_i \;=\; \mathbb{1}\!\left[\, \mathrm{verify}(x, o_i) = \mathsf{true}\,\right]
   \;+\; \alpha\,\mathbb{1}\!\left[\, \mathrm{format}(o_i) = \mathsf{ok}\,\right],
