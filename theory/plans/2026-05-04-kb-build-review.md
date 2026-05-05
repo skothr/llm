@@ -1,20 +1,25 @@
-# KB build — final review (Phases 0-4)
+# KB build — review (Phases 0-5 brainstorm)
 
 _2026-05-04. Snapshot of the theory/ KB-substrate after Phases 0-4 of the
-2026-05-03 expansion plan. Phases 5 (LaTeX series) and 2.5 (PDF deepening)
-remain deferred — both have entry points captured below._
+2026-05-03 expansion plan, the stub-fill round (all 16 stubs → draft),
+and the Phase 5 LaTeX-series brainstorm. Phase 2.5 (PDF deepening) and
+the Phase 5 implementation (per-paper plans) remain ahead._
+
+_Updated 2026-05-04 evening: stub-fill batch (3 parallel subagents) +
+Phase 5 brainstorm document committed. KB now 54 draft / 0 stubs._
 
 ## Inventory
 
 | Slice | Count | Notes |
 |------|------:|------|
-| Papers in `kb/index/papers.json` | 164 | 63 with `excerpts_file`, 155 with `notes_referenced_by` |
-| Topic leaves | 54 | 9 areas; 38 draft + 16 stub |
-| Excerpt files (`kb/excerpts/*.md`) | 63 | mostly abstract-level (see Phase 2.5 gap) |
+| Papers in `kb/index/papers.json` | 187 | 88 with `excerpts_file`, 174 with `notes_referenced_by` |
+| Topic leaves | 54 | 9 areas; **all 54 draft, 0 stubs** |
+| Excerpt files (`kb/excerpts/*.md`) | 88 | most still abstract-level (see Phase 2.5 gap) |
 | Synthesis notes (`kb/notes/*/*.md`) | 54 | one per leaf |
-| Cross-area contradictions surfaced | 73 | 38 notes; reasoning + architecture lead |
-| Glossary entries | ~425 | pre-existing + pilot + 9 area fragments |
+| Cross-area contradictions surfaced | 99 | reasoning + architecture lead |
+| Glossary entries | ~500 | pre-existing + pilot + 9 area fragments + 2 stubfill fragments |
 | Timeline entries | pre-2017 → 2026-H1 | 41 unique cited keys, all resolve in `papers.json` |
+| Cited paper-keys (inline §) | 124 | up from 74 |
 
 ## Phase outcomes
 
@@ -92,14 +97,19 @@ remain deferred — both have entry points captured below._
 
 ## Recommended next session
 
-Pick whichever serves the next research goal:
+(B) is now done; (C) is now drafted. The two remaining tracks:
 
 - **(A) Phase 2.5 — excerpt deepening.** Re-pull missing PDFs to
   `theory/sources/papers/`, deepen abstract-level excerpts to
   §/eq.-anchored, backfill `[kb/excerpts/<key>#anchor]` citations
-  across draft notes. Highest leverage for citation provenance.
-- **(B) 16 stub fills.** Targeted draft passes on the stub notes;
-  smaller in scope than the original Phase 2 fan-out and easy to
-  parallelize via subagents.
-- **(C) Phase 5 — LaTeX series outline.** Brainstorm paper-set shape
-  using the now-stable KB as substrate.
+  across draft notes. Highest leverage for citation provenance — and
+  a hard precondition for actually starting any LaTeX paper.
+- **(F) Phase 5 implementation kickoff.** User picks a series shape
+  (A-E in `theory/plans/2026-05-04-latex-series-brainstorm.md`) — Shape
+  C (5 thesis papers) is the recommendation. Once chosen, write the
+  per-paper outline + implementation plan for Paper 1, hand off to
+  a writing-plans round, then implement.
+
+Suggested order: A first, F second. Without Phase 2.5 the LaTeX series
+will inherit the abstract-level provenance gap — workable for early
+drafts but it shows.
