@@ -44,19 +44,19 @@ rlvr-and-grpo → foundations + variants.
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| transformer-overview | stub | `kb/notes/architecture/transformer-overview.md` |
-| tokenization | stub | `kb/notes/architecture/tokenization.md` |
-| embeddings-and-tying | stub | `kb/notes/architecture/embeddings-and-tying.md` |
+| transformer-overview | draft | `kb/notes/architecture/transformer-overview.md` |
+| tokenization | draft | `kb/notes/architecture/tokenization.md` |
+| embeddings-and-tying | draft | `kb/notes/architecture/embeddings-and-tying.md` |
 | position-encoding | draft | `kb/notes/architecture/position-encoding.md` |
 | attention-mechanism | draft | `kb/notes/architecture/attention-mechanism.md` |
-| ffn | stub | `kb/notes/architecture/ffn.md` |
+| ffn | draft | `kb/notes/architecture/ffn.md` |
 | moe | draft | `kb/notes/architecture/moe.md` |
-| normalization | stub | `kb/notes/architecture/normalization.md` |
+| normalization | draft | `kb/notes/architecture/normalization.md` |
 | state-space-models | draft | `kb/notes/architecture/state-space-models.md` |
 | long-context | draft | `kb/notes/architecture/long-context.md` |
-| multimodal-llm-extensions | stub | `kb/notes/architecture/multimodal-llm-extensions.md` |
+| multimodal-llm-extensions | draft | `kb/notes/architecture/multimodal-llm-extensions.md` |
 | reasoning-architectures | draft | `kb/notes/architecture/reasoning-architectures.md` |
-| multi-token-prediction | stub | `kb/notes/architecture/multi-token-prediction.md` |
+| multi-token-prediction | draft | `kb/notes/architecture/multi-token-prediction.md` |
 
 ### training/
 
@@ -66,17 +66,17 @@ rlvr-and-grpo → foundations + variants.
 | synthetic-data-and-distillation | draft | `kb/notes/training/synthetic-data-and-distillation.md` |
 | optimization | draft | `kb/notes/training/optimization.md` |
 | distributed-training | draft | `kb/notes/training/distributed-training.md` |
-| mixed-precision-and-stability | stub | `kb/notes/training/mixed-precision-and-stability.md` |
-| adaptation-and-merging | stub | `kb/notes/training/adaptation-and-merging.md` |
+| mixed-precision-and-stability | draft | `kb/notes/training/mixed-precision-and-stability.md` |
+| adaptation-and-merging | draft | `kb/notes/training/adaptation-and-merging.md` |
 
 ### post-training/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| sft | stub | `kb/notes/post-training/sft.md` |
+| sft | draft | `kb/notes/post-training/sft.md` |
 | rlhf | draft | `kb/notes/post-training/rlhf.md` |
 | dpo-and-offline | draft | `kb/notes/post-training/dpo-and-offline.md` |
-| rlaif-and-constitutional | stub | `kb/notes/post-training/rlaif-and-constitutional.md` |
+| rlaif-and-constitutional | draft | `kb/notes/post-training/rlaif-and-constitutional.md` |
 | rlvr-and-grpo | draft | `kb/notes/post-training/rlvr-and-grpo.md` |
 
 ### reasoning/
@@ -97,7 +97,7 @@ rlvr-and-grpo → foundations + variants.
 | quantization | draft | `kb/notes/inference/quantization.md` |
 | speculative-decoding | draft | `kb/notes/inference/speculative-decoding.md` |
 | serving-systems | draft | `kb/notes/inference/serving-systems.md` |
-| structured-output | stub | `kb/notes/inference/structured-output.md` |
+| structured-output | draft | `kb/notes/inference/structured-output.md` |
 
 ### scaling/
 
@@ -113,18 +113,18 @@ rlvr-and-grpo → foundations + variants.
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| lens-techniques | stub | `kb/notes/interpretability/lens-techniques.md` |
+| lens-techniques | draft | `kb/notes/interpretability/lens-techniques.md` |
 | mechanistic-interpretability | draft | `kb/notes/interpretability/mechanistic-interpretability.md` |
 | sparse-autoencoders | draft | `kb/notes/interpretability/sparse-autoencoders.md` |
 | activation-patching | draft | `kb/notes/interpretability/activation-patching.md` |
-| probing | stub | `kb/notes/interpretability/probing.md` |
+| probing | draft | `kb/notes/interpretability/probing.md` |
 | circuit-tracing | draft | `kb/notes/interpretability/circuit-tracing.md` |
 
 ### evaluation/
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| knowledge-benchmarks | stub | `kb/notes/evaluation/knowledge-benchmarks.md` |
+| knowledge-benchmarks | draft | `kb/notes/evaluation/knowledge-benchmarks.md` |
 | reasoning-benchmarks | draft | `kb/notes/evaluation/reasoning-benchmarks.md` |
 | agentic-benchmarks | draft | `kb/notes/evaluation/agentic-benchmarks.md` |
 | eval-methodology | draft | `kb/notes/evaluation/eval-methodology.md` |
@@ -133,7 +133,7 @@ rlvr-and-grpo → foundations + variants.
 
 | Topic | Status | Note path |
 |-------|--------|-----------|
-| safety-evaluation | stub | `kb/notes/alignment/safety-evaluation.md` |
+| safety-evaluation | draft | `kb/notes/alignment/safety-evaluation.md` |
 | watermarking-and-provenance | draft | `kb/notes/alignment/watermarking-and-provenance.md` |
 | oversight-and-scalable-alignment | draft | `kb/notes/alignment/oversight-and-scalable-alignment.md` |
 | sycophancy | draft | `kb/notes/alignment/sycophancy.md` |

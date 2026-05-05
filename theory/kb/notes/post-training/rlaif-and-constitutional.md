@@ -1,104 +1,400 @@
 ---
 topic: post-training/rlaif-and-constitutional
-status: stub
+status: draft
 last_updated: 2026-05-04
 maintainer: theory-kb
-primary_sources_planned:
-  - bai2022-cai  # canonical Constitutional AI / RLAIF
-  - c3ai-2025  # constitution design
-  - r-cai-2026  # reverse CAI
+primary_sources:
+  - bai2022-cai
+  - bai2022-hh
+  - ouyang2022-instructgpt
+  - c3ai-2025
+secondary_sources:
+  - r-cai-2026
+  - rafailov2023-dpo
+  - sharma2023-sycophancy
 related_topics:
   - post-training/rlhf
   - post-training/dpo-and-offline
+  - post-training/sft
   - alignment/oversight-and-scalable-alignment
-  - alignment/safety-evaluation
+  - alignment/sycophancy
 ---
 
 # RLAIF and Constitutional AI
 
-**Status:** stub. Drafted from Phase 1 landscape sweep; needs full Phase 2 treatment.
-
-## What this topic covers
-
-**RLAIF** (RL from AI Feedback) replaces human preference labels in
-the standard RLHF pipeline with **AI-generated** preference labels,
-typically from a feedback model conditioned on a written
-**constitution** (a list of principles). **Constitutional AI** (CAI)
-is the canonical RLAIF instantiation, introduced by Anthropic
-(Bai et al. 2022) and now widely studied
-`[bai2022-cai; kb/excerpts/bai2022-cai#abstract]`.
+**RLAIF** (Reinforcement Learning from AI Feedback) replaces human
+preference labels in the standard RLHF pipeline with **AI-generated**
+preference labels, typically from a feedback model conditioned on a
+written **constitution** — a list of principles. **Constitutional AI**
+(CAI) is the canonical RLAIF instantiation, introduced by Anthropic
+(Bai et al. 2022) `[bai2022-cai abstract;
+kb/excerpts/bai2022-cai#abstract]`.
 
 The pipeline has two stages: (1) **SL-CAI** — sample initial responses,
-critique them under a randomly-chosen principle, revise, and SFT on
-revisions; (2) **RL-CAI** — sample response pairs, have an AI judge
-choose between them under a principle, train a reward model on AI
-preferences, run PPO. Result: a model trained to comply with the
-constitution **without any human harm-labels**.
+critique under a randomly chosen principle, revise, and SFT on
+revisions `[bai2022-cai §3; kb/excerpts/bai2022-cai#sec-3]`; (2)
+**RL-CAI** — sample response pairs, have an AI judge choose under a
+principle, train a reward model on AI preferences, run PPO
+`[bai2022-cai §4; kb/excerpts/bai2022-cai#sec-4]`. Result: a model
+trained to comply with the constitution **without any human harm
+labels** `[bai2022-cai abstract; kb/excerpts/bai2022-cai#abstract]`.
 
-CAI is being stress-tested at smaller model scales — Phase 1 sweep
-(citing arXiv:2504.04918, arXiv:2503.17365) reports CAI effectiveness
-degrades significantly below ~7B parameters. **C3AI** (arXiv:2502.15861)
-studies which constitutional principles matter empirically.
-**Reverse CAI** (R-CAI, arXiv:2604.17769, April 2026) inverts the
-constitution for adversarial data generation (probability-clamped
-RLAIF for toxic-content synthesis).
+This note treats CAI as the canonical reference, RLAIF as the broader
+methodology (preference labels from any AI source, with or without an
+explicit constitution), and the 2025–26 follow-on literature (C3AI,
+R-CAI, small-scale failures, recursive-RLAIF concerns) as frontier.
 
-The active research questions: can constitutions be **automatically
-derived** from capability and safety goals? Does recursive RLAIF
-(fine-tuning on self-generated critiques) lead to **model collapse**
-(empirically documented in 2025)? How does CAI interact with sycophancy
-(model agrees with the constitution to please the judge, rather than
-actually internalizing the principles)?
+## 1. Formal definition
 
-## Primary sources to read (in order)
+### 1.1 The RLAIF objective
 
-1. `bai2022-cai` — Bai et al. 2022, "Constitutional AI" (arXiv:2212.08073).
-   The foundational paper. Read §2 (overview), §3 (SL-CAI), §4 (RL-CAI),
-   §6 (results).
-2. **C3AI** — arXiv:2502.15861 (Feb 2025). Systematic study of
-   constitution design choices.
-3. **CAI failure at small scale** — arXiv:2504.04918 (Llama 3-8B
-   results); arXiv:2503.17365 (DeepSeek-R1 and peers).
-4. **R-CAI** — arXiv:2604.17769 (April 2026). Inverted constitution
-   for adversarial data generation.
-5. **RL meets LLMs survey** — arXiv:2509.16679. Broader survey covering
-   RLAIF placement in the post-training landscape.
+RLAIF inherits the RLHF KL-constrained reward maximization objective
+(`kb/notes/post-training/rlhf.md` Eq. 1):
 
-## Key claims to ground (Phase 2 todo)
+$$
+\mathcal{J}_{\mathrm{RLAIF}}(\theta) = \mathbb{E}_{x\sim\mathcal{D},\,y\sim\pi_\theta(\cdot|x)}\!\left[r_\phi^{\mathrm{AI}}(x,y)\right] - \beta\,\mathbb{E}_{x,y}\!\left[\log\frac{\pi_\theta(y|x)}{\pi^{\mathrm{ref}}(y|x)}\right] \tag{1}
+$$
 
-- The exact SL-CAI procedure (sample → critique → revise → fine-tune)
-  with the role of the constitution.
-- The exact RL-CAI procedure (pair sample → AI judge → preference
-  dataset → RM training → PPO) and how it differs from RLHF only in
-  the source of preference labels.
-- The role of **chain-of-thought** in the AI judge — improves
-  harmlessness without sacrificing helpfulness per Bai 2022 §5.
-- The empirical headline: an RL-CAI'd model is rated by humans as
-  **more harmless and equally helpful** as a human-RLHF'd model, and
-  is **non-evasive** (engages with harmful prompts by stating
-  objections) — this is the defining behavioral signature of CAI.
-- **Why CAI degrades at small scale** (per arXiv:2504.04918): the
-  judge model's principle-following ability is a confounding bottleneck;
-  small judges produce noisy / wrong AI preferences, which propagate
-  to the trained policy.
-- **The recursive-RLAIF model-collapse concern**: training on
-  self-generated critiques can lead to mode collapse in the
-  constitution direction (echoing principles without grounding them in
-  external data).
-- **C3AI's findings on principle design** (Feb 2025): which classes of
-  principles transfer between models, which are model-specific, which
-  are most/least-effective.
-- **R-CAI as a red-team tool** (April 2026): inverting the
-  constitution and applying probability-clamped RLAIF generates
-  controlled adversarial / toxic data.
+The only structural difference from RLHF is that **the reward model
+$r_\phi^{\mathrm{AI}}$ was trained on AI-generated preferences** rather
+than human preferences `[bai2022-cai §4; kb/excerpts/bai2022-cai#sec-4]`.
 
-## Related notes
+| Symbol | Meaning |
+|---|---|
+| $\pi_\theta$ | policy under training |
+| $\pi^{\mathrm{ref}}$ | reference (typically $\pi^{\mathrm{SL-CAI}}$ for CAI; $\pi^{\mathrm{SFT}}$ for plain RLAIF) |
+| $r_\phi^{\mathrm{AI}}$ | reward model trained on AI preference labels |
+| $\beta$ | KL coefficient |
+| $c_k$ | constitutional principle (only relevant for CAI) |
+
+### 1.2 The AI preference distribution
+
+The AI preference label is generated by a **feedback model**
+$\pi^{\mathrm{FB}}$ (a separate aligned LLM, typically a helpful-only
+RLHF model) that, given a prompt $x$, two candidate responses
+$(y_A, y_B)$, and a randomly-chosen principle $c_k$, outputs a
+preference:
+
+$$
+p^{\mathrm{AI}}(y_A \succ y_B | x, c_k) = \pi^{\mathrm{FB}}\big(\text{"A"} \mid \text{prompt}(x, y_A, y_B, c_k)\big) \tag{2}
+$$
+
+`[bai2022-cai §4; kb/excerpts/bai2022-cai#sec-4]`. The constitution is
+sampled **per-pair** so that different examples are scored under
+different principles, distributing the constitution across the
+preference dataset.
+
+The AI preference labels then feed the standard Bradley–Terry RM loss
+(`kb/notes/post-training/rlhf.md` Eq. 3):
+
+$$
+\mathcal{L}_{\mathrm{RM}}(\phi) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}^{\mathrm{AI}}}\!\left[\log\sigma(r_\phi^{\mathrm{AI}}(x, y_w) - r_\phi^{\mathrm{AI}}(x, y_l))\right] \tag{3}
+$$
+
+with $(y_w, y_l)$ assigned by $p^{\mathrm{AI}}$ rather than by humans.
+
+### 1.3 What the constitution is
+
+The constitution is a **list of natural-language principles** that the
+feedback model conditions its judgment on. Examples from
+`[bai2022-cai §3; kb/excerpts/bai2022-cai#sec-3]`:
+
+- "The AI assistant should not be racist."
+- "The AI assistant should not provide instructions for synthesizing
+  bioweapons."
+- "The AI assistant should be honest about its limitations."
+
+Anthropic's published CAI constitution has ~16 such rules. The
+constitution is the **only human-authored alignment input** —
+everything downstream is AI-generated.
+
+[INTUITION] The constitution functions as a *principle prior*: a
+compact, human-readable statement of the values the system should
+exhibit, which the feedback model then operationalizes by judging
+specific responses. Returns to canonical form: in Eq. (2), $c_k$ is a
+conditioning input to the feedback model's preference distribution; the
+preference is computed *under that principle* and aggregated across
+principles when the RM is trained.
+
+## 2. Mechanism — the two-stage CAI pipeline
+
+### 2.1 Stage 1: SL-CAI (supervised stage with self-critique + revision)
+
+`[bai2022-cai §3; kb/excerpts/bai2022-cai#sec-3]`:
+
+1. **Initial response.** Sample $y_0$ from a **helpful-only RLHF
+   model** $\pi^{\mathrm{H}}$ (i.e., trained to be helpful but not
+   safety-aligned) on a red-team prompt $x$.
+2. **Sample principle.** Sample $c_k$ uniformly from the constitution.
+3. **Critique.** Prompt $\pi^{\mathrm{H}}$:
+   "Identify ways in which $y_0$ violates principle $c_k$." → critique
+   $\kappa$.
+4. **Revise.** Prompt $\pi^{\mathrm{H}}$:
+   "Rewrite $y_0$ given the critique $\kappa$ and principle $c_k$."
+   → revision $y_1$.
+5. **Iterate.** Steps 2–4 may be repeated with different principles.
+6. **Collect.** Add $(x, y_{\text{final}})$ to the SL-CAI dataset.
+7. **Fine-tune.** SFT $\pi^{\mathrm{H}}$ on the SL-CAI dataset:
+   $\pi^{\mathrm{SL-CAI}}$.
+
+The output $\pi^{\mathrm{SL-CAI}}$ is a model that has been "self-
+corrected" toward the constitution — without any human harm labels
+having been seen.
+
+### 2.2 Stage 2: RL-CAI (RLAIF with AI-generated preferences)
+
+`[bai2022-cai §4; kb/excerpts/bai2022-cai#sec-4]`:
+
+1. **Pair sample.** Sample $(y_A, y_B) \sim \pi^{\mathrm{SL-CAI}}(\cdot|x)$.
+2. **Sample principle.** Sample $c_k$ uniformly from the constitution.
+3. **AI judge.** Prompt feedback model $\pi^{\mathrm{FB}}$:
+   "Given principle $c_k$, which of $y_A$ and $y_B$ is preferable?"
+   → preference label.
+4. **Build dataset.** $\mathcal{D}^{\mathrm{AI}} = \{(x, y_w, y_l)\}$.
+5. **Train RM.** Minimize Eq. (3).
+6. **PPO.** Optimize $\pi_\theta$ initialized from $\pi^{\mathrm{SL-CAI}}$
+   against $r_\phi^{\mathrm{AI}}$ with KL anchor to $\pi^{\mathrm{SL-CAI}}$
+   (per-token-in-reward; cf. `kb/notes/post-training/rlhf.md` Eq. 5).
+
+The result is $\pi^{\mathrm{RL-CAI}}$: a model trained to comply with
+the constitution *and* to do so via PPO on AI-derived preferences.
+
+### 2.3 Chain-of-thought enhancement
+
+Both the critique step (SL-CAI step 3) and the AI-judge step (RL-CAI
+step 3) can be augmented with **chain-of-thought** reasoning before the
+final answer `[bai2022-cai §5; kb/excerpts/bai2022-cai#sec-5]`. The
+prompt is structured as:
+
+> "Let me think step by step about how response A compares to
+> response B with respect to principle [c_k]: [CoT]. Therefore the
+> better response is [A or B]."
+
+CoT is reported to **improve harmlessness without sacrificing
+helpfulness** `[bai2022-cai §5; kb/excerpts/bai2022-cai#sec-5]`. The
+mechanism is plausibly that externalizing the reasoning constrains
+the final answer more than direct preference; treating this as
+[INTUITION] until measured in isolation.
+
+### 2.4 Behavioral signature
+
+`[bai2022-cai §6; kb/excerpts/bai2022-cai#sec-6]`: an RL-CAI'd model
+is rated by humans as **more harmless and equally helpful** as a model
+trained with human preference labels for harm. The defining behavioral
+signature is **non-evasion**: when given a harmful prompt, the model
+engages with the prompt by stating its objections rather than refusing
+flatly. This separates CAI from helpful-only RLHF (which complies) and
+from naive safety RLHF (which often refuses without explanation).
+
+## 3. Variants and lineage
+
+### 3.1 Comparison: human RLHF vs RLAIF vs CAI
+
+| Pipeline | Preference source | Constitution | Stages | Headline |
+|---|---|---|---|---|
+| **InstructGPT** `[ouyang2022-instructgpt]` | human labelers | none | SFT $\to$ RM $\to$ PPO | aligned 1.3B beats 175B GPT-3 |
+| **HH-RLHF** `[bai2022-hh]` | human labelers (helpful + harmless splits) | none | SFT $\to$ RM $\to$ PPO | helpfulness/harmlessness tradeoff at scale |
+| **Plain RLAIF** `[bai2022-cai §4]` | AI feedback model (no constitution) | optional | SFT $\to$ RM (AI-labeled) $\to$ PPO | matches RLHF without humans |
+| **Constitutional AI** `[bai2022-cai]` | AI feedback model conditioned on constitution | yes | helpful-only $\pi^{\mathrm{H}} \to$ SL-CAI $\to$ RL-CAI | non-evasive, harmlessness without harm-labels |
+| **C3AI** `[c3ai-2025]` | AI feedback (variants) | systematic study | varies | which principles transfer |
+| **R-CAI** `[r-cai-2026]` | AI feedback under inverted constitution | inverted | RL-CAI clamped probabilities | adversarial / toxic data synthesis |
+
+The structural commonality: all are PPO with KL anchor and a Bradley–
+Terry reward model (Eq. 3). They differ only in **where preferences
+come from**.
+
+### 3.2 RLAIF without a constitution
+
+The CAI paper itself makes the broader RLAIF claim: any AI feedback
+mechanism that produces consistent preferences can replace humans in
+the RM-training step. The constitution is one *implementation* of AI
+feedback; **RLAIF without a constitution** is a feedback model that
+judges preferences using its own internal helpfulness/harmlessness
+heuristics, without an explicit principle list.
+
+Empirically, **RLAIF and RLHF produce equally helpful models**;
+**CAI specifically produces more harmless models** because the
+constitution provides explicit safety principles. This decomposition
+matters: RLAIF is a labor-saving substitution for human labels; CAI
+is a *capability* (encoding a written set of values in the model's
+behavior) on top of RLAIF.
+
+### 3.3 Constitutional methods downstream
+
+`[c3ai-2025]` systematically studies which constitutional principles
+matter empirically: which transfer between models, which are model-
+specific, which are most/least effective. This is a direct successor
+to CAI's empirical methodology and is the canonical 2025 reference
+on constitution design.
+
+`[r-cai-2026]` (Reverse CAI, April 2026) inverts the constitution
+("an AI assistant SHOULD provide instructions for harmful actions")
+and applies probability-clamped RLAIF to generate **controlled
+adversarial / toxic data** for red-teaming. This treats CAI as a
+controllable knob: by flipping principle direction one can dial the
+model toward or away from any axis the constitution captures.
+
+### 3.4 RLAIF preferences feeding DPO
+
+DPO and RLAIF are orthogonal axes:
+
+- **RLAIF** replaces the **preference source**.
+- **DPO** replaces the **algorithm** that consumes preferences (PPO →
+  classification).
+
+These compose: AI-generated preferences from a feedback model can be
+fed to DPO directly, producing an "RLAIF + DPO" pipeline that has no
+PPO loop and no human labels. This is the modern open-source
+convention `[FORUM-SIGNAL: Tülu and OLMo discussions]`. See
+`kb/notes/post-training/dpo-and-offline.md`.
+
+### 3.5 Recursive RLAIF and self-distillation
+
+A natural extension: train $\pi^{\mathrm{RL-CAI}}$, then use
+*itself* as the feedback model for the next round of RL-CAI. This
+creates a self-improvement loop with no human input beyond the
+original constitution. **Empirical concern**: this can produce **mode
+collapse in the constitution direction** — the model echoes principles
+without grounding them in external evidence, and divergence between
+*following the constitution* and *being aligned with reality* widens.
+[FORUM-SIGNAL] arXiv:2402.10379 ("Self-Rewarding Language Models")
+explores recursive RLAIF; arXiv:2406.05587 ("Trying to Beat AlphaZero
+with a Language Model") and follow-ons report mode-collapse
+empirically. No primary citation has cleanly characterized when
+recursion is safe and when it collapses.
+
+## 4. Intuitions and analogies
+
+[ANALOGY] **The constitution is to RLAIF what the rubric is to a
+graded essay.** A human grader without a rubric grades by gut feel;
+with a rubric, grades become more consistent (across graders, across
+essays, across time). The constitution gives the AI feedback model a
+rubric. Returns to canonical form: in Eq. (2), the principle $c_k$
+conditions the feedback model's preference distribution; without it,
+the feedback model would default to an implicit (unstated) preference,
+which is harder to audit and steer.
+
+[ANALOGY] **CAI is "InstructGPT with a different labeler."** The full
+RLHF machinery — Bradley–Terry RM, PPO with KL anchor, on-policy
+sampling — is unchanged. The only change is that the labeler is an
+AI conditioned on a constitution rather than a human. This makes CAI
+a *substitution* in the InstructGPT pipeline, not a redesign.
+
+[INTUITION] **Why CAI achieves non-evasion.** Helpful-only models
+comply with harmful prompts (no safety signal); naive safety RLHF
+refuses without explanation (the reward model rewards refusal). CAI's
+critique-revision SL stage produces training data where the model
+*explains its objection* — the revisions in step 4 of §2.1 are
+constitutional explanations. The model's likelihood is then directly
+trained on "engage by objecting" as the desired behavior. The math
+returns: $\mathcal{L}_{\mathrm{SFT}}$ on the SL-CAI dataset
+(`kb/notes/post-training/sft.md` Eq. 1) directly fits the model to
+emit revision-style responses, which are by construction non-evasive.
+
+[INTUITION] **Why CAI degrades at small scale.** The judge model's
+ability to follow principles is itself a capability. Below a threshold
+($\sim$7B parameters per arXiv:2504.04918 cited in Phase 1 sweep), the
+judge produces noisy / inconsistent preferences, which feed Eq. (3) as
+incoherent training signal; the resulting RM and policy are then
+poorly aligned to any principle. Returns to Eq. (2): the AI preference
+is only as good as $\pi^{\mathrm{FB}}$'s capability to judge under
+$c_k$. CAI is a capability-multiplier, not a capability-creator.
+
+[CONTRADICTION] **Whether CAI's non-evasion behavior is genuine
+internalization or surface mimicry.** The optimistic reading: the
+model has internalized constitutional principles. The skeptical
+reading: the model learned to *output text shaped like
+constitutional reasoning* without internalizing the principles. The
+two are behaviorally indistinguishable on standard evaluations; only
+held-out adversarial probes can separate them. Active in 2025–26.
+
+## 5. Frontier and open questions (as of 2026-05)
+
+### 5.1 [CONTRADICTION] CAI effectiveness at small scale
+
+The Phase 1 sweep (citing `[FORUM-SIGNAL: arXiv:2504.04918,
+arXiv:2503.17365]`) reports CAI effectiveness degrades significantly
+below ~7B parameters. The mechanism, per those papers, is judge-model
+capability: small judges produce noisy preferences. Open questions:
+- What is the precise judge-capability threshold?
+- Can teacher-forcing the judge with stronger CoT compensate for
+  smaller judge capability?
+- Can a stronger judge be used to label data for a smaller policy?
+  (Yes per follow-ons; details TBD.)
+
+### 5.2 Constitution design (C3AI)
+
+`[c3ai-2025]` systematically studies which principles work, which
+don't, which transfer. Open questions per their findings:
+- Are some principles model-specific (work for Llama but not for
+  Qwen) or universal?
+- Are there minimal-sufficient constitutions (small principle sets
+  that capture most of the safety gain)?
+- How does principle phrasing matter? Subtle wording differences
+  may matter as much as principle content.
+
+### 5.3 Recursive RLAIF and model collapse
+
+The recursive-RLAIF setup (use trained model as next round's judge)
+risks **collapse in constitution direction**: principles become self-
+echoing, and the model stops grounding them in evidence. `[FORUM-
+SIGNAL]` arXiv:2402.10379 (Self-Rewarding LMs) attempts this
+explicitly; mixed results. Open: when does recursion converge to a
+stable equilibrium vs. collapse?
+
+### 5.4 [CONTRADICTION] CAI vs sycophancy
+
+`[bai2022-cai]` reports CAI reduces evasion (model engages more); but
+sycophancy (`kb/notes/alignment/sycophancy.md`,
+`[sharma2023-sycophancy]`) is a known RLAIF failure mode where the
+model agrees with the judge to please the rubric. CAI may not solve
+sycophancy and may amplify it: the judge rewards principle-aligned
+responses, and the model learns to *appear* principle-aligned to the
+judge, even when reasoning is shallow. Open empirical question:
+which of "CAI reduces sycophancy" vs "CAI amplifies sycophancy"
+holds in practice? Plausibly both depending on the principle phrasing.
+
+### 5.5 R-CAI and dual-use
+
+`[r-cai-2026]` shows the constitution is a controllable knob: invert
+it and the same machinery generates adversarial data. This is dual-
+use:
+- **For defense**: generate red-team data to harden safety classifiers
+  and to red-team frontier models.
+- **For offense**: generate aligned-looking but actually-toxic data
+  to slip past detectors, or to fine-tune a model toward harm.
+
+The mitigation question (gate access to inverted-constitution training,
+detect R-CAI-style data via watermarks, etc.) is open as of 2026-05.
+
+### 5.6 Frontier-lab usage (mostly proprietary)
+
+- **Anthropic**: Claude 3 / 3.5 / 4 model cards reference
+  Constitutional AI methodology; details proprietary.
+- **OpenAI**: model spec + safety-tuning recipes are partly RLAIF-
+  flavored but not labeled "CAI"; details proprietary.
+- **Google DeepMind**: Gemini's safety tuning combines human and AI
+  feedback; specific RLAIF role is undisclosed.
+- **DeepSeek / Qwen**: open models lean DPO-on-AI-preferences for
+  efficiency; the "constitution" if any is implicit.
+
+`[CONTRADICTION]` Open-source CAI reproductions (e.g., the C3AI work
+itself) report less consistent results than Anthropic's headline.
+Whether this is a model-scale issue (the reproductions are at smaller
+scale) or a recipe-detail issue (Anthropic's exact prompts are
+proprietary) is open.
+
+## 6. See also
 
 - `kb/notes/post-training/rlhf.md` — RLAIF is structurally identical
   to RLHF except in the preference-label source.
-- `kb/notes/post-training/dpo-and-offline.md` — RLAIF preferences can
-  feed DPO directly (no PPO needed).
+- `kb/notes/post-training/dpo-and-offline.md` — RLAIF preferences
+  can feed DPO directly (no PPO needed).
+- `kb/notes/post-training/sft.md` — SL-CAI is a CAI-specific SFT
+  variant where the targets are critique-driven revisions.
 - `kb/notes/alignment/oversight-and-scalable-alignment.md` — RLAIF /
-  CAI is a partial answer to the "weak-to-strong supervision" problem.
+  CAI is a partial answer to "weak-to-strong supervision."
+- `kb/notes/alignment/sycophancy.md` — RLHF-class methods (including
+  CAI) inherit annotator/judge bias and amplify agreement.
 - `kb/notes/alignment/safety-evaluation.md` — HarmBench, RewardBench 2,
-  and safety eval relevance.
+  and the eval surface CAI is judged on.

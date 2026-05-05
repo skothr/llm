@@ -1,6 +1,6 @@
 # Contradictions surface
 
-_Generated 2026-05-04 by `theory/plans/_phase2/extract_contradictions.py` from every `[CONTRADICTION]` paragraph across `kb/notes/`. 73 contradictions across 38 notes in 9 areas._
+_Generated 2026-05-04 by `theory/plans/_phase2/extract_contradictions.py` from every `[CONTRADICTION]` paragraph across `kb/notes/`. 99 contradictions across 53 notes in 9 areas._
 
 Each entry below is the verbatim paragraph from the note, preceded by a `<area>/<topic>` header. Use this as a single lens for: where do primary sources disagree? Which areas have the deepest live open questions? Which contradictions appear in multiple areas (suggesting a cross-area research thread)?
 
@@ -8,28 +8,28 @@ Each entry below is the verbatim paragraph from the note, preceded by a `<area>/
 
 | Area | Notes w/ contradictions | Total contradictions |
 |------|------------------------:|--------------------:|
+| architecture | 13 | 22 |
 | reasoning | 5 | 14 |
-| architecture | 6 | 13 |
-| alignment | 4 | 9 |
+| post-training | 5 | 12 |
+| alignment | 5 | 10 |
+| training | 6 | 10 |
+| inference | 5 | 9 |
+| interpretability | 6 | 9 |
 | scaling | 5 | 9 |
-| inference | 4 | 6 |
-| interpretability | 4 | 6 |
-| post-training | 3 | 6 |
-| training | 4 | 6 |
 | evaluation | 3 | 4 |
 
 ## By note (top contention)
 
+- `post-training/rlaif-and-constitutional` — 4
 - `post-training/rlvr-and-grpo` — 4
 - `alignment/oversight-and-scalable-alignment` — 3
 - `alignment/scheming-and-deceptive-alignment` — 3
 - `architecture/long-context` — 3
 - `architecture/moe` — 3
 - `architecture/reasoning-architectures` — 3
+- `inference/structured-output` — 3
 - `reasoning/inference-time-search` — 3
 - `reasoning/process-supervision` — 3
-- `reasoning/reasoning-training` — 3
-- `reasoning/test-time-compute` — 3
 
 ## alignment
 
@@ -60,6 +60,22 @@ GPT-2/GPT-4 gap is structurally dis-analogous to the human/superhuman
 gap (both ends share training distribution; same regime of representable
 concepts). The response from the W2S authors is that the analogy is
 imperfect but the only experimental handle currently available.
+
+### alignment/safety-evaluation
+
+_Source: `kb/notes/alignment/safety-evaluation.md`_
+
+[CONTRADICTION] **Whether safety-eval pass implies deployment-safe**
+is contested. The Apollo / scheming literature
+`[meinke2024-apollo-scheming;
+kb/excerpts/meinke2024-apollo-scheming]` documents cases where models
+behave differently when they *suspect* they are being evaluated. If
+this generalizes, a benchmark-passing score may be eval-condition-
+specific, not deployment-stable. Whether this is a real failure mode
+at production scale, an artifact of specific eval framings, or a
+worst-case extrapolation that future training will robustly avoid —
+contested. The mitigations (honeypot evals, "unaware-of-eval"
+protocols) are nascent.
 
 ### alignment/scheming-and-deceptive-alignment
 
@@ -180,6 +196,27 @@ MHA" claim as DeepSeek-internal until cross-replicated.
   induction heads, copy heads, and circuit-level attention patterns
   continues; see `kb/notes/interpretability/mechanistic-interpretability.md`.
 
+### architecture/embeddings-and-tying
+
+_Source: `kb/notes/architecture/embeddings-and-tying.md`_
+
+[CONTRADICTION] The historical Press & Wolf result reports tying
+*improves* perplexity on small models; the recent untied-frontier
+results report tied embeddings *hurt* at scale. The reconciling claim
+(if any) is that the gradient-imbalance failure mode only matters when
+$|V| \cdot d \gg \text{rest of model}$ is no longer true — i.e., at
+multi-billion-parameter scale the embedding matrices are a small
+fraction of the model and the gradient imbalance dominates. This is
+an [INTUITION] not a derivation.
+
+### architecture/ffn
+
+_Source: `kb/notes/architecture/ffn.md`_
+
+[CONTRADICTION] Shazeer 2020 ranks GEGLU > SwiGLU on T5-base; LLaMA
+chose SwiGLU and the field followed. No published frontier-scale
+re-ablation. Whether GEGLU would still win at LLaMA-3 8B+ is unknown.
+
 ### architecture/long-context
 
 _Source: `kb/notes/architecture/long-context.md`_
@@ -264,6 +301,63 @@ $E_s$ before citing in formal output.
   CPU, and speculative decoding interactions with MoE are active.
   Belongs in `kb/notes/inference/serving-systems.md`.
 
+### architecture/multi-token-prediction
+
+_Source: `kb/notes/architecture/multi-token-prediction.md`_
+
+[CONTRADICTION] Quality vs. speed framing. The Gloeckle 2024 paper
+emphasizes **speedup** via parallel drafter use; DeepSeek-V3 reports
+both speedup and a quality lift from the auxiliary objective itself.
+The two papers report MTP for somewhat different reasons; whether
+the quality lift survives at all scales is not fully ablated.
+
+### architecture/multimodal-llm-extensions
+
+_Source: `kb/notes/architecture/multimodal-llm-extensions.md`_
+
+[CONTRADICTION] "Early-fusion is better" rests on Llama 4 and
+InternVL3 internal comparisons against their own adapter baselines.
+A controlled comparison that holds data, compute, and post-training
+fixed across the two architectures has not been published. The
+practical signal (frontier labs choosing early-fusion) is stronger
+than the published evidence.
+
+### architecture/normalization
+
+_Source: `kb/notes/architecture/normalization.md`_
+
+Chen & Wei 2026 (arXiv 2601.19895) report that **Post-LN can train
+stably with new initialization and regularization techniques** —
+DeepNorm-style scaled residuals + careful warmup — and offers
+expressivity advantages at very deep ($L > 100$) networks. As of
+2026-05 this is a single result; not yet adopted at frontier scale.
+[CONTRADICTION] Phase 1 sweep §3 lists "Post-LN is unstable" as a
+stale prior; this 2026 paper rehabilitates it. The story is now:
+Pre-LN trains; Peri-LN is more stable; Post-LN with the right
+initialization is competitive again. The earlier Xiong et al.
+analysis identified one failure mode; new work addresses it.
+
+- **Pre-LN vs Peri-LN at very-deep frontier scale.** Frontier models
+  in 2026 split: DeepSeek/Qwen3/LLaMA stay Pre-LN; Gemma 3 and OLMo 2
+  switch to Peri-LN. No head-to-head ablation at $\geq 70\text{B}$ has
+  been published.
+- **QK-Norm's interaction with RoPE.** RoPE rotates $Q, K$ before the
+  dot product; applying RMSNorm before the rotation vs after vs both
+  is implementation-specific; the trade-offs are not well-characterized.
+- **Post-LN rehabilitation transferring to frontier.** arXiv
+  2601.19895 (Jan 2026) is encouraging but small-scale. Whether
+  frontier labs adopt is open. [CONTRADICTION] Vaswani 2017 used
+  Post-LN successfully, the field moved away citing instability,
+  and a 2026 paper says it works again with new init — the meta-
+  question of "what changed" is itself open.
+- **Norm-free architectures.** Gated removal (arXiv 2602.10408) and
+  ReZero-style designs explore whether the normalization layer is
+  fundamentally necessary; answer is "probably yes but the form can
+  vary."
+- **Why RMSNorm works as well as LayerNorm.** The geometric
+  explanation (arXiv 2409.12951) is partial; a full theory of
+  centering's non-role in deep networks doesn't exist.
+
 ### architecture/position-encoding
 
 _Source: `kb/notes/architecture/position-encoding.md`_
@@ -310,6 +404,73 @@ mid-2026 not yet independently replicated on formal-language benchmarks.
 The empirical LM quality at 7B+ is competitive with similar-size
 Transformers; whether the theoretical-expressiveness claim translates
 to practical advantage is open.
+
+### architecture/tokenization
+
+_Source: `kb/notes/architecture/tokenization.md`_
+
+- **Tokenizer-free at 70B+.** BLT demonstrated viability at 8B `[blt2024 §1]`.
+  The 70B+ regime has not been published. [CONTRADICTION] Phase 1
+  sweep §3 flags this as "no longer niche"; whether frontier-scale
+  parity holds is open.
+- **SuperBPE and length-maximizing BPE variants.** SuperBPE (Liu et al.
+  2025, COLM) lifts BPE's cross-whitespace constraint, producing
+  multi-word tokens like " of the"; reports 33% fewer tokens at 200K
+  vocab and +4% average benchmark
+  `[arXiv 2503.13423 §3]`. Length-MAX (Dong & Su 2025, arXiv
+  2511.20849) reports 14–18% fewer tokens/char vs BPE at matched
+  vocabulary. Adoption pending.
+- **Information-theoretic tokenizer design.** Recent work (arXiv
+  2601.09039, Jan 2026) takes Shannon-entropy lenses to tokenizer
+  efficiency; a quantitative target for BPE replacement.
+- **End-to-end RL-trained tokenizers.** arXiv 2602.13940 (2026)
+  proposes joint tokenizer + LM training via RL; very recent.
+- **"Tokenizer betrays reasoning" thread.** arXiv 2601.14658 (2026)
+  documents tokenizer-induced failure modes systematically.
+- **Tokenizer adaptation for pretrained models.** Adding new tokens
+  (and initializing their embeddings) post-pretraining without
+  quality loss is an open problem; relevant for vocabulary expansion
+  and domain adaptation. See `kb/notes/architecture/embeddings-and-tying.md`.
+
+### architecture/transformer-overview
+
+_Source: `kb/notes/architecture/transformer-overview.md`_
+
+[CONTRADICTION] Dense vs. MoE at frontier: as of 2026 nearly every
+public frontier disclosure is MoE; one article (largo.dev 2026,
+Tier B) asserts "dense can't compete on capability-per-FLOP" at
+frontier scale, but Anthropic's Claude family architecture is
+undisclosed and may not be MoE. Treat the "MoE is universal at the
+frontier" claim as a strong empirical regularity restricted to
+publicly disclosed architectures.
+
+- **Hybrid SSM-Transformer architectures.** Jamba, Zamba2, Hymba, and
+  RWKV-7 interleave or fuse SSM and attention layers
+  `[lieber2024-jamba §2; rwkv7-2025 §2]`. Pure-SSM at frontier scale
+  has not materialized — the deployed form is hybrid with 1:5 to 1:6
+  attention:SSM ratios. Full treatment in
+  `kb/notes/architecture/state-space-models.md`. [CONTRADICTION] RWKV-7
+  claims state-tracking expressiveness exceeding Transformers under
+  standard complexity conjectures; independent verification on formal-
+  language benchmarks is sparse.
+- **Tokenizer-free.** BLT (Meta 2024) matched LLaMA-3 quality at 50%
+  fewer inference FLOPs at 8B scale `[blt2024 §1]`. Whether tokenizer-
+  free scales to 70B+ is open. See
+  `kb/notes/architecture/tokenization.md`.
+- **Native multimodal.** Llama 4, InternVL3, and Gemini 2.5 train
+  jointly on image+text from scratch rather than vision-encoder +
+  adapter `[meta-llama4 §2; internvl3-2025 §3.1]`. The architectural
+  shift is from "LLM with grafted vision" to "LLM with first-class
+  image tokens." See `kb/notes/architecture/multimodal-llm-extensions.md`.
+- **Reasoning architectures.** DeepSeek-R1 and Qwen3 expose a
+  thinking-mode toggle that switches between long-CoT and direct
+  generation `[deepseek-r1 §2; qwen3 §3.2]`. Whether this requires
+  architectural support beyond training-time changes is contested.
+  See `kb/notes/architecture/reasoning-architectures.md`.
+- **Architecture opacity at the frontier.** Anthropic (Claude 3.5/3.7/
+  4.x), OpenAI (GPT-4o/o1/o3/o4/GPT-5), and xAI (Grok 3+) have not
+  published architecture details. Inference-stack reverse-engineering
+  is the only public information path.
 
 
 ## evaluation
@@ -432,6 +593,32 @@ proposal). Medusa with typical acceptance is *not*. Papers/blogs
 sometimes conflate these. The distinction matters for any deployment
 that cares about reproducible sampling.
 
+### inference/structured-output
+
+_Source: `kb/notes/inference/structured-output.md`_
+
+[CONTRADICTION] **Whether constrained decoding harms model quality.**
+Two views in 2024–25 literature:
+- **Helpful**: forcing JSON validity prevents downstream parsing
+  errors; downstream task scores improve `[FORUM-SIGNAL: 2024 outline
+  blog posts]`.
+- **Harmful**: constraining the model can *suppress* the most
+  semantically appropriate token if it is unfortunately also the most
+  syntactically invalid; reasoning quality drops on free-form math
+  benchmarks `[FORUM-SIGNAL: arXiv:2408.02442 'JSON mode harms
+  reasoning']`.
+
+Logit-bias is a probabilistic constraint (allows occasional
+violations); FSM-constrained is an exact constraint (zero violations).
+[CONTRADICTION] OpenAI's `json_schema` response format claims exact
+guarantees in docs but reportedly has occasional violations in
+practice `[FORUM-SIGNAL: 2025 community reports]`. The gap is
+between the theoretical guarantee and the implementation; full
+audit-level exactness on long deeply-nested schemas remains
+engineering-fragile.
+
+### 5.4 [CONTRADICTION] Does constrained decoding hurt reasoning?
+
 
 ## interpretability
 
@@ -504,6 +691,55 @@ _Source: `kb/notes/interpretability/circuit-tracing.md`_
   claims depends on circuit-tracing fidelity, which depends on
   transcoder canonicality, which is unresolved.
 
+### interpretability/lens-techniques
+
+_Source: `kb/notes/interpretability/lens-techniques.md`_
+
+- **Tuned lenses for modern open-source frontier models.** Belrose
+  et al. ship lenses for Pythia, GPT-Neo, GPT-NeoX-20B, OPT, BLOOM,
+  GPT-2, and (via lens-transfer) Vicuna-13B. The 2025-2026
+  generation (Llama 3 / 4, Qwen-2.5 / 3, DeepSeek-V3, Gemma 3) is
+  largely uncovered by published lenses as of writing. The
+  `logitlens4llms-2025` extension targets Qwen-2.5 / Llama-3.1; broader
+  open lenses are an outstanding need.
+- **[CONTRADICTION] Layer-of-prediction vs. layer-of-decision.**
+  Halawi et al. 2023 argue that on certain tasks, predictions
+  extracted from earlier layers are **more robust** to incorrect
+  demonstrations than the final layer. Belrose §5.2 reproduces this
+  on three models (BLOOM 560M, Neo 1.3B, Neo 2.7B), but flags that
+  *without* peaking at ground truth labels, choosing the right layer
+  is hard `[belrose2023-tuned-lens §5.2;
+  kb/excerpts/belrose2023-tuned-lens#sec-5]`. So the early-layer
+  prediction is sometimes more reliable than the final, but the
+  lens-user has no a-priori way to know that.
+- **Lens-based interventions vs. activation patching.** Causal Basis
+  Extraction is a lens-derived ablation method. Its relationship to
+  full activation patching
+  (`kb/notes/interpretability/activation-patching.md`) is partly
+  formal (CBE finds influential directions; patching tests
+  influential states) and partly empirical (Spearman $\rho = 0.89$
+  between the two on Pythia 410M is suggestive but not conclusive).
+  Whether CBE recovers the "right" causal directions on harder tasks
+  (multi-token answers, multi-step reasoning) is open.
+- **Lens with non-canonical unembeddings.** The lens framework
+  assumes a clean residual-stream-with-final-unembedding architecture.
+  Modern instructed models with auxiliary heads (reward heads, value
+  heads) or modified output projections (BLT, infini-attention)
+  complicate the picture. No published lens for byte-level
+  transformers (BLT, Pagnoni et al. 2024) exists.
+- **Cross-modal / vision-transformer extension.** "Diffusion Steering
+  Lens" (2025, arXiv 2504.13763) extends the lens framework to
+  diffusion / vision transformers `[FORUM-SIGNAL]`. Whether the
+  iterative-inference structure that makes lenses work on
+  language-LLMs also holds for diffusion-style architectures is an
+  active question.
+- **The post-RoPE / MLA architectural shift.** As MoE / MLA / NSA
+  architectures spread (DeepSeek-V2/V3, Llama 4), the residual
+  stream is still well-defined but the layer structure is more
+  irregular (mixture-of-experts at FFN, latent compression at K/V).
+  Whether lens techniques extend cleanly to these is partially
+  empirical and not yet documented in print.
+
 ### interpretability/mechanistic-interpretability
 
 _Source: `kb/notes/interpretability/mechanistic-interpretability.md`_
@@ -538,6 +774,59 @@ _Source: `kb/notes/interpretability/mechanistic-interpretability.md`_
   superposition hypothesis explain *capacity* (why SAEs work in
   principle); they do not explain *mechanism* (why the IOI circuit
   takes the specific 7-class shape it does).
+
+### interpretability/probing
+
+_Source: `kb/notes/interpretability/probing.md`_
+
+[CONTRADICTION] Whether the **same direction** that probing finds is
+the *direction the model uses*. Marks & Tegmark §3 argue yes (their
+ablation experiments work). But Marks & Tegmark §4 also document
+**stark misalignment** between truth directions for different
+datasets:
+
+- **Do probes and SAE features find the same directions?**
+  Both methodologies produce a vector
+  $\mathbf{d} \in \mathbb{R}^d$ for a "concept". Are the truth
+  direction (Marks & Tegmark) and the truth-related SAE latent
+  (Templeton 2024) the *same* vector, up to scale? As of 2026 this
+  question is informally addressed in Neuronpedia-style writeups but
+  not, to our knowledge, systematically measured at scale. The
+  cosine similarity between probe directions and SAE latents on
+  matched concepts is a missing benchmark.
+  See `kb/notes/interpretability/sparse-autoencoders.md`.
+- **[CONTRADICTION] Generalization of mass-mean probing to non-binary
+  properties.** Truth (binary) admits a linear separating direction.
+  Multi-class properties ("the answer is in {Paris, London, Madrid,
+  Berlin}") do not have a single mass-mean direction; whether
+  multi-class linear probes recover causally-implicated subspaces
+  the way mass-mean does for binary is unresolved.
+- **Probing for safety-relevant properties.** Behavioral probes for
+  deception, refusal-circumvention, sycophancy, and scheming
+  (`kb/notes/alignment/safety-evaluation.md`,
+  `kb/notes/alignment/sycophancy.md`) are increasingly load-bearing
+  in alignment evaluation. The question of whether such probes
+  generalize from in-distribution evaluation prompts to adversarial
+  out-of-distribution behavior is **the** open question for
+  alignment uses of probing.
+- **Probe-derived steering in production.** Activation-steering at
+  inference time (representation engineering, Vennemeyer 2025) is
+  cheap and avoids retraining; whether it composes with RLHF /
+  RLAIF post-training in a stable way is being actively studied.
+  Side-effect risk: steering one direction may drag along
+  unrelated directions in the residual stream's covariance subspace.
+- **Probing across model families.** A truth direction in
+  LLaMA-2-13B and a truth direction in Qwen-2.5-14B almost certainly
+  do not have the same coordinates (different bases). Cross-family
+  probe transfer is not generically supported. Methodological
+  question: is there a "canonical truth direction" up to model-
+  specific basis, or are truth directions fundamentally
+  model-dependent?
+- **Probe scaling laws.** Linear-probe accuracy for fixed properties
+  appears to scale with model size — but the scaling exponent is not
+  rigorously characterized. A scaling-law-style study of
+  $\text{ProbeAcc}(N, D)$ for canonical properties (truth,
+  sentiment, syntactic depth) across model scales is a missing piece.
 
 ### interpretability/sparse-autoencoders
 
@@ -625,6 +914,28 @@ _Source: `kb/notes/post-training/dpo-and-offline.md`_
 
 ### 5.1 [CONTRADICTION] DPO at frontier scale: as good as PPO, or just cheaper?
 
+### post-training/rlaif-and-constitutional
+
+_Source: `kb/notes/post-training/rlaif-and-constitutional.md`_
+
+[CONTRADICTION] **Whether CAI's non-evasion behavior is genuine
+internalization or surface mimicry.** The optimistic reading: the
+model has internalized constitutional principles. The skeptical
+reading: the model learned to *output text shaped like
+constitutional reasoning* without internalizing the principles. The
+two are behaviorally indistinguishable on standard evaluations; only
+held-out adversarial probes can separate them. Active in 2025–26.
+
+### 5.1 [CONTRADICTION] CAI effectiveness at small scale
+
+### 5.4 [CONTRADICTION] CAI vs sycophancy
+
+`[CONTRADICTION]` Open-source CAI reproductions (e.g., the C3AI work
+itself) report less consistent results than Anthropic's headline.
+Whether this is a model-scale issue (the reproductions are at smaller
+scale) or a recipe-detail issue (Anthropic's exact prompts are
+proprietary) is open.
+
 ### post-training/rlhf
 
 _Source: `kb/notes/post-training/rlhf.md`_
@@ -663,6 +974,14 @@ than "creation of new capability."
 
 The headline `[CONTRADICTION]` of the field
 `[rlvr-limits-2025; arXiv:2504.13837]`:
+
+### post-training/sft
+
+_Source: `kb/notes/post-training/sft.md`_
+
+### 5.1 [CONTRADICTION] How much SFT data is enough?
+
+### 5.3 [CONTRADICTION] Reasoning-distillation: is RL necessary for novel reasoning?
 
 
 ## reasoning
@@ -1010,6 +1329,20 @@ contested as of 2026.
 
 ## training
 
+### training/adaptation-and-merging
+
+_Source: `kb/notes/training/adaptation-and-merging.md`_
+
+[CONTRADICTION] **Whether merged models exceed any single ingredient.**
+Many merge papers report merged > best ingredient; many real-world
+merges report merged < best ingredient. The discrepancy is partly
+measurement: merge wins are most consistent on multi-task evaluations
+where each ingredient was specialized to a subset of tasks; on
+single-task evaluations the best specialist wins. Treat "merged
+beats best ingredient" as a *task-set-conditional* claim.
+
+### 5.3 [CONTRADICTION] LoRA quality at scale
+
 ### training/distributed-training
 
 _Source: `kb/notes/training/distributed-training.md`_
@@ -1023,6 +1356,21 @@ on every MoE layer; DeepSeek picked the second because their MoE was
 already paying for it. The general lesson is that "which parallelism is
 best" is a function of model architecture, not a universal answer
 `[deepseek-v3 §3.2; torchtitan2024 §2.1.3]`.
+
+### training/mixed-precision-and-stability
+
+_Source: `kb/notes/training/mixed-precision-and-stability.md`_
+
+[CONTRADICTION] **Whether NVFP4 (FP4) is production-stable for full
+pre-training**. As of 2026-05 several Blackwell-deploying vendors are
+running FP4 pilots; DeepSeek and Anthropic have not publicly confirmed
+FP4 pre-training. The scaling-laws-for-precision result
+`[scaling-laws-precision-2024]` predicts effective-parameter loss
+becomes substantial below ~7 bits, but the prediction is fitted on
+small models. Treat FP4 frontier-scale stability as open until a
+post-hoc tech report appears.
+
+### 5.3 [CONTRADICTION] Empirical loss-spike taxonomy
 
 ### training/optimization
 

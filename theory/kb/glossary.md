@@ -1069,3 +1069,257 @@ Each term gets a 1-3 sentence definition + a paper-key citation.
 - **PEFT (Parameter-Efficient Fine-Tuning)** — Family of fine-tuning methods that update only a small fraction of parameters: LoRA, DoRA, IA3, prefix-tuning. Pending excerpts.
 - **Model merging** — Combining trained models via parameter-level operations (averaging, interpolation, sign-resolution, sparsification). Subtypes include weight averaging (Model Soups), task arithmetic, TIES, DARE, evolutionary merging. Pending excerpts.
 - **Linear mode connectivity** — The empirical finding that fine-tunes of a shared base land in a connected loss basin: averaging their weights gives a model with loss similar to the endpoints. The leading explanation for why merging works at all. (Frankle, Dziugaite et al. 2020 — pending excerpt.)
+
+
+## Phase 2 stub-fill additions
+
+_Glossary fragments produced 2026-05-04 by the two stub-fill subagents (training+post+inference; interpretability+evaluation+alignment). The third (architecture) batch stalled before its glossary fragment was written; arch terms remain inline in their respective notes._
+
+### training+post-training+inference
+
+## Mixed precision and training stability
+
+- **Master weights** — A high-precision (FP32) copy of the model
+  parameters maintained alongside a low-precision (FP16/BF16/FP8)
+  working copy used in the forward/backward pass. Optimizer updates
+  are applied to the master copy and cast down to the working copy.
+  `[micikevicius2017-mixed-precision §2;
+  kb/excerpts/micikevicius2017-mixed-precision#sec-2]`.
+- **Loss scaling** — Multiplying the loss by a scale factor $S$
+  before backprop, then dividing the resulting gradients by $S$
+  before the master-weight update. Shifts the gradient distribution
+  upward in the FP16 representable range to avoid underflow.
+  `[micikevicius2017-mixed-precision §3;
+  kb/excerpts/micikevicius2017-mixed-precision#sec-3]`.
+- **BF16 (bfloat16)** — A 16-bit floating-point format with 8
+  exponent bits and 7 mantissa bits. Same dynamic range as FP32;
+  half the precision of FP16. The universal LLM pre-training default
+  by 2023. `[kalamkar2019-bfloat16 §2;
+  kb/excerpts/kalamkar2019-bfloat16#sec-2]`.
+- **FP8 E4M3 / E5M2** — 8-bit float formats with 4-bit
+  exponent + 3-bit mantissa (E4M3, range $\pm 448$) or 5-bit
+  exponent + 2-bit mantissa (E5M2, larger range, lower precision).
+  NVIDIA's hybrid recipe uses E4M3 forward and E5M2 backward;
+  DeepSeek-V3 uses E4M3 everywhere with fine-grained tile scaling.
+  `[deepseek-v3 §3.3.2;
+  kb/excerpts/deepseek-v3-training#sec-3-3-2-mantissa]`.
+- **Fine-grained quantization (tile/block scaling)** — Per-group
+  scaling factors along inner dimensions of a GEMM, allowing each
+  tile/block to choose its own scale and absorb local outliers.
+  DeepSeek-V3's 1×128 (activations) and 128×128 (weights) scheme.
+  `[deepseek-v3 §3.3.2;
+  kb/excerpts/deepseek-v3-training#sec-3-3-2-finegrained]`.
+- **Promotion to CUDA cores at $N_C$** — Periodic (every $N_C = 128$
+  elements) copy of FP8 Tensor Core partial sums to FP32 registers
+  on CUDA cores, where full-precision accumulation is performed.
+  Recovers accumulation precision lost to Tensor Core's 14-bit
+  internal accumulator. `[deepseek-v3 §3.3.2;
+  kb/excerpts/deepseek-v3-training#sec-3-3-2-accum]`.
+- **NVFP4** — 4-bit floating-point format (E2M1) with native
+  hardware MXScale (32-element per-block scaling) on Blackwell-class
+  GPUs. Production-stability for full pre-training is open as of
+  2026-05.
+- **Loss spike** — A sudden upward jump in pre-training loss, often
+  caused by gradient-norm explosion, attention-logit divergence,
+  embedding-norm growth, or FP8 underflow. May or may not recover.
+  DeepSeek-V3 reports zero irrecoverable spikes over 14.8T tokens
+  `[deepseek-v3 abstract;
+  kb/excerpts/deepseek-v3-training#abstract]`.
+- **QK-LayerNorm / QK-clip** — Stability machinery to prevent
+  attention-logit blow-up: normalize $Q$ and $K$ before the dot
+  product (QK-LayerNorm, Henry et al. 2020) or clamp $QK^\top$ before
+  softmax (QK-clip).
+
+## Adaptation, PEFT, and merging
+
+- **LoRA (Low-Rank Adaptation)** — Parameterizes a frozen weight
+  matrix's update as a rank-$r$ product $BA$ with $r \ll
+  \min(d_{\text{in}}, d_{\text{out}})$; only $A, B$ are trained. Merges
+  to a single weight at inference time with no latency cost.
+  `[hu2021-lora §3, §4; kb/excerpts/hu2021-lora#sec-3]`.
+- **QLoRA** — LoRA over a 4-bit-quantized (NF4) base model. Adds
+  double-quantization and paged optimizers. 65B fine-tune on a single
+  48GB GPU. `[dettmers2023-qlora §3;
+  kb/excerpts/dettmers2023-qlora#sec-3-nf4]`.
+- **NF4 (NormalFloat-4)** — 4-bit quantization with quantile-spaced
+  bin centers matched to a standard normal distribution. Information-
+  theoretically near-optimal for pretrained weights, which are
+  empirically near-Gaussian per block.
+  `[dettmers2023-qlora §3.1; kb/excerpts/dettmers2023-qlora#sec-3-nf4]`.
+- **DoRA (Direction-Then-Magnitude LoRA)** — LoRA variant decomposing
+  $W$ into magnitude and direction; LoRA the direction only. Cited
+  via Liu et al. 2024. Often outperforms LoRA at similar parameter
+  count.
+- **Task vector** — A direction in weight space defined as
+  $\tau_T = \theta_T - \theta_0$ where $\theta_0$ is a pretrained base
+  and $\theta_T$ is the same base fine-tuned on task $T$. Arithmetic
+  on task vectors (addition, negation, combination) steers model
+  behavior. `[ilharco2022-task-vectors §2;
+  kb/excerpts/ilharco2022-task-vectors#sec-2]`.
+- **Model Soup** — A model produced by averaging the weights of $K$
+  fine-tunes from a shared base. *Uniform soup* averages all; *greedy
+  soup* iteratively includes only fine-tunes that don't decrease
+  validation accuracy. `[wortsman2022-model-soups §3;
+  kb/excerpts/wortsman2022-model-soups#sec-3]`.
+- **TIES-Merging (Trim-Elect-Sign-Disjoint-Merge)** — Three-step model
+  merge: trim each task vector to top-$k\%$, elect a sign per
+  coordinate by magnitude-weighted majority, disjoint-merge the
+  surviving same-sign entries. `[yadav2023-ties-merging §3;
+  kb/excerpts/yadav2023-ties-merging#sec-3]`.
+- **DARE (Drop And REscale)** — Bernoulli-drop $1-p$ of task-vector
+  entries and rescale survivors by $1/p$ before TIES or Soup merging.
+  Yu et al. 2024.
+- **MergeKit** — Open-source toolkit for model merging supporting
+  Linear / SLERP / TIES / DARE / passthrough merges with per-tensor
+  configuration. `[mergekit2024]`.
+- **Linear mode connectivity (LMC)** — The empirical property that
+  fine-tunes of a shared base land in a connected loss basin: the
+  path $\theta_0 + t(\theta_f - \theta_0)$, $t \in [0,1]$, stays in
+  low-loss territory. Underpins why model merging works.
+- **Frankenmerge / passthrough merge** — Layer-wise interleaving of
+  layers from two or more models (e.g., copy layers 0–15 from model A
+  and 16–31 from model B). Widely used in OSS practice; limited
+  primary literature. [FORUM-SIGNAL].
+
+## SFT and post-training data
+
+- **Loss masking (in SFT)** — Setting per-token loss weight to 0 on
+  prompt tokens and 1 on response tokens, so only response tokens
+  contribute gradient. The standard convention; multi-turn variants
+  train on all assistant turns or only the last. `[ouyang2022-
+  instructgpt §3; kb/excerpts/ouyang2022-instructgpt#sec-3]`.
+- **Rejection sampling (in post-training)** — Sample $N$ responses
+  per prompt from the current policy, score with a reward model, keep
+  the top-$k$, and SFT on those. The Llama-3 quality gate before each
+  preference round. `[meta-llama3]`.
+- **MAGPIE (alignment data synthesis from scratch)** — Procedure
+  exploiting that an aligned LM, prompted with only its instruction-
+  template prefix (no question), will fabricate the question and then
+  answer it. Produces $(x,y)$ SFT pairs at zero human cost.
+  `[magpie-2024]`.
+- **Reasoning-distillation SFT** — Fine-tuning a small base model on
+  $(x,y)$ traces sampled from a strong RL-trained reasoner (e.g.,
+  R1-Distill: 800K samples from DeepSeek-R1; s1: 1K curated traces
+  from Gemini Flash Thinking). Recovers most reasoning capability
+  with no RL. `[deepseek-r1; s1-2025]`.
+- **Thinking / non-thinking mode SFT** — Training a model to emit
+  `<think>...</think>` blocks gated by a system prompt, switching
+  reasoning behavior on/off. Qwen 3's 4-stage post-training innovation.
+  `[qwen3]`.
+- **FLAN (Finetuned Language Net)** — Original instruction-tuning
+  recipe: ~1.8K NLP tasks reformatted as natural-language
+  instructions, used as an SFT mixture. The pre-RLHF post-training
+  baseline. `[wei2021-flan]`. FLAN-T5 `[chung2022-flan-t5]` and the
+  FLAN Collection (Longpre et al. 2023, arXiv:2301.13688) extend it.
+
+## RLAIF and Constitutional AI
+
+- **RLAIF (Reinforcement Learning from AI Feedback)** — RLHF pipeline
+  where preference labels come from an AI feedback model rather than
+  human labelers. The reward model is trained on AI-generated
+  preferences via standard Bradley–Terry. `[bai2022-cai §4;
+  kb/excerpts/bai2022-cai#sec-4]`.
+- **Constitution (in CAI)** — A list of natural-language principles
+  ("the assistant should not...") used to condition the AI feedback
+  model's preferences. The only human-authored alignment input in
+  Constitutional AI. `[bai2022-cai §3;
+  kb/excerpts/bai2022-cai#sec-3]`.
+- **SL-CAI** — Stage 1 of Constitutional AI: sample a response from
+  a helpful-only model, critique under a randomly-chosen principle,
+  revise, and SFT on the revisions. Produces $\pi^{\mathrm{SL-CAI}}$.
+  `[bai2022-cai §3; kb/excerpts/bai2022-cai#sec-3]`.
+- **RL-CAI** — Stage 2 of Constitutional AI: sample response pairs
+  from $\pi^{\mathrm{SL-CAI}}$, have an AI judge choose under a
+  principle, train a reward model on AI preferences, run PPO with KL
+  anchor. `[bai2022-cai §4; kb/excerpts/bai2022-cai#sec-4]`.
+- **Non-evasion (CAI behavioral signature)** — A model trained with
+  CAI engages with harmful prompts by stating its objections, rather
+  than refusing flatly. The defining behavioral signature
+  distinguishing CAI from helpful-only RLHF (which complies) and from
+  naive safety RLHF (which refuses without explanation).
+  `[bai2022-cai §6; kb/excerpts/bai2022-cai#sec-6]`.
+- **R-CAI (Reverse CAI)** — Inverts the constitution and applies
+  probability-clamped RLAIF to generate controlled adversarial / toxic
+  data. `[r-cai-2026]`.
+- **Recursive RLAIF** — Using a previously-trained RLAIF model as the
+  feedback model for the next round of RLAIF. Risks model collapse in
+  the constitution direction.
+
+## Structured output / constrained decoding
+
+- **Constrained decoding** — Generation procedure that, at each step,
+  masks the logits to allow only tokens consistent with a target
+  grammar (regex, JSON schema, GBNF, CFG). The sampling distribution
+  is restricted to $\mathcal{V}_{\text{allowed}}(s_t)$, the FSM's
+  allowed-token set in the current state. `[willard2023-outlines §3;
+  kb/excerpts/willard2023-outlines#sec-3]`.
+- **FSM-vocabulary index (Willard–Louf)** — Precomputed mapping from
+  each FSM state to the set of allowed vocabulary tokens. Built once
+  per grammar; reduces per-step constraint check from $O(V)$ to
+  amortized $O(1)$. `[willard2023-outlines §3;
+  kb/excerpts/willard2023-outlines#sec-3]`.
+- **Context-independent vs context-dependent tokens** — Partition of
+  the vocabulary by whether allowed/disallowed status depends only on
+  the parser state (context-independent: precomputable bitmask) or
+  also on stack contents (context-dependent: runtime check). XGrammar
+  reports ~99% context-independent for typical JSON schemas.
+  `[xgrammar2024 §3; kb/excerpts/xgrammar2024#sec-3]`.
+- **Compressed FSM (SGLang)** — FSM transformation that merges chains
+  of singular-transition edges into single edges, allowing multi-token
+  decoding when the grammar deterministically forces a literal
+  substring (e.g., `{"summary": "` in a JSON schema).
+  `[zheng2024-sglang §4; kb/excerpts/zheng2024-sglang#sec-4]`.
+- **GBNF (GGML BNF)** — llama.cpp's grammar specification format.
+  An extended BNF used to define constrained-decoding grammars.
+- **JSON mode / structured output API** — Vendor-facing API features
+  (OpenAI `response_format`, Anthropic tool-use schemas, etc.) that
+  guarantee output conforms to a schema. Implemented underneath via
+  FSM-constrained decoding. Exact-conformance guarantees depend on
+  whether the backend uses true FSM or only logit-bias.
+- **JSONSchemaBench** — Benchmark of 10K real-world JSON schemas
+  used to compare constrained-decoding engines. `[FORUM-SIGNAL:
+  arXiv:2501.10868]`.
+
+
+### interpretability+evaluation+alignment
+
+## Probing
+
+- **Probe** — A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology `[alain-bengio-2017 §1]`.
+- **Linear probe** — Probe of the form $g(\mathbf{h}) = \sigma(\mathbf{w}^\top \mathbf{h} + b)$ with $\mathbf{w} \in \mathbb{R}^d$. Distinguished from non-linear / MLP probes that can suffer from "probe leakage" (learning the property from low-information features) `[alain-bengio-2017]`.
+- **Structural probe** — Hewitt & Manning's geometric probe that predicts higher-arity structure (e.g., parse-tree distance) by learning a linear transformation $\mathbf{B} \in \mathbb{R}^{k \times d}$ such that $\|\mathbf{B}(\mathbf{h}_i - \mathbf{h}_j)\|_2^2 \approx d_T(w_i, w_j)$ for tokens $i, j$ `[hewitt2019-structural-probe]`.
+- **Mass-mean probe / difference-in-means probe** — Parameter-free probe that defines the property direction as $\mathbf{d}_{\mathrm{MM}} = \boldsymbol{\mu}_+ - \boldsymbol{\mu}_-$ (per-class mean difference). Closed-form, no optimization required. Marks & Tegmark 2023 argue the directions found are "more causally implicated in model outputs" than logistic-regression probe directions on the same data `[marks-tegmark-2023-truth §abstract]`.
+- **Probing methodology critique** — The argument (consolidated in Belinkov 2022) that high-accuracy probes are correlational and can read properties the model represents but does not *use*. Three named confounders: probe-expressivity, spurious-correlation, vestigial-information `[belinkov2022-probing-survey §abstract]`.
+- **Causal probing** — The 2023+ pattern of pairing probes with activation interventions (direction ablation, addition, steering) to test whether the probe's direction is *causally* used by the model, not merely correlated with the property. Marks & Tegmark 2023 demonstrate this on a truth direction in LLaMA-2-13B that flips TRUE/FALSE prediction when ablated `[marks-tegmark-2023-truth §abstract]`.
+- **Direction ablation** — Causal-probing intervention that projects a residual-stream activation onto the orthogonal complement of a probe direction $\hat{\mathbf{d}}$: $\mathbf{h} \mapsto \mathbf{h} - (\mathbf{h}^\top \hat{\mathbf{d}})\hat{\mathbf{d}}$, then runs the rest of the model. A behavior change validates causal use of $\hat{\mathbf{d}}$ `[marks-tegmark-2023-truth §abstract]`.
+- **Activation steering** — Inference-time intervention that adds $\alpha \hat{\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\alpha < 0$, suppress) a probed direction. The Representation Engineering / Vennemeyer 2025 line `[vennemeyer2025-sycophancy-not-one-thing FORUM-SIGNAL]`.
+- **Truth direction** — A direction in residual-stream space whose projection sign correlates with (and, validated by Marks & Tegmark 2023, causally controls) the model's TRUE/FALSE prediction on factual statements. Localizes around layer 12-15 of LLaMA-2-13B at end-of-statement punctuation tokens `[marks-tegmark-2023-truth §3]`.
+- **Summarization behavior** — The empirical pattern (Tigges et al. 2023, Marks & Tegmark 2023) that information about a clause is encoded over the clause-ending punctuation token, making period-position activations the canonical probing target for sentence-level properties `[marks-tegmark-2023-truth §3]`.
+
+## Knowledge benchmarks
+
+- **MMLU (Massive Multitask Language Understanding)** — 57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021. 15,908 questions sourced from public exam banks (AP, GRE, MCAT, professional licensing). Foundational for the post-2021 LLM eval era; saturated at >90% on frontier models as of 2026 `[hendrycks2021-mmlu §abstract]`.
+- **MMLU-Redux** — Polo et al. 2024 audit of MMLU finding 6.49% baseline error rate, with the Virology subset reaching 57% errors. Per-question corrections published; methodology audit, not a new benchmark `[mmlu-redux-2024 §abstract]`.
+- **MMLU-Pro** — 10-way MCQ, reasoning-augmented successor to MMLU. 12,032 items, 16-33 percentage point drop in headline score relative to MMLU at launch, 2× lower prompt-format sensitivity `[wang2024-mmlu-pro §abstract]`.
+- **GPQA Diamond** — 198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web access got it wrong. The "Google-proof" property is operationalized via the 34% non-expert-with-web baseline. Saturated at frontier as of 2026 (>90%) `[rein2023-gpqa §abstract]`.
+- **Answer-letter prior** — The training-data-induced bias that pre-trained LMs do not have uniform priors over A/B/C/D in MCQ items. Letter bias can favor one option by several percentage points; 10-way MCQ (MMLU-Pro) dilutes this effect `[wang2024-mmlu-pro §sec-delta]`.
+- **CoT-vs-direct gap (as a knowledge/reasoning diagnostic)** — On a knowledge-dominant benchmark (MMLU), Chain-of-Thought scoring gives roughly the same result as direct-answer scoring; on a reasoning-dominant benchmark (MMLU-Pro), CoT improves the score measurably. The gap is a diagnostic for whether a benchmark requires multi-step inference `[wang2024-mmlu-pro §sec-cot]`.
+- **Knowledge-vs-reasoning hybrid** — A benchmark where items combine factual retrieval and multi-step reasoning. MMLU-Pro, GPQA, HLE all qualify; the post-MMLU eval landscape has largely abandoned pure-knowledge benchmarks in favor of hybrids `[wang2024-mmlu-pro; rein2023-gpqa; phan2025-hle]`.
+
+## Safety evaluation
+
+- **ASR (Attack Success Rate)** — Headline metric in adversarial-robustness benchmarks: fraction of (behavior, attack) pairs for which the model produces an output the judge rates harmful. Not directly comparable across papers unless the judge, behaviors, and attack family match `[chao2024-jailbreakbench §abstract]`.
+- **HarmBench** — Mazeika et al. 2024 standardized red-team evaluation framework: 510 behaviors in four functional categories, 18 attack methods, 33 target LLMs/defenses. Used by AISI for pre-deployment evals `[harmbench2024 §abstract]`.
+- **JailbreakBench** — Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifacts (the actual successful prompts), standardized LLM-as-judge, public leaderboard. NeurIPS 2024 D&B `[chao2024-jailbreakbench §abstract]`.
+- **Crescendo (multi-turn jailbreak)** — Russinovich et al. 2024 attack: gradually escalate over multiple benign-seeming turns, exploiting the LM's tendency to over-weight its own prior committed responses. Achieves 29-71% ASR uplift over single-turn baselines on AdvBench against GPT-4 / Gemini-Pro. Documents that single-turn evals systematically underestimate the attack surface `[russinovich2024-crescendo §abstract]`.
+- **Crescendomation** — The automated implementation of Crescendo: an attacker LLM generates the escalation chain. The 29-71% ASR uplift number refers to Crescendomation specifically `[russinovich2024-crescendo §sec-asr-uplift]`.
+- **Competing objectives (jailbreak failure mode)** — Wei, Haghtalab, Steinhardt 2023: when a model's capability training and safety training pull in different directions, attacks that invoke the capability override the safety training. One of two named failure modes `[wei2023-jailbroken §abstract]`.
+- **Mismatched generalization (jailbreak failure mode)** — Wei et al. 2023: safety training fails to generalize to a domain (Base64, low-resource language, role-play) where the model has capabilities. The other named failure mode `[wei2023-jailbroken §abstract]`.
+- **Safety-capability parity** — Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range. Partial-domain safety training will be defeated by attacks that target the capability/safety gap `[wei2023-jailbroken §abstract]`.
+- **ASL (AI Safety Level)** — Anthropic's Responsible Scaling Policy tier framework. ASL-1 (low risk, no autonomy) → ASL-2 (current frontier baseline) → ASL-3 (substantially elevated risk; specific deployment controls required) → ASL-4 (autonomous AI risk; not yet deployed). Each tier specifies capability-evaluation triggers and security/containment commitments `[anthropic-rsp-2024]`.
+- **Task-horizon metric (METR)** — Capability-evaluation metric framing model performance as the human-time-to-complete distribution at which the model succeeds at >50%. Becoming the field's lingua franca for capability quantification across labs and external evaluators `[metr-autonomy-2024]`.
+- **Dangerous-capability evaluation** — Pre-deployment eval that tests whether a model can autonomously carry out a task whose successful completion would constitute a threat (cyber CTFs, autonomous replication, biology / CBRN tasks). Inverts the usual "model refuses harm" frame to "model could *do* harm if it tried" `[metr-autonomy-2024; cybench2024 FORUM-SIGNAL]`.
+- **Judge-LLM contamination** — Failure mode in safety evals: when the judge classifier is from the same model family as the model being evaluated, it may systematically underrate harmful generations from that family. Cross-judge agreement testing is the partial mitigation `[chao2024-jailbreakbench §abstract]`.
+- **HarmBench-Judge** — The fine-tuned classifier (Llama-2-13B family, fine-tuned on labeled harmful/non-harmful generations) shipped with HarmBench as the standardized judge for the 510 behaviors `[harmbench2024 §sec-structure]`.
+- **Honeypot evaluation** — Eval protocol that presents the model with a deployment-realistic context (or, conversely, a clearly-evaluation context) to test whether eval scores are stable across the eval-vs-deployment boundary. Motivated by the Apollo / scheming finding that models may behave differently when they suspect they are being evaluated `[meinke2024-apollo-scheming]`.
+

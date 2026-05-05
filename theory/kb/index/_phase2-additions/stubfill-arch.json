@@ -1,0 +1,77 @@
+{
+  "description": "Reconstructed JSON for the architecture stub-fill batch. The original subagent stalled after drafting all 7 notes but before writing this file; orchestrator derived the 5 missing paper-keys by auditing arch-note citations against papers.json and added existing-paper updates for keys whose excerpts_file the agent created on disk.",
+  "subagent": "stubfill-arch-2026-05-04 (orchestrator-reconstructed)",
+  "new_papers": [
+    {
+      "key": "alayrac2022-flamingo",
+      "title": "Flamingo: a Visual Language Model for Few-Shot Learning",
+      "authors": "Alayrac, Donahue, Luc, Miech, Barr, Hasson, Lenc, Mensch, Millican, Reynolds, Ring, Rutherford, Cabi, Han, Gong, Samangooei, Monteiro, Menick, Borgeaud, Brock, Nematzadeh, Sharifzadeh, Binkowski, Barreira, Vinyals, Zisserman, Simonyan",
+      "year": 2022,
+      "venue": "NeurIPS 2022",
+      "url": "https://arxiv.org/abs/2204.14198",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/alayrac2022-flamingo.md",
+      "notes_referenced_by": ["architecture/multimodal-llm-extensions"],
+      "topics": ["multimodal-llm-extensions"],
+      "category": "foundational",
+      "summary": "Flamingo: bridge a frozen vision encoder to a frozen LM via Perceiver Resampler + interleaved gated cross-attention layers; trained on interleaved image-text web data. Establishes the cross-attention-bridge architectural family for multimodal LLMs."
+    },
+    {
+      "key": "ba2016-layernorm",
+      "title": "Layer Normalization",
+      "authors": "Ba, Kiros, Hinton",
+      "year": 2016,
+      "venue": "arXiv:1607.06450",
+      "url": "https://arxiv.org/abs/1607.06450",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": ["architecture/normalization", "architecture/transformer-overview"],
+      "topics": ["normalization"],
+      "category": "foundational",
+      "summary": "LayerNorm: per-token normalization across the hidden dimension with learned gain and bias. The original normalization the canonical Transformer used; later largely superseded in LLMs by RMSNorm but the conceptual baseline."
+    },
+    {
+      "key": "gloeckle2024-mtp",
+      "title": "Better & Faster Large Language Models via Multi-token Prediction",
+      "authors": "Gloeckle, Idrissi, Roziere, Lopez-Paz, Synnaeve",
+      "year": 2024,
+      "venue": "ICML 2024",
+      "url": "https://arxiv.org/abs/2404.19737",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/gloeckle2024-mtp.md",
+      "notes_referenced_by": ["architecture/transformer-overview", "architecture/multi-token-prediction"],
+      "topics": ["multi-token-prediction"],
+      "category": "foundational",
+      "summary": "Trains an LM with N parallel output heads predicting the next 1..N tokens jointly. Improves sample efficiency at scale and provides a built-in self-speculative-decoding hook. Distinct from speculative decoding (which uses a separate draft model)."
+    },
+    {
+      "key": "kudo2018-sentencepiece",
+      "title": "SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing",
+      "authors": "Kudo, Richardson",
+      "year": 2018,
+      "venue": "EMNLP 2018 demos",
+      "url": "https://arxiv.org/abs/1808.06226",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/kudo2018-sentencepiece.md",
+      "notes_referenced_by": ["architecture/tokenization"],
+      "topics": ["tokenization"],
+      "category": "foundational",
+      "summary": "Whitespace-agnostic, byte-level-capable subword tokenizer + detokenizer. Treats raw text as a Unicode byte stream and learns BPE or unigram-LM subwords on it. Becomes the standard tokenizer scaffolding for multilingual LMs."
+    },
+    {
+      "key": "press2017-tied-embed",
+      "title": "Using the Output Embedding to Improve Language Models",
+      "authors": "Press, Wolf",
+      "year": 2017,
+      "venue": "EACL 2017",
+      "url": "https://arxiv.org/abs/1608.05859",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/press2017-tied-embed.md",
+      "notes_referenced_by": ["architecture/embeddings-and-tying"],
+      "topics": ["embeddings-and-tying"],
+      "category": "foundational",
+      "summary": "Tied weight scheme: share the input token embedding matrix with the output unembedding. Cuts ~30% of parameters in small LMs and improves PPL by serving as an implicit regularizer. The default in many decoder-only LMs through ~2023; modern frontier LMs sometimes untie."
+    }
+  ],
+  "existing_paper_updates": []
+}
