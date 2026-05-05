@@ -317,7 +317,8 @@
         "reasoning/chain-of-thought",
         "reasoning/inference-time-search",
         "scaling/inference-time-compute-scaling",
-        "training/synthetic-data-and-distillation"
+        "training/synthetic-data-and-distillation",
+        "post-training/sft"
       ],
       "topics": [
         "rlvr-and-grpo",
@@ -792,7 +793,8 @@
       "excerpts_file": "kb/excerpts/rafailov2023-dpo.md",
       "notes_referenced_by": [
         "post-training/dpo-and-offline",
-        "post-training/rlhf"
+        "post-training/rlhf",
+        "post-training/rlaif-and-constitutional"
       ],
       "topics": [
         "dpo-and-offline"
@@ -977,7 +979,8 @@
         "reasoning/test-time-compute",
         "reasoning/chain-of-thought",
         "reasoning/reasoning-training",
-        "scaling/inference-time-compute-scaling"
+        "scaling/inference-time-compute-scaling",
+        "post-training/sft"
       ],
       "topics": [
         "test-time-compute"
@@ -1018,7 +1021,8 @@
         "reasoning/inference-time-search",
         "reasoning/reasoning-training",
         "reasoning/process-supervision",
-        "scaling/inference-time-compute-scaling"
+        "scaling/inference-time-compute-scaling",
+        "post-training/sft"
       ],
       "topics": [
         "inference-time-search",
@@ -1059,7 +1063,8 @@
       "excerpts_file": "kb/excerpts/ma2024-bitnet.md",
       "notes_referenced_by": [
         "inference/quantization",
-        "scaling/scaling-frontier"
+        "scaling/scaling-frontier",
+        "training/mixed-precision-and-stability"
       ],
       "topics": [
         "quantization"
@@ -1111,7 +1116,7 @@
       "venue": "MLSys 2025",
       "url": "https://arxiv.org/abs/2411.15100",
       "local_file": null,
-      "excerpts_file": null,
+      "excerpts_file": "kb/excerpts/xgrammar2024.md",
       "notes_referenced_by": [
         "inference/structured-output"
       ],
@@ -1359,9 +1364,10 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2303.08112",
       "local_file": "sources/papers/belrose2023_tuned-lens.pdf",
-      "excerpts_file": null,
+      "excerpts_file": "kb/excerpts/belrose2023-tuned-lens.md",
       "notes_referenced_by": [
-        "interpretability/lens-techniques"
+        "interpretability/lens-techniques",
+        "interpretability/probing"
       ],
       "topics": [
         "lens-techniques"
@@ -1377,7 +1383,7 @@
       "venue": "ICLR",
       "url": "https://arxiv.org/abs/2009.03300",
       "local_file": null,
-      "excerpts_file": null,
+      "excerpts_file": "kb/excerpts/hendrycks2021-mmlu.md",
       "notes_referenced_by": [
         "evaluation/knowledge-benchmarks",
         "evaluation/reasoning-benchmarks",
@@ -1459,7 +1465,8 @@
       "excerpts_file": "kb/excerpts/phan2025-hle.md",
       "notes_referenced_by": [
         "evaluation/reasoning-benchmarks",
-        "evaluation/eval-methodology"
+        "evaluation/eval-methodology",
+        "evaluation/knowledge-benchmarks"
       ],
       "topics": [
         "knowledge-benchmarks"
@@ -1551,7 +1558,8 @@
       "local_file": null,
       "excerpts_file": "kb/excerpts/greenblatt2024-alignment-faking.md",
       "notes_referenced_by": [
-        "alignment/scheming-and-deceptive-alignment"
+        "alignment/scheming-and-deceptive-alignment",
+        "alignment/safety-evaluation"
       ],
       "topics": [
         "scheming-and-deceptive-alignment"
@@ -1569,7 +1577,8 @@
       "local_file": null,
       "excerpts_file": "kb/excerpts/meinke2024-apollo-scheming.md",
       "notes_referenced_by": [
-        "alignment/scheming-and-deceptive-alignment"
+        "alignment/scheming-and-deceptive-alignment",
+        "alignment/safety-evaluation"
       ],
       "topics": [
         "scheming-and-deceptive-alignment"
@@ -1585,7 +1594,7 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2402.04249",
       "local_file": null,
-      "excerpts_file": null,
+      "excerpts_file": "kb/excerpts/harmbench2024.md",
       "notes_referenced_by": [
         "alignment/safety-evaluation"
       ],
@@ -1627,7 +1636,8 @@
       "notes_referenced_by": [
         "scaling/chinchilla",
         "scaling/scaling-frontier",
-        "training/pre-training-data"
+        "training/pre-training-data",
+        "post-training/sft"
       ],
       "topics": [
         "pre-training-data"
@@ -1814,7 +1824,8 @@
       "local_file": null,
       "excerpts_file": "kb/excerpts/sharma2023-sycophancy.md",
       "notes_referenced_by": [
-        "alignment/sycophancy"
+        "alignment/sycophancy",
+        "post-training/rlaif-and-constitutional"
       ],
       "topics": [
         "sycophancy"
@@ -1832,7 +1843,8 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [
-        "alignment/sycophancy"
+        "alignment/sycophancy",
+        "interpretability/probing"
       ],
       "topics": [
         "sycophancy",
@@ -1921,7 +1933,7 @@
       "venue": "NeurIPS 2024 D&B",
       "url": "https://arxiv.org/abs/2404.01318",
       "local_file": null,
-      "excerpts_file": null,
+      "excerpts_file": "kb/excerpts/chao2024-jailbreakbench.md",
       "notes_referenced_by": [
         "alignment/safety-evaluation"
       ],
@@ -1939,7 +1951,7 @@
       "venue": "USENIX 2025",
       "url": "https://arxiv.org/abs/2404.01833",
       "local_file": null,
-      "excerpts_file": null,
+      "excerpts_file": "kb/excerpts/russinovich2024-crescendo.md",
       "notes_referenced_by": [
         "alignment/safety-evaluation"
       ],
@@ -1995,7 +2007,8 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [
-        "alignment/sycophancy"
+        "alignment/sycophancy",
+        "alignment/safety-evaluation"
       ],
       "topics": [
         "sycophancy",
@@ -2141,7 +2154,7 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2406.04127",
       "local_file": null,
-      "excerpts_file": null,
+      "excerpts_file": "kb/excerpts/mmlu-redux-2024.md",
       "notes_referenced_by": [
         "evaluation/eval-methodology",
         "evaluation/knowledge-benchmarks"
@@ -2183,7 +2196,8 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [
-        "evaluation/agentic-benchmarks"
+        "evaluation/agentic-benchmarks",
+        "alignment/safety-evaluation"
       ],
       "topics": [
         "agentic-benchmarks",
@@ -2259,7 +2273,8 @@
       "local_file": null,
       "excerpts_file": "kb/excerpts/frantar2022.md",
       "notes_referenced_by": [
-        "inference/quantization"
+        "inference/quantization",
+        "training/mixed-precision-and-stability"
       ],
       "topics": [
         "quantization"
@@ -2520,7 +2535,7 @@
       "venue": "arXiv",
       "url": "https://arxiv.org/abs/2310.06824",
       "local_file": "sources/papers/burns2023-truth-geometry.pdf",
-      "excerpts_file": null,
+      "excerpts_file": "kb/excerpts/marks-tegmark-2023-truth.md",
       "notes_referenced_by": [
         "interpretability/probing"
       ],
@@ -2561,7 +2576,8 @@
       "notes_referenced_by": [
         "post-training/rlhf",
         "post-training/dpo-and-offline",
-        "post-training/rlvr-and-grpo"
+        "post-training/rlvr-and-grpo",
+        "post-training/sft"
       ],
       "topics": [
         "rlhf",
@@ -2637,7 +2653,8 @@
       "local_file": null,
       "excerpts_file": null,
       "notes_referenced_by": [
-        "post-training/rlhf"
+        "post-training/rlhf",
+        "post-training/rlaif-and-constitutional"
       ],
       "topics": [
         "rlhf"
@@ -3163,6 +3180,435 @@
       ],
       "category": "frontier",
       "summary": "Empirical study of self-consistency tradeoffs across four frontier models (GPT-5.2, Claude Opus 4.5, Gemini-3-flash-preview, DeepSeek-v3.2) on 100 GSM8K problems. Finds inference scaling does not uniformly improve faithfulness: e.g., Claude Opus 4.5 accuracy 78% -> 74.3% while measured faithfulness rises 0.270 -> 0.891 at N=5. Self-consistency must be tested per-model before deployment."
+    },
+    {
+      "key": "chuang2023-dola",
+      "title": "DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language Models",
+      "authors": "Chuang, Xie, Luo, Kim, Glass, He",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2309.03883",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/lens-techniques"
+      ],
+      "topics": [
+        "lens-techniques",
+        "decoding",
+        "factuality"
+      ],
+      "category": "recent",
+      "summary": "Decoding-time application of the logit-lens framework: contrast logits at the final layer against logits at an adaptively-chosen earlier layer (chosen per-token by JS divergence) to amplify factual signal and suppress hallucination. Improves TruthfulQA and FACTOR scores on LLaMA-7B/13B/33B with negligible inference overhead. Note: PDF not yet downloaded; excerpts from arXiv abstract pending grounding via WebSearch."
+    },
+    {
+      "key": "alain-bengio-2017",
+      "title": "Understanding intermediate layers using linear classifier probes",
+      "authors": "Alain, Bengio",
+      "year": 2016,
+      "venue": "ICLR 2017 Workshop (arXiv 1610.01644)",
+      "url": "https://arxiv.org/abs/1610.01644",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/alain-bengio-2017.md",
+      "notes_referenced_by": [
+        "interpretability/probing"
+      ],
+      "topics": [
+        "probing",
+        "interpretability-methodology"
+      ],
+      "category": "foundational",
+      "summary": "Foundational paper for the linear-classifier-probe methodology. Introduces the probe definition: a linear classifier trained on frozen network activations to predict a property, with the network's parameters held fixed. Empirical finding: linear separability of features increases monotonically with depth on Inception v3 / ResNet-50. The methodology generalizes to NLP probing in subsequent work. PDF not yet downloaded."
+    },
+    {
+      "key": "hewitt2019-structural-probe",
+      "title": "A Structural Probe for Finding Syntax in Word Representations",
+      "authors": "Hewitt, Manning",
+      "year": 2019,
+      "venue": "NAACL 2019",
+      "url": "https://aclanthology.org/N19-1419/",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/hewitt2019-structural-probe.md",
+      "notes_referenced_by": [
+        "interpretability/probing"
+      ],
+      "topics": [
+        "probing",
+        "syntactic-structure"
+      ],
+      "category": "foundational",
+      "summary": "Generalizes linear probing from binary classification to geometric / structural probing of higher-arity properties. Defines a 'structural probe' that learns a linear transform B such that squared-L2 distance in B-space approximates parse-tree distance, and a depth probe such that squared-L2 norm approximates parse-tree depth. Finds such transforms exist for ELMo and BERT but not for randomly-initialized baselines. PDF not yet downloaded."
+    },
+    {
+      "key": "belinkov2022-probing-survey",
+      "title": "Probing Classifiers: Promises, Shortcomings, and Advances",
+      "authors": "Belinkov",
+      "year": 2022,
+      "venue": "Computational Linguistics 48(1)",
+      "url": "https://aclanthology.org/2022.cl-1.7/",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/belinkov2022-probing-survey.md",
+      "notes_referenced_by": [
+        "interpretability/probing"
+      ],
+      "topics": [
+        "probing",
+        "interpretability-methodology"
+      ],
+      "category": "landmark",
+      "summary": "Methodology survey that consolidates the correlational critique of probing and reviews causal alternatives. Three confounders documented: probe expressivity (powerful probe learns property from low-information features), spurious correlation (probe reads correlated feature, not target), vestigial information (model represents but doesn't use). Surveys causal probing methods (Amnesic, causal mediation, interchange interventions). PDF not yet downloaded."
+    },
+    {
+      "key": "wei2023-jailbroken",
+      "title": "Jailbroken: How Does LLM Safety Training Fail?",
+      "authors": "Wei, Haghtalab, Steinhardt",
+      "year": 2023,
+      "venue": "NeurIPS 2023",
+      "url": "https://arxiv.org/abs/2307.02483",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/wei2023-jailbroken.md",
+      "notes_referenced_by": [
+        "alignment/safety-evaluation"
+      ],
+      "topics": [
+        "safety-evaluation",
+        "jailbreak",
+        "alignment"
+      ],
+      "category": "foundational",
+      "summary": "Articulates the two-failure-mode framework for jailbreaks: (1) competing objectives (capability vs. safety pull in different directions), (2) mismatched generalization (safety training fails to generalize to domains where capability exists, e.g., Base64 / role-play). Empirically demonstrates that attacks designed against either failure mode succeed on every prompt in red-team evaluation sets for GPT-4 and Claude v1.3. Recommends 'safety-capability parity' as the policy upshot. PDF not yet downloaded."
+    },
+    {
+      "key": "nostalgebraist2020-logit-lens",
+      "title": "interpreting GPT: the logit lens",
+      "authors": "nostalgebraist",
+      "year": 2020,
+      "venue": "LessWrong (Tier B/C \u2014 forum-signal / discovery only)",
+      "url": "https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/lens-techniques"
+      ],
+      "topics": [
+        "lens-techniques",
+        "interpretability-methodology"
+      ],
+      "category": "foundational",
+      "summary": "The original LessWrong post introducing the logit lens technique on GPT-2. Tier B/C forum source \u2014 cited as the discovery-path provenance for the technique, never as the sole citation for hard claims. The peer-reviewed treatment of the underlying methodology is `belrose2023-tuned-lens`."
+    },
+    {
+      "key": "micikevicius2017-mixed-precision",
+      "title": "Mixed Precision Training",
+      "authors": "Micikevicius, Narang, Alben, Diamos, Elsen, Garcia, Ginsburg, Houston, Kuchaiev, Venkatesh, Wu",
+      "year": 2017,
+      "venue": "ICLR 2018",
+      "url": "https://arxiv.org/abs/1710.03740",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/micikevicius2017-mixed-precision.md",
+      "notes_referenced_by": [
+        "training/mixed-precision-and-stability"
+      ],
+      "topics": [
+        "mixed-precision-and-stability",
+        "optimization"
+      ],
+      "category": "foundational",
+      "summary": "Canonical mixed-precision recipe: FP16 forward/backward + FP32 master weights + dynamic loss scaling + FP32 GEMM accumulators. The substrate that all modern lower-precision training extends."
+    },
+    {
+      "key": "kalamkar2019-bfloat16",
+      "title": "A Study of BFLOAT16 for Deep Learning Training",
+      "authors": "Kalamkar et al. (Intel)",
+      "year": 2019,
+      "venue": "arXiv (Intel)",
+      "url": "https://arxiv.org/abs/1905.12322",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/kalamkar2019-bfloat16.md",
+      "notes_referenced_by": [
+        "training/mixed-precision-and-stability"
+      ],
+      "topics": [
+        "mixed-precision-and-stability"
+      ],
+      "category": "foundational",
+      "summary": "Establishes BF16 (8-bit exponent, 7-bit mantissa) as a drop-in FP32 replacement for deep-learning training, eliminating the need for loss scaling and (often) FP32 master weights. The universal LLM pre-training default by 2023."
+    },
+    {
+      "key": "shoeybi2019-megatron",
+      "title": "Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism",
+      "authors": "Shoeybi, Patwary, Puri, LeGresley, Casper, Catanzaro",
+      "year": 2019,
+      "venue": "arXiv (NVIDIA)",
+      "url": "https://arxiv.org/abs/1909.08053",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "training/mixed-precision-and-stability"
+      ],
+      "topics": [
+        "distributed-training",
+        "mixed-precision-and-stability"
+      ],
+      "category": "foundational",
+      "summary": "Original Megatron-LM tensor-parallelism paper. Cited here for the mixed-precision communication-precision discussion."
+    },
+    {
+      "key": "hu2021-lora",
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "authors": "Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, Chen",
+      "year": 2021,
+      "venue": "ICLR 2022",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/hu2021-lora.md",
+      "notes_referenced_by": [
+        "training/adaptation-and-merging"
+      ],
+      "topics": [
+        "adaptation-and-merging",
+        "post-training"
+      ],
+      "category": "foundational",
+      "summary": "Canonical low-rank parameter-efficient fine-tuning. Inject trainable B*A rank-r decomposition alongside frozen base weights; merge for inference."
+    },
+    {
+      "key": "dettmers2023-qlora",
+      "title": "QLoRA: Efficient Finetuning of Quantized LLMs",
+      "authors": "Dettmers, Pagnoni, Holtzman, Zettlemoyer",
+      "year": 2023,
+      "venue": "NeurIPS 2023",
+      "url": "https://arxiv.org/abs/2305.14314",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/dettmers2023-qlora.md",
+      "notes_referenced_by": [
+        "training/adaptation-and-merging",
+        "inference/quantization"
+      ],
+      "topics": [
+        "adaptation-and-merging",
+        "quantization"
+      ],
+      "category": "landmark",
+      "summary": "LoRA over a 4-bit-quantized (NF4) base, with double quantization and paged optimizers. Lets a 65B parameter model fine-tune on a single 48GB GPU."
+    },
+    {
+      "key": "wortsman2022-model-soups",
+      "title": "Model soups: averaging weights of multiple fine-tuned models improves accuracy without increasing inference time",
+      "authors": "Wortsman, Ilharco, Gadre, Roelofs, Gontijo-Lopes, Morcos, Namkoong, Farhadi, Carmon, Kornblith, Schmidt",
+      "year": 2022,
+      "venue": "ICML 2022",
+      "url": "https://arxiv.org/abs/2203.05482",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/wortsman2022-model-soups.md",
+      "notes_referenced_by": [
+        "training/adaptation-and-merging"
+      ],
+      "topics": [
+        "adaptation-and-merging"
+      ],
+      "category": "foundational",
+      "summary": "Averaging weights of multiple fine-tunes from a shared base produces a single model that often beats the best individual fine-tune. Foundational to the merging literature; relies on linear mode connectivity."
+    },
+    {
+      "key": "ilharco2022-task-vectors",
+      "title": "Editing Models with Task Arithmetic",
+      "authors": "Ilharco, Ribeiro, Wortsman, Gururangan, Schmidt, Hajishirzi, Farhadi",
+      "year": 2022,
+      "venue": "ICLR 2023",
+      "url": "https://arxiv.org/abs/2212.04089",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/ilharco2022-task-vectors.md",
+      "notes_referenced_by": [
+        "training/adaptation-and-merging"
+      ],
+      "topics": [
+        "adaptation-and-merging"
+      ],
+      "category": "foundational",
+      "summary": "Defines task vectors as fine-tune-minus-base directions in weight space; addition / negation / combination as primitives. Direct ancestor of TIES-Merging."
+    },
+    {
+      "key": "yadav2023-ties-merging",
+      "title": "TIES-Merging: Resolving Interference When Merging Models",
+      "authors": "Yadav, Tam, Choshen, Raffel, Bansal",
+      "year": 2023,
+      "venue": "NeurIPS 2023",
+      "url": "https://arxiv.org/abs/2306.01708",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/yadav2023-ties-merging.md",
+      "notes_referenced_by": [
+        "training/adaptation-and-merging"
+      ],
+      "topics": [
+        "adaptation-and-merging"
+      ],
+      "category": "landmark",
+      "summary": "Three-step model merge (Trim, Elect-Sign, Disjoint-Merge) addressing the sign-conflict and redundancy issues in naive task-vector averaging. The current default merge method in MergeKit."
+    },
+    {
+      "key": "willard2023-outlines",
+      "title": "Efficient Guided Generation for Large Language Models",
+      "authors": "Willard, Louf",
+      "year": 2023,
+      "venue": "arXiv (Outlines library)",
+      "url": "https://arxiv.org/abs/2307.09702",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/willard2023-outlines.md",
+      "notes_referenced_by": [
+        "inference/structured-output"
+      ],
+      "topics": [
+        "structured-output"
+      ],
+      "category": "foundational",
+      "summary": "Reformulates constrained decoding as transitions in an FSM whose alphabet is the model's vocabulary. Builds a per-state index over allowed tokens, dropping per-step overhead from O(V) to amortized O(1). Foundation for Outlines, XGrammar, llguidance."
+    },
+    {
+      "key": "beurer-kellner2023-lmql",
+      "title": "Prompting Is Programming: A Query Language for Large Language Models",
+      "authors": "Beurer-Kellner, Fischer, Vechev",
+      "year": 2022,
+      "venue": "PLDI 2023 (PACMPL)",
+      "url": "https://arxiv.org/abs/2212.06094",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "inference/structured-output"
+      ],
+      "topics": [
+        "structured-output"
+      ],
+      "category": "foundational",
+      "summary": "Introduces LMQL, a query language for LLMs that exposes constraints (regex, length, type) close to the prompt and translates them to per-step logit masks. The DSL-first approach to constrained decoding; predates the FSM-index optimization."
+    },
+    {
+      "key": "wei2021-flan",
+      "title": "Finetuned Language Models Are Zero-Shot Learners (FLAN)",
+      "authors": "Wei, Bosma, Zhao, Guu, Yu, Lester, Du, Dai, Le",
+      "year": 2021,
+      "venue": "ICLR 2022",
+      "url": "https://arxiv.org/abs/2109.01652",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/sft"
+      ],
+      "topics": [
+        "sft"
+      ],
+      "category": "foundational",
+      "summary": "Original instruction-tuning paper. Reformats ~1.8K NLP tasks as natural-language instructions; SFT on the multi-task collection produces strong zero-shot generalization. The pre-RLHF post-training default."
+    },
+    {
+      "key": "chung2022-flan-t5",
+      "title": "Scaling Instruction-Finetuned Language Models (Flan-T5)",
+      "authors": "Chung, Hou, Longpre, Zoph, Tay, Fedus, Li, Wang, Dehghani, Brahma, Webson, Gu, Dai, Suzgun, Chen, Chowdhery, Castro-Ros, Pellat, Robinson, Valter, Narang, Mishra, Yu, Zhao, Huang, Dai, Yu, Petrov, Chi, Dean, Devlin, Roberts, Zhou, Le, Wei",
+      "year": 2022,
+      "venue": "JMLR / arXiv",
+      "url": "https://arxiv.org/abs/2210.11416",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/sft"
+      ],
+      "topics": [
+        "sft"
+      ],
+      "category": "foundational",
+      "summary": "Scales FLAN to 1.8K tasks with multiple prompting techniques (zero-shot, few-shot, CoT). Establishes that adding CoT examples to instruction-tuning data improves reasoning generalization."
+    },
+    {
+      "key": "alayrac2022-flamingo",
+      "title": "Flamingo: a Visual Language Model for Few-Shot Learning",
+      "authors": "Alayrac, Donahue, Luc, Miech, Barr, Hasson, Lenc, Mensch, Millican, Reynolds, Ring, Rutherford, Cabi, Han, Gong, Samangooei, Monteiro, Menick, Borgeaud, Brock, Nematzadeh, Sharifzadeh, Binkowski, Barreira, Vinyals, Zisserman, Simonyan",
+      "year": 2022,
+      "venue": "NeurIPS 2022",
+      "url": "https://arxiv.org/abs/2204.14198",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/alayrac2022-flamingo.md",
+      "notes_referenced_by": [
+        "architecture/multimodal-llm-extensions"
+      ],
+      "topics": [
+        "multimodal-llm-extensions"
+      ],
+      "category": "foundational",
+      "summary": "Flamingo: bridge a frozen vision encoder to a frozen LM via Perceiver Resampler + interleaved gated cross-attention layers; trained on interleaved image-text web data. Establishes the cross-attention-bridge architectural family for multimodal LLMs."
+    },
+    {
+      "key": "ba2016-layernorm",
+      "title": "Layer Normalization",
+      "authors": "Ba, Kiros, Hinton",
+      "year": 2016,
+      "venue": "arXiv:1607.06450",
+      "url": "https://arxiv.org/abs/1607.06450",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "architecture/normalization",
+        "architecture/transformer-overview"
+      ],
+      "topics": [
+        "normalization"
+      ],
+      "category": "foundational",
+      "summary": "LayerNorm: per-token normalization across the hidden dimension with learned gain and bias. The original normalization the canonical Transformer used; later largely superseded in LLMs by RMSNorm but the conceptual baseline."
+    },
+    {
+      "key": "gloeckle2024-mtp",
+      "title": "Better & Faster Large Language Models via Multi-token Prediction",
+      "authors": "Gloeckle, Idrissi, Roziere, Lopez-Paz, Synnaeve",
+      "year": 2024,
+      "venue": "ICML 2024",
+      "url": "https://arxiv.org/abs/2404.19737",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/gloeckle2024-mtp.md",
+      "notes_referenced_by": [
+        "architecture/transformer-overview",
+        "architecture/multi-token-prediction"
+      ],
+      "topics": [
+        "multi-token-prediction"
+      ],
+      "category": "foundational",
+      "summary": "Trains an LM with N parallel output heads predicting the next 1..N tokens jointly. Improves sample efficiency at scale and provides a built-in self-speculative-decoding hook. Distinct from speculative decoding (which uses a separate draft model)."
+    },
+    {
+      "key": "kudo2018-sentencepiece",
+      "title": "SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing",
+      "authors": "Kudo, Richardson",
+      "year": 2018,
+      "venue": "EMNLP 2018 demos",
+      "url": "https://arxiv.org/abs/1808.06226",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/kudo2018-sentencepiece.md",
+      "notes_referenced_by": [
+        "architecture/tokenization"
+      ],
+      "topics": [
+        "tokenization"
+      ],
+      "category": "foundational",
+      "summary": "Whitespace-agnostic, byte-level-capable subword tokenizer + detokenizer. Treats raw text as a Unicode byte stream and learns BPE or unigram-LM subwords on it. Becomes the standard tokenizer scaffolding for multilingual LMs."
+    },
+    {
+      "key": "press2017-tied-embed",
+      "title": "Using the Output Embedding to Improve Language Models",
+      "authors": "Press, Wolf",
+      "year": 2017,
+      "venue": "EACL 2017",
+      "url": "https://arxiv.org/abs/1608.05859",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/press2017-tied-embed.md",
+      "notes_referenced_by": [
+        "architecture/embeddings-and-tying"
+      ],
+      "topics": [
+        "embeddings-and-tying"
+      ],
+      "category": "foundational",
+      "summary": "Tied weight scheme: share the input token embedding matrix with the output unembedding. Cuts ~30% of parameters in small LMs and improves PPL by serving as an implicit regularizer. The default in many decoder-only LMs through ~2023; modern frontier LMs sometimes untie."
     }
   ]
 }

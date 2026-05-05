@@ -1,0 +1,188 @@
+{
+  "description": "Stub-fill additions from the 2026-05-04 cross-area pass that promoted four stub notes to draft: interpretability/lens-techniques, interpretability/probing, evaluation/knowledge-benchmarks, alignment/safety-evaluation. Adds new paper entries (chuang2023-dola, alain-bengio-2017, hewitt2019-structural-probe, belinkov2022-probing-survey, wei2023-jailbroken, nostalgebraist2020-logit-lens) and updates excerpts_file / notes_referenced_by for existing entries that now have grounded excerpts (belrose2023-tuned-lens, marks-tegmark-2023-truth, hendrycks2021-mmlu, mmlu-redux-2024, harmbench2024, chao2024-jailbreakbench, russinovich2024-crescendo).",
+  "new_papers": [
+    {
+      "key": "chuang2023-dola",
+      "title": "DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language Models",
+      "authors": "Chuang, Xie, Luo, Kim, Glass, He",
+      "year": 2023,
+      "venue": "ICLR 2024",
+      "url": "https://arxiv.org/abs/2309.03883",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/lens-techniques"
+      ],
+      "topics": ["lens-techniques", "decoding", "factuality"],
+      "category": "recent",
+      "summary": "Decoding-time application of the logit-lens framework: contrast logits at the final layer against logits at an adaptively-chosen earlier layer (chosen per-token by JS divergence) to amplify factual signal and suppress hallucination. Improves TruthfulQA and FACTOR scores on LLaMA-7B/13B/33B with negligible inference overhead. Note: PDF not yet downloaded; excerpts from arXiv abstract pending grounding via WebSearch."
+    },
+    {
+      "key": "alain-bengio-2017",
+      "title": "Understanding intermediate layers using linear classifier probes",
+      "authors": "Alain, Bengio",
+      "year": 2016,
+      "venue": "ICLR 2017 Workshop (arXiv 1610.01644)",
+      "url": "https://arxiv.org/abs/1610.01644",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/alain-bengio-2017.md",
+      "notes_referenced_by": [
+        "interpretability/probing"
+      ],
+      "topics": ["probing", "interpretability-methodology"],
+      "category": "foundational",
+      "summary": "Foundational paper for the linear-classifier-probe methodology. Introduces the probe definition: a linear classifier trained on frozen network activations to predict a property, with the network's parameters held fixed. Empirical finding: linear separability of features increases monotonically with depth on Inception v3 / ResNet-50. The methodology generalizes to NLP probing in subsequent work. PDF not yet downloaded."
+    },
+    {
+      "key": "hewitt2019-structural-probe",
+      "title": "A Structural Probe for Finding Syntax in Word Representations",
+      "authors": "Hewitt, Manning",
+      "year": 2019,
+      "venue": "NAACL 2019",
+      "url": "https://aclanthology.org/N19-1419/",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/hewitt2019-structural-probe.md",
+      "notes_referenced_by": [
+        "interpretability/probing"
+      ],
+      "topics": ["probing", "syntactic-structure"],
+      "category": "foundational",
+      "summary": "Generalizes linear probing from binary classification to geometric / structural probing of higher-arity properties. Defines a 'structural probe' that learns a linear transform B such that squared-L2 distance in B-space approximates parse-tree distance, and a depth probe such that squared-L2 norm approximates parse-tree depth. Finds such transforms exist for ELMo and BERT but not for randomly-initialized baselines. PDF not yet downloaded."
+    },
+    {
+      "key": "belinkov2022-probing-survey",
+      "title": "Probing Classifiers: Promises, Shortcomings, and Advances",
+      "authors": "Belinkov",
+      "year": 2022,
+      "venue": "Computational Linguistics 48(1)",
+      "url": "https://aclanthology.org/2022.cl-1.7/",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/belinkov2022-probing-survey.md",
+      "notes_referenced_by": [
+        "interpretability/probing"
+      ],
+      "topics": ["probing", "interpretability-methodology"],
+      "category": "landmark",
+      "summary": "Methodology survey that consolidates the correlational critique of probing and reviews causal alternatives. Three confounders documented: probe expressivity (powerful probe learns property from low-information features), spurious correlation (probe reads correlated feature, not target), vestigial information (model represents but doesn't use). Surveys causal probing methods (Amnesic, causal mediation, interchange interventions). PDF not yet downloaded."
+    },
+    {
+      "key": "wei2023-jailbroken",
+      "title": "Jailbroken: How Does LLM Safety Training Fail?",
+      "authors": "Wei, Haghtalab, Steinhardt",
+      "year": 2023,
+      "venue": "NeurIPS 2023",
+      "url": "https://arxiv.org/abs/2307.02483",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/wei2023-jailbroken.md",
+      "notes_referenced_by": [
+        "alignment/safety-evaluation"
+      ],
+      "topics": ["safety-evaluation", "jailbreak", "alignment"],
+      "category": "foundational",
+      "summary": "Articulates the two-failure-mode framework for jailbreaks: (1) competing objectives (capability vs. safety pull in different directions), (2) mismatched generalization (safety training fails to generalize to domains where capability exists, e.g., Base64 / role-play). Empirically demonstrates that attacks designed against either failure mode succeed on every prompt in red-team evaluation sets for GPT-4 and Claude v1.3. Recommends 'safety-capability parity' as the policy upshot. PDF not yet downloaded."
+    },
+    {
+      "key": "nostalgebraist2020-logit-lens",
+      "title": "interpreting GPT: the logit lens",
+      "authors": "nostalgebraist",
+      "year": 2020,
+      "venue": "LessWrong (Tier B/C — forum-signal / discovery only)",
+      "url": "https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "interpretability/lens-techniques"
+      ],
+      "topics": ["lens-techniques", "interpretability-methodology"],
+      "category": "foundational",
+      "summary": "The original LessWrong post introducing the logit lens technique on GPT-2. Tier B/C forum source — cited as the discovery-path provenance for the technique, never as the sole citation for hard claims. The peer-reviewed treatment of the underlying methodology is `belrose2023-tuned-lens`."
+    }
+  ],
+  "existing_paper_updates": [
+    {
+      "key": "belrose2023-tuned-lens",
+      "set_excerpts_file": "kb/excerpts/belrose2023-tuned-lens.md",
+      "add_notes_referenced_by": ["interpretability/lens-techniques", "interpretability/probing"]
+    },
+    {
+      "key": "marks-tegmark-2023-truth",
+      "set_excerpts_file": "kb/excerpts/marks-tegmark-2023-truth.md",
+      "add_notes_referenced_by": ["interpretability/probing"]
+    },
+    {
+      "key": "hendrycks2021-mmlu",
+      "set_excerpts_file": "kb/excerpts/hendrycks2021-mmlu.md",
+      "add_notes_referenced_by": ["evaluation/knowledge-benchmarks"]
+    },
+    {
+      "key": "mmlu-redux-2024",
+      "set_excerpts_file": "kb/excerpts/mmlu-redux-2024.md",
+      "add_notes_referenced_by": ["evaluation/knowledge-benchmarks"]
+    },
+    {
+      "key": "harmbench2024",
+      "set_excerpts_file": "kb/excerpts/harmbench2024.md",
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "chao2024-jailbreakbench",
+      "set_excerpts_file": "kb/excerpts/chao2024-jailbreakbench.md",
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "russinovich2024-crescendo",
+      "set_excerpts_file": "kb/excerpts/russinovich2024-crescendo.md",
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "anthropic-rsp-2024",
+      "set_excerpts_file": null,
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "metr-autonomy-2024",
+      "set_excerpts_file": null,
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "cybench2024",
+      "set_excerpts_file": null,
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "perez2022-discovering-llm-behaviors",
+      "set_excerpts_file": null,
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "wang2024-mmlu-pro",
+      "set_excerpts_file": "kb/excerpts/wang2024-mmlu-pro.md",
+      "add_notes_referenced_by": ["evaluation/knowledge-benchmarks"]
+    },
+    {
+      "key": "rein2023-gpqa",
+      "set_excerpts_file": "kb/excerpts/rein2023-gpqa.md",
+      "add_notes_referenced_by": ["evaluation/knowledge-benchmarks"]
+    },
+    {
+      "key": "phan2025-hle",
+      "set_excerpts_file": "kb/excerpts/phan2025-hle.md",
+      "add_notes_referenced_by": ["evaluation/knowledge-benchmarks"]
+    },
+    {
+      "key": "vennemeyer2025-sycophancy-not-one-thing",
+      "set_excerpts_file": null,
+      "add_notes_referenced_by": ["interpretability/probing"]
+    },
+    {
+      "key": "meinke2024-apollo-scheming",
+      "set_excerpts_file": "kb/excerpts/meinke2024-apollo-scheming.md",
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    },
+    {
+      "key": "greenblatt2024-alignment-faking",
+      "set_excerpts_file": "kb/excerpts/greenblatt2024-alignment-faking.md",
+      "add_notes_referenced_by": ["alignment/safety-evaluation"]
+    }
+  ]
+}
