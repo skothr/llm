@@ -1,0 +1,434 @@
+% Paper 3, §7 — The RLVR paradigm: GRPO and DAPO (anchor section)
+% Anchors: kb/notes/post-training/rlvr-and-grpo.md §1-3
+%          kb/notes/reasoning/reasoning-training.md §1
+%          kb/excerpts/{shao2024,dapo2025,deepseek-r1}.md
+% Cross-paper: complement to Paper~2 §11 (RL on verifiable rewards: GRPO and
+% DAPO). That section anchors the post-training-pipeline framing; this one
+% anchors the reasoning-triangle role of the same machinery.
+
+\section{The RLVR paradigm: GRPO and DAPO}
+\label{sec:rlvr-grpo-dapo}
+
+The third leg of the reasoning triangle of \cref{sec:introduction} is
+\emph{reinforcement learning on verifiable rewards} (RLVR). The previous
+two legs --- inference-time compute (\cref{sec:inference-compute-axis})
+and verifier signals at inference (\cref{sec:process-reward-models},
+\cref{sec:tree-search}) --- both spend test-time FLOPs to amplify a
+fixed policy. RLVR is the training-time leg that \emph{produces} the
+policy whose test-time compute is worth amplifying. Two coupled
+substitutions define the paradigm: a programmatic verifier replaces a
+learned reward model, and a group-mean baseline replaces a co-sized
+value network. The first removes reward-hacking as a structural failure
+mode; the second halves the active-parameter footprint of training and
+makes long-CoT trajectories practical to backpropagate through. The
+empirical proof point treated in detail in \cref{sec:r1-protocol} ---
+DeepSeek-R1-Zero's AIME 2024 climb from $15.6\%$ to $77.9\%$ pass@1
+under one continuous GRPO run \citep[\S
+2.3]{deepseek-r1}\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} --- is the cleanest
+single number in the reasoning-LLM literature, and the central evidence
+that the triangle composes.
+
+This section is deliberately complementary to Paper~2's RL-stage
+treatment (Paper~2 §11, which covers GRPO/DAPO as one stage of the
+six-stage post-training pipeline). The angle here is different: how
+RLVR \emph{shapes} the test-time compute axis. The training reward is
+terminal and binary, but the policy that emerges is one whose
+inference-time trace length grows from $\sim\!200$ tokens to
+$\sim\!10^4$ on its own \citep[\S 2.3]{deepseek-r1}\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aha}.} --- the verifier
+contains no length term, but the policy discovers that long traces win
+on math and code. RLVR is the training-time mechanism that ratchets
+the inference-time compute axis upward.
+
+\subsection{The verifiable reward}
+\label{sec:rlvr-verifier-reward}
+
+Define the reward for prompt $x$ and sampled output $y$:
+\begin{equation}
+R_{\mathrm{verifier}}(x, y) \;=\; \mathbb{1}\!\big[\,\mathrm{verify}(x, y) = \mathsf{true}\,\big] \;\in\; \{0, 1\},
+\label{eq:verifier-reward}
+\end{equation}
+where $\mathrm{verify}$ is a deterministic program supplied alongside
+the prompt \citep[\S 2.2]{deepseek-r1}.\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}; KB note:
+\texttt{kb/notes/post-training/rlvr-and-grpo.md\#1-1}.} The instances
+that drive the post-2024 reasoning ecosystem are: \emph{math} ---
+exact-match against the canonical answer after sympy-style
+normalization, on competition benchmarks (AIME, MATH, AMC) whose
+answer space is small symbolic expressions or integers; \emph{code}
+--- compile + pass attached unit tests, with per-problem suites shipped
+by competitive-programming benchmarks (LiveCodeBench, Codeforces);
+\emph{format} --- a regex or parser that fires on the
+\texttt{<think>...</think><answer>...</answer>} envelope, used as a
+small constant add-on reward to keep the reasoning channel alive during
+early training \citep[\S 2.2]{deepseek-r1}.
+
+The reward is \emph{sparse} (one bit per trajectory) and \emph{terminal}
+(the final answer is graded, intermediate steps are not, in the RLVR
+setting; the process-supervised contrast is
+\cref{sec:process-reward-models}). Two structural failure modes of
+learned reward models drop out of \cref{eq:verifier-reward}:
+reward-hacking the artifacts of $r_\phi$, and reward-overoptimization
+as $\KL(\pi_\theta\|\pi_\mathrm{ref})$ grows \citep[scaling laws for
+overoptimization]{ouyang2022-instructgpt}.\deepencite{gao2023-overopt
+\S 4 (bibkey not yet in references.bib)} The verifier
+\emph{is} the gold reward in its supported domains; the proxy--gold gap
+of RLHF closes by construction. \citet[\S 2.2]{deepseek-r1} state the
+position explicitly: ``we abstain from applying neural reward models
+--- whether outcome-based or process-based --- to reasoning tasks. This
+decision is predicated on our observation that neural reward models are
+susceptible to reward hacking during large-scale reinforcement
+learning.''\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}.} The
+post-training-pipeline framing of why this matters is
+Paper~2 §11; the reasoning-triangle framing is that
+\cref{eq:verifier-reward}'s sparseness is what \emph{forces} the policy
+to discover long-CoT solutions in the first place --- the only signal
+RLVR provides is whether the final answer is correct, so the policy
+must learn to reach correct answers however it can, including by
+spending more inference-time tokens on the trace.
+
+\subsection{The GRPO objective}
+\label{sec:rlvr-grpo-objective}
+
+\citet{shao2024} introduce \emph{Group Relative Policy Optimization}
+(GRPO) in DeepSeekMath as a critic-free PPO variant: per-prompt
+sampling of a group of $G$ trajectories, with the group's empirical
+reward distribution as the variance-reducing
+baseline.\footnote{KB excerpt:
+\texttt{kb/excerpts/shao2024.md\#sec-4-1-motivation}.} The objective,
+restated and verified in \citet[\S 2.1, Eq.\ 1]{deepseek-r1}\footnote{KB
+excerpts: \texttt{kb/excerpts/shao2024.md\#sec-4-1} and
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-1-grpo}.}:
+\begin{equation}
+\begin{aligned}
+\mathcal{J}_{\mathrm{GRPO}}(\theta) \;=\; & \E_{q \sim P(Q),\, \{o_i\}_{i=1}^G \sim \pi_{\theta_{\mathrm{old}}}(\cdot \mid q)} \bigg[ \\
+& \quad \frac{1}{G} \sum_{i=1}^{G} \frac{1}{|o_i|} \sum_{t=1}^{|o_i|}
+\min\!\Big( r_{i,t}(\theta)\, \hat{A}_{i,t},\;
+\mathrm{clip}\!\big(r_{i,t}(\theta), 1 - \epsilon, 1 + \epsilon\big)\, \hat{A}_{i,t} \Big) \\
+& \quad -\, \beta \, \KL\!\big[\pi_\theta \,\|\, \pi_{\mathrm{ref}}\big] \bigg],
+\end{aligned}
+\label{eq:grpo}
+\end{equation}
+with importance ratio
+$r_{i,t}(\theta) = \pi_\theta(o_{i,t} \mid q, o_{i,<t}) \,/\, \pi_{\theta_{\mathrm{old}}}(o_{i,t} \mid q, o_{i,<t})$
+and \emph{group-normalized advantage}
+\begin{equation}
+\hat{A}_{i,t} \;=\; \tilde{A}_i \;=\; \frac{R_i \,-\, \mathrm{mean}\!\big(\{R_1, \ldots, R_G\}\big)}{\mathrm{std}\!\big(\{R_1, \ldots, R_G\}\big)},
+\label{eq:grpo-advantage}
+\end{equation}
+constant in $t$ across the trajectory \citep[\S 4.1, Eq.\ verified
+against R1 \S 2.1 Eq.\ 3]{shao2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/shao2024.md\#sec-4-1}.}
+
+\paragraph{Symbol table.} $q$ is the prompt; $G$ the group size,
+typically $8$--$64$ ($G = 16$ in R1-Zero \citep[\S
+2.1]{deepseek-r1}\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-1-hp}.}); $o_i$ the $i$-th
+sampled trajectory (chain-of-thought + answer); $R_i \in \{0, 1\}$ the
+verifier reward of \cref{eq:verifier-reward}; $\pi_\mathrm{ref}$ a
+frozen reference (typically the SFT cold-start, see Paper~2 §SFT);
+$\beta$ the KL coefficient ($0.001$ for R1-Zero
+\citep[\S 2.1]{deepseek-r1}); $\epsilon = 0.2$ the PPO clip range. The
+KL is computed token-wise with Schulman's unbiased estimator,
+$\KL = \pi_\mathrm{ref}/\pi_\theta - \log(\pi_\mathrm{ref}/\pi_\theta) - 1$
+\citep[\S 4.1]{shao2024}.
+
+\paragraph{Operational consequence: no value network.} The single
+load-bearing fact about GRPO at LLM scale is that
+\cref{eq:grpo-advantage}'s $\tilde{A}_i$ is a function only of the
+group's empirical rewards $\{R_1, \ldots, R_G\}$ --- there is no
+$V_\phi(s_t)$. PPO with GAE \citep[\S
+3.5]{ouyang2022-instructgpt}\footnote{KB excerpt:
+\texttt{kb/excerpts/ouyang2022-instructgpt.md\#sec-3}.} requires a value
+network co-sized with the policy, doubling the active parameter count
+and the activation memory of training. GRPO removes the second network
+entirely. With value model: $\sim\!2P$ active parameters and $\sim\!2A$
+activation memory per training step (where $P$ is policy parameters and
+$A$ its activation footprint), plus the value-network's own optimizer
+state. Without (GRPO): $P + A$ for the policy, $P$ frozen for the
+reference, but $G \times$ rollouts per prompt at sequence length up to
+$L_\mathrm{max}$. The four co-resident model copies of RLHF's PPO
+infrastructure (policy, reference, reward, value) reduce to two
+(policy, reference); the verifier is a CPU subprocess, not a model.
+The trade is $G$ rollouts of length $\le L_\mathrm{max}$ per prompt
+against the value-network's parameter and activation footprint, and at
+sparse reward (where $V_\phi$ struggles to learn anyway) it is
+favorable \citep[\S 4.1]{shao2024}.\footnote{KB excerpt:
+\texttt{kb/excerpts/shao2024.md\#sec-4-1-motivation}.} For
+reasoning training where $L_\mathrm{max} \in [10^4, 6.5 \times 10^4]$
+\citep[\S 2.1]{deepseek-r1}, this is the difference between fitting the
+training run on a given cluster and not.
+
+\begin{intuition}
+GRPO is the median-of-rollouts as a policy gradient. Sample $G$
+trajectories from the current policy on prompt $q$, score each, and
+ask: which were \emph{better than typical for this prompt}? Up-weight
+the better-than-mean log-probs, down-weight the worse-than-mean ones.
+The sign of $\tilde{A}_i$ in \cref{eq:grpo-advantage} answers the
+question; its magnitude (in standard-deviation units of the group's
+reward distribution) is the step size. Returning to canonical form:
+\cref{eq:grpo-advantage} is exactly the standardization of $R_i$ within
+its group, and \cref{eq:grpo} is the PPO-clipped surrogate with that
+standardized advantage broadcast over the trajectory's tokens. The
+\emph{inference} interpretation, central to this paper's triangle, is
+that the group-mean is an empirical estimate of $p_0(q)$ --- the
+fraction of trajectories the current policy gets right at this prompt
+--- and GRPO's gradient is a trajectory-level importance-weighted
+update on the better-than-$p_0(q)$ rollouts. RLVR cannot make the
+policy solve a problem it has \emph{never} solved at any sample budget;
+it can only sharpen the distribution toward the rollouts that already
+succeed.
+\end{intuition}
+
+The intuition's last clause foreshadows the
+\citet{rlvr-limits-2025} contradiction (\cref{sec:contradictions}, also
+discussed in Paper~2 §11): if the group-mean baseline is the binding
+mechanism, then RLVR's reach is bounded by the base policy's pass@$K$
+at any $K$, not by its pass@$1$. The $15.6 \to 77.9$ AIME climb is then
+read as ``the base model could already solve $77.9\%$ of these problems
+\emph{at some sample budget}; GRPO transferred that to pass@1.''
+Whether this exhausts the picture or merely captures the dominant term
+is the open question.
+
+\subsection{DAPO: four targeted refinements}
+\label{sec:rlvr-dapo}
+
+\citet{dapo2025} (``Decoupled clip and dynamic s\textbf{A}mpling
+\textbf{P}olicy \textbf{O}ptimization,'' ByteDance Seed, March 2025)
+introduce four modifications to GRPO that together cut training-step
+count to AIME-2024 score 50 by roughly half on Qwen2.5-32B-base
+relative to the GRPO baseline \citep[\S
+4]{dapo2025}.\footnote{KB excerpt:
+\texttt{kb/excerpts/dapo2025.md\#sec-4-headline}.} Each modification
+addresses a measured failure mode of the GRPO recipe under the
+specific demands of long-CoT training; together they are the canonical
+2025 statement of where the GRPO objective leaks gradient signal.
+
+\paragraph{(i) Clip-Higher (Eq.\ 10).} GRPO's symmetric clip
+$[1 - \epsilon, 1 + \epsilon]$ caps probability \emph{increases} on
+under-probable exploration tokens at the same rate as it caps
+\emph{decreases} on already-favored tokens. DAPO decouples the bound:
+\begin{equation}
+\mathcal{J}_{\mathrm{DAPO}}(\theta) \;=\; \E\!\left[\frac{1}{G} \sum_i \min\!\Big( r_{i,t}(\theta)\, \hat{A}_i,\; \mathrm{clip}\!\big(r_{i,t}(\theta), 1 - \epsilon_{\mathrm{low}}, 1 + \epsilon_{\mathrm{high}}\big)\, \hat{A}_i \Big) \right],
+\label{eq:dapo-clip}
+\end{equation}
+with $\epsilon_{\mathrm{low}} = 0.2$ kept at the PPO default and
+$\epsilon_{\mathrm{high}}$ enlarged (e.g., $0.28$) \citep[Eq.\
+10]{dapo2025}.\footnote{KB excerpt:
+\texttt{kb/excerpts/dapo2025.md\#sec-3-clip-higher}.} The asymmetry
+permits larger upward updates on under-probable correct tokens and
+prevents collapse onto already-favored trajectories --- collapse being
+the failure mode in which the entropy of the policy at long-CoT
+positions decays before the policy has explored alternative reasoning
+paths.
+
+\paragraph{(ii) Dynamic Sampling (Eq.\ 11).} Whenever all $G$
+trajectories in a group share the same reward (all-correct or
+all-incorrect), the group-normalized advantage \cref{eq:grpo-advantage}
+is identically zero by construction and the sample contributes no
+gradient. DAPO enforces
+\begin{equation}
+0 \;<\; \big| \{\, o_i : \mathrm{is\_equivalent}(a, o_i) \,\}\big| \;<\; G
+\label{eq:dapo-dynsample}
+\end{equation}
+\citep[Eq.\ 11]{dapo2025}, discarding and re-sampling groups that fail
+the constraint.\footnote{KB excerpt:
+\texttt{kb/excerpts/dapo2025.md\#sec-3-dynamic-sampling}.} Compute
+concentrates on informative gradients. The structural reason this
+matters under the reasoning-triangle framing is that as the policy's
+pass@1 climbs through training, the all-correct degenerate group
+becomes more frequent on easy prompts; without dynamic sampling, an
+increasing fraction of the rollout budget produces no learning signal.
+
+\paragraph{(iii) Token-Level Loss (Eq.\ 12).} GRPO normalizes by
+$1/|o_i|$ inside the group sum and then by $1/G$ outside, so longer
+trajectories contribute proportionally less per token. DAPO replaces
+this with token-aggregated normalization:
+\begin{equation}
+\mathcal{L}_{\mathrm{DAPO}}(\theta) \;=\; -\,\frac{1}{\sum_{i=1}^{G} |o_i|} \sum_{i=1}^{G} \sum_{t=1}^{|o_i|} L_{i,t}(\theta).
+\label{eq:dapo-tokenloss}
+\end{equation}
+Every token weighs equally regardless of trajectory length
+\citep[Eq.\ 12]{dapo2025}.\footnote{KB excerpt:
+\texttt{kb/excerpts/dapo2025.md\#sec-3-token-loss}.} This is the
+modification most directly aligned with the reasoning-triangle thesis
+of this paper: GRPO's per-trajectory normalization systematically
+under-weights the long correct CoTs that
+\cref{sec:rlvr-grpo-objective}'s response-length growth produces, which
+is precisely the regime the inference-time-compute axis cares about.
+DAPO's token-level loss removes that bias.
+
+\paragraph{(iv) Overlong Reward Shaping (Eq.\ 13).} Trajectories that
+hit $L_\mathrm{max}$ are typically penalized as failures, but the
+failure signal is uninformative --- the model just ran out of budget.
+DAPO replaces the hard zero with a length-based soft penalty:
+\begin{equation}
+R_{\mathrm{length}}(o_i) \;=\; \begin{cases}
+0 & |o_i| \le L_{\mathrm{accept}}, \\
+\text{linear interp.} & L_{\mathrm{accept}} < |o_i| < L_\mathrm{max}, \\
+-1 & |o_i| \ge L_\mathrm{max},
+\end{cases}
+\label{eq:dapo-overlong}
+\end{equation}
+\citep[Eq.\ 13]{dapo2025}.\footnote{KB excerpt:
+\texttt{kb/excerpts/dapo2025.md\#sec-3-overlong}.} Variance from
+length-truncated samples falls; the genuine signal that overlong
+reasoning is bad is preserved. The interaction with
+\cref{eq:dapo-tokenloss} is structural: without
+\cref{eq:dapo-tokenloss}'s token-level normalization, the soft penalty
+would still be aggregated against the longest trajectories, restoring
+the bias \cref{eq:dapo-tokenloss} just removed.
+
+\begin{analogy}
+The four DAPO modifications can be read as the field's
+$\mathcal{O}(\epsilon^2)$ correction to GRPO once the long-CoT regime
+made the leading-order behavior visible. Symmetric clipping, equal-weight
+trajectories, hard length penalties, and uniform group acceptance are
+all reasonable defaults at trajectory length $\sim\!10^2$ tokens; at
+$\sim\!10^4$ tokens each defaults to a small bias whose accumulation
+shows up as wasted gradient steps. Returning to canonical form: each
+DAPO equation localises one of those biases.
+\cref{eq:dapo-clip} is the asymmetric trust-region around the importance
+ratio, \cref{eq:dapo-dynsample} the support condition for
+\cref{eq:grpo-advantage} to have nonzero variance,
+\cref{eq:dapo-tokenloss} the un-biased token-aggregator that replaces
+GRPO's per-trajectory normalisation, and \cref{eq:dapo-overlong} the
+length-conditioned reward that decouples ``ran out of budget'' from
+``failed.''
+\end{analogy}
+
+\paragraph{Per-step procedure (GRPO and DAPO share this).} For each
+batch of $B$ prompts: (1) sample $G$ trajectories per prompt from
+$\pi_{\theta_\mathrm{old}}$ at temperature $T \in [0.7, 1.0]$ capped at
+$L_\mathrm{max}$ tokens (R1-Zero uses $L_\mathrm{max} = 32{,}768$
+before step $8.2$k and $65{,}536$ afterward \citep[\S
+2.1]{deepseek-r1}); (2) score with the verifier; (3) compute
+$\tilde{A}_i$ via \cref{eq:grpo-advantage} and broadcast token-wise (or
+apply DAPO's dynamic-sampling and token-level normalization); (4) take
+$K \in \{1, 4\}$ PPO inner-loop steps on the buffered $(B \cdot G)$
+trajectories; (5) refresh
+$\theta_\mathrm{old} \leftarrow \theta$. The verifier is a CPU
+subprocess; rollouts dominate wall-clock time.
+
+\subsection{Empirical headline: R1-Zero and DAPO}
+\label{sec:rlvr-empirics}
+
+Two evidence points define the 2025 RLVR-for-reasoning literature.
+First, \citet[\S 2.3]{deepseek-r1}\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} report that
+DeepSeek-R1-Zero's average pass@1 on AIME 2024 climbs from $15.6\%$ to
+$77.9\%$ over one continuous GRPO run on the DeepSeek-V3 base, with
+$86.7\%$ achieved at majority-vote-over-$64$, ``surpass[ing] the
+average performance across all human competitors.'' The full run is
+$10{,}400$ steps, $\sim\!1.6$ epochs over the training distribution
+\citep[\S 2.1]{deepseek-r1}; the only signal is the binary verifier of
+\cref{eq:verifier-reward} plus a small format reward. The detailed
+protocol --- cold-start SFT, the rejection-sampling SFT, the final
+helpfulness-and-harmlessness RL stage --- is the subject of
+\cref{sec:r1-protocol}; here we cite the headline as the proof that
+the RL leg of the triangle, alone, can produce frontier-grade reasoning
+on verifier-supported domains.
+
+Second, \citet[\S 4]{dapo2025}\footnote{KB excerpt:
+\texttt{kb/excerpts/dapo2025.md\#sec-4-headline}.} reach AIME 2024
+score $50$ on Qwen2.5-32B-base in roughly half the training steps
+relative to the GRPO baseline using the four modifications of
+\cref{sec:rlvr-dapo}. The training code, curated dataset, and verl
+framework integration are open-sourced. As of 2026-Q2 DAPO and its
+descendants are the practical default for open-weight RLVR on long-CoT
+tasks; GRPO remains the canonical reference and the simpler starting
+point.
+
+The \emph{cross-leg} reading of these numbers is the section's thesis:
+the response-length growth observed during the R1-Zero run (a few
+hundred tokens early in training to roughly $10{,}000$ tokens at
+convergence \citep[\S 2.3]{deepseek-r1}\footnote{KB excerpt:
+\texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aha}.}) is, by definition,
+movement along the inference-time-compute axis of
+\cref{sec:inference-compute-axis}; and the ``aha moment'' --- a sudden
+spike in the policy's use of \texttt{wait} during reflection --- is
+self-reflection patterns that interact with verifier signals at
+inference (\cref{sec:tree-search}). The same RLVR run thus moves the
+policy along all three legs simultaneously: train against
+\cref{eq:verifier-reward}, get a longer trace, get more
+self-verification structure for free. \cref{sec:search-vs-rl} returns
+to the operational tradeoff between spending marginal compute on RLVR
+training versus inference search; the headline above sets the
+training-side anchor of that tradeoff.
+
+\subsection{Open contradiction: VAPO --- are value models really useless?}
+\label{sec:rlvr-vapo}
+
+\begin{contradiction}
+\textbf{Did GRPO show that value models are useless, or that
+\emph{na\"ive} value models are useless?} VAPO (Value-Augmented PPO,
+ByteDance Seed, April 2025, arXiv:2504.05118) re-introduces a learned
+value function under the GRPO/RLVR objective, but trains it more
+carefully than GAE-PPO: shared backbone with the policy,
+value-loss-clipped, advantage normalized per-batch. The paper reports
+VAPO outperforming DAPO on long-CoT tasks at fewer steps, suggesting
+the GRPO-vs-PPO gap is driven not by ``$V_\phi$ is the wrong tool'' but
+by ``$V_\phi$ trained the way GAE-PPO trains it is the wrong tool.''
+The reasoning-triangle reading would split: if VAPO replicates,
+group-baselines are an implementation choice, not a structural feature
+of the leg; if it does not, GRPO's critic-free design is part of why
+RLVR scales to $10^4$-token traces in the first place. Whether VAPO's
+gain over DAPO replicates outside the original recipe is open as of
+2026-Q2; only the original paper has reported the comparison, and
+follow-up evidence is limited to a small set of reproductions.
+Cross-paper to Paper~2 §11 (the same contradiction in
+post-training-pipeline framing) and \cref{sec:contradictions} (the
+unified resolution attempt across the three legs).
+\deepencite{vapo2025 — bibkey not yet in references.bib; arXiv:2504.05118 §3 replication evidence}
+\end{contradiction}
+
+The VAPO contradiction has a near-neighbor on the credit-assignment
+side: VinePPO \deepencite{kazemnejad2025-vineppo --- bibkey not yet in
+references.bib; arXiv:2410.01679 \S 3} keeps a value baseline but
+replaces $V_\phi$'s per-token bootstrap with Monte Carlo re-simulation,
+sampling $M$ continuations from each intermediate state and averaging
+their rewards. REINFORCE-class methods (REINFORCE++, RLOO,
+GRPO-no-clip) drop the PPO clip entirely, arguing the KL anchor and
+small per-step learning rate already provide the trust region.
+\deepencite{ahmadian2024-rloo --- bibkey not yet in references.bib} The
+empirical gaps between these variants are small in 2025--2026 reports
+on math and code; whether the gap survives transfer to agentic and
+long-horizon RLVR is single-source. The unifying observation is that
+\cref{eq:grpo-advantage}'s group-mean baseline is the simplest member
+of a family of zero-bias variance-reducers, and the open question is
+which family member best amortises the cost of long-CoT rollouts.
+
+\subsection{Forward link}
+\label{sec:rlvr-forward}
+
+This section established the third leg of the reasoning triangle in
+isolation: the verifiable reward of \cref{eq:verifier-reward}, the
+GRPO objective of \cref{eq:grpo} with its critic-free group-mean
+advantage \cref{eq:grpo-advantage}, the four DAPO modifications
+\cref{eq:dapo-clip}--\cref{eq:dapo-overlong}, and the empirical proof
+points: R1-Zero's AIME climb on GRPO and DAPO's halved step-count to
+matched score on Qwen2.5-32B-base. The post-training-pipeline framing
+of the same machinery (Paper~2 §11) treats RLVR as the successor to
+RLHF in the six-stage training pipeline; this section's framing instead
+treats the RL leg as the upstream cause of the inference-time compute
+axis the previous sections of this paper studied.
+
+\Cref{sec:r1-protocol} is the empirical proof point that the triangle
+\emph{composes}. R1's four-stage pipeline --- cold-start SFT, GRPO with
+verifiable rewards, rejection-sampling SFT, general-domain RL ---
+combines the RL leg of this section with the inference-compute axis
+of \cref{sec:inference-compute-axis} and the verifier signals of
+\cref{sec:process-reward-models}, and the resulting model is the
+strongest single piece of evidence for the triangle as a co-design
+rather than three independent gains. \Cref{sec:search-vs-rl} picks up
+the operational tradeoff this section deliberately did not close: at
+fixed total compute, when does the marginal FLOP go to RLVR training
+versus inference search versus pretraining? The open answer turns on
+the same empirical anecdotes (DAPO's step efficiency \citep[\S
+4]{dapo2025}, R1's training-token cost \citep[\S 2.3]{deepseek-r1},
+Snell's FLOPs-matched curves \citep[\S 6]{snell2024}\footnote{KB
+excerpt: \texttt{kb/excerpts/snell2024.md\#sec-1-flops-matched}.}) that
+\cref{sec:rlvr-empirics} cited as headlines, now read against each
+other rather than in isolation.

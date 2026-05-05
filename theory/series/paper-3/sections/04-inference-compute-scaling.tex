@@ -1,0 +1,483 @@
+% Paper 3, §4 — Inference-time compute as a scaling axis (Snell anchor)
+% Anchors: kb/notes/scaling/inference-time-compute-scaling.md §1-2
+%          kb/excerpts/snell2024.md (#abstract, #sec-1-flops-matched,
+%            #sec-2-proposer-verifier, #sec-3-1, #sec-3-2-difficulty,
+%            #sec-5-2-search)
+
+\section{Inference-time compute as a scaling axis}
+\label{sec:inference-compute-scaling}
+
+\Cref{sec:cot-phenomenon,sec:self-consistency} treat chain-of-thought and
+self-consistency as decoder-side tactics: the model is fixed, the prompt
+is fixed, and a knob (sample $T$, sample count $N$) is turned. They are
+correctly described as ``prompting tricks'' in the 2022 literature.
+\citet{snell2024} reframe the entire family. Test-time compute, in
+their formulation, is not a bag of tricks but a \emph{scaling axis} ---
+a quantitative dimension along which loss, accuracy, and FLOP cost trade
+off in measurable, allocateable ways, structurally analogous to the
+training-side compute axis of \citet{kaplan2020} and
+\citet{hoffmann2022-chinchilla}. The headline empirical claim --- a
+smaller base model plus compute-optimal test-time spend matches a
+$14\times$ larger base model at FLOPs-matched cost on easy and
+intermediate MATH problems
+\citep[\S 1, \S 6]{snell2024}\footnote{KB excerpt:
+\texttt{kb/excerpts/snell2024.md\#sec-1-flops-matched}.} --- promotes
+inference-time compute from a deployment optimisation to a research-grade
+scaling-law variable.
+
+This section transcribes Snell's compute-optimal definition (the only
+load-bearing equation), walks the proposer/verifier decomposition that
+unifies every other section of this paper, formalises the
+question-difficulty operationalisation that makes the
+prompt-conditional argmax tractable, and presents the FLOPs-matched
+substitution result that makes the structural Chinchilla parallel
+(Paper~2 \S scaling-laws) explicit. It closes on the open functional
+form $L(\theta, N)$ --- power law, log, or something else --- which
+remains unsettled as of 2026.
+
+\subsection{The compute-optimal test-time strategy}
+\label{sec:snell-compute-optimal}
+
+Fix a base LLM and a prompt $q$. Let $y^\ast(q)$ denote the
+ground-truth correct response to $q$, and let $\mathrm{Target}(\theta,
+N, q)$ denote the distribution over output tokens induced by running
+the LLM on $q$ under test-time hyperparameters $\theta$ with a compute
+budget of $N$ inference FLOPs (or, equivalently, generated tokens).
+\citet[\S 3.1, Eq.~1]{snell2024} define the
+\textbf{test-time compute-optimal scaling strategy}%
+\footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-3-1}.} as
+\begin{equation}
+  \theta^\ast_{q,\, y^\ast(q)}(N)
+    \;=\; \argmax_\theta \;
+    \E_{y \sim \mathrm{Target}(\theta,\, N,\, q)}\!\left[
+       \mathbb{1}_{y \,=\, y^\ast(q)}
+    \right].
+  \label{eq:snell-compute-optimal}
+\end{equation}
+The argmax is over a strategy space $\theta$ that ranges over every
+test-time hyperparameter: sampling temperature, sample count $N$, beam
+width $M$, MCTS rollout count $N_\text{rollout}$, revision-chain depth,
+verifier weighting scheme. The objective is the expected indicator of
+correctness under that strategy at the fixed compute budget $N$.
+
+\paragraph{Symbol glossary.} For \cref{eq:snell-compute-optimal}:
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+Symbol & Meaning \\
+\midrule
+$q$                                     & the prompt / question \\
+$y^\ast(q)$                             & ground-truth correct response \\
+$N$                                     & test-time compute budget (FLOPs or token count) \\
+$\theta$                                & test-time hyperparameters of a chosen strategy \\
+$\mathrm{Target}(\theta, N, q)$         & output distribution induced by spending $N$ FLOPs with strategy $\theta$ \\
+$\mathbb{1}_{y = y^\ast(q)}$            & indicator: $1$ if $y$ matches ground-truth, else $0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What the equation commits to.} Three commitments are
+non-trivial. First, $\theta^\ast$ is indexed by the prompt $q$, not by
+the model. \citet[\S 3.2]{snell2024} are explicit: the optimal
+test-time strategy is \emph{prompt-conditional}, and treating it as a
+fixed model-level hyperparameter --- ``always use best-of-32'' or
+``always use a beam of width 4'' --- leaves a measurable amount of
+performance on the table. Second, the budget $N$ is a hard constraint:
+the argmax in \cref{eq:snell-compute-optimal} is implicitly subject to
+the FLOP cost of $\theta$ at budget $N$ matching the budget exactly,
+which couples the strategy choice to the cost model of the underlying
+operations (a wider beam costs more per step but explores more; a
+deeper revision chain costs proportionally to depth; a larger MCTS
+budget grows polynomially in branch-times-depth). Third, the
+ground-truth $y^\ast(q)$ appears explicitly in the objective. This is
+the move that distinguishes a scaling \emph{law} from a scaling
+\emph{heuristic}: the optimum is defined against verifiable
+correctness, not against a proxy score. Operationalising the argmax
+without access to $y^\ast(q)$ at deployment is the central practical
+move of \cref{sec:snell-difficulty}.
+
+\begin{intuition}
+The folk gloss of \cref{eq:snell-compute-optimal} is ``given a hard
+problem and a fixed compute budget, what's the smartest way to spend it
+inside the model's inference loop?'' The folk gloss is exactly right;
+the only subtlety is that the answer depends on \emph{which} problem.
+Returning to math: the indicator under the expectation in
+\cref{eq:snell-compute-optimal} is the per-prompt success probability
+of strategy $\theta$, and the argmax is the strategy that maximises that
+probability at compute $N$. The dependence on $q$ enters because the
+inner expectation is over $\mathrm{Target}(\theta, N, q)$, which is
+itself a function of the prompt --- different prompts induce different
+output distributions, so different strategies bend those distributions
+toward $y^\ast(q)$ most efficiently.
+\end{intuition}
+
+\subsection{The proposer/verifier decomposition}
+\label{sec:snell-proposer-verifier}
+
+Across the otherwise-disparate test-time-compute literature ---
+chain-of-thought (\cref{sec:cot-phenomenon}), self-consistency
+(\cref{sec:self-consistency}), best-of-$N$ with verifier
+(\cref{sec:process-reward-models}), beam search and MCTS
+(\cref{sec:tree-search}), revision-finetuned models, RLVR-trained
+long-CoT --- \citet[\S 2]{snell2024}%
+\footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-2-proposer-verifier}.}
+identify two and only two structural levers for shaping
+$\mathrm{Target}(\theta, N, q)$:
+\begin{enumerate}
+\item \textbf{Modify the proposal distribution.} Augment the prompt
+with additional tokens the LLM conditions on to obtain a different
+output distribution. Concretely: prepend a chain-of-thought instruction
+\citep{wei2022-cot, kojima2022}, finetune the model to iteratively
+revise its own answer \citep[\S 2]{snell2024}, or RL-train the model so
+its base distribution itself emits long thinking traces
+(\cref{sec:rlvr,sec:r1-family}). Each of these reshapes
+$\mathrm{Target}(\theta, N, q)$ from the inside.
+\item \textbf{Apply a verifier on outputs.} Sample $K$ candidates from
+the (unchanged) base distribution and select among them with a learned
+scorer. Concretely: best-of-$N$ with an outcome reward model, best-of-$N$
+with a process reward model
+(\cref{sec:process-reward-models}), beam search or MCTS guided by a
+PRM \citep[\S 5.2]{snell2024}.%
+\footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-5-2-search}.}
+This reshapes $\mathrm{Target}(\theta, N, q)$ from the outside, by
+post-hoc reweighting.
+\end{enumerate}
+
+The two levers compose. Self-consistency is the proposer-only special
+case at unit verifier weight (\cref{sec:self-consistency}); best-of-$N$
+with ORM is the verifier-only special case on a fixed base distribution;
+RLVR-trained long-CoT plus PRM-weighted self-consistency
+(\cref{sec:r1-family,sec:prm-prm800k}) deploys both levers
+simultaneously. \citet[\S 2]{snell2024} argue that every published
+test-time-compute method to date is one of $\{$proposer-only,
+verifier-only, both$\}$, and the taxonomic claim has not been
+counter-exampled in the 2024-2026 literature.
+
+\begin{analogy}
+The proposer/verifier decomposition is structurally Markov-chain Monte
+Carlo. In an MCMC sampler targeting a hard distribution $\pi$, the two
+design choices are the \emph{proposal kernel} (which candidate next
+state to sample) and the \emph{accept/reject rule} (which candidate
+moves to keep). Modifying the proposal kernel and tuning the
+accept/reject rule are independent levers that compose multiplicatively:
+a better kernel reduces the rejection rate; a sharper accept rule
+filters more aggressively at fixed kernel quality. \citet[\S 2]{snell2024}
+make this connection explicit.
+Returning to math:
+\cref{eq:snell-compute-optimal} maximises
+$\E_{y \sim \mathrm{Target}(\theta,N,q)}\!\left[\mathbb{1}_{y=y^\ast(q)}\right]$,
+and the proposer/verifier decomposition factors $\theta$ into a
+proposal-shaping component (the kernel-analog --- prompt augmentation,
+revision, RL-training of the base distribution) and a verifier-applying
+component (the accept-rule-analog --- ORM, PRM, search-against-PRM).
+Both components shape the same $\mathrm{Target}(\theta, N, q)$;
+optimising over both jointly is the content of \cref{eq:snell-compute-optimal}.
+\end{analogy}
+
+\subsection{Question difficulty as a sufficient statistic}
+\label{sec:snell-difficulty}
+
+The argmax in \cref{eq:snell-compute-optimal} is unevaluable as written:
+it requires $y^\ast(q)$ at deployment. \citet[\S 3.2]{snell2024}%
+\footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-3-2-difficulty}.}
+introduce a tractable approximation by replacing the per-prompt argmax
+with a \textbf{difficulty-conditional} argmax over a discrete bucket of
+prompts.
+
+The operationalisation: take the base LLM, sample $2048$ completions on
+each test-set prompt $q$, and compute the empirical pass@$1$
+\begin{equation}
+  \widehat{\mathrm{pass@}1}(q)
+    \;=\; \frac{1}{2048}\sum_{n=1}^{2048}\mathbb{1}\!\left[y^{(n)} = y^\ast(q)\right],
+    \qquad y^{(n)} \sim p_\theta(\cdot \mid q).
+  \label{eq:pass-at-1-binning}
+\end{equation}
+Bin the $\widehat{\mathrm{pass@}1}(q)$ values into five quantiles
+(easy $\to$ very hard) over the test set, yielding five
+\emph{difficulty bins}. The compute-optimal strategy for an unseen
+prompt $q$ is then approximated by the strategy that maximises
+validation accuracy on the difficulty bin $q$ falls into:
+\begin{equation}
+  \theta^\ast(q, N)
+    \;\approx\;
+    \argmax_\theta \;
+    \frac{1}{|\mathcal{D}_{\mathrm{bin}(q)}|}
+    \sum_{q' \in \mathcal{D}_{\mathrm{bin}(q)}}
+    \E_{y \sim \mathrm{Target}(\theta, N, q')}\!\left[\mathbb{1}_{y = y^\ast(q')}\right],
+  \label{eq:snell-bin-argmax}
+\end{equation}
+where $\mathcal{D}_{\mathrm{bin}(q)}$ is the validation subset that
+shares $q$'s difficulty bin. \citet[\S 3.2]{snell2024} define this as
+the \textbf{oracle difficulty} setting, since $\mathbb{1}_{y = y^\ast}$
+on the validation fold requires ground-truth.
+
+The deployable variant replaces the indicator with a verifier score:
+sample $2048$ completions, score each with a learned outcome verifier,
+average the score, and bin on the averaged score instead. This is
+\citet[\S 3.2]{snell2024}'s \textbf{model-predicted difficulty}, and it
+costs the same compute as one strategy run while delivering most of the
+oracle difficulty's gain.
+
+\paragraph{Empirical content of the binning.} The five difficulty bins
+turn out to be more than a discretisation convenience.
+\citet[\S 3.2]{snell2024} report that the strategy that maximises
+accuracy is \emph{qualitatively different} across bins:
+\begin{itemize}
+\item \textbf{Easy prompts} benefit most from \emph{revision} (modify
+the proposal). The model already nearly solves the problem; the right
+move is to refine the existing draft.
+\item \textbf{Intermediate prompts} benefit most from \emph{search}
+(best-of-$N$-weighted, beam-search, or MCTS against a PRM
+\citep[\S 5.2]{snell2024}). The model occasionally solves the problem;
+the right move is to sample many and let the verifier select.
+\item \textbf{The hardest prompts} fail to benefit from current
+test-time-compute strategies and require \emph{more pretraining}
+(\cref{sec:snell-flops-matched}).
+\end{itemize}
+
+\begin{intuition}
+Different problems want different test-time strategies because they sit
+at different points on the model's competence curve. A problem the
+model already nearly solves wants \emph{refinement} --- iterate on the
+existing draft. A problem the model occasionally solves wants
+\emph{sampling} --- draw many independent attempts and let a verifier
+pick. A problem the model essentially never solves wants \emph{a
+better model} --- no amount of inference compute will rescue it.
+Returning to math: the per-bin argmax in \cref{eq:snell-bin-argmax}
+selects the strategy that maximises the bin-averaged success indicator,
+and the empirical content of \citet[\S 3.2, Fig.~9]{snell2024} is that
+the argmax shifts from revision-heavy to search-heavy to
+``no inference strategy works'' as the bin moves from easy to hard.
+\end{intuition}
+
+\subsection{The 4$\times$ compute-optimal vs.\ best-of-$N$ gain}
+\label{sec:snell-4x}
+
+\citet[abstract]{snell2024}%
+\footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#abstract}.}
+report that picking the right strategy per difficulty bin --- the
+operationalised \cref{eq:snell-bin-argmax} --- delivers
+\textbf{$\sim 4\times$ efficiency} over a fixed best-of-$N$ baseline at
+matched accuracy. Equivalently, holding inference FLOPs constant, the
+bin-conditional strategy reaches accuracy levels that fixed best-of-$N$
+needs four times the budget to match. The single largest source of the
+$4\times$ is the easy-prompt-uses-revision $/$ hard-prompt-uses-search
+split: applying revision uniformly across the test set leaves
+search-favoured bins underserved, and applying search uniformly leaves
+revision-favoured bins overspending on parallel sampling when an
+iterative refine would suffice.
+
+\begin{forumsignal}
+The $4\times$ figure is sometimes informally cited as ``Snell's
+$4\times$.'' The number is specific to the MATH benchmark, the PaLM
+$2$-S\* base model, and the strategy menu of best-of-$N$-weighted, beam
+search, and revision under the test-time-compute setup of
+\citet[\S 5--6]{snell2024}. It is not a universal exchange rate. Cited
+or repeated outside that benchmark and model class, the $4\times$
+figure should be treated as a discovery signal that compute-optimal
+allocation matters, not as a numerical constant transferable to other
+domains. \citet[\S 6]{snell2024} themselves note the result depends on
+``the specific conditions on the pretraining and inference workload.''
+\end{forumsignal}
+
+\subsection{The FLOPs-matched comparison: 14$\times$ pretraining substitution}
+\label{sec:snell-flops-matched}
+
+The structural Chinchilla parallel becomes explicit in
+\citet[\S 6]{snell2024}'s FLOPs-matched experiment, where total
+end-to-end FLOPs (training plus inference) are held fixed and the
+allocation between training and inference is varied. The two compared
+configurations:
+\begin{align}
+  C_\text{small}^\text{train} + C^\text{test}
+    &\;\approx\; C_\text{large}^\text{train} + C_\text{large}^\text{1-pass}.
+  \label{eq:flops-matched}
+\end{align}
+The left side is a smaller base model plus compute-optimal test-time
+spend (the operationalised \cref{eq:snell-bin-argmax}); the right side
+is a $14\times$ larger base model running a single-pass inference at
+matched total FLOPs. \citet[\S 1]{snell2024}%
+\footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-1-flops-matched}.}
+report:
+\begin{quote}
+On easy and intermediate questions, and even hard questions
+(depending on the specific conditions on the pretraining and inference
+workload), additional test-time compute is often preferable to scaling
+pretraining. \ldots\ \emph{[I]n some settings it is be more effective to
+pretrain smaller models with less compute, and then apply test-time
+compute to improve model outputs.} That said, with the most challenging
+questions, we observe very little benefits from scaling up test-time
+compute. Instead, we find that on these questions, it is more effective
+to make progress by applying additional pretraining compute,
+demonstrating that current approaches to scaling test-time compute may
+not be 1-to-1 exchangeable with scaling pretraining.
+\end{quote}
+
+The 14$\times$ substitution ratio is therefore \emph{conditional on the
+difficulty regime}. For easy and intermediate prompts (which are most
+prompts in deployment), test-time compute substitutes one-for-one with
+\emph{at least} $14\times$ more pretraining FLOPs at matched accuracy.
+For the hardest tail (the very hard bin, the bin where the base model's
+$\widehat{\mathrm{pass@}1}(q)$ is near zero), the substitution breaks
+down and pretraining FLOPs cannot be replaced by inference FLOPs.
+
+\paragraph{The structural Chinchilla parallel.} Paper~2's scaling-laws
+section transcribes \citet[\S 3, Eq.~10]{hoffmann2022-chinchilla}'s
+parametric loss
+$L(N, D) = E + A/N^\alpha + B/D^\beta$ and derives the compute-optimal
+allocation between parameters $N$ and tokens $D$ at fixed training
+compute $C_\text{train} = 6 N D$. \citet{snell2024}'s Eq.~1 (transcribed
+as \cref{eq:snell-compute-optimal} above) is the inference-side
+analog: an argmax over inference-strategy hyperparameters $\theta$ at
+fixed inference compute $C_\text{test} = N$. The two argmaxes target
+different objects --- training loss vs.\ per-prompt success indicator
+--- and live on different sides of the training/inference boundary, but
+they share the optimisation form: a constrained argmax over an
+allocation parameter at a fixed compute budget. The FLOPs-matched
+experiment of \cref{eq:flops-matched} closes the loop by relating the
+two budgets: at fixed total FLOPs $C_\text{train} + C_\text{test}$,
+how much of each should be spent? The empirical answer of
+\citet[\S 6]{snell2024} is that the two budgets substitute on easy and
+intermediate prompts and decouple on the hardest tail. A
+\emph{joint} closed-form $L(N, D, \theta, C_\text{test})$ scaling law
+that subsumes Chinchilla and Snell remains an open question
+(\cref{sec:snell-open}, \cref{sec:search-vs-rl}).
+
+\subsection{Tensor-shape and operational notes}
+\label{sec:snell-tensor-shapes}
+
+The strategy parameter $\theta$ in \cref{eq:snell-compute-optimal} is
+not a tensor in the usual sense --- it is a vector of inference-time
+hyperparameters whose shape and content depend on the strategy class.
+For reference:
+\begin{center}
+\small
+\begin{tabular}{lll}
+\toprule
+Strategy class & Components of $\theta$ & Cost in $N$ \\
+\midrule
+Best-of-$N$ with ORM            & $(K, T)$                 & $K \cdot L_\text{ans}$ \\
+Best-of-$N$-weighted with PRM   & $(K, T, \text{agg})$     & $K \cdot L_\text{ans} \cdot (1 + c_\text{verify})$ \\
+Beam search against PRM         & $(K, M, T)$              & $K \cdot D \cdot c_\text{step}$ \\
+MCTS against PRM                & $(N_\text{rollout}, c_\text{puct}, D)$ & $N_\text{rollout} \cdot D \cdot L_\text{step}$ \\
+Revision chain                  & $(K_\text{revisions}, T)$ & $K_\text{revisions} \cdot L_\text{ans}$ \\
+Self-consistency                & $(N, T)$                 & $N \cdot L_\text{ans}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+where $L_\text{ans}$ is mean answer-trace length, $L_\text{step}$ is
+mean per-step token count, $D$ is search depth, $K$ is sample count,
+$M$ is beam width, $T$ is sampling temperature,
+$c_\text{verify}$ is per-verifier-call cost in equivalent generation
+tokens, and $c_\text{puct}$ is the MCTS exploration constant. The
+budget $N$ in \cref{eq:snell-compute-optimal} is the sum of the
+right-hand cost column. The strategy menu \citet[\S 5--6]{snell2024}
+explore is the $\{$best-of-$N$-weighted, beam search, revision$\}$
+subset; later sections of this paper (\cref{sec:tree-search,sec:rlvr})
+extend the menu to MCTS and to RL-trained long-CoT proposers.
+
+The pass@1 difficulty estimator of \cref{eq:pass-at-1-binning} is, in
+operational terms, a $|\text{test set}| \times 2048$ shape of
+indicators, summed along the second axis to yield a scalar per prompt.
+The $2048$-sample budget is itself non-trivial inference compute --- a
+preprocessing pass that
+\citet[\S 3.2]{snell2024} amortise across the entire downstream
+strategy-selection pipeline.
+
+\subsection{The functional form of \texorpdfstring{$L(\theta, N)$}{L(theta,N)} is open}
+\label{sec:snell-open}
+
+\citet{snell2024} produce empirical curves --- accuracy as a function
+of test-time FLOP budget, broken down by strategy and difficulty bin
+\citep[\S 5--6]{snell2024} --- but they do not commit to a closed-form
+$L(\theta, N)$ in the spirit of Chinchilla's
+$L(N, D) = E + A/N^\alpha + B/D^\beta$
+\citep[\S 3, Eq.~10]{hoffmann2022-chinchilla}. The shape of the
+empirical curves is qualitatively concave in $\log N$ on easy and
+intermediate prompts and roughly flat on the hardest bin, but no
+parametric fit with the structural status of Chinchilla's law has been
+attested for inference-time compute. The 2025 budget-forcing experiment
+of \citet{s1-2025} measures accuracy as a function of explicit
+thinking-token budget on a small reasoning-trained model and reports
+\emph{logarithmic} returns to thinking-token count on its evaluation
+suite (s1's Fig.~1, qualitatively monotone in $\log L$ where $L$ is the
+thinking-budget length). This is suggestive but does not establish a
+functional form: it is a single-paper, single-model report on a single
+benchmark family.
+
+\begin{contradiction}
+\textbf{The functional form $L(\theta, N)$ is unsettled.}
+\citet{snell2024} report empirical accuracy-vs-FLOPs curves but stop
+short of fitting a parametric scaling law. \citet{s1-2025} report
+roughly logarithmic returns to thinking-token budget on a small
+reasoning-trained model. \citet{deepseek-r1} report monotone increase
+of AIME 2024 pass@1 with response-length ramp from $\sim 200$ to
+$\sim 10\,000$ tokens during GRPO training (\cref{sec:r1-family}), but
+do not parameterise the inference-time accuracy-vs-budget curve at
+fixed training. The candidate functional forms are: power law in $N$
+(Kaplan-style), logarithmic in $N$ (s1-suggestive), bounded sigmoid
+saturating at the base-model competence ceiling, or a difficulty-bin
+mixture of all three. As of 2026-Q2 no closed-form $L(\theta, N)$
+analogous to Chinchilla's $L(N, D)$ is attested in the literature, and
+the joint $(C_\text{train}, C_\text{test})$ frontier --- the natural
+generalisation of \cref{eq:flops-matched} into a parametric form --- is
+an open research direction (\cref{sec:search-vs-rl,sec:contradictions}).
+\end{contradiction}
+
+A second open frontier: \citet[\S 4--6]{snell2024} run their entire
+analysis on the MATH benchmark using PaLM~2-S\* (Codey) as the base
+model. The 14$\times$ substitution ratio, the 4$\times$
+compute-optimal-vs-fixed-best-of-$N$ gain, and the difficulty-bin
+strategy split are all measured on this single benchmark/model
+combination. The 2025-2026 reasoning-trained-model literature
+(\cref{sec:r1-family,sec:budget-forcing}) extends the empirical
+support for Snell's framing to AIME and competition-grade math under
+DeepSeek-R1 and s1, but a Snell-style FLOPs-matched comparison has not
+been redone on a frontier-2026 reasoning-trained base model. The
+substitution-ratio number is therefore best read as a discovery-grade
+result --- it establishes that the substitution exists and is large ---
+rather than as a transferable constant.
+
+\subsection{Cross-paper and forward links}
+\label{sec:snell-forward}
+
+The Snell framing is the load-bearing scaffolding for the rest of this
+paper:
+\begin{itemize}
+\item \Cref{sec:process-reward-models} deepens the verifier leg of
+\cref{sec:snell-proposer-verifier}: \citet{lightman2023-prm800k}'s PRM
+loss, the three aggregation rules, and the post-2023 PRM lineage. The
+verifier-only special case of
+\cref{eq:snell-compute-optimal} is what
+\cref{sec:process-reward-models} formalises.
+\item \Cref{sec:tree-search} deepens the search side: beam search, BFS,
+and MCTS are the three strategies that operationalise
+\citet[\S 5.2]{snell2024}'s ``search against a PRM'' under the
+$\theta = (K, M, c_\text{puct}, D)$ rows of
+\cref{sec:snell-tensor-shapes}.
+\item \Cref{sec:rlvr,sec:r1-family} treat the proposer leg's
+training-time form: RL-trained long-CoT models (DeepSeek-R1, o1, the
+distilled-Qwen variants) ship a base distribution that is itself
+shaped to emit long thinking traces, so $\mathrm{Target}(\theta, N, q)$
+becomes a different object before any test-time strategy is applied.
+\item \Cref{sec:search-vs-rl} returns to the FLOPs-matched experiment
+of \cref{eq:flops-matched} and asks the deeper question: at fixed total
+compute, when do the marginal FLOPs go to inference search, RLVR
+training, or pretraining? Snell's curves give one slice
+(inference vs.\ pretraining); the RLVR literature gives partial
+answers for inference vs.\ RL.
+\end{itemize}
+
+The structural picture: Snell's Eq.~1 (transcribed as
+\cref{eq:snell-compute-optimal}) is the inference-time analog of the
+Chinchilla compute-optimal allocation in Paper~2 \S scaling-laws. Both
+are constrained-optimisation problems with empirically-fitted exchange
+rates between dimensions; both produce headline substitution-ratio
+numbers (Chinchilla: parameters-vs-tokens at fixed
+$C_\text{train}$; Snell: strategy-choice at fixed $C_\text{test}$, and
+$14\times$ inference-vs-pretraining at fixed
+$C_\text{train} + C_\text{test}$); and both leave open how to compose
+the two argmaxes into a single joint frontier. The verifier leg picks
+up in \cref{sec:process-reward-models}; the third leg of the triangle
+--- RL on verifiable rewards --- picks up in \cref{sec:rlvr}.
