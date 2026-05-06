@@ -62,7 +62,7 @@ disclosed & native multimodal \\
 Mistral Large 2 & GQA-8 & FA2 / FA3 & dense SwiGLU & RMSNorm +
 Pre-LN & RoPE + position-IDs ext.\ & tekken (BPE) & none disclosed &
 text-only (Pixtral variant: native MM) \\
-Gemma 3 27B & GQA + interleaved local/global & FA2 & dense SwiGLU &
+Gemma 3 27B & GQA + 5 local : 1 global (window 1024) & FA2 & dense SwiGLU &
 RMSNorm + Peri-LN + QK-Norm & RoPE + interleaved windows & SentencePiece
 BPE & none disclosed & native MM (4B$+$ Vision) \\
 Qwen 2.5 / Qwen 2.5-VL & GQA & FA2 / FA3 & dense SwiGLU &
@@ -148,9 +148,9 @@ as MoE going forward, and the dense-vs-MoE split tilts further
 toward MoE than the row alone shows.}
 
 \paragraph{Gemma 3.}
-Gemma 3 27B uses GQA with the interleaved local / global attention
-pattern of Gemma 2~\citep[\S 2.1]{gemma3} --- alternating per layer
-between sliding-window local and full global attention. Normalization
+Gemma 3 27B uses GQA with a $5{:}1$ local-to-global interleave (sliding
+window $1024$ tokens) of Gemma 2's pattern~\citep[\S 2.1]{gemma3} --- five
+sliding-window local-attention layers per one full global-attention layer. Normalization
 is the Peri-LN placement of \citet{peri-ln2025} combined with QK-Norm
 on the attention path~\citep[\S 2.1]{gemma3,olmo2}. Position encoding
 is RoPE; the FFN is dense SwiGLU; multimodality is native via a

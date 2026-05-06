@@ -62,8 +62,8 @@ model's own final pre-unembed normalization. Tensor shapes for the
 rest of this section: residual stream $\mathbf{h}_\ell \in \mathbb{R}^D$
 at one $(B, S)$ position, with $D$ the model dim, $V = |\mathcal{V}|$
 the vocabulary, and $L$ the layer count from Paper~1's notation. A
-batched residual stream is $\mathsf{B}\!\times\!\mathsf{S}\!\times\!D$;
-the lens output is $\mathsf{B}\!\times\!\mathsf{S}\!\times\!V$.
+batched residual stream is $\BSH$;
+the lens output is $\bsv$.
 
 The \emph{prediction trajectory}
 $\{\mathrm{Lens}_\ell(\mathbf{h}_\ell)\}_{\ell=0}^L$ across layers is

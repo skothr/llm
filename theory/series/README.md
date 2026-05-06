@@ -50,18 +50,20 @@ PDFs ship in-repo under each paper directory; intermediate
 
 | Paper | Title | PDF | Pages |
 |------:|-------|-----|------:|
-| 1 | The modern Transformer is a small set of choices | [`paper-1/main.pdf`](paper-1/main.pdf) | 72 |
+| 1 | The modern Transformer is a small set of choices | [`paper-1/main.pdf`](paper-1/main.pdf) | 73 |
 | 2 | Training is a multi-stage pipeline | [`paper-2/main.pdf`](paper-2/main.pdf) | 98 |
-| 3 | Reasoning is compute, search, and verification | [`paper-3/main.pdf`](paper-3/main.pdf) | 76 |
+| 3 | Reasoning is compute, search, and verification | [`paper-3/main.pdf`](paper-3/main.pdf) | 77 |
 | 4 | The internal computation can be partially read | [`paper-4/main.pdf`](paper-4/main.pdf) | 72 |
-| 5 | What we measure and what slips through | [`paper-5/main.pdf`](paper-5/main.pdf) | 76 |
-|   | **Total** |   | **394** |
+| 5 | What we measure and what slips through | [`paper-5/main.pdf`](paper-5/main.pdf) | 77 |
+|   | **Total** |   | **397** |
 
-Build state as of 2026-05-05: paper-1/2/3/5 build with zero undefined
-references and zero undefined citations; paper-4 has one residual
-`Citation 'l' undefined` warning (a stray-key artifact whose source
-defies grep — it does not prevent the PDF from building, and renders
-as a single `[?]` in the bibliography on page 60). Cross-paper
+Build state as of 2026-05-06 (post-MINOR-sweep): paper-3 builds
+clean; paper-4 carries the known `Citation 'l' undefined` warning
+(a stray-key artifact whose source defies grep — it does not prevent
+the PDF from building, and renders as a single `[?]` in the
+bibliography on page 60); paper-1/2/5 carry small pre-existing
+warnings (a few cross-paper `\cref` targets, a Unicode μ in one bib
+title, a font-shape note) that do not block the build. Cross-paper
 references throughout the series are inline-text rather than `\cref`
 since each paper builds independently; xr-hyper would lift this if
 ever desired.

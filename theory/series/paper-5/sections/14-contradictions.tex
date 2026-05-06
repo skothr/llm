@@ -24,7 +24,9 @@ deployment-relevant claims, not just internal scoreboards).
 
 \paragraph{1. MMLU saturation: reality versus reported (\cref{sec:knowledge-benchmarks}).}
 The benchmark's published scores live above their own
-verifier-error ceiling. \citet{mmlu-redux-2024} re-audit the
+verifier-error ceiling. \citet{mmlu-redux-2024}%
+\deepencite{mmlu-redux-2024 §abstract, KB excerpt is abstract/README-only; PDF verification pending}
+re-audit the
 $57$-subject test set and find $6.49\%$ of items contain
 answer-key errors, ambiguities, or unverifiable references; this
 caps the highest honest score the original instrument can carry. As
@@ -53,8 +55,9 @@ $(\mathcal{B}, \mathcal{A}, V, \pi)$ that fixes target behaviors,
 attacker family, judge, and success criterion. \citet{harmbench2024}
 and \citet{chao2024-jailbreakbench} each standardize the substrate
 inside their own frame; neither is field-wide, and the two are not
-interoperable. \citet{russinovich2024-crescendo} measure a
-$29$--$71\%$ ASR uplift when the attack family $\mathcal{A}$ alone
+interoperable. \citet{russinovich2024-crescendo} measure
+$29$--$61\%$ ASR uplift on GPT-4 and $49$--$71\%$ on Gemini-Pro
+when the attack family $\mathcal{A}$ alone
 shifts from single-turn to multi-turn, holding other factors
 approximately fixed --- which demonstrates exactly how much of the
 headline ASR is determined by substrate rather than model.\\
@@ -140,7 +143,7 @@ removal pressure is admissible. The vendor and Kirchenbauer-2024
 position is that moderate fine-tuning leaves the watermark
 detectable at slower accumulation rates; \citet{sadasivan2023-detection}%
 \deepencite{sadasivan2023-detection §main-result, citation-pending}
-prove that any watermark detectable from short spans is in
+argue that any watermark detectable from short spans is in
 principle removable by a paraphrase attacker with a
 comparable-quality model, and independent adversarial probes of
 SynthID-Text confirm that aggressive paraphrase plus modest
@@ -251,13 +254,16 @@ when an external constraint forces coordination
 construct-validity ones close when an interpretability or
 behavioral co-signal supplies an agreed referent; the
 instrumentation one closes the moment a single group with
-sufficient compute decides to host it. The honest forecast is
+sufficient compute decides to host it.
+\end{contradiction}
+
+\begin{speculation}
+\textbf{Closure-order forecast.} The honest forecast is
 that 5 closes first, 1 and 7 close together under regulatory
 pressure, 2 closes when one of the standardization candidates
-acquires critical mass, and 3, 4, and 6 remain open longest. We
-flag this forecast as \texttt{[SPECULATION]}; it is a
-field-trajectory prediction, not an evaluation result.
-\end{contradiction}
+acquires critical mass, and 3, 4, and 6 remain open longest. This
+is a field-trajectory prediction, not an evaluation result.
+\end{speculation}
 
 \subsection{What this paper commits to}
 \label{sec:contradictions-commitments}

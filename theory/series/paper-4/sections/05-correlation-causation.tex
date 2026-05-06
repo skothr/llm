@@ -170,7 +170,7 @@ information is encoded along $\hat{\mathbf{d}}_y$, it checks whether
 the model's downstream computation \emph{depends} on it.
 
 The shape ledger: at one batched residual-stream slice the activation
-is $\mathbf{h} \in \mathsf{B}\!\times\!\mathsf{S}\!\times\!D$, the
+is $\mathbf{h} \in \R^{\BSH}$, the
 direction is $\hat{\mathbf{d}}_y \in \mathbb{R}^D$, the projection
 $\mathbf{h}^\top \hat{\mathbf{d}}_y$ contracts the $D$-axis to a
 scalar per $(B, S)$ position, and the ablation rewrites $\mathbf{h}$

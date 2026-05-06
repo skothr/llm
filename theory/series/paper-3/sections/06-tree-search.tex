@@ -150,7 +150,7 @@ four rounds of self-evolution
 \citep[headline numbers]{rstar-math2025}.\footnote{KB excerpt:
 \texttt{kb/excerpts/rstar-math2025.md\#headline}.}
 
-\paragraph{The UCT selection rule.} At each iteration, descend the tree
+\paragraph{The PUCT selection rule.} At each iteration, descend the tree
 from the root by repeatedly choosing the child $s$ that maximises%
 \footnote{KB note:
 \texttt{kb/notes/reasoning/inference-time-search.md\#2-2-mcts-over-reasoning-steps-rstar-math}.}
@@ -158,7 +158,7 @@ from the root by repeatedly choosing the child $s$ that maximises%
   U(s) \;=\; Q(s) \;+\; c_\text{puct}\;
               \pi_\theta\!\bigl(s \,\big|\, \text{parent}(s)\bigr)\;
               \frac{\sqrt{N_\text{parent}}}{1 + N_s}.
-  \label{eq:uct}
+  \label{eq:puct}
 \end{equation}
 The first term $Q(s)$ is the running mean of rollout outcomes through
 $s$ (the exploitation term: nodes that have produced correct rollouts
@@ -176,7 +176,7 @@ empirically.
 \paragraph{The four phases of an MCTS iteration.}
 \begin{enumerate}
 \item \textbf{Selection.} From the root, repeatedly apply
-\cref{eq:uct} to descend until a leaf $\ell$ is reached. ``Leaf'' here
+\cref{eq:puct} to descend until a leaf $\ell$ is reached. ``Leaf'' here
 means a node that has not yet been expanded under MCTS bookkeeping ---
 not necessarily a terminal in the trace sense.
 \item \textbf{Expansion.} Sample $k$ candidate next-steps from
@@ -227,7 +227,7 @@ $N_\text{rollout}$ increasingly concentrates on the winning subtree.
 On problems where rollout outcomes are noisy or where the success
 signal is buried deep, MCTS spends iterations re-validating
 already-committed paths instead of broadening, and beam can match or
-beat it. Returning to math: \cref{eq:uct}'s exploitation term $Q(s)$
+beat it. Returning to math: \cref{eq:puct}'s exploitation term $Q(s)$
 is a Monte-Carlo estimate of the expected return from $s$, and the
 ratio $\sqrt{N_\text{parent}}/(1 + N_s)$ is the standard PUCT
 exploration bonus from AlphaGo / AlphaZero, here applied in the
@@ -319,7 +319,7 @@ legal-move distribution. The value head is the PRM
 $R^P_\phi(x, s_{1:t})$ rather than the position-evaluation network.
 The self-play loop is replaced by a
 generate-MCTS-trajectories-then-SFT-on-correct-ones loop. Returning to
-math: \cref{eq:uct}'s PUCT formula is the same equation that drives
+math: \cref{eq:puct}'s PUCT formula is the same equation that drives
 AlphaZero's selection, with the policy prior
 $\pi_\theta(s \mid \text{parent})$ playing the role of the
 move-prior network's output and $Q(s)$ playing the role of the
@@ -406,7 +406,7 @@ necessarily pay for itself at fixed test-time FLOPs. \citet{rstar-math2025}'s
 headline framing instead foregrounds MCTS as the central mechanism by
 which 7B SLMs match o1-preview, and the AlphaZero structural parallel
 of \cref{sec:tree-rest-mcts} runs entirely through the MCTS recurrence
-of \cref{eq:uct}. Reconciling the two: Snell's evaluation uses a
+of \cref{eq:puct}. Reconciling the two: Snell's evaluation uses a
 non-reasoning-trained base model and a single round of search; rStar-
 Math's MCTS is co-trained with the policy and PRM across four rounds
 of self-evolution \citep[abstract]{rstar-math2025}, so the
@@ -439,7 +439,7 @@ checkpoint (Snell-style evaluation).
 triangle --- RL on verifiable rewards --- which is the
 \emph{training-time} answer to the question this section treated at
 inference: how to spend compute to amplify reasoning. The
-\cref{eq:cost-mcts} cost expression and the \cref{eq:uct} UCT
+\cref{eq:cost-mcts} cost expression and the \cref{eq:puct} PUCT
 recurrence both reappear there in a different role: ReST-MCTS\textsuperscript{*}'s
 search-then-SFT loop and RLVR's group-of-rollouts both \emph{generate}
 training trajectories from a current policy, with the verifier

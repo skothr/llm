@@ -284,11 +284,18 @@ RoPE-equipped attention layers with NoPE attention layers in a 3:1
 ratio, with a temperature-scaling factor in the NoPE layers. Trained
 natively at $S_{\text{train}} = 256\text{K}$, LLaMA 4 Scout reports a
 claimed 10M-token inference context --- a qualitative regime change,
-not just better interpolation. The pattern resembles a fallback: RoPE
-layers provide explicit local-order constraints; NoPE layers are
+not just better interpolation.
+
+\begin{speculation}
+\textbf{Fallback framing of iRoPE.} The pattern resembles a fallback:
+RoPE layers provide explicit local-order constraints; NoPE layers are
 forced to derive position from content alone, providing a channel that
 does not depend on the rotation when phases at $m \gg S_{\text{train}}$
-go out-of-distribution.
+go out-of-distribution. \citet{meta-llama4}'s own theoretical
+justification for the pattern, if any, is not in this KB at this
+writing; the framing is offered here as a coherent reading rather than
+as the paper's stated mechanism.
+\end{speculation}
 
 \begin{contradiction}
 Long-context extrapolation method comparison is contested as of

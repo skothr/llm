@@ -69,7 +69,7 @@ dense baseline, because pre-training with sparse attention teaches the
 model to use it \citep{yuan2025}. \textbf{Pro-FA3:} FlashAttention-3
 with H100 asynchronous warp-specialization reaches $\sim 75\%$ of
 H100's theoretical peak FP16 throughput on dense attention
-\citep{shah2024}; community indications are that NSA's $11.6\times$
+\citep{shah2024}\deepencite{shah2024 §3 (excerpt not yet in KB; first-use anchor in \S\ref{sec:hardware-attention})}; community indications are that NSA's $11.6\times$
 margin shrinks substantially when the dense baseline is FA3 rather than
 FA2 and the context length is closer to 32K than 64K.
 

@@ -47,7 +47,7 @@ the LLM on $q$ under test-time hyperparameters $\theta$ with a compute
 budget of $N$ inference FLOPs (or, equivalently, generated tokens).
 \citet[\S 3.1, Eq.~1]{snell2024} define the
 \textbf{test-time compute-optimal scaling strategy}%
-\footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-3-1}.} as
+\footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-3-1}. Notation note: \citet{snell2024} write the subscript with mixed labels $a^\ast$ in the index and $y^\ast$ in the indicator; we unify to $y^\ast(q)$ throughout for readability without altering the equation's content.} as
 \begin{equation}
   \theta^\ast_{q,\, y^\ast(q)}(N)
     \;=\; \argmax_\theta \;

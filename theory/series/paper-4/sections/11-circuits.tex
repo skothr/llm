@@ -256,6 +256,17 @@ resulting graph is iterated backward from the target node to the
 embedding layer; the surviving subgraph is the attribution
 graph~\citep{lindsey2025-circuit-tracing}.
 
+\begin{forumsignal}
+\textbf{Single-source methodology (2026-Q2).} The cross-layer-transcoder
++ Jacobian-attribution pipeline above rests on
+\citet{lindsey2025-circuit-tracing} as its sole canonical reference; no
+external lab has published an independent reproduction at frontier
+scale at this writing. Treat the productionised-methodology framing as
+Anthropic-internal evidence pending external replication. The closing
+contradiction of this section develops the attendant
+transcoder-seed-stability and external-reproduction concerns.
+\end{forumsignal}
+
 The compute regime shifts from manual to automated. Per-task cost on
 the replaced model is one forward pass plus one backward pass; the
 amortized cost is the cross-layer transcoder training, which Anthropic

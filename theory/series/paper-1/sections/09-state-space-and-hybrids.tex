@@ -257,6 +257,18 @@ parameters/compute in published work, and all four are at sub-frontier
 scale (12B active is the largest deployed example,
 \citet{lieber2024-jamba}).
 
+\begin{speculation}
+\textbf{Why the 1:7 hybrid ratio is roughly right.} An attention layer
+once every $\sim 8$ tokens of stack-depth gives the model enough
+exact-recall capacity to handle the rare positions where the SSM
+substrate cannot, while keeping the cheaper SSM dominant for the
+routine residual-stream work. The optimal ratio likely depends on the
+task distribution: code probably benefits from more attention,
+narrative summarization benefits from more SSM. The published lineage
+has not run that ratio sweep at frontier scale, so this remains a
+plausible heuristic rather than a derived constant.
+\end{speculation}
+
 \subsection{Why pure SSM has not won at frontier}
 \label{sec:ssm-frontier}
 
