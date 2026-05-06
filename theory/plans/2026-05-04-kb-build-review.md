@@ -143,6 +143,50 @@ Nanda 2023 attribution-patching). All are flagged for an optional
 Phase 2.5 deepening pass; none is load-bearing for a frontier
 claim.
 
+## Post-review fix-up (2026-05-06, same session as Phase 5)
+
+Six fresh-context opus reviewers audited the just-built series with
+non-overlapping lenses (adversarial content, cross-paper coherence, math
+correctness, citation-tier discipline, frontier currency [web-enabled],
+Feynman-bar pedagogy). Reports under `theory/reviews/`. Aggregate findings:
+1 BLOCKER, 11 MAJOR, ~19 MINOR, 6 NIT. The single BLOCKER and 8 of the
+11 MAJORs were closed in commit `4d6c354`:
+
+- **B1 closed** — AIME contamination contradiction in Paper 3 §14
+  partially closed by Sept-2025 *Nature* publication of DeepSeek-R1
+  (decontamination audit + Qwen2-7B control). Acknowledged inline.
+- **M1, M2, M3, M4** — citation/source mismatch cluster (AIME number
+  error, bare cite-keys without `\deepencite`, Hoffmann Eq. 2 mis-cited
+  as Eq. 10): all sed-class fixes applied.
+- **M6, M7, M8, M9** — frontier-currency drift cluster: Paper 1 §13
+  closed-vendor caveat, Mistral Large 3 MoE update, OpenAI/Apollo
+  deliberative-alignment paper acknowledged in Paper 5 §10 + §14,
+  Yue counter-evidence (`wen2025-cot-passk`, `rl-plus-2025`) cited in
+  Paper 3 §14.
+- **M11** — Paper 3 §7 intuition softened around the contested Yue
+  RLVR-limit claim.
+- **M5** — re-read showed it was a false positive (GRPO equation
+  honestly dual-cites `shao2024` + `deepseek-r1`).
+- **M10** — partially closed by M6's tier-B caveat; residual hedge
+  deferred.
+
+Bibliography: 191 → 201 (Phase 5 closeout) → 206 (post-review fix-up).
+`gen_bibliography.py` patched to escape `&` in titles.
+
+Build state after fix-up: 73 + 98 + 77 + 72 + 77 = **397 pages** across
+the 5 PDFs (was 394 pre-fix). All 5 PDFs build clean from a fresh
+working tree; one residual `Citation 'l'` warning on paper-4 that
+defies grep (renders as `[?]`, doesn't block).
+
+Deferred to future session:
+- ~19 MINORs (notation drift in Paper 4, `\begin{speculation}` env
+  defined but never used despite ~12 [SPECULATION] markers in KB notes,
+  forumsignal undercount, Snell θ* subscript drift, PUCT-vs-UCT
+  terminology) — single batched cleanup-sweep, ~30 min.
+- 6 NITs — defer indefinitely.
+- Phase 2.5 excerpt deepening (still optional).
+- xr-hyper for cross-paper `\cref` (still optional).
+
 ## Recommended next session
 
 (B), (C), and most of (A) are now done. Tracks ahead:
