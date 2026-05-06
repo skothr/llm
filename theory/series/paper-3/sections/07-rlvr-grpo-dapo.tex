@@ -177,10 +177,13 @@ standardized advantage broadcast over the trajectory's tokens. The
 that the group-mean is an empirical estimate of $p_0(q)$ --- the
 fraction of trajectories the current policy gets right at this prompt
 --- and GRPO's gradient is a trajectory-level importance-weighted
-update on the better-than-$p_0(q)$ rollouts. RLVR cannot make the
-policy solve a problem it has \emph{never} solved at any sample budget;
-it can only sharpen the distribution toward the rollouts that already
-succeed.
+update on the better-than-$p_0(q)$ rollouts. Under the
+\citet{rlvr-limits-2025} reading discussed in
+\cref{sec:contradictions}, this implies RLVR cannot make the policy
+solve a problem it has \emph{never} solved at any sample budget; it
+can only sharpen the distribution toward the rollouts that already
+succeed --- a claim contested by the R1 narrative \citep[\S
+2.3]{deepseek-r1} and not yet decisively settled.
 \end{intuition}
 
 The intuition's last clause foreshadows the

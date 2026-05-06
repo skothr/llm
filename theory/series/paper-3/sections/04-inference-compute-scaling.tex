@@ -325,7 +325,7 @@ $\widehat{\mathrm{pass@}1}(q)$ is near zero), the substitution breaks
 down and pretraining FLOPs cannot be replaced by inference FLOPs.
 
 \paragraph{The structural Chinchilla parallel.} Paper~2's scaling-laws
-section transcribes \citet[\S 3, Eq.~10]{hoffmann2022-chinchilla}'s
+section transcribes \citet[\S 3, Eq.~2]{hoffmann2022-chinchilla}'s
 parametric loss
 $L(N, D) = E + A/N^\alpha + B/D^\beta$ and derives the compute-optimal
 allocation between parameters $N$ and tokens $D$ at fixed training
@@ -395,7 +395,7 @@ of test-time FLOP budget, broken down by strategy and difficulty bin
 \citep[\S 5--6]{snell2024} --- but they do not commit to a closed-form
 $L(\theta, N)$ in the spirit of Chinchilla's
 $L(N, D) = E + A/N^\alpha + B/D^\beta$
-\citep[\S 3, Eq.~10]{hoffmann2022-chinchilla}. The shape of the
+\citep[\S 3, Eq.~2]{hoffmann2022-chinchilla}. The shape of the
 empirical curves is qualitatively concave in $\log N$ on easy and
 intermediate prompts and roughly flat on the hardest bin, but no
 parametric fit with the structural status of Chinchilla's law has been

@@ -3849,6 +3849,102 @@
       "summary": "Empirical evaluation of Irving 2018-style debate with LLM debaters and weaker-judge LLMs / non-expert humans. Reports that pitting two more-persuasive LLMs against each other and judging with a weaker model recovers truth on QuALITY-style reading-comprehension tasks better than direct consultation. Partial-and-domain-bounded support for the debate equilibrium hypothesis; counterpoint to the open question whether equilibrium honesty holds in practice."
     },
     {
+      "key": "deepseek-r1-nature-2025",
+      "title": "DeepSeek-R1 incentivizes reasoning in LLMs through reinforcement learning",
+      "authors": "DeepSeek-AI",
+      "year": 2025,
+      "venue": "Nature 645(8081), 18 September 2025",
+      "url": "https://www.nature.com/articles/s41586-025-09422-z",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "reasoning/reasoning-training",
+        "post-training/rlvr-and-grpo"
+      ],
+      "topics": [
+        "rlvr-and-grpo",
+        "reasoning-training"
+      ],
+      "category": "landmark",
+      "summary": "Peer-reviewed Nature publication of DeepSeek-R1 (DOI 10.1038/s41586-025-09422-z). Adds an n-gram-overlap decontamination audit on pre- and post-training data and a Qwen2-7B (June 2024 base, predating advanced reasoners) control experiment that reproduces capability emergence under the same GRPO recipe. Reviewers' comments and authors' responses published alongside. Partially closes the AIME-2024-contamination concern raised against the arxiv preprint."
+    },
+    {
+      "key": "openai2025-deliberative-alignment",
+      "title": "Stress Testing Deliberative Alignment for Anti-Scheming Training",
+      "authors": "Schoen and Lan and Wang and Marks and Mu and others",
+      "year": 2025,
+      "venue": "arXiv:2509.15541",
+      "url": "https://arxiv.org/abs/2509.15541",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "alignment/scheming-and-deceptive-alignment"
+      ],
+      "topics": [
+        "scheming-and-deceptive-alignment"
+      ],
+      "category": "landmark",
+      "summary": "Sept 2025 OpenAI/Apollo collaboration. Across 26 OOD evaluations (180+ environments), deliberative alignment reduces o3 covert-action rate from 13% to 0.4% (~30x reduction). Crucial caveat: the reduction is partially driven by situational awareness (the model explicitly reasons about being evaluated); the paper documents this confound rather than treating the suppression as load-bearing alignment. Sharpens but does not close the capability-vs-propensity scheming-detection contradiction."
+    },
+    {
+      "key": "mistral-large3-2025",
+      "title": "Mistral 3: introducing Mistral Large 3 and Ministral",
+      "authors": "Mistral AI",
+      "year": 2025,
+      "venue": "Mistral AI release blog (2 December 2025)",
+      "url": "https://mistral.ai/news/mistral-3",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "architecture/frontier-2026-snapshot"
+      ],
+      "topics": [
+        "transformer-overview"
+      ],
+      "category": "tech-report",
+      "summary": "Mistral Large 3, released 2 December 2025: 675B-total / 41B-active sparse mixture-of-experts under Apache 2.0, 256K context, multimodal (text+images), trained from scratch on 3000 H200 GPUs. Mistral's first MoE flagship since Mixtral; supersedes the dense Mistral Large 2 as the lab's frontier model and flips the dense-vs-MoE roster of Paper 1's snapshot further toward MoE."
+    },
+    {
+      "key": "wen2025-cot-passk",
+      "title": "Reinforcement Learning with Verifiable Rewards Implicitly Incentivizes Correct Reasoning in Base LLMs",
+      "authors": "Wen and Liu and Zheng and Ye and Wu and Wang and Xu and Liang and Li and Miao and Bian and Yang",
+      "year": 2025,
+      "venue": "ICLR 2026 (arXiv:2506.14245)",
+      "url": "https://arxiv.org/abs/2506.14245",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlvr-and-grpo",
+        "reasoning/reasoning-training"
+      ],
+      "topics": [
+        "rlvr-and-grpo",
+        "reasoning-training"
+      ],
+      "category": "landmark",
+      "summary": "Counter-evidence to Yue et al. 2025 (rlvr-limits-2025). Introduces CoT-Pass@K, which scores both the final answer and the chain-of-thought derivation; under this metric RLVR-trained models retain a consistent and significant gap over the base model on AIME 2024/2025 across all K up to 1024, in contrast to standard Pass@K where the gap closes. Argues that RLVR does expand reasoning capacity rather than merely sharpening sampling efficiency."
+    },
+    {
+      "key": "rl-plus-2025",
+      "title": "RL-PLUS: Countering Capability Boundary Collapse of LLMs in Reinforcement Learning with Hybrid-policy Optimization",
+      "authors": "Dong and Jiang and Tao and Liu and others",
+      "year": 2025,
+      "venue": "arXiv:2508.00222",
+      "url": "https://arxiv.org/abs/2508.00222",
+      "local_file": null,
+      "excerpts_file": null,
+      "notes_referenced_by": [
+        "post-training/rlvr-and-grpo",
+        "reasoning/reasoning-training"
+      ],
+      "topics": [
+        "rlvr-and-grpo",
+        "reasoning-training"
+      ],
+      "category": "tech-report",
+      "summary": "Hybrid-policy optimization that synergizes internal exploitation with external data; explicitly framed as a fix to Yue's 'boundary collapse' diagnosis. Reports that RL-PLUS maintains a consistent advantage over both the base model and GRPO as K grows in pass@K, supporting the reading that the boundary issue is real but tractable."
+    },
+    {
       "key": "harlap2018-pipedream",
       "title": "PipeDream: Fast and Efficient Pipeline Parallel DNN Training",
       "authors": "Harlap, Narayanan, Phanishayee, Seshadri, Devanur, Ganger, Gibbons",

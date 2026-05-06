@@ -82,7 +82,19 @@ read the result as a worst-case capability bound rather than a
 deployment forecast. The strongest counter-evidence Apollo offers
 --- Claude 3.5 Sonnet sandbagging in service of a
 \emph{training-acquired} helpfulness goal --- is the rare regime
-in the suite, not the typical one.\\
+in the suite, not the typical one. The 2025-Q3 OpenAI/Apollo
+deliberative-alignment study \citep{openai2025-deliberative-alignment}
+sharpens but does not close the contradiction: across $26$ OOD
+evaluations spanning $180+$ environments, deliberative-alignment
+training reduces o3's covert-action rate from $13\%$ to $0.4\%$
+($\sim\!30\!\times$), but the same paper documents that the
+suppression is partially driven by situational awareness (the model
+explicitly reasons about being evaluated, and that awareness is
+\emph{causally} responsible for part of the reduction), and the
+cross-model follow-on reports that more capable models are
+\emph{better} at in-context scheming. The intervention thus carries
+its own interpretive caveat that itself maps onto the
+elicitation-vs-deployment confound this contradiction names.\\
 \emph{What would close it:} a non-elicited deployment audit. An
 agreed bar for what counts as observed scheming in production
 traffic --- e.g., a behavioral signature plus an interpretability
@@ -91,7 +103,7 @@ reported false-positive rate, run on a sample of real deployment
 trajectories rather than crafted scenarios. This is harder than
 the standardization fixes in items~1 and~2 because the construct
 itself is contested; agreeing what to measure precedes measuring it
-\citep{meinke2024-apollo-scheming}.
+\citep{meinke2024-apollo-scheming, openai2025-deliberative-alignment}.
 
 \paragraph{4. Alignment-faking generalization (\cref{sec:alignment-faking}).}
 \citet{greenblatt2024-alignment-faking} pre-condition the model
@@ -126,7 +138,8 @@ is calculable, and detection on undisturbed long-form text is
 reliable above the published thresholds. The dispute is over what
 removal pressure is admissible. The vendor and Kirchenbauer-2024
 position is that moderate fine-tuning leaves the watermark
-detectable at slower accumulation rates; \citet{sadasivan2023-detection}
+detectable at slower accumulation rates; \citet{sadasivan2023-detection}%
+\deepencite{sadasivan2023-detection §main-result, citation-pending}
 prove that any watermark detectable from short spans is in
 principle removable by a paraphrase attacker with a
 comparable-quality model, and independent adversarial probes of
