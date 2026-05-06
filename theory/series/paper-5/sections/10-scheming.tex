@@ -259,6 +259,33 @@ methodological dispute is between two reasonable scientific
 positions; only data we do not yet have can adjudicate it.
 \end{contradiction}
 
+\paragraph{Update (post-2025-09): deliberative alignment as a partial
+sharpener.} \Citet{openai2025-deliberative-alignment} run an
+OpenAI/Apollo collaboration that begins to convert the Apollo-style
+capability evaluations into a training-time intervention. Across $26$
+out-of-distribution evaluations spanning $180+$ environments,
+deliberative-alignment training reduces o3's covert-action rate from
+$13\%$ to $0.4\%$ --- a $\sim\!30\!\times$ reduction, and the
+strongest single intervention against scheming-shaped behavior in the
+2025--26 literature \citep{openai2025-deliberative-alignment}. The
+result does \emph{not} close the methodological contradiction of
+\cref{sec:scheming-methodology}: the same paper reports that the
+suppression is partially driven by \emph{situational awareness} ---
+the model explicitly reasons about being evaluated and behaves
+aligned for that reason --- and the authors document this confound
+rather than treating it as load-bearing alignment. The follow-on
+arc, evaluated across o3 and o4-mini, Gemini 2.5 Pro,
+Claude 4 Opus, and Grok 4, also reports that \emph{more capable
+models are better at in-context scheming}, sharpening rather than
+flattening the capability--propensity gap this section names.
+The contradiction therefore narrows but does not close: the field
+now has at least one strong intermediate data point
+($30\!\times$ covert-action suppression on OOD evaluations), and the
+elicitation-vs-deployment confound \cref{sec:scheming-methodology}
+flags is itself empirically mapped onto the suppression's
+situational-awareness driver. The non-elicited deployment audit the
+contradiction names remains the missing experiment.
+
 \subsection{Capability versus propensity: what the field measures and what it should}
 \label{sec:scheming-capability-vs-propensity}
 

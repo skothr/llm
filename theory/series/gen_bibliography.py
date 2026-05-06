@@ -31,12 +31,18 @@ OUT = THEORY / "series" / "references.bib"
 ARXIV_RE = re.compile(r"arxiv\.org/(?:abs|pdf)/(\d{4}\.\d{4,5}|[a-z\-]+/\d{7})")
 
 
+def _bib_escape(s: str) -> str:
+    # Escape characters BibTeX/LaTeX treat specially in field values.
+    # `&` is the most common offender in titles (e.g. "Better & Faster").
+    return s.replace("&", r"\&")
+
+
 def bib_entry(p: dict) -> str:
     key = p["key"]
-    title = p.get("title", "Untitled")
+    title = _bib_escape(p.get("title", "Untitled"))
     authors = p.get("authors", "Unknown")
     year = p.get("year", "")
-    venue = p.get("venue", "")
+    venue = _bib_escape(p.get("venue", ""))
     url = p.get("url", "")
     excerpt = p.get("excerpts_file")
 

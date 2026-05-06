@@ -136,7 +136,16 @@ Large 2 release notes / Hugging Face model card, July 2024;
 Position encoding is RoPE; multi-token output is not disclosed beyond
 single-head autoregression. The Pixtral variant adds a projector +
 vision encoder (\cref{sec:multimodal}); the text-only Mistral Large
-2 is not multimodal.
+2 is not multimodal.\footnote{\textbf{Superseded 2025-12-02.}
+Mistral Large 3 \citep{mistral-large3-2025} crosses the
+Mistral flagship line over to MoE: 675B-total / 41B-active sparse
+MoE under Apache 2.0, 256K context, native multimodal. The
+\texttt{Mistral Large 2} row is retained here because its detail is
+the publicly-documented dense reference point Paper 1 \S\ref{sec:ffn}
+uses as a counter-example; on the dense-vs-MoE roster of
+\S\ref{sec:snapshot-divergence}, the Mistral row should now be read
+as MoE going forward, and the dense-vs-MoE split tilts further
+toward MoE than the row alone shows.}
 
 \paragraph{Gemma 3.}
 Gemma 3 27B uses GQA with the interleaved local / global attention
@@ -212,6 +221,36 @@ to the disclosed seven rows; whether the closed labs sit inside or
 outside the disclosed convergence cluster is a falsifiable prediction
 of \cref{sec:contradictions}, not a claim of this section.
 \end{forumsignal}
+
+\paragraph{Caveat: closed-vendor row labels age faster than the
+architectural picture.} The closed-row labels in
+\cref{tab:frontier-snapshot} (``Claude 3.7-class,'' ``GPT-class
+(o-/$\!4o$/5),'' ``Gemini 2.5'') are accurate as a 2025-Q1 vintage of
+the closed lineup. By 2026-Q2 each lab has shipped multiple point
+releases beyond those labels --- Anthropic's Claude 4-family
+(May 2025) plus subsequent Opus 4.x and Sonnet 4.x updates; OpenAI's
+GPT-5 (August 2025) folding the o-series into a unified
+fast-vs-thinking tier, with subsequent GPT-5.x point releases; and
+Gemini 2.5 Deep Think (August 2025) with its parallel-thinking RL
+disclosure. The architectural picture this section's thesis depends on
+\emph{does not move} across those point releases at any disclosed
+level: the closed rows remain ``ND'' on every architectural axis the
+table tracks, and the productionised exposure of inference-time
+compute (extended-thinking budgets, reasoning-effort levels,
+parallel-thinking modes) converges on the same API surface as the
+disclosed labs rather than diverging from it.\deepencite{closed-vendor system
+cards (Anthropic Claude 4-family, OpenAI GPT-5.x, Google Gemini 2.5
+Deep Think) are tier-B per \texttt{theory/sources/README.md} and back
+the version-lineage / API-surface claims, not the architectural cells;
+those cells remain ``ND.''} We retain the 2025-Q1 row labels with
+this date stamp rather than extend them per release: the column-by-
+column architectural cells would still be ``ND'' for every newer
+label, and the row's load-bearing function in the table is the
+disclosure-ceiling, not the version stamp. The convergence claim of
+this section is therefore stable across the closed-row lineage shift
+between 2025-Q1 and 2026-Q2; the lineage shift itself is documented
+in \cref{sec:contradictions} as a separate question about whether the
+disclosure ceiling is moving.
 
 \subsection{Where the disclosed frontier agrees}
 \label{sec:snapshot-agreement}
@@ -300,12 +339,15 @@ the recipe risk of MLA's decoupled-RoPE construction
 non-crossover. \cref{sec:contradictions} returns to this.
 
 \paragraph{Dense versus MoE on the FFN.}
-The dense-versus-MoE split is genuine. LLaMA-3 8B and 70B are
-dense~\citep{meta-llama3}; Mistral Large 2 is dense; Qwen 2.5 base
-is dense. DeepSeek V3 is MoE with $E = 256$, $E_s = 1$, $k = 8$;
-Qwen 3 is MoE with $E = 128$, $E_s = 0$, $k = 8$; Llama 4 is
-hybrid (alternating dense and MoE layers); Mixtral 8$\times$7B
-remains the canonical 8-expert classical MoE point. As discussed in
+The dense-versus-MoE split is genuine but tilting further toward MoE
+through 2025--26. LLaMA-3 8B and 70B are dense~\citep{meta-llama3};
+Qwen 2.5 base is dense; Mistral Large 2 was dense, but the lab's
+flagship line crossed to MoE with Mistral Large 3 (Dec 2025;
+\citealp{mistral-large3-2025}: 675B-total / 41B-active sparse MoE).
+DeepSeek V3 is MoE with $E = 256$, $E_s = 1$, $k = 8$; Qwen 3 is MoE
+with $E = 128$, $E_s = 0$, $k = 8$; Llama 4 is hybrid (alternating
+dense and MoE layers); Mixtral 8$\times$7B remains the canonical
+8-expert classical MoE point. As discussed in
 \cref{sec:ffn-frontier}, this is no longer a question of whether
 to do MoE at scale --- the answer is yes for the largest models in
 this list --- but of which MoE design point: $E$, $E_s$, $k$, and
