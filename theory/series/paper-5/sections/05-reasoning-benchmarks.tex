@@ -57,8 +57,8 @@ pre-2025 launch numbers in the $\sim 50\%$ range for early
 reasoning-tuned models \deepencite{aime-2024 §1}.
 
 The 2025 reasoning-RL generation moved both numbers decisively. As
-documented in Paper~3's reasoning-RL section
-\deepencite{paper-3 §reasoning-RL}, DeepSeek-R1's RL-only training
+documented in Paper~3's reasoning-RL section,
+DeepSeek-R1's RL-only training
 pipeline reports an AIME~2024 jump from a base-model $\sim 16\%$ to
 a final $\sim 80\%$ pass$@1$
 \deepencite{deepseek-r1 §3}, with self-consistency over $64$ samples
@@ -282,7 +282,7 @@ out of distribution as to floor at single digits.
 
 The four-benchmark surface produces a single load-bearing claim
 about Paper~3's reasoning-RL lineage. Reasoning-RL on verifiable
-rewards \deepencite{paper-3 §RLVR-and-GRPO} delivers large gains on
+rewards (Paper~3 §RLVR-and-GRPO) delivers large gains on
 problem distributions covered by the RL training mixture --- the
 $16\% \to 80\%+$ AIME~2024 jump documented in
 \citet[\S{}3]{deepseek-r1}, and the parallel saturation of MATH-500
@@ -297,7 +297,7 @@ from. The RL-induced gains do not transfer cleanly into this regime.
 This is consistent with a moderate version of the
 in-distribution-RL claim: RLVR-on-verifiable-rewards is doing
 real reasoning-circuit work within its training distribution
-(\deepencite{paper-3 §RLVR-generalization-vs-memorization}), but
+(Paper~3 §RLVR-generalization-vs-memorization), but
 its OOD generalization is much weaker than the AIME-and-GPQA
 trajectories alone would suggest. The $80\%+$ AIME saturation does
 not predict $80\%+$ on FrontierMath; it predicts $1$--$2\%$ on

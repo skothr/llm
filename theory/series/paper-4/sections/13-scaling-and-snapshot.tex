@@ -84,9 +84,9 @@ $O(N_{\mathrm{components}})$ forward passes per (clean, corrupted) pair
 (\S\ref{sec:patching-protocol}) --- but the amortized cost is the
 cross-layer transcoder training, estimated at the same order as SAE
 training in \citet{gemma-scope-2024} ($\sim\! 20\%$ of the underlying
-model's pretraining compute). The Anthropic 2025-06 open release of
+model's pretraining compute). The Anthropic 2025-05-30 open release of
 the circuit-tracing tooling and its Neuronpedia integration
-\deepencite{Anthropic open-source release of circuit-tracer 2025-06,
+\deepencite{Anthropic open-source release of circuit-tracer 2025-05-30,
 not in papers.json} converted the methodology from a strictly internal
 capability into one external groups can in principle exercise on open
 models. As of 2026, no externally-trained attribution-graph result on a
@@ -164,7 +164,7 @@ GPT-family models. The gap between ``what frontier models do'' and
 ``what we have interpretability evidence about frontier models doing''
 is not narrowing on net: it is widening, because architectural
 innovation outpaces the per-architecture interpretability work needed
-to catch up. The 2025-06 Anthropic open release of circuit-tracing
+to catch up. The 2025-05-30 Anthropic open release of circuit-tracing
 tooling and the Gemma Scope CC-BY-4.0 release are corrective forces;
 whether they correct fast enough is a load-bearing empirical question
 about the field's coverage trajectory.
@@ -176,11 +176,21 @@ about the field's coverage trajectory.
 Three pipelines are in active use as of 2026, each anchored on one of
 the methods above.
 
+\begin{forumsignal}
+\textbf{Source caveat for the Anthropic pipeline.} The cross-layer-transcoder
++ Jacobian-attribution methodology rests on
+\citet{lindsey2025-circuit-tracing} as its sole canonical reference;
+no external lab has published an independent reproduction at frontier
+scale as of 2026-Q2. The pipeline below is described as a productionised
+tool, but the load-bearing claim that this is the productionised
+attribution-graph methodology rests on a single tier-B Anthropic source.
+\end{forumsignal}
+
 \paragraph{Anthropic --- circuit tracer + Neuronpedia.}
 The cross-layer-transcoder + Jacobian-attribution pipeline of
-\citet{lindsey2025-circuit-tracing}, open-sourced in 2025-06 and
+\citet{lindsey2025-circuit-tracing}, open-sourced in 2025-05-30 and
 integrated with Neuronpedia for interactive feature browsing
-\deepencite{Anthropic 2025-06 open-source release; Neuronpedia
+\deepencite{Anthropic 2025-05-30 open-source release; Neuronpedia
 integration; not in papers.json}. The substantive findings on Claude
 3.5 Haiku --- forward-planning rhyme features, multi-step factual
 chains (``Texas'' $\to$ ``Austin''), refusal-circuit features,
@@ -269,8 +279,8 @@ Manual circuit hunt & \citet{wang2022-ioi};
 (2023) & yes on GPT-2 small; not yet on frontier-2026 models \\
 Cross-layer transcoder + attribution graph
 & \citet{lindsey2025-circuit-tracing} & Claude 3.5 Haiku & frontier &
-circuit-tracer tooling (2025-06)
-\deepencite{Anthropic open-source release 2025-06; Neuronpedia
+circuit-tracer tooling (2025-05-30)
+\deepencite{Anthropic open-source release 2025-05-30; Neuronpedia
 integration; not in papers.json} & no external reproduction as of
 2026 \\
 \bottomrule
