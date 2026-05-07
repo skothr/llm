@@ -13,8 +13,8 @@ treated as `status: pre-expansion-seed` until re-validated during Phase 2.
 
 - **LLM** — Large Language Model. A neural network with billions of parameters trained on large text corpora to predict and generate language.
 - **Transformer** — Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing of sequences.
-- **Encoder-Decoder** — The original Transformer layout: an encoder processes the full input bidirectionally, a decoder generates output autoregressively, with cross-attention connecting them.
-- **Decoder-Only** — Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN layers.
+- **encoder-decoder** — The original Transformer layout: an encoder processes the full input bidirectionally, a decoder generates output autoregressively, with cross-attention connecting them.
+- **decoder-only** — Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN layers.
 - **RNN** — Recurrent Neural Network. Processes sequences one step at a time, maintaining a hidden state. Predecessor to the Transformer.
 - **LSTM** — Long Short-Term Memory. An RNN variant with gating mechanisms to better preserve long-range dependencies.
 - **T5 (Text-to-Text Transfer Transformer)** — Google's encoder-decoder Transformer (Raffel et al., 2019) that frames every NLP task as text-to-text. Originator of several conventions reused elsewhere (e.g., SentencePiece vocab, relative positional bias).
@@ -28,13 +28,13 @@ treated as `status: pre-expansion-seed` until re-validated during Phase 2.
 - **BPE (Byte Pair Encoding)** — Subword tokenization algorithm that iteratively merges the most frequent adjacent character pairs to build a vocabulary.
 - **Subword Unit** — A token that may be a whole word, a word fragment, or a single character/byte, depending on corpus frequency.
 - **SentencePiece** — A tokenizer that operates on raw byte sequences rather than Unicode characters, used by LLaMA. Provides byte-fallback so any input can be tokenized.
-- **Byte-Fallback** — Mechanism ensuring no "unknown token" failures: any byte sequence can be represented, even if unseen during training.
+- **byte-fallback** — Mechanism ensuring no "unknown token" failures: any byte sequence can be represented, even if unseen during training.
 - **Vocabulary (V)** — The fixed set of all tokens a model can recognize. Size ranges from ~32K (LLaMA) to ~50K (GPT-3).
 
 ## Embeddings and Positional Encoding
 
-- **Token Embedding** — A learned lookup table ($W_e \in \mathbb{R}^{V \times d_{\text{model}}}$) mapping each token index to a dense vector.
-- **Weight Tying** — Sharing the same weight matrix $W_e$ for both input embeddings and the output projection to logits, halving vocabulary-related parameters.
+- **token embedding** — A learned lookup table ($W_e \in \mathbb{R}^{V \times d_{\text{model}}}$) mapping each token index to a dense vector.
+- **weight tying** — Sharing the same weight matrix $W_e$ for both input embeddings and the output projection to logits, halving vocabulary-related parameters.
 - **Positional Encoding** — Any mechanism that injects sequence-position information into the model, since self-attention is inherently permutation-invariant.
 - **Sinusoidal Positional Encoding** — Fixed positional encoding using sine/cosine functions at different frequencies (original Transformer, 2017).
 - **Learned Positional Embedding** — A trainable position matrix $W_p$ where each row corresponds to a sequence position (GPT-1, 2018). Fixes maximum context length at training time.
@@ -42,15 +42,15 @@ treated as `status: pre-expansion-seed` until re-validated during Phase 2.
 
 ## Attention
 
-- **Self-Attention** — Mechanism where each position in a sequence computes a weighted sum over all positions, with weights determined by learned query-key similarity.
-- **Scaled Dot-Product Attention** — Core attention operation: $\text{softmax}(QK^\top / \sqrt{d_k}) V$. Scaling by $\sqrt{d_k}$ prevents large dot products from saturating the softmax.
-- **Multi-Head Attention** — Running $h$ parallel attention operations on different learned projections, then concatenating and projecting the results. Allows attending to different representation subspaces simultaneously.
+- **self-attention** — Mechanism where each position in a sequence computes a weighted sum over all positions, with weights determined by learned query-key similarity.
+- **scaled dot-product attention** — Core attention operation: $\text{softmax}(QK^\top / \sqrt{d_k}) V$. Scaling by $\sqrt{d_k}$ prevents large dot products from saturating the softmax.
+- **multi-head attention** — Running $h$ parallel attention operations on different learned projections, then concatenating and projecting the results. Allows attending to different representation subspaces simultaneously.
 - **Query (Q)** — Projected representation of the position that is "asking" for information in attention.
 - **Key (K)** — Projected representation of positions being "queried" against. The Q·K dot product determines attention weights.
 - **Value (V)** — Projected representation of the content to be aggregated. Weighted by attention scores to produce the output.
-- **Attention Weights** — The softmax-normalized scores ($a_j \geq 0$, $\sum a_j = 1$) that determine how much each position contributes to the output.
-- **Causal Mask** — A triangular mask that prevents position $i$ from attending to positions $> i$, enforcing autoregressive (left-to-right) generation.
-- **Cross-Attention** — Attention where Q comes from the decoder and K, V come from the encoder output. Removed in decoder-only models.
+- **attention weights** — The softmax-normalized scores ($a_j \geq 0$, $\sum a_j = 1$) that determine how much each position contributes to the output.
+- **causal mask** — A triangular mask that prevents position $i$ from attending to positions $> i$, enforcing autoregressive (left-to-right) generation.
+- **cross-attention** — Attention where Q comes from the decoder and K, V come from the encoder output. Removed in decoder-only models.
 - **Head Dimension ($d_k$, $d_v$)** — Dimensionality of query/key and value projections per attention head. Typically $d_{\text{model}} / h$.
 
 ## Attention variants and KV-cache compression
@@ -61,7 +61,7 @@ treated as `status: pre-expansion-seed` until re-validated during Phase 2.
 - **Uptraining** — The Ainslie 2023 recipe for converting an existing MHA checkpoint to GQA/MQA: mean-pool the $W^K, W^V$ matrices within each group, then continue pre-training for $\alpha \approx 5\%$ of the original budget `[ainslie2023 §2.1]`.
 - **MLA (Multi-Head Latent Attention)** — DeepSeek-V2's compression scheme. Rather than sharing K/V across heads, K and V are reconstructed at use time from a small latent $\mathbf{c}_t^{KV} = W^{DKV} \mathbf{h}_t \in \mathbb{R}^{d_c}$ via up-projections $W^{UK}, W^{UV}$. Cache holds only the latent. During inference $W^{UK}$ can be absorbed into $W^Q$ and $W^{UV}$ into $W^O$ `[deepseek-v2 §2.1.2]`.
 - **Decoupled RoPE** — The MLA add-on that splits each query/key into a content part (no RoPE, low-rank reconstructed) and a small shared RoPE-carrying part. Necessary because standard RoPE inserts a position-dependent rotation between $W^Q$ and $W^{UK}$ that prevents the cache-absorption optimization `[deepseek-v2 §2.1.3]`.
-- **KV Cache** — The buffer holding past keys and values during autoregressive decoding. One $(K_t, V_t)$ entry per token per layer per K/V-head. The dominant memory-bandwidth cost of inference `[shazeer2019 §1]`.
+
 
 ## Attention implementation (hardware)
 
@@ -80,13 +80,11 @@ treated as `status: pre-expansion-seed` until re-validated during Phase 2.
 - **ReLU** — Rectified Linear Unit: $\max(0, x)$. Original Transformer activation (2017).
 - **GELU (Gaussian Error Linear Unit)** — Smooth activation $x \cdot \Phi(x)$ where $\Phi$ is the standard normal CDF. Used by GPT-1 (2018).
 - **Swish / SiLU** — Activation function $x \cdot \sigma(\beta x)$ where $\sigma$ is the sigmoid. SiLU is the $\beta = 1$ case: $x \cdot \sigma(x)$. Unlike ReLU, it is smooth and non-monotonic around zero.
-- **GLU (Gated Linear Unit)** — Architecture where one linear projection produces content and another produces a gate controlling what passes through.
-- **SwiGLU** — GLU variant using Swish activation for the gate. Uses three weight matrices instead of two; inner dimension reduced by 2/3 to compensate. Used by LLaMA (2023).
 - **Inner Dimension ($d_{\text{ff}}$)** — The expanded hidden size inside the FFN. Typically $4 \times d_{\text{model}}$, or $\frac{2}{3} \times 4 \times d_{\text{model}}$ for SwiGLU.
 
 ## Normalization and Residual Connections
 
-- **Residual Connection (Skip Connection)** — Adding the sub-layer input directly to its output ($\text{output} = x + \text{SubLayer}(x)$). Enables gradient flow and makes each layer learn a correction rather than a full representation.
+- **residual connection (Skip Connection)** — Adding the sub-layer input directly to its output ($\text{output} = x + \text{SubLayer}(x)$). Enables gradient flow and makes each layer learn a correction rather than a full representation.
 - **Layer Normalization (LayerNorm)** — Normalizes across the feature dimension per position: subtract mean, divide by standard deviation, apply learned scale ($\gamma$) and bias ($\beta$).
 - **RMSNorm (Root Mean Square Normalization)** — Simplified LayerNorm that drops mean-centering and bias, normalizing only by the RMS of the input. 7–64% faster with comparable quality. Used by LLaMA.
 - **Post-LN** — Original Transformer placement: normalize after the residual addition. Requires learning rate warmup for stable training.
@@ -97,7 +95,7 @@ treated as `status: pre-expansion-seed` until re-validated during Phase 2.
 
 - **Logits** — Unnormalized log-probabilities over the vocabulary, produced by the output projection ($h_{\text{final}} \cdot W_e^\top$).
 - **Softmax** — Converts logits to a probability distribution: $P(j) = e^{z_j} / \sum_k e^{z_k}$.
-- **Cross-Entropy Loss** — Training objective: $\mathcal{L} = -\log P(t_i \mid t_1, \ldots, t_{i-1})$, summed over all positions.
+- **cross-entropy loss** — Training objective: $\mathcal{L} = -\log P(t_i \mid t_1, \ldots, t_{i-1})$, summed over all positions.
 - **Autoregressive** — Generating tokens one at a time, left to right, where each prediction depends only on previous tokens.
 - **Perplexity** — $2^{\mathcal{L}}$ (or $e^{\mathcal{L}}$ with natural log). Measures how "surprised" the model is by the data. Lower is better.
 
@@ -108,13 +106,12 @@ treated as `status: pre-expansion-seed` until re-validated during Phase 2.
 - **$h$** — Number of attention heads.
 - **$L$** — Number of Transformer layers (blocks).
 - **$V$** — Vocabulary size.
-- **Hidden State** — The $d_{\text{model}}$-dimensional vector representation at each position, flowing through the residual stream across layers.
-- **Residual Stream** — The main data pathway through the model: each layer reads from and writes back to this stream via residual connections.
+- **hidden state** — The $d_{\text{model}}$-dimensional vector representation at each position, flowing through the residual stream across layers.
 - **Parameters** — The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).
 
 ## Inference
 
-- **Greedy Decoding** — Selecting the highest-probability token at each step.
+- **greedy decoding** — Selecting the highest-probability token at each step.
 - **Top-k Sampling** — Sampling from only the $k$ most probable tokens.
 - **Nucleus Sampling (Top-p)** — Sampling from the smallest set of tokens whose cumulative probability exceeds $p$.
 
@@ -222,12 +219,6 @@ _Per-area glossary fragments produced by Phase 2 area subagents on 2026-05-04; m
   Amplify decomposes hard tasks into supervisable subtasks. Task-
   decomposition dual of debate's claim-decomposition. No clean LLM-
   scale empirical instantiation as of 2026-05.
-- **Constitutional AI (CAI)** — Bai et al. 2022 two-stage pipeline:
-  SL-CAI (model self-critiques and revises using constitution-derived
-  prompts; finetune on revisions) then RL-CAI (model ranks responses
-  against constitution; train PM on rankings; RL the model against
-  the PM). The constitution is the load-bearing decomposition spec.
-  `[bai2022-cai §abstract]`
 - **RLAIF (RL from AI Feedback)** — Replacing human preference labels
   with AI-generated preference labels in the RL stage. Introduced as
   the RL-CAI step of `bai2022-cai`. Reduces labeling burden but does
@@ -394,7 +385,7 @@ _Per-area glossary fragments produced by Phase 2 area subagents on 2026-05-04; m
 - **Learned absolute positional embedding** — Per-position trainable vectors indexed by integer position; hard cutoff at maximum sequence length. Used by GPT-2, BERT. `[su2021 §2.2]`
 - **Relative position encoding (T5 bias)** — Per-(query, key) distance bias added to attention logits; binned by relative distance. `[su2021 §2.3]`
 - **ALiBi** — Attention with Linear Biases. Parameter-free additive bias $-|m-n| \cdot s_h$ at attention logits, with per-head slope. Used by BLOOM, MPT. (Press et al. 2021, arXiv 2108.12409)
-- **Rotary Position Embedding (RoPE)** — Multiplicative position encoding that rotates query and key in 2D subspaces by per-frequency angles $m\theta_i$. Inserts position information as relative offsets only via rotation-matrix orthogonality. The de-facto standard in modern decoder-only LLMs. `[su2021 §3.2]`
+- **Rotary Position Embedding** — Multiplicative position encoding that rotates query and key in 2D subspaces by per-frequency angles $m\theta_i$. Inserts position information as relative offsets only via rotation-matrix orthogonality. The de-facto standard in modern decoder-only LLMs. `[su2021 §3.2]`
 - **RoPE base frequency $b$** — The base of the geometric frequency progression $\theta_i = b^{-2(i-1)/d}$. Default 10000 (su2021); LLaMA-3 uses 500000; long-context models use 1e6+. Larger $b$ stretches the longest "naturally-seen" wavelength.
 - **NTK-aware RoPE scaling** — Per-frequency RoPE rescaling that scales the base $b$ rather than positions, leaving high-frequency dimensions unchanged. Empirically extends context length without degrading short-context quality.
 - **YaRN** — "Yet another RoPE extensioN method." Combines NTK-aware scaling with a per-frequency interpolation schedule (no scaling on short-wavelength dims, full scaling on long-wavelength dims, smooth ramp between) and an attention-temperature rescale. ~10× more token-efficient than position interpolation. (Peng et al. 2023, arXiv 2309.00071)
@@ -433,13 +424,13 @@ _Per-area glossary fragments produced by Phase 2 area subagents on 2026-05-04; m
 ## Long context
 
 - **Sliding-window attention** — Each position attends only to the previous $w$ tokens; compute $O(N w d)$ vs $O(N^2 d)$. Local-only by construction; relies on stacked layers' growing receptive field for long-range dependencies. (Longformer 2020, Mistral 2023)
-- **Native Sparse Attention (NSA)** — Three-branch sparse attention (compress + select + sliding-window) trained natively (not retrofit). GQA-group-aligned blockwise selection enables FlashAttention-style kernels under sparsity. `[yuan2025 §3.2–3.4]`
+- **Native Sparse Attention** — Three-branch sparse attention (compress + select + sliding-window) trained natively (not retrofit). GQA-group-aligned blockwise selection enables FlashAttention-style kernels under sparsity. `[yuan2025 §3.2–3.4]`
 - **Token compression branch (NSA)** — Block-summarizes a window of $l$ keys/values into a single representation via learned MLP. Provides coarse global attention. `[yuan2025 §3.3.1 Eq.7]`
 - **Token selection branch (NSA)** — Picks top-$n$ blocks by importance scores derived from the compression branch's attention scores. Provides fine-grained attention. `[yuan2025 §3.3.2 Eq.8–12]`
 - **Sliding window branch (NSA)** — Dedicated local-window branch that absorbs local-pattern learning so the compression and selection branches focus on long-range. `[yuan2025 §3.3.3]`
 - **Native sparse training** — Pretraining with a sparse attention pattern from the start, vs retrofitting sparsity onto a dense-attention pretrained model. NSA's signature design choice. `[yuan2025 §2.2]`
 - **Compressive memory (Infini-Attention)** — Linear-attention-style $d \times d$ memory matrix updated by outer-product accumulation over the entire prefix; read by cross-attention from local-window queries. (Munkhdalai et al. 2024, arXiv 2404.07143)
-- **Ring Attention** — Distributed exact attention: shard sequence across $D$ devices, rotate $K, V$ blocks around the ring, overlap communication with computation. Per-device memory $O(N/D)$; max sequence scales with device count. (Liu, Zaharia, Abbeel 2023, arXiv 2310.01889)
+- **ring attention** — Distributed exact attention: shard sequence across $D$ devices, rotate $K, V$ blocks around the ring, overlap communication with computation. Per-device memory $O(N/D)$; max sequence scales with device count. (Liu, Zaharia, Abbeel 2023, arXiv 2310.01889)
 - **Context parallelism** — Production realization of Ring-Attention-style sharding for inference. Yang et al. 2024 reports 93% parallelization efficiency at 1M context, LLaMA 405B, 128 H100s.
 - **Position interpolation (PI)** — Simplest RoPE extension: scale positions by $s = L_{\text{test}} / L_{\text{train}}$. Cheap, degrades short-context quality. (Chen et al. 2023)
 
@@ -474,7 +465,7 @@ _Per-area glossary fragments produced by Phase 2 area subagents on 2026-05-04; m
 - **Agentic benchmark** — Evaluation in which a model autonomously plans, takes actions in an environment, observes results, and replans, scored by an end-state verifier rather than a turn-by-turn rubric. Distinct from question-answering eval. Canonical examples: SWE-bench, GAIA, OSWorld, tau-bench `[jimenez2024-swebench, mialon2023-gaia, xie2024-osworld, yao2024-tau-bench]`.
 - **End-state verifier** — A scoring function $V(s_T, g)$ that checks the post-trajectory environment state $s_T$ against a goal $g$, accepting any path that reaches the correct end-state. Contrast: turn-by-turn rubric (rewards specific actions). `[xie2024-osworld §sec-task-spec]`
 - **FAIL_TO_PASS / PASS_TO_PASS** — The two test-bundle sets used in SWE-bench's verifier. F2P tests must transition from failing on the pre-patch codebase to passing on the post-patch codebase; P2P tests must continue to pass. Both must hold for a task to be `resolved`. `[jimenez2024-swebench §sec-eval-protocol]`
-- **SWE-bench Verified** — OpenAI's August-2024 500-task subset of SWE-bench, filtered by professional software engineers for unambiguous issue specs and fair test sets. The de-facto leaderboard target as of 2025. `[jimenez2024-swebench]`
+- **SWE-Bench Verified** — OpenAI's August-2024 500-task subset of SWE-bench, filtered by professional software engineers for unambiguous issue specs and fair test sets. The de-facto leaderboard target as of 2025. `[jimenez2024-swebench]`
 - **pass^k** — Reliability metric: the probability that **all** $k$ independent attempts at a task succeed. Dual to pass@k (probability that **at least one** of $k$ attempts succeeds). pass^k measures consistent capability; pass@k measures peak capability. `[yao2024-tau-bench §sec-passk]`
 - **GUI grounding** — The ability to map a natural-language target ("click the Save button") to the correct pixel coordinates on a screen. Identified as the dominant failure mode for vision-language agents on OSWorld at launch. `[xie2024-osworld §sec-results]`
 - **Tool budget / step budget** — The maximum number of environment actions an agent is allowed in a single task evaluation. SWE-bench traces typically allow 30–50 turns; GAIA limits by tool calls; OSWorld bounds at ~50 actions. Important methodological knob: short budgets favor planning-strong agents, long budgets favor exploration-strong agents.
@@ -730,7 +721,7 @@ glossary format (cf. "Attention variants and KV-cache compression").
   latents (in the larger but not the smaller SAE) and reconstruction
   latents (in both with similar behavior)
   `[leask2025-sae-not-canonical §1; kb/excerpts/leask2025-sae-not-canonical#sec-1-techniques]`.
-- **Meta-SAE** — an SAE trained on the *decoder matrix* of another
+- **meta-SAE** — an SAE trained on the *decoder matrix* of another
   SAE. Reveals that latents in a larger SAE often decompose into
   sparse combinations of meta-latents, contradicting the "atomic
   features" assumption `[leask2025-sae-not-canonical §1 Einstein;
@@ -827,7 +818,7 @@ Each term gets a 1-3 sentence definition + a paper-key citation.
 
 - **RLHF (Reinforcement Learning from Human Feedback)** — The 3-stage post-training pipeline: SFT → reward-model training on pairwise preferences → PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT `[ouyang2022-instructgpt §3]`.
 - **Bradley–Terry preference model** — Assumes pairwise preferences depend on a difference of latent rewards: $p(y_w \succ y_l|x) = \sigma(r(x,y_w) - r(x,y_l))$. The basis for both the RM training loss and DPO `[ouyang2022-instructgpt §3.5; rafailov2023-dpo §4]`.
-- **Reward Model (RM, $r_\phi$)** — A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\pi^{\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO `[ouyang2022-instructgpt §3.5]`.
+- **reward model (RM, $r_\phi$)** — A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\pi^{\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO `[ouyang2022-instructgpt §3.5]`.
 - **PPO-ptx** — InstructGPT's RLHF objective with an added pre-training-mixture term: $+\gamma\, \mathbb{E}_{\mathrm{pretrain}}[\log\pi_\theta]$. Reduces alignment tax on standard NLP benchmarks `[ouyang2022-instructgpt §3.5]`.
 - **KL anchor / KL penalty** — The $\beta \log\pi_\theta(y|x)/\pi^{\mathrm{SFT}}(y|x)$ term in RLHF objectives that prevents the policy from drifting too far from the SFT initialization. Implemented per-token in the reward in InstructGPT-style PPO `[ouyang2022-instructgpt §3.5]`.
 - **Alignment tax** — The performance regression on standard NLP benchmarks observed after RLHF. PPO-ptx mitigates it by mixing in pre-training likelihood `[ouyang2022-instructgpt §3.5]`.
@@ -918,7 +909,7 @@ Each term gets a 1-3 sentence definition + a paper-key citation.
 - **Process Reward Model (PRM)** — A scoring function $R^P_\phi: (x, s_{1:t}) \to [0, 1]$ trained on per-step correctness labels. Dense signal — one label per step. Outperforms ORM at matched best-of-$N$ on MATH. `[lightman2023-prm800k §2.2, §4]`
 - **PRM800K** — OpenAI's released dataset of $\approx 800{,}000$ human step-correctness labels on GPT-4-generated MATH solutions. The foundational reference dataset for PRM training. `[lightman2023-prm800k §3]`
 - **Aggregation rule (PRM)** — How per-step PRM scores are combined to a trace score. Min, product, last-step. **Min** is the strongest aggregator at PRM800K-grade. `[lightman2023-prm800k §4.2]`
-- **Discriminative PRM** — A classifier-style PRM: outputs a probability of step correctness in one feed-forward pass. Cheap to evaluate; classical Math-Shepherd / OpenAI PRM lineage. `[lightman2023-prm800k §2.2]`
+- **discriminative PRM** — A classifier-style PRM: outputs a probability of step correctness in one feed-forward pass. Cheap to evaluate; classical Math-Shepherd / OpenAI PRM lineage. `[lightman2023-prm800k §2.2]`
 - **Generative PRM (ThinkPRM)** — A small reasoning-LLM verifier that emits its own short CoT evaluating each step before producing a verdict. Trained on 1% of PRM800K, beats full-PRM800K discriminative PRMs on ProcessBench / AIME 2024. `[thinkprm2025 §3]`
 - **Process Preference Model (PPM)** — rStar-Math's variant: trained on preferences over MCTS-discovered step pairs, rather than absolute step labels. Avoids naïve step-score annotation. `[rstar-math2025 §3]`
 - **ProcessBench** — Standard benchmark for PRM step-error detection (identify the first incorrect step in a partial trace). `[arXiv 2412.06559]`
@@ -930,7 +921,7 @@ Each term gets a 1-3 sentence definition + a paper-key citation.
 - **GRPO (Group Relative Policy Optimisation)** — Critic-free PPO variant (Shao 2024). Per-prompt group of $G$ samples; advantage is each sample's reward minus group mean, divided by group std. Eliminates the value-network requirement. `[shao2024 §4.1; deepseek-r1 §2.1]`
 - **DAPO** — ByteDance's GRPO variant. Four modifications: clip-higher (asymmetric clip), dynamic sampling (drop zero-variance groups), token-level loss (vs sequence-level), overlong reward shaping. AIME 2024 50pts on Qwen2.5-32B. `[dapo2025 §2]`
 - **Cold-start SFT** — A small-scale ($\sim 10^4$ examples) SFT pass on long-CoT exemplars, run before RL to fix readability problems of pure-RL outputs (R1-Zero). Does not change asymptotic capability but improves trace coherence. `[deepseek-r1 §2.2.4]`
-- **Rejection-sampling SFT** — Generate candidate solutions with the current policy, filter by verifier (and optional quality filter), SFT on the survivors. Used as Stage 3 of the R1 pipeline. `[deepseek-r1 §2.3.3]`
+- **rejection-sampling SFT** — Generate candidate solutions with the current policy, filter by verifier (and optional quality filter), SFT on the survivors. Used as Stage 3 of the R1 pipeline. `[deepseek-r1 §2.3.3]`
 - **Distillation (reasoning)** — Use a strong teacher's RL-trained traces as SFT data for smaller students. R1 demonstrates this beats running RL directly on a small model. `[deepseek-r1 §3.2]`
 - **Capability ceiling (RLVR)** — The empirical finding that RLVR improves $\mathrm{pass}@1$ on problems the base model could already solve at $\mathrm{pass}@k$ for some $k$, but does not expand the set of solvable problems. Set at pre-training. `[rlvr-limits-2025 §3]`
 - **Reward / process hacking** — Failure mode in which the policy learns to exploit imperfections in the verifier (or PRM) rather than improving on the underlying task. `[deepseek-r1 §2.2.4; arXiv 2505.00551]`
@@ -939,7 +930,7 @@ Each term gets a 1-3 sentence definition + a paper-key citation.
 ## Inference-time search
 
 - **Inference-time search** — TTC family that constructs and explores a tree (or DAG) of partial reasoning prefixes, using a verifier or value function to direct expansion. Beam / BFS / MCTS variants. `[rstar-math2025 §3]`
-- **Reasoning-MCTS** — Monte Carlo Tree Search where actions are next-step reasoning generations and the value function is a PRM. Selection-expansion-simulation-backup loop, UCT-style exploration. `[rstar-math2025 §3]`
+- **reasoning-MCTS** — Monte Carlo Tree Search where actions are next-step reasoning generations and the value function is a PRM. Selection-expansion-simulation-backup loop, UCT-style exploration. `[rstar-math2025 §3]`
 - **Generator-discriminator mutual verification** — rStar-Math's two-SLM design: policy SLM generates candidate next-steps, reward / discriminator SLM scores them. Both small (~7B); together rival o1-mini on MATH. `[rstar-math2025 §3]`
 - **ReST-MCTS*** — Self-training loop using MCTS to generate correct trajectories, then SFT on those, then update the value function. Structurally analogous to AlphaZero self-play. `[rest-mcts-2024, arXiv 2406.03816]`
 - **Lookahead beam** — Beam search variant: from each beam candidate, perform short rollouts and score the rolled-out outcomes, then prune. The form Snell 2024 uses for compute-optimal mix experiments. `[snell2024 §4]`
@@ -968,14 +959,11 @@ Each term gets a 1-3 sentence definition + a paper-key citation.
 - **Test-time compute / inference-time compute** — Compute spent during model inference (forward passes, search, verifier scoring) on a single query. Distinct from training compute. Key paper: `snell2024`.
 - **Test-time compute-optimal scaling strategy** — The argmax over test-time hyperparameters $\theta$ of expected output correctness, at a fixed test-time compute budget $N$, conditioned on a prompt $q$: $\theta^\ast_{q, y^\ast(q)}(N) = \arg\max_\theta \mathbb{E}_{y \sim \mathrm{Target}(\theta, N, q)}[\mathbb{1}_{y = y^\ast(q)}]$ `[snell2024 §3.1 Eq.(1); kb/excerpts/snell2024#sec-3-1]`.
 - **Proposer / verifier decomposition** — The unified framing of test-time compute strategies as either (1) modifying the model's proposal distribution (CoT, revision, self-critique) or (2) applying a verifier (best-of-N, beam search, tree search) to selected candidates `[snell2024 §2; kb/excerpts/snell2024#sec-2-proposer-verifier]`.
-- **Process Reward Model (PRM)** — A learned verifier that produces a per-step (rather than per-final-answer) correctness score over a chain-of-thought. Enables tree search. Contrast: Outcome Reward Model (ORM), final-answer-only `[snell2024 §2; kb/excerpts/snell2024#sec-2-proposer-verifier]`. See `kb/notes/reasoning/process-supervision.md`.
-- **Outcome Reward Model (ORM)** — A verifier that scores only complete final answers. The classical reward-model form. Cheaper to train than PRM but less informative for search.
 - **Best-of-N (BoN)** — Generate $N$ independent candidate solutions, select the highest-scoring under an ORM. Baseline test-time-compute strategy. Snell's "best-of-N weighted" variant aggregates per-step PRM scores instead.
 - **Beam search (in test-time-compute context)** — Search over per-step PRM scores: at each step keep top $N/M$ candidates, expand each by $M$ proposals, repeat. $N$ = beam width, $M$ = expansion factor `[snell2024 §5.2; kb/excerpts/snell2024#sec-5-2-search]`.
 - **Lookahead search** — Beam search variant where each candidate's score includes simulated rollout of further steps before being kept/dropped. Costlier per beam, more discriminative.
 - **Question difficulty (Snell et al.)** — A 5-quantile bin of a base LLM's pass@1 rate (estimated from 2048 samples) on a test-set prompt. Used as a sufficient statistic for picking the compute-optimal test-time strategy `[snell2024 §3.2; kb/excerpts/snell2024#sec-3-2-difficulty]`.
 - **Oracle vs model-predicted difficulty** — Two operational forms of question-difficulty estimation: oracle uses ground-truth correctness (test-time only as research proxy); model-predicted uses a verifier's averaged score (deployable) `[snell2024 §3.2; kb/excerpts/snell2024#sec-3-2-difficulty]`.
-- **Budget forcing** — A simple test-time-compute control: append continuation tokens (e.g., "Wait") to extend the model's thinking phase, or insert end-of-thinking tokens to truncate. Introduced in s1 (`s1-2025`).
 - **Thinking budget / `thinkingBudget`** — A productionized API parameter (Gemini 2.5, OpenAI o-series reasoning-effort levels, Anthropic extended-thinking) that caps the test-time-compute spend per request. Operationalizes Snell's compute-optimal strategy `[gemini2-5; kb/index/papers.json#gemini2-5]`.
 - **Reasoning model** — An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer. o1, DeepSeek-R1, Qwen3-thinking-mode, Gemini 2.5-thinking-mode are exemplars `[deepseek-r1; kb/index/papers.json#deepseek-r1]`.
 - **Self-consistency** — Sample $N$ chain-of-thoughts independently at $T > 0$; majority-vote the final answers. Wang et al. 2022. Cheap baseline that requires no verifier.
