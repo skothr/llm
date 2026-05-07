@@ -21,20 +21,20 @@
     },
     {
       "key": "encoder-decoder",
-      "primary_form": "Encoder-Decoder",
+      "primary_form": "encoder-decoder",
       "aliases": [],
       "short_def": "The original Transformer layout: an encoder processes the full input bidirectionally, a decoder generates output autoregressively, with cro…",
       "full_def": "The original Transformer layout: an encoder processes the full input bidirectionally, a decoder generates output autoregressively, with cross-attention connecting them.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
       "key": "decoder-only",
-      "primary_form": "Decoder-Only",
+      "primary_form": "decoder-only",
       "aliases": [],
       "short_def": "Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN lay…",
       "full_def": "Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN layers.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -133,11 +133,11 @@
     },
     {
       "key": "byte-fallback",
-      "primary_form": "Byte-Fallback",
+      "primary_form": "byte-fallback",
       "aliases": [],
       "short_def": "Mechanism ensuring no \"unknown token\" failures: any byte sequence can be represented, even if unseen during training.",
       "full_def": "Mechanism ensuring no \"unknown token\" failures: any byte sequence can be represented, even if unseen during training.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -153,20 +153,20 @@
     },
     {
       "key": "token-embedding",
-      "primary_form": "Token Embedding",
+      "primary_form": "token embedding",
       "aliases": [],
       "short_def": "A learned lookup table ($W_e \\in \\mathbb{R}^{V \\times d_{\\text{model}}}$) mapping each token index to a dense vector.",
       "full_def": "A learned lookup table ($W_e \\in \\mathbb{R}^{V \\times d_{\\text{model}}}$) mapping each token index to a dense vector.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
       "key": "weight-tying",
-      "primary_form": "Weight Tying",
+      "primary_form": "weight tying",
       "aliases": [],
       "short_def": "Sharing the same weight matrix $W_e$ for both input embeddings and the output projection to logits, halving vocabulary-related parameters.",
       "full_def": "Sharing the same weight matrix $W_e$ for both input embeddings and the output projection to logits, halving vocabulary-related parameters.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -209,29 +209,29 @@
     },
     {
       "key": "self-attention",
-      "primary_form": "Self-Attention",
+      "primary_form": "self-attention",
       "aliases": [],
       "short_def": "Mechanism where each position in a sequence computes a weighted sum over all positions, with weights determined by learned query-key simila…",
       "full_def": "Mechanism where each position in a sequence computes a weighted sum over all positions, with weights determined by learned query-key similarity.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
       "key": "scaled-dot-product-attention",
-      "primary_form": "Scaled Dot-Product Attention",
+      "primary_form": "scaled dot-product attention",
       "aliases": [],
       "short_def": "Core attention operation: $\\text{softmax}(QK^\\top / \\sqrt{d_k}) V$.",
       "full_def": "Core attention operation: $\\text{softmax}(QK^\\top / \\sqrt{d_k}) V$. Scaling by $\\sqrt{d_k}$ prevents large dot products from saturating the softmax.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
       "key": "multi-head-attention",
-      "primary_form": "Multi-Head Attention",
+      "primary_form": "multi-head attention",
       "aliases": [],
       "short_def": "Running $h$ parallel attention operations on different learned projections, then concatenating and projecting the results.",
       "full_def": "Running $h$ parallel attention operations on different learned projections, then concatenating and projecting the results. Allows attending to different representation subspaces simultaneously.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -269,29 +269,29 @@
     },
     {
       "key": "attention-weights",
-      "primary_form": "Attention Weights",
+      "primary_form": "attention weights",
       "aliases": [],
       "short_def": "The softmax-normalized scores ($a_j \\geq 0$, $\\sum a_j = 1$) that determine how much each position contributes to the output.",
       "full_def": "The softmax-normalized scores ($a_j \\geq 0$, $\\sum a_j = 1$) that determine how much each position contributes to the output.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
       "key": "causal-mask",
-      "primary_form": "Causal Mask",
+      "primary_form": "causal mask",
       "aliases": [],
       "short_def": "A triangular mask that prevents position $i$ from attending to positions $> i$, enforcing autoregressive (left-to-right) generation.",
       "full_def": "A triangular mask that prevents position $i$ from attending to positions $> i$, enforcing autoregressive (left-to-right) generation.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
       "key": "cross-attention",
-      "primary_form": "Cross-Attention",
+      "primary_form": "cross-attention",
       "aliases": [],
       "short_def": "Attention where Q comes from the decoder and K, V come from the encoder output.",
       "full_def": "Attention where Q comes from the decoder and K, V come from the encoder output. Removed in decoder-only models.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -362,15 +362,6 @@
       "aliases": [],
       "short_def": "The MLA add-on that splits each query/key into a content part (no RoPE, low-rank reconstructed) and a small shared RoPE-carrying part.",
       "full_def": "The MLA add-on that splits each query/key into a content part (no RoPE, low-rank reconstructed) and a small shared RoPE-carrying part. Necessary because standard RoPE inserts a position-dependent rotation between $W^Q$ and $W^{UK}$ that prevents the cache-absorption optimization `[deepseek-v2 §2.1.3]`.",
-      "case_strict": true,
-      "kb_cite": null
-    },
-    {
-      "key": "kv-cache",
-      "primary_form": "KV Cache",
-      "aliases": [],
-      "short_def": "The buffer holding past keys and values during autoregressive decoding.",
-      "full_def": "The buffer holding past keys and values during autoregressive decoding. One $(K_t, V_t)$ entry per token per layer per K/V-head. The dominant memory-bandwidth cost of inference `[shazeer2019 §1]`.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -491,26 +482,6 @@
       "kb_cite": null
     },
     {
-      "key": "glu",
-      "primary_form": "GLU",
-      "aliases": [
-        "Gated Linear Unit"
-      ],
-      "short_def": "Architecture where one linear projection produces content and another produces a gate controlling what passes through.",
-      "full_def": "Architecture where one linear projection produces content and another produces a gate controlling what passes through.",
-      "case_strict": true,
-      "kb_cite": null
-    },
-    {
-      "key": "swiglu",
-      "primary_form": "SwiGLU",
-      "aliases": [],
-      "short_def": "GLU variant using Swish activation for the gate.",
-      "full_def": "GLU variant using Swish activation for the gate. Uses three weight matrices instead of two; inner dimension reduced by 2/3 to compensate. Used by LLaMA (2023).",
-      "case_strict": true,
-      "kb_cite": null
-    },
-    {
       "key": "inner-dimension-d-text-ff",
       "primary_form": "Inner Dimension ($d_{\\text{ff}}$)",
       "aliases": [],
@@ -521,13 +492,13 @@
     },
     {
       "key": "residual-connection",
-      "primary_form": "Residual Connection",
+      "primary_form": "residual connection",
       "aliases": [
         "Skip Connection"
       ],
       "short_def": "Adding the sub-layer input directly to its output ($\\text{output} = x + \\text{SubLayer}(x)$).",
       "full_def": "Adding the sub-layer input directly to its output ($\\text{output} = x + \\text{SubLayer}(x)$). Enables gradient flow and makes each layer learn a correction rather than a full representation.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -599,11 +570,11 @@
     },
     {
       "key": "cross-entropy-loss",
-      "primary_form": "Cross-Entropy Loss",
+      "primary_form": "cross-entropy loss",
       "aliases": [],
       "short_def": "Training objective: $\\mathcal{L} = -\\log P(t_i \\mid t_1, \\ldots, t_{i-1})$, summed over all positions.",
       "full_def": "Training objective: $\\mathcal{L} = -\\log P(t_i \\mid t_1, \\ldots, t_{i-1})$, summed over all positions.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -671,20 +642,11 @@
     },
     {
       "key": "hidden-state",
-      "primary_form": "Hidden State",
+      "primary_form": "hidden state",
       "aliases": [],
       "short_def": "The $d_{\\text{model}}$-dimensional vector representation at each position, flowing through the residual stream across layers.",
       "full_def": "The $d_{\\text{model}}$-dimensional vector representation at each position, flowing through the residual stream across layers.",
-      "case_strict": true,
-      "kb_cite": null
-    },
-    {
-      "key": "residual-stream",
-      "primary_form": "Residual Stream",
-      "aliases": [],
-      "short_def": "The main data pathway through the model: each layer reads from and writes back to this stream via residual connections.",
-      "full_def": "The main data pathway through the model: each layer reads from and writes back to this stream via residual connections.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -698,11 +660,11 @@
     },
     {
       "key": "greedy-decoding",
-      "primary_form": "Greedy Decoding",
+      "primary_form": "greedy decoding",
       "aliases": [],
       "short_def": "Selecting the highest-probability token at each step.",
       "full_def": "Selecting the highest-probability token at each step.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -889,17 +851,6 @@
       "short_def": "Christiano 2018: recursive",
       "full_def": "Christiano 2018: recursive",
       "case_strict": false,
-      "kb_cite": null
-    },
-    {
-      "key": "constitutional-ai",
-      "primary_form": "Constitutional AI",
-      "aliases": [
-        "CAI"
-      ],
-      "short_def": "Bai et al.",
-      "full_def": "Bai et al. 2022 two-stage pipeline:",
-      "case_strict": true,
       "kb_cite": null
     },
     {
@@ -1186,9 +1137,7 @@
     {
       "key": "rotary-position-embedding",
       "primary_form": "Rotary Position Embedding",
-      "aliases": [
-        "RoPE"
-      ],
+      "aliases": [],
       "short_def": "Multiplicative position encoding that rotates query and key in 2D subspaces by per-frequency angles $m\\theta_i$.",
       "full_def": "Multiplicative position encoding that rotates query and key in 2D subspaces by per-frequency angles $m\\theta_i$. Inserts position information as relative offsets only via rotation-matrix orthogonality. The de-facto standard in modern decoder-only LLMs.",
       "case_strict": true,
@@ -1464,9 +1413,7 @@
     {
       "key": "native-sparse-attention",
       "primary_form": "Native Sparse Attention",
-      "aliases": [
-        "NSA"
-      ],
+      "aliases": [],
       "short_def": "Three-branch sparse attention (compress + select + sliding-window) trained natively (not retrofit).",
       "full_def": "Three-branch sparse attention (compress + select + sliding-window) trained natively (not retrofit). GQA-group-aligned blockwise selection enables FlashAttention-style kernels under sparsity.",
       "case_strict": true,
@@ -1527,11 +1474,11 @@
     },
     {
       "key": "ring-attention",
-      "primary_form": "Ring Attention",
+      "primary_form": "ring attention",
       "aliases": [],
       "short_def": "Distributed exact attention: shard sequence across $D$ devices, rotate $K, V$ blocks around the ring, overlap communication with computatio…",
       "full_def": "Distributed exact attention: shard sequence across $D$ devices, rotate $K, V$ blocks around the ring, overlap communication with computation. Per-device memory $O(N/D)$; max sequence scales with device count. (Liu, Zaharia, Abbeel 2023, arXiv 2310.01889)",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -1555,7 +1502,7 @@
       "kb_cite": null
     },
     {
-      "key": "glu-2",
+      "key": "glu",
       "primary_form": "GLU",
       "aliases": [
         "Gated Linear Unit"
@@ -1566,7 +1513,7 @@
       "kb_cite": "shazeer2020 §2 Eq.4"
     },
     {
-      "key": "swiglu-2",
+      "key": "swiglu",
       "primary_form": "SwiGLU",
       "aliases": [],
       "short_def": "$\\mathrm{FFN}_{\\mathrm{SwiGLU}}(x) = (\\mathrm{Swish}_1(xW) \\otimes xV) W_2$.",
@@ -1724,7 +1671,7 @@
     },
     {
       "key": "swe-bench-verified",
-      "primary_form": "SWE-bench Verified",
+      "primary_form": "SWE-Bench Verified",
       "aliases": [],
       "short_def": "OpenAI's August-2024 500-task subset of SWE-bench, filtered by professional software engineers for unambiguous issue specs and fair test se…",
       "full_def": "OpenAI's August-2024 500-task subset of SWE-bench, filtered by professional software engineers for unambiguous issue specs and fair test sets. The de-facto leaderboard target as of 2025.",
@@ -1981,7 +1928,7 @@
       "kb_cite": null
     },
     {
-      "key": "kv-cache-2",
+      "key": "kv-cache",
       "primary_form": "KV cache",
       "aliases": [],
       "short_def": "The per-layer cache of key/value tensors $K_{1:t}, V_{1:t}$ produced during autoregressive decoding so each new token's attention is $O(t)$…",
@@ -2495,7 +2442,7 @@
       "kb_cite": null
     },
     {
-      "key": "residual-stream-2",
+      "key": "residual-stream",
       "primary_form": "Residual stream",
       "aliases": [],
       "short_def": "the linear data bus running through a",
@@ -2715,7 +2662,7 @@
     },
     {
       "key": "meta-sae",
-      "primary_form": "Meta-SAE",
+      "primary_form": "meta-SAE",
       "aliases": [],
       "short_def": "an SAE trained on the *decoder matrix* of another",
       "full_def": "an SAE trained on the *decoder matrix* of another",
@@ -2872,13 +2819,13 @@
     },
     {
       "key": "reward-model",
-      "primary_form": "Reward Model",
+      "primary_form": "reward model",
       "aliases": [
         "RM, $r_\\phi$"
       ],
       "short_def": "A neural network trained on Bradley–Terry preferences to score response quality.",
       "full_def": "A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\\pi^{\\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO `[ouyang2022-instructgpt §3.5]`.",
-      "case_strict": true,
+      "case_strict": false,
       "kb_cite": null
     },
     {
@@ -3058,7 +3005,7 @@
       "kb_cite": null
     },
     {
-      "key": "constitutional-ai-2",
+      "key": "constitutional-ai",
       "primary_form": "Constitutional AI",
       "aliases": [
         "CAI"
@@ -3485,7 +3432,7 @@
     },
     {
       "key": "discriminative-prm",
-      "primary_form": "Discriminative PRM",
+      "primary_form": "discriminative PRM",
       "aliases": [],
       "short_def": "A classifier-style PRM: outputs a probability of step correctness in one feed-forward pass.",
       "full_def": "A classifier-style PRM: outputs a probability of step correctness in one feed-forward pass. Cheap to evaluate; classical Math-Shepherd / OpenAI PRM lineage.",
@@ -3574,7 +3521,7 @@
     },
     {
       "key": "rejection-sampling-sft",
-      "primary_form": "Rejection-sampling SFT",
+      "primary_form": "rejection-sampling SFT",
       "aliases": [],
       "short_def": "Generate candidate solutions with the current policy, filter by verifier (and optional quality filter), SFT on the survivors.",
       "full_def": "Generate candidate solutions with the current policy, filter by verifier (and optional quality filter), SFT on the survivors. Used as Stage 3 of the R1 pipeline.",
@@ -3630,7 +3577,7 @@
     },
     {
       "key": "reasoning-mcts",
-      "primary_form": "Reasoning-MCTS",
+      "primary_form": "reasoning-MCTS",
       "aliases": [],
       "short_def": "Monte Carlo Tree Search where actions are next-step reasoning generations and the value function is a PRM.",
       "full_def": "Monte Carlo Tree Search where actions are next-step reasoning generations and the value function is a PRM. Selection-expansion-simulation-backup loop, UCT-style exploration.",
@@ -3818,28 +3765,6 @@
       "kb_cite": null
     },
     {
-      "key": "process-reward-model-2",
-      "primary_form": "Process Reward Model",
-      "aliases": [
-        "PRM"
-      ],
-      "short_def": "A learned verifier that produces a per-step (rather than per-final-answer) correctness score over a chain-of-thought.",
-      "full_def": "A learned verifier that produces a per-step (rather than per-final-answer) correctness score over a chain-of-thought. Enables tree search. Contrast: Outcome Reward Model (ORM), final-answer-only `[snell2024 §2; kb/excerpts/snell2024#sec-2-proposer-verifier]`. See `kb/notes/reasoning/process-supervision.md`.",
-      "case_strict": true,
-      "kb_cite": null
-    },
-    {
-      "key": "outcome-reward-model-2",
-      "primary_form": "Outcome Reward Model",
-      "aliases": [
-        "ORM"
-      ],
-      "short_def": "A verifier that scores only complete final answers.",
-      "full_def": "A verifier that scores only complete final answers. The classical reward-model form. Cheaper to train than PRM but less informative for search.",
-      "case_strict": true,
-      "kb_cite": null
-    },
-    {
       "key": "best-of-n",
       "primary_form": "Best-of-N",
       "aliases": [
@@ -3885,15 +3810,6 @@
       "aliases": [],
       "short_def": "Two operational forms of question-difficulty estimation: oracle uses ground-truth correctness (test-time only as research proxy); model-pre…",
       "full_def": "Two operational forms of question-difficulty estimation: oracle uses ground-truth correctness (test-time only as research proxy); model-predicted uses a verifier's averaged score (deployable) `[snell2024 §3.2; kb/excerpts/snell2024#sec-3-2-difficulty]`.",
-      "case_strict": false,
-      "kb_cite": null
-    },
-    {
-      "key": "budget-forcing-2",
-      "primary_form": "Budget forcing",
-      "aliases": [],
-      "short_def": "A simple test-time-compute control: append continuation tokens (e.g., \"Wait\") to extend the model's thinking phase, or insert end-of-thinki…",
-      "full_def": "A simple test-time-compute control: append continuation tokens (e.g., \"Wait\") to extend the model's thinking phase, or insert end-of-thinking tokens to truncate. Introduced in s1 (`s1-2025`).",
       "case_strict": false,
       "kb_cite": null
     },
