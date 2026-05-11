@@ -43,6 +43,15 @@ _MATH_ENV = re.compile(
     re.DOTALL,
 )
 
+# Verbatim-like environments: their contents are code/literal and must not be
+# wrapped. \begin{lstlisting} (listings package), \begin{verbatim}, etc.
+_VERBATIM_ENV = re.compile(
+    r"\\begin\{(lstlisting|verbatim|minted|alltt|Verbatim)\}"
+    r".*?"
+    r"\\end\{\1\}",
+    re.DOTALL,
+)
+
 # LaTeX commands whose first brace-arg must be skipped (they're not body text).
 # For these, the recorded skip region is just (open_brace, end_brace).
 _SKIP_COMMANDS_SINGLE_ARG = {
@@ -83,6 +92,26 @@ def _find_brace_arg(text: str, open_idx: int) -> int:
     return i if depth == 0 else -1
 
 
+def _find_bracket_arg(text: str, open_idx: int) -> int:
+    """Given an index pointing at '[', return index just past matching ']'.
+
+    Used to skip over LaTeX optional args like \\citep[\\S 3.4]{key}. LaTeX
+    optargs don't nest in general; we honor \\] as an escape just in case.
+    Returns -1 if no match.
+    """
+    if open_idx >= len(text) or text[open_idx] != "[":
+        return -1
+    i = open_idx + 1
+    while i < len(text):
+        if text[i] == "\\" and i + 1 < len(text):
+            i += 2
+            continue
+        if text[i] == "]":
+            return i + 1
+        i += 1
+    return -1
+
+
 def _find_command_skip_regions(text: str) -> list[tuple[int, int]]:
     """For each \\command{arg} where command is in the skip set, mark a region.
 
@@ -96,14 +125,28 @@ def _find_command_skip_regions(text: str) -> list[tuple[int, int]]:
         | _SKIP_COMMANDS_FULL_SINGLE_ARG
         | _SKIP_COMMANDS_DOUBLE_ARG
     )
-    cmd_re = re.compile(r"\\([A-Za-z]+\*?)\s*(?=\{)")
+    cmd_re = re.compile(r"\\([A-Za-z]+\*?)")
     for m in cmd_re.finditer(text):
         name = m.group(1)
         if name not in all_skip:
             continue
-        open1 = text.find("{", m.end() - 1)
-        if open1 == -1:
+        # Skip whitespace and any optional [...] args before the mandatory
+        # brace. natbib's \citep accepts up to two optional args:
+        # \citep[pre][post]{key}. Without this loop the lookahead form
+        # silently failed for any \cmd[...]{...} usage.
+        i = m.end()
+        while i < len(text) and text[i].isspace():
+            i += 1
+        while i < len(text) and text[i] == "[":
+            close = _find_bracket_arg(text, i)
+            if close == -1:
+                break
+            i = close
+            while i < len(text) and text[i].isspace():
+                i += 1
+        if i >= len(text) or text[i] != "{":
             continue
+        open1 = i
         end1 = _find_brace_arg(text, open1)
         if end1 == -1:
             continue
@@ -146,7 +189,9 @@ def find_skip_regions(text: str) -> list[tuple[int, int]]:
 
     Skip set:
       - Math: $...$, \\(...\\), \\[...\\], \\begin{equation|align|...}
+      - Verbatim envs: \\begin{lstlisting|verbatim|minted|alltt|Verbatim}
       - Reference/cite/anchor command args (\\label, \\citep, etc.)
+        — including \\cmd[opt]{arg} forms with optional bracket args.
       - Section-shaped commands' brace args (\\section, \\paragraph, etc.)
       - Comments (% to end of line, ignoring escaped \\%)
       - Already-wrapped: \\glsterm{}{} (entire 2-arg call)
@@ -156,7 +201,7 @@ def find_skip_regions(text: str) -> list[tuple[int, int]]:
     """
     regions: list[tuple[int, int]] = []
     for pattern in (_MATH_INLINE_DOLLAR, _MATH_INLINE_PAREN,
-                    _MATH_DISPLAY_BRACKET, _MATH_ENV):
+                    _MATH_DISPLAY_BRACKET, _MATH_ENV, _VERBATIM_ENV):
         for m in pattern.finditer(text):
             regions.append((m.start(), m.end()))
     regions.extend(_find_command_skip_regions(text))
