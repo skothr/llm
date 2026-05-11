@@ -5,3 +5,6 @@ paper-*/main.bbl
 paper-*/main.blg
 paper-*/main.out
 paper-*/main.toc
+# pdfcomment package sidecars (annotation-index aux files; empty in our use).
+paper-*/main.upa
+paper-*/main.upb
