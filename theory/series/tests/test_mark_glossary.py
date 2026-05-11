@@ -47,6 +47,40 @@ def test_skip_citep_arg():
     assert (s, e) in regions
 
 
+def test_skip_citep_with_optional_arg():
+    """Regression: \\citep[\\S 3.4]{key} — the optional bracket arg must not
+    prevent the brace arg from being added to the skip set. The earlier
+    implementation used a `(?=\\{)` lookahead that silently failed when an
+    optional `[...]` arg sat between command and brace, causing glossary
+    aliases inside citation keys to be wrapped."""
+    text = r"as shown by \citep[\S 3.4]{muon-moonlight2025} and"
+    regions = find_skip_regions(text)
+    s = text.index("{muon")
+    e = text.index("}") + 1
+    assert (s, e) in regions
+
+
+def test_skip_citep_two_optional_args():
+    """natbib supports \\citep[pre][post]{key} — both optargs must be passed
+    through before the brace skip."""
+    text = r"see \citep[e.g.,][\S 4]{vaswani2017} and"
+    regions = find_skip_regions(text)
+    s = text.index("{vaswani")
+    e = text.index("}", s) + 1
+    assert (s, e) in regions
+
+
+def test_skip_lstlisting_environment():
+    """Regression: \\begin{lstlisting}...\\end{lstlisting} verbatim code
+    blocks must be skipped wholesale. Without this, Python kwargs like
+    `key=...` inside code listings were matched as glossary terms."""
+    text = "before\n\\begin{lstlisting}\nbest = max(pairs, key=pairs.get)\n\\end{lstlisting}\nafter"
+    regions = find_skip_regions(text)
+    s = text.index(r"\begin{lstlisting}")
+    e = text.index(r"\end{lstlisting}") + len(r"\end{lstlisting}")
+    assert (s, e) in regions
+
+
 def test_skip_section_title_arg():
     text = r"\section{Attention is all you need}"
     regions = find_skip_regions(text)
