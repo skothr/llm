@@ -405,8 +405,13 @@ def _sanitize_full_def(text: str) -> str:
         text = text.replace(uni, latex)
 
     # Order matters: do & before others since & is most disruptive.
-    text = text.replace("&", r"\&")
-    text = text.replace("#", r"\#")
+    # Use negative lookbehind so we don't double-escape `\&` and `\#` that
+    # the source already wrote — the kb/glossary.md has math like
+    # `(F\&B + B - 3W)` where `\&` is already a literal ampersand escape;
+    # naively replacing every `&` would turn it into `\\&` (a `\\` line
+    # break inside math, which pdfLaTeX rejects).
+    text = re.sub(r"(?<!\\)&", r"\\&", text)
+    text = re.sub(r"(?<!\\)#", r"\\#", text)
     # _ and ^ must only be escaped when NOT already inside $...$
     # Simple approach: escape outside math; inside math they're valid.
     parts: list[str] = []

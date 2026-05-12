@@ -103,7 +103,7 @@ schedule lineage tightens this:
 \begin{equation}
 \text{1F1B:}\;\; (p-1)(F + B), \qquad
 \text{ZeroBubble (ZB1P):}\;\; (p-1)(F + B - 2W), \qquad
-\text{DualPipe:}\;\; \!\bigl(\tfrac{p}{2} - 1\bigr)(F\&B + B - 3W),
+\text{DualPipe:}\;\; \!\bigl(\tfrac{p}{2} - 1\bigr)(F\mathbin{\text{\&}}B + B - 3W),
 \label{eq:bubble-formulas}
 \end{equation}
 verbatim from \citet[\S 3.2.1, table]{deepseek-v3}\footnote{KB excerpt:
@@ -264,7 +264,7 @@ Post-training        & $\;\;\;\;5$K & $\$0.010$M \\
 \caption{DeepSeek-V3 full training cost. ``Training DeepSeek-V3 on
 each trillion tokens requires only 180K H800 GPU hours, i.e., 3.7
 days on our cluster with 2048 H800 GPUs.'' After
-\citet[\S 1]{deepseek-v3}.\footnotemark}
+\citet[\S 1]{deepseek-v3}.\protect\footnotemark}
 \label{tab:dsv3-cost}
 \end{table}\footnotetext{KB excerpt:
 \texttt{kb/excerpts/\glsterm{precision-pinning}{deepseek-v3}-training.md\#sec-1-cost}.}
@@ -302,7 +302,7 @@ combine on each microbatch's forward and backward) overlap with the
 matrix-compute phases of \emph{adjacent microbatches}, and to feed the
 pipeline from both ends simultaneously \citep[\S 3.2.1]{deepseek-v3}.
 The bubble formula in \cref{eq:bubble-formulas} drops to
-$(\tfrac{p}{2} - 1)(F\&B + B - 3W)$ --- roughly half of 1F1B at the
+$(\tfrac{p}{2} - 1)(F\mathbin{\text{\&}}B + B - 3W)$ --- roughly half of 1F1B at the
 cost of ``$2\times$ parameter memory and $+1$ activation copy''
 \citep[\S 3.2.1]{deepseek-v3}.
 
@@ -333,7 +333,7 @@ The \glsterm{dualpipe}{DualPipe} schedule plus the IB+NVLink kernel together tur
 \glsterm{precision-pinning}{DeepSeek-V3}'s nominally $1{:}1$ compute-to-communication ratio
 \citep[\S 3.2.1]{deepseek-v3} into an effectively compute-bound run
 with no irrecoverable loss spikes \citep[abstract]{deepseek-v3}.
-Returning to canonical form: in \cref{eq:bubble-formulas}, $F\&B$ is
+Returning to canonical form: in \cref{eq:bubble-formulas}, $F\mathbin{\text{\&}}B$ is
 the overlapped forward-and-backward sub-step where the all-to-all
 phases are scheduled into the gaps between matmul phases of adjacent
 microbatches; in \cref{eq:dsv3-routing} the $4$-node cap turns each

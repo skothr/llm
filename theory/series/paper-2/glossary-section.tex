@@ -103,7 +103,7 @@ Closed-form, classification-loss reformulation of RLHF: trains the policy direct
 Distributed tensor abstraction; weights are stored as DTensor with a placement spec on a $d \times t \times p \times c \times e$ device mesh. The composability layer for 4D/5D parallelism. \citep[\S 2.1.1]{torchtitan2024}
 
 \item[\hypertarget{glossary:dualpipe}{DualPipe}]
-DeepSeek-V3's bidirectional PP. Microbatches feed from both ends of the pipeline simultaneously; each chunk split into 4 stages (attention / dispatch / MLP / combine), backward further split via ZB; achieves $(\tfrac{p}{2}-1)(F\\&B+B-3W)$ bubble at $2\times$ parameter memory and $+1$ activation. \citep[\S 3.2.1; kb/excerpts/deepseek-v3-training\#sec-3-2-1-dualpipe]{deepseek-v3}
+DeepSeek-V3's bidirectional PP. Microbatches feed from both ends of the pipeline simultaneously; each chunk split into 4 stages (attention / dispatch / MLP / combine), backward further split via ZB; achieves $(\tfrac{p}{2}-1)(F\&B+B-3W)$ bubble at $2\times$ parameter memory and $+1$ activation. \citep[\S 3.2.1; kb/excerpts/deepseek-v3-training\#sec-3-2-1-dualpipe]{deepseek-v3}
 
 \item[\hypertarget{glossary:dynamic-sampling}{Dynamic Sampling} (DAPO)]
 Reject groups where all $G$ trajectories share the same reward, since the GRPO advantage is then zero and the gradient is wasted. Re-sample until each group contains both $R=0$ and $R=1$ trajectories `[dapo2025 §2]`.
