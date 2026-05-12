@@ -5,7 +5,7 @@ authors: Ouyang, Wu, Jiang, Almeida, Wainwright, Mishkin, Zhang, Agarwal, Slama,
 year: 2022
 venue: NeurIPS
 arxiv: 2203.02155
-local_pdf: null
+local_pdf: theory/sources/papers/ouyang2022-instructgpt.pdf
 type: excerpts
 note: "Excerpts from arXiv abstract page (verbatim) plus canonical pipeline description as reproduced in standard RLHF references (Stiennon 2020 §3 — InstructGPT inherits this pipeline; DPO §3 — restates the InstructGPT objective). Section/equation numbers from the published NeurIPS 2022 version."
 ---
@@ -63,28 +63,23 @@ Across all $\binom{K}{2}$ pairs per prompt, with the standard pair
 correlation correction.
 
 **Stage 3 — Reinforcement Learning with PPO.** Optimize the policy
-$\pi_\theta$ initialized from $\pi^{\mathrm{SFT}}$ to maximize the
-RM reward subject to a per-token KL penalty against $\pi^{\mathrm{SFT}}$:
+$\pi_\phi^{\mathrm{RL}}$ initialized from $\pi^{\mathrm{SFT}}$ to maximize
+the RM reward minus a per-token KL penalty against $\pi^{\mathrm{SFT}}$
+(PDF Eq. 2):
 
 $$
-\mathcal{J}_{\mathrm{RLHF}}(\theta) = \mathbb{E}_{x\sim\mathcal{D}, y\sim\pi_\theta(\cdot|x)} \left[r_\phi(x,y)\right] - \beta\, \mathbb{E}_{x,y}\left[\log\frac{\pi_\theta(y|x)}{\pi^{\mathrm{SFT}}(y|x)}\right] + \gamma\, \mathbb{E}_{x\sim\mathcal{D}_{\mathrm{pretrain}}}[\log\pi_\theta(x)].
+\mathrm{objective}(\phi) = \mathbb{E}_{(x,y)\sim D_{\pi_\phi^{\mathrm{RL}}}} \!\left[r_\theta(x,y) - \beta \log \frac{\pi_\phi^{\mathrm{RL}}(y \mid x)}{\pi^{\mathrm{SFT}}(y \mid x)}\right] + \gamma\, \mathbb{E}_{x\sim D_{\mathrm{pretrain}}}\!\left[\log \pi_\phi^{\mathrm{RL}}(x)\right].
 $$
 
-The third term ($\gamma$ coefficient) is the **PPO-ptx** mixin:
-maximum-likelihood on the original pre-training distribution, added to
-prevent regression on standard NLP benchmarks ("alignment tax"). When
-$\gamma = 0$, the objective reduces to standard PPO-RLHF.
-
-The KL term is implemented as a per-token penalty added to the reward,
-not as an explicit constraint:
-
-$$
-r_{\mathrm{total}}(x, y_t) = r_\phi(x,y) \cdot \mathbb{1}[t = T] - \beta \log\frac{\pi_\theta(y_t|x,y_{<t})}{\pi^{\mathrm{SFT}}(y_t|x,y_{<t})}.
-$$
-
-The terminal-token reward + per-token KL is the standard "RLHF reward
-shape" inherited by Stiennon 2020 and reused by every subsequent RLHF
-paper.
+Note: the reward $r_\theta$ and the KL penalty are **inside a single
+expectation** over trajectories $(x,y)\sim D_{\pi_\phi^{\mathrm{RL}}}$;
+an earlier version of this note incorrectly split them into two separate
+expectations. The third term ($\gamma$ coefficient) is the **PPO-ptx**
+mixin: maximum-likelihood on the original pre-training distribution, added
+to prevent regression on standard NLP benchmarks ("alignment tax"). When
+$\gamma = 0$, the objective reduces to standard PPO-RLHF. The KL penalty
+is applied per-token in the implementation (described in text, §3.5), but
+the PDF does not give a separate per-token reward equation.
 
 ## §4 Headline result — alignment beats scale on user prompts {#sec-4}
 
@@ -96,7 +91,15 @@ over an unaligned 175B model on user-submitted prompts. The result
 established RLHF as a first-class post-training technique and is the
 direct ancestor of every assistant LLM since.
 
-[NOTE — pdf-not-available] Equation forms are the canonical RLHF
-formulation as reproduced in Stiennon 2020 §3, DPO §3, the textbook
-treatment, and the survey arXiv:2509.16679; section numbers should be
-re-verified against the PDF.
+[Verified from PDF on 2026-05-12: arXiv v1 (2203.02155v1). Abstract
+verbatim confirmed. §3.5 "Models" contains the SFT, RM, and RL
+descriptions. RM loss (PDF Eq. 1) confirmed as Bradley-Terry log-likelihood;
+the normalizing constant 1/C(K,2) is present in the PDF but omitted in
+the KB equation above (editorial choice — the form is otherwise correct).
+PPO objective (PDF Eq. 2) corrected: reward and KL penalty are inside a
+single expectation, not split into two separate expectations as the prior
+note had it. No separate per-token reward equation in the PDF (implementation
+detail described in §3.5 prose). SFT cross-entropy loss above is an
+editorial formalization; the PDF describes it in text only, no equation
+number. §4 headline (1.3B preferred over 175B GPT-3) confirmed verbatim
+in Abstract and §4.1.]

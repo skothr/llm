@@ -5,7 +5,7 @@ authors: Willard, Louf
 year: 2023
 venue: arXiv (Outlines library)
 arxiv: 2307.09702
-local_pdf: null
+local_pdf: theory/sources/papers/willard2023-outlines.pdf
 type: excerpts
 note: |
   Abstract verified verbatim 2026-05-05 via WebFetch on arXiv abs page.
@@ -57,8 +57,8 @@ each step), which scales as $O(V)$ per step.
 
 ## §4 CFG support via LALR(1) parsers {#sec-4}
 
-> The FSM approach can also be extended to context-free grammars
-> (CFGs) and LALR(1) parsers to allow for efficient guided generation
+> our indexing approach can also be extended to CFGs
+> and LALR(1) parsers to allow for efficient guided generation
 > according to popular data formats and programming languages (e.g.
 > JSON, Python, SQL, etc.).
 
@@ -68,13 +68,25 @@ parser whose state captures enough of the stack contents that the
 index can still be precomputed for the common parsing-state /
 stack-summary combinations.
 
-## §5 Empirical {#sec-5}
+## §5 Discussion {#sec-5}
 
-> [The approach] adds little to no overhead to the token sequence
-> generation process, … significantly outperforms existing solutions.
+> [It adds little overhead to the token sequence generation process
+> and] significantly outperforms existing solutions.
 
-The empirical claim is that the per-step overhead drops from
-hundreds-of-µs to single-digit µs on typical schemas, taking
-constrained decoding from "the bottleneck" to "negligible."
+PDF §5 is titled "Discussion," not "Empirical." The quantitative
+comparison (Outlines vs. Guidance latency) is in §3.2 "Comparison
+with current methods," which shows runtime plots; §5 is qualitative
+discussion of memory/trade-offs and broader implications. The phrase
+"hundreds-of-µs to single-digit µs" does not appear in the PDF and
+has been removed. The overhead/outperforms claim is from the Abstract.
 
-[NOTE — pdf-not-available] Section numbers from arXiv v3.
+[Verified from PDF on 2026-05-12: arXiv v4 (2307.09702v4). Abstract
+verbatim confirmed. §3 = "Iterative FSM Processing and Indexing"
+(vocabulary index map σ : Q → P(V), O(1) retrieval). §4 = "Extensions
+to Iterative Parsing" / §4.1 "Pushdown Automata Formulation" (PDA
+6-tuple, LALR(1) extension). §5 = "Discussion" (memory trade-offs,
+no raw latency numbers). Corrected: (1) §4 quoted text was "The FSM
+approach" — PDF says "our indexing approach"; fixed to verbatim. (2)
+§5 section title was "Empirical" — PDF §5 is "Discussion"; the
+empirical benchmark is §3.2. (3) "hundreds-of-µs to single-digit µs"
+claim not present in PDF; removed.]

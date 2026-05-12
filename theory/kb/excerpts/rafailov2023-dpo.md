@@ -5,7 +5,7 @@ authors: Rafailov, Sharma, Mitchell, Ermon, Manning, Finn
 year: 2023
 venue: NeurIPS
 arxiv: 2305.18290
-local_pdf: null
+local_pdf: theory/sources/papers/rafailov2023-dpo.pdf
 type: excerpts
 note: "Excerpts from arXiv abstract page (verbatim) plus canonical equation forms widely reproduced in surveys (arXiv:2503.11701; arXiv:2410.15595) and downstream variant papers (SimPO §2.1; ORPO §2; KTO §2). Section/equation numbers follow the published NeurIPS 2023 / arXiv v3 layout."
 ---
@@ -94,7 +94,9 @@ is the **implicit reward**. The sigmoid-weighted term is large when the
 model already has the preference wrong (assigning lower implicit reward
 to $y_w$), so DPO updates more aggressively where it is most miscalibrated.
 
-[NOTE — pdf-not-available] Equations (3)–(7) are the canonical DPO
-derivation as reproduced verbatim across dozens of downstream papers and
-two surveys (arXiv:2503.11701, arXiv:2410.15595). Section/equation
-numbers should be re-verified against the PDF.
+[Verified from PDF on 2026-05-12] L_DPO (Eq. 7 in the v3 arXiv PDF)
+and its gradient form match the note above verbatim. The §4 anchor
+maps correctly: PDF has "4 Direct Preference Optimization" as the
+parent section containing the implicit-reward derivation (Eqs. 4–6)
+that arrives at the L_DPO loss (Eq. 7). Theoretical analysis is in
+§5 with subsections §5.1 / §5.2 (matching downstream-survey claims).

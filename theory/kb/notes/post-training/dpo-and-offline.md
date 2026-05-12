@@ -220,7 +220,7 @@ forward pass) and removes a stage from the pipeline.
 
 ### 3.5 SimPO — reference-free, length-normalized
 
-SimPO `[meng2024-simpo §3; kb/excerpts/meng2024-simpo#sec-3]`:
+SimPO `[meng2024-simpo §2; kb/excerpts/meng2024-simpo#sec-2]`:
 
 $$
 \mathcal{L}_{\mathrm{SimPO}}(\theta) = -\mathbb{E}\!\left[\log\sigma\!\left(\frac{\beta}{|y_w|}\log\pi_\theta(y_w|x) - \frac{\beta}{|y_l|}\log\pi_\theta(y_l|x) - \gamma\right)\right]. \tag{5}

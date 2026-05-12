@@ -5,7 +5,7 @@ authors: Bai, Kadavath, Kundu, Askell, Kernion, Jones, Chen, Goldie, Mirhoseini,
 year: 2022
 venue: "Anthropic Tech Report"
 arxiv: 2212.08073
-local_pdf: null
+local_pdf: theory/sources/papers/bai2022-cai.pdf
 type: excerpts
 note: "Verbatim from arXiv abstract page; full pipeline description from cross-referenced sources (C3AI arXiv:2502.15861 §2; Llama 2 §3.4 description of RLAIF; survey arXiv:2509.16679). PDF not yet downloaded."
 ---
@@ -96,7 +96,14 @@ The paper reports:
   by stating objections rather than refusing flatly. This is held up as
   the defining behavioral signature of CAI vs. helpful-only RLHF.
 
-[NOTE — pdf-not-available] Section numbers should be re-verified against
-the PDF; pipeline descriptions above are reproduced verbatim across
-multiple secondary sources (C3AI §2, Llama 2 paper §3.4, survey
-arXiv:2509.16679 §3).
+[Verified from PDF on 2026-05-12: arXiv v1 (2212.08073v1). Abstract
+verbatim confirmed. §3 = "Constitutional AI: Critiques, Revisions, and
+Supervised Learning"; §3.1 "Method" describes the SL-CAI pipeline
+(red-team prompts → critique → revision → finetune), confirmed against
+KB description. §4 = "Constitutional AI: Reinforcement Learning from AI
+Feedback"; §4.1 "Method" describes the RLAIF pipeline (feedback model
+with multiple-choice format, log-prob normalized preferences, Bradley-Terry
+PM). CoT discussion is a subsection within §4.1 "Chain-of-Thought
+Prompting" (KB labels it §5 — no separate §5 in the PDF for this;
+PDF §5 is "Related Work"). Main empirical results are in §4.3 and §4.4.
+No structural discrepancies found in the pipeline descriptions.]
