@@ -33,6 +33,9 @@ Anthropic's proprietary decoder-only LLM family. No public architecture paper; s
 \item[\hypertarget{glossary:cold-start-sft-2}{Cold-start SFT}]
 A small-scale ($\sim 10^4$ examples) SFT pass on long-CoT exemplars, run before RL to fix readability problems of pure-RL outputs (R1-Zero). Does not change asymptotic capability but improves trace coherence. \citep[\S 2.2.4]{deepseek-r1}
 
+\item[\hypertarget{glossary:constrained-decoding-2}{Constrained decoding}]
+Generation procedure that, at each step,
+
 \item[\hypertarget{glossary:cot-faithfulness-2}{CoT faithfulness}]
 The extent to which the trace $z$ causally drives the answer $y$ versus being post-hoc rationalisation. Measured by counterfactual perturbation. Thinking models report rates ~0.04–0.14% post-hoc; non-thinking models ~7–13%. [chen2026-faithfulness-scaling, arXiv 2601.06423; chen2025-faithcot-bench, arXiv 2510.04040]
 

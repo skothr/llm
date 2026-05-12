@@ -233,13 +233,13 @@ different precondition of \cref{eq:self-consistency}.
 $y^{(n)}$, not the full trace $z^{(n)}$. If the regex fails — the
 model omits the ``The answer is $X$'' template, or formats numbers
 inconsistently (\textit{``42''} vs.\ \textit{``forty-two''} vs.\
-\textit{``\$42$.$00$\$''}) — different traces arriving at the same
+\textit{``\$42.00\$''}) — different traces arriving at the same
 underlying answer can land in different vote bins, splitting the
 correct cluster and causing a wrong answer to win by plurality. This
-is the dominant production failure mode of CoT pipelines
+is the dominant production failure mode of \glsterm{chain-of-thought}{CoT} pipelines
 \citep[\S 2.4]{wang2022-self-consistency}; mitigations are robust
 parsers, structured-output decoders (Paper~1's inference-adjuncts
-section on structured-output / FSM-constrained decoding), and
+section on structured-output / FSM-\glsterm{constrained-decoding-2}{constrained decoding}), and
 trained answer-format consistency.
 
 \paragraph{Temperature too high or too low.}
@@ -257,7 +257,7 @@ instance, on a word problem with a tempting incorrect arithmetic
 shortcut, the model may produce that shortcut consistently across
 samples and majority-vote into a wrong answer with high confidence.
 \citet[\S 5]{wang2022-self-consistency} acknowledge that
-self-consistency cannot recover from systematic error. Open-ended
+\glsterm{self-consistency-2}{self-consistency} cannot recover from systematic error. Open-ended
 generation (creative writing, summarisation, code with non-canonical
 correct outputs) breaks the precondition that the answer space has
 finite support; the analogue there is best-of-$N$ under a learned
@@ -266,7 +266,7 @@ verifier (\cref{sec:process-reward-models}), not majority vote.
 \subsection{Forward link}
 \label{sec:sc-forward}
 
-Self-consistency moves the inference decoder from a single greedy draw
+\glsterm{self-consistency-2}{Self-consistency} moves the inference decoder from a single greedy draw
 to $N$ independent samples plus a deterministic vote. The $N$ axis is
 the simplest form of inference-time compute; the next section
 (\cref{sec:test-time-compute}) generalises to the full taxonomy of
@@ -275,6 +275,6 @@ budgets, formalises the compute-optimal selection problem of
 \citet{snell2024}, and presents the FLOPs-matched headline that on
 medium-difficulty problems a $14\times$ smaller model with
 test-time-compute beats the larger model at matched inference FLOPs.
-Self-consistency is then re-derivable as the unweighted-majority
+\glsterm{self-consistency-2}{Self-consistency} is then re-derivable as the unweighted-majority
 special case of that taxonomy at fixed sample count and verifier
 weight $w_n = 1$.

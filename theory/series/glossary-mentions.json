@@ -247,6 +247,7 @@
       "circuit-tracing",
       "claude",
       "cold-start-sft-2",
+      "constrained-decoding-2",
       "cot-faithfulness-2",
       "dapo-2",
       "debate",
@@ -308,7 +309,9 @@
       "vineppo",
       "vocabulary"
     ],
-    "sections_modified": []
+    "sections_modified": [
+      "03-self-consistency.tex"
+    ]
   },
   "paper-4": {
     "keys_used": [
