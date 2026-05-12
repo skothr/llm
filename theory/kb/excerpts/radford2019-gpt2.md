@@ -4,13 +4,13 @@ title: Language Models are Unsupervised Multitask Learners
 authors: Radford, Wu, Child, Luan, Amodei, Sutskever
 year: 2019
 venue: OpenAI tech report
-pdf: theory/sources/papers/radford2019-gpt2.pdf
+local_pdf: theory/sources/papers/radford2019-gpt2.pdf
 extracted: 2026-05-04 (Phase 2.5 deepening)
 ---
 
 # Verbatim excerpts — Radford et al. 2019, "Language Models are Unsupervised Multitask Learners" (GPT-2)
 
-## #abstract
+## Abstract {#abstract}
 
 > Natural language processing tasks, such as question answering,
 > machine translation, reading comprehension, and summarization, are
@@ -32,21 +32,41 @@ extracted: 2026-05-04 (Phase 2.5 deepening)
 > language processing systems which learn to perform tasks from their
 > naturally occurring demonstrations.
 
-## #sec-2-1 — WebText (§2.1, p.3)
+## §2 Approach — Zero-Shot Task Framing as p(output|input,task) {#sec-2-task-framing}
 
-> The resulting dataset, WebText, contains the text subset of these 45
-> million links. To extract the text from HTML responses we use a
-> combination of the Dragnet (Peters & Lecocq, 2013) and Newspaper
-> content extractors. All results presented in this paper use a
-> preliminary version of WebText which does not include links created
-> after Dec 2017 and which after de-duplication and some heuristic
-> based cleaning contains slightly over 8 million documents for a
-> total of 40 GB of text. We removed all Wikipedia documents from
-> WebText since it is a common data source for other datasets and
-> could complicate analysis due to overlapping training data with test
-> evaluation tasks.
+> Learning to perform a single task can be expressed in a
+> probabilistic framework as estimating a conditional distri-
+> bution p(output|input). Since a general system should be
+> able to perform many different tasks, even for the same
+> input, it should condition not only on the input but also
+> on the task to be performed. That is, it should model
+> p(output|input, task).
 
-## #sec-2-2 — Byte-level BPE input representation (§2.2, p.3-4)
+This is the paper's central theoretical claim: because a single general system must handle many tasks, the modeling target must extend from p(output|input) to p(output|input, task). The key insight is that *language* provides a natural way to encode the task signal without any architectural modification — a translation example becomes `(translate to french, english text, french text)` as a flat symbol sequence. This reframing is what justifies the zero-shot evaluation: the model is trained on the unsupervised objective but inherits task conditioning implicitly from naturally occurring demonstrations in the corpus.
+
+## §2.1 WebText Dataset Construction — Reddit Outbound Links with Karma ≥ 3 {#sec-2-1-webtext}
+
+> we scraped all outbound links from
+> Reddit, a social media platform, which received at least 3
+> karma. This can be thought of as a heuristic indicator for
+> whether other users found the link interesting, educational,
+> or just funny.
+> The resulting dataset, WebText, contains the text subset
+> of these 45 million links. To extract the text from HTML
+> responses we use a combination of the Dragnet (Peters &
+> Lecocq, 2013) and Newspaper content extractors. All re-
+> sults presented in this paper use a preliminary version of
+> WebText which does not include links created after Dec
+> 2017 and which after de-duplication and some heuristic
+> based cleaning contains slightly over 8 million documents
+> for a total of 40 GB of text. We removed all Wikipedia
+> documents from WebText since it is a common data source
+> for other datasets and could complicate analysis due to over-
+> lapping training data with test evaluation tasks.
+
+The karma-threshold heuristic is the load-bearing quality filter: it replaces expensive manual curation with a crowd signal. The Wikipedia exclusion is methodologically important — it prevents spurious zero-shot gains on Wikipedia-derived benchmarks (PTB, WikiText-2, CBT) from being attributed to generalization rather than training-set overlap.
+
+## §2.2 — Byte-level BPE input representation (§2.2, p.3-4) {#sec-2-2}
 
 > Byte Pair Encoding (BPE) (Sennrich et al., 2015) is a practical
 > middle ground between character and word level language modeling
@@ -78,7 +98,7 @@ extracted: 2026-05-04 (Phase 2.5 deepening)
 > Unicode string, this allows us to evaluate our LMs on any dataset
 > regardless of pre-processing, tokenization, or vocab size.
 
-## #sec-2-3 — Model: Pre-LN modification + scaled init (§2.3, p.4)
+## §2.3 — Model: Pre-LN modification + scaled init (§2.3, p.4) {#sec-2-3}
 
 > We use a Transformer (Vaswani et al., 2017) based architecture for
 > our LMs. The model largely follows the details of the OpenAI GPT
@@ -107,7 +127,7 @@ The 1.5B model is the canonical "GPT-2." The Pre-LN move +
 cites as the load-bearing architectural change between GPT-1 and
 GPT-2.
 
-## #sec-3 — Experiments (§3, p.4-5)
+## §3 — Experiments Overview (§3, p.4-5) {#sec-3}
 
 > We trained and benchmarked four LMs with approximately log-uniformly
 > spaced sizes. The architectures are summarized in Table 2. The
@@ -119,6 +139,39 @@ GPT-2.
 > of WebText. All models still underfit WebText and held-out
 > perplexity has as of yet improved given more training time.
 
+## §3.3 LAMBADA — Zero-Shot Benchmark Headline {#sec-3-3-lambada}
+
+> The LAMBADA dataset (Paperno et al., 2016) tests the
+> ability of systems to model long-range dependencies in
+> text. The task is to predict the final word of sentences
+> which require at least 50 tokens of context for a human to
+> successfully predict. GPT-2 improves the state of the art
+> from 99.8 (Grave et al., 2016) to 8.6 perplexity and increases
+> the accuracy of LMs on this test from 19% (Dehghani et al.,
+> 2018) to 52.66%.
+
+> WebText LMs transfer well across domains and datasets,
+> improving the state of the art on 7 out of the 8 datasets in a
+> zero-shot setting. Large improvements are noticed on small
+> datasets such as Penn Treebank and WikiText-2 which have
+> only 1 to 2 million training tokens.
+
+The 7-of-8 zero-shot SOTA result (Table 3, §3) is the headline empirical finding of the paper. LAMBADA accuracy improvement from 19% to 52.66% (63.24% with stop-word filter) is the single sharpest individual task gain, attributable to the model's long-context modeling capacity from large-batch, long-context (1024-token) training.
+
+## §7 Conclusion — Log-Linear Scaling Observation {#sec-7-scaling}
+
+> When a large language model is trained on a sufficiently
+> large and diverse dataset it is able to perform well across
+> many domains and datasets. GPT-2 zero-shots to state of
+> the art performance on 7 out of 8 tested language model-
+> ing datasets. The diversity of tasks the model is able to
+> perform in a zero-shot setting suggests that high-capacity
+> models trained to maximize the likelihood of a sufficiently
+> varied text corpus begin to learn how to perform a surprising
+> amount of tasks without the need for explicit supervision.
+
+The abstract states the log-linear scaling claim directly: "The capacity of the language model is essential to the success of zero-shot task transfer and increasing it improves performance in a log-linear fashion across tasks." This is corroborated empirically by the four model sizes (117M → 345M → 762M → 1542M, Table 2), whose benchmark results in Table 3 and Figures 1–3 show consistent monotonic improvement with log-uniformly spaced parameter counts. The conclusion frames this as evidence that unsupervised task learning is an additional promising research direction alongside transfer learning.
+
 ## Source notes
 
 - Tier A canonical (OpenAI tech report, no peer-reviewed venue but
@@ -127,3 +180,5 @@ GPT-2.
 - Anchors stable; equation numbers (where present) preserved.
 - `kb/notes/architecture/{transformer-overview,normalization,ffn,
   tokenization}.md` all cite into this file via dual-citation.
+
+[Verified from PDF on 2026-05-12] Added §2 task-framing (#sec-2-task-framing), §2.1 WebText Reddit/karma (#sec-2-1-webtext), §3.3 LAMBADA headline (#sec-3-3-lambada), §7 log-linear scaling (#sec-7-scaling). Abstract verified verbatim against PDF. Front-matter `pdf:` key corrected to `local_pdf:`. Existing section anchors updated to `{#sec-*}` form.

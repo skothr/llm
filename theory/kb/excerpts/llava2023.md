@@ -5,7 +5,7 @@ authors: Liu, Li, Wu, Lee
 year: 2023
 venue: NeurIPS
 arxiv: 2304.08485
-pdf: theory/sources/papers/llava2023.pdf
+local_pdf: theory/sources/papers/llava2023.pdf
 extracted: 2026-05-05 (Phase 2.5 deepening)
 ---
 
@@ -18,7 +18,7 @@ recipe. Contrasts with Flamingo's gated cross-attention insertion. The
 LLaVA recipe is the dominant pattern for open multimodal models in
 2024–2026 (Llama 3.2-Vision, InternVL, Qwen2-VL all build on it).
 
-## #abstract
+## Abstract {#abstract}
 
 > Instruction tuning large language models (LLMs) using machine-generated
 > instruction-following data has been shown to improve zero-shot
@@ -26,7 +26,7 @@ LLaVA recipe is the dominant pattern for open multimodal models in
 > multimodal field. We present the first attempt to use language-only
 > GPT-4 to generate multimodal language-image instruction-following
 > data. By instruction tuning on such generated data, we introduce
-> **LLaVA: Large Language and Vision Assistant**, an end-to-end trained
+> LLaVA: Large Language and Vision Assistant, an end-to-end trained
 > large multimodal model that connects a vision encoder and an LLM for
 > general-purpose visual and language understanding. To facilitate
 > future research on visual instruction following, we construct two
@@ -37,9 +37,10 @@ LLaVA recipe is the dominant pattern for open multimodal models in
 > yields a 85.1% relative score compared with GPT-4 on a synthetic
 > multimodal instruction-following dataset. When fine-tuned on Science
 > QA, the synergy of LLaVA and GPT-4 achieves a new state-of-the-art
-> accuracy of 92.53%.
+> accuracy of 92.53%. We make GPT-4 generated visual instruction tuning
+> data, our model, and code publicly available.
 
-## #sec-3 — GPT-assisted visual instruction data generation (§3)
+## §3 GPT-assisted visual instruction data generation {#sec-3}
 
 > Inspired by the success of recent GPT models in text-annotation tasks
 > [17], we propose to leverage ChatGPT/GPT-4 for multimodal instruction-
@@ -61,7 +62,7 @@ The three response types — **conversation**, **detailed description**,
 **complex reasoning** — are the LLaVA data taxonomy, copied widely in
 follow-up VLM datasets.
 
-## #sec-4-1 — Architecture: linear projection (§4.1, Eq. 1)
+## §4.1 Architecture — linear projection {#sec-4-1}
 
 > The primary goal is to effectively leverage the capabilities of both
 > the pre-trained LLM and visual model. The network architecture is
@@ -96,7 +97,7 @@ tokens to the input sequence as if they were word embeddings. Later
 LLaVA-1.5 / LLaVA-NeXT replaced the linear $W$ with a 2-layer MLP for
 small additional gains.
 
-## #sec-4-2 — Two-stage training (§4.2)
+## §4.2 Two-stage training {#sec-4-2}
 
 > For each image $X_v$, we generate multi-turn conversation data
 > $(X_q^1, X_a^1, \cdots, X_q^T, X_a^T)$, where $T$ is the total number
@@ -130,7 +131,7 @@ The frozen-vision-encoder + trainable-projection + trainable-LLM
 configuration is the LLaVA training pattern that all open VLMs
 inherit.
 
-## #sec-5 — Experimental settings (§5)
+## §5 Experimental settings {#sec-5}
 
 > We train all models with 8× A100s, following Vicuna's hyperparameters.
 > We pre-train our model on the filtered CC-595K subset for 1 epoch with
@@ -138,7 +139,7 @@ inherit.
 > proposed LLaVA-Instruct-158K dataset for 3 epochs, with a learning
 > rate of 2e-5 and a batch size of 32.
 
-## #sec-5-2 — Quantitative result on Science QA (§5.2)
+## §5.2 Quantitative result on Science QA {#sec-5-2}
 
 > When fine-tuned on Science QA, LLaVA alone achieves an accuracy of
 > 90.92%. The synergy of LLaVA and GPT-4 achieves a new state-of-the-art
@@ -154,3 +155,5 @@ inherit.
   LLaVA-NeXT extends to dynamic high-resolution. None of these change
   the core architectural premise — linear/MLP projection of CLIP
   features into the LLM embedding space.
+
+[Verified from PDF on 2026-05-12] Abstract verified verbatim (added missing final sentence "We make GPT-4 generated visual instruction tuning data, our model, and code publicly available."). Sections #sec-3, #sec-4-1, #sec-4-2, #sec-5, #sec-5-2 already present from prior extraction pass; all verified against PDF. Frontmatter: `pdf:` replaced with `local_pdf:`.

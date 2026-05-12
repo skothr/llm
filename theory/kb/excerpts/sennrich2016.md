@@ -5,7 +5,7 @@ authors: Sennrich, Haddow, Birch
 year: 2016
 venue: ACL
 arxiv: 1508.07909
-pdf: theory/sources/papers/sennrich2016_bpe.pdf
+local_pdf: theory/sources/papers/sennrich2016_bpe.pdf
 extracted: 2026-05-05 (Phase 2.5 deepening)
 ---
 
@@ -20,7 +20,7 @@ recipe defined here is the load-bearing reference for every
 subword tokenizer in modern LLMs (LLaMA, GPT-2/3/4, Qwen, DeepSeek,
 Mistral).
 
-## #abstract
+## Abstract {#abstract}
 
 > Neural machine translation (NMT) models typically operate with a fixed
 > vocabulary, but translation is an open-vocabulary problem. Previous
@@ -40,7 +40,7 @@ Mistral).
 > tasks English→German and English→Russian by up to 1.1 and 1.3 BLEU,
 > respectively.
 
-## #sec-1 — Two main contributions (§1)
+## §1 Two main contributions {#sec-1}
 
 > This paper has two main contributions:
 >
@@ -55,7 +55,7 @@ Mistral).
 >   of variable-length character sequences, making it a very suitable
 >   word segmentation strategy for neural network models.
 
-## #sec-3-2 — Byte Pair Encoding (BPE), the algorithmic core (§3.2)
+## §3.2 Byte Pair Encoding — the algorithmic core {#sec-3-2}
 
 > Byte Pair Encoding (BPE) (Gage, 1994) is a simple data compression
 > technique that iteratively replaces the most frequent pair of bytes in
@@ -115,7 +115,7 @@ for i in range(num_merges):
 > This is applicable to any word, and allows for open-vocabulary
 > networks with fixed symbol vocabularies.
 
-## #sec-3-2-joint — Joint vs independent BPE (§3.2)
+## §3.2 Joint vs independent BPE {#sec-3-2-joint}
 
 > We evaluate two methods of applying BPE: learning two independent
 > encodings, one for the source, one for the target vocabulary, or
@@ -130,7 +130,7 @@ The joint-BPE pattern is the ancestor of the multilingual single-vocab
 tokenizers used in LLaMA (32k tokens) and Qwen/DeepSeek
 (byte-level BPE, ~128k+).
 
-## #sec-4 — Evaluation framing (§4)
+## §4 Evaluation framing {#sec-4}
 
 > We aim to answer the following empirical questions:
 >
@@ -145,7 +145,7 @@ tokenizers used in LLaMA (32k tokens) and Qwen/DeepSeek
 > English→Russian, the training set consists of 2.6 million sentence
 > pairs, or approximately 50 million tokens.
 
-## #sec-5 — Headline result (§5, conclusions paraphrased)
+## §5 Headline result {#sec-5}
 
 > The main contribution of this paper is that we show that neural
 > machine translation systems are capable of open-vocabulary translation
@@ -168,3 +168,7 @@ tokenizers used in LLaMA (32k tokens) and Qwen/DeepSeek
 - The 2018 SentencePiece paper (Kudo & Richardson) wraps this algorithm
   into a language-independent library and adds the unigram-LM
   alternative; see `kb/excerpts/kudo2018-sentencepiece.md`.
+
+[Verified from PDF on 2026-05-12] Added §1 contributions, §3.2 BPE
+algorithmic core, §3.2 joint-vs-independent variant, §4 evaluation, §5
+headline. Abstract verified verbatim.

@@ -12,7 +12,7 @@ note: Verbatim quotations from the v1 arXiv PDF (Apr 2024). Practitioner-facing 
 
 # Excerpts — Heimersheim & Nanda 2024, "How to use and interpret activation patching"
 
-## #abstract
+## Abstract {#abstract}
 
 > Activation patching is a popular mechanistic interpretability
 > technique, but has many subtleties regarding how it is applied and how
@@ -23,7 +23,7 @@ note: Verbatim quotations from the v1 arXiv PDF (Apr 2024). Practitioner-facing 
 > what evidence patching experiments provide about circuits, and on the
 > choice of metric and associated pitfalls.
 
-## #sec-1-1 — What is activation patching (§1.1, p.1)
+## §1.1 What is activation patching {#sec-1-1}
 
 > Activation patching (also referred to as Interchange Intervention,
 > Causal Tracing, Resample Ablation, or Causal Mediation Analysis) is
@@ -55,7 +55,7 @@ The 6-step protocol (§1.3, p.1):
 > 6. Repeat for all activations of interest: E.g. sweep to test all MLP
 >    layers.
 
-## #sec-2-3 — Noising vs Denoising (§2.3, p.3)
+## §2.3 Noising vs Denoising {#sec-2-3}
 
 The key conceptual distinction the paper introduces:
 
@@ -84,7 +84,7 @@ The key conceptual distinction the paper introduces:
 | Clean → corrupted (Denoising, Causal Tracing) | First run activations (clean) | Clean tokens | Second run activations (corrupted) | Corrupt tokens | What restores behaviour |
 | Corrupted → clean (Noising, Resample Ablation) | First run activations (corrupted) | Corrupt tokens | Second run activations (clean) | Clean tokens | What breaks behaviour |
 
-## #sec-2-4 — AND vs OR gates: noising and denoising are not symmetric (§2.4, p.4)
+## §2.4 AND vs OR gates — noising and denoising are not symmetric {#sec-2-4}
 
 > Consider a hypothetical circuit of three components A, B, and C that
 > are connected with an AND or an OR gate. They are embedded in a much
@@ -121,7 +121,7 @@ direction-of-patching based on circuit topology: AND-shaped serial
 dependencies need noising; OR-shaped redundant components need
 denoising.
 
-## #sec-4-1 — Logit difference as the recommended metric (§4.1, p.8)
+## §4.1 Logit difference as the recommended metric {#sec-4-1}
 
 > Logit difference measures to what extent the model knows the correct
 > answer, and it allows us to be specific: We can control for things we
@@ -135,7 +135,7 @@ denoising.
 > model even if they don't change the rank of the output tokens (unlike
 > e.g. accuracy), which is crucial for exploratory patching.
 
-## #sec-4-2 — Metric pitfall taxonomy (§4.2, p.9-10)
+## §4.2 Metric pitfall taxonomy {#sec-4-2}
 
 The paper enumerates problems for each metric type:
 
@@ -164,6 +164,51 @@ The paper enumerates problems for each metric type:
 >   that generally many components contribute to a model's performance,
 >   with no single decisive contributor.
 
+## §-ref Attribution patching as fast approximation {#sec-attribution-patching}
+
+> Fast approximations to activation patching, such as attribution
+> patching (see Nanda, 2023, and also AtP*, atpstar) can help speed up
+> this process in large models.
+
+The paper does not reproduce the attribution patching formula inline; it
+delegates to Nanda 2023 (blogpost: neelnanda.io/mechanistic-interpretability/attribution-patching).
+[TODO] Formula `(a_corrupt - a_clean) · ∂L/∂a_clean` — verbatim
+equation not present in this PDF; source is Nanda 2023 blogpost (Tier B).
+
+## §5 Summary — practical recommendations (verbatim) {#sec-5-summary}
+
+> In most situations, use activation patching instead of ablations.
+> Different corrupted prompts give you different information, be careful
+> about what you choose and try to test a range of prompts.
+> There are two different directions you can patch in: denoising and
+> noising. These are not symmetric. Be aware of what a patching result
+> implies!
+>
+> - Denoising (a clean → corrupt patch) shows whether the patched
+>   activations were sufficient to restore the model behaviour. This
+>   implies the components make up a cross-section of the circuit.
+> - Noising (a corrupt → clean patch) shows whether the patched
+>   activations were necessary to maintain the model behaviour. This
+>   implies the components are part of the circuit.
+>
+> Be careful when using metrics that are (i) discrete, (ii) overly
+> sharp, or (iii) sensitive to unintended information. Ideally use a
+> range of metrics, and try to have at least one metric that is
+> continuous and roughly linear in logits such as logit difference or
+> logprob. We recommend representing patching results in a big dataframe
+> with a column per metric and row per patching experiment, and making a
+> bunch of plots from this.
+>
+> - Model top-k accuracy is discrete and can overrepresent changes at
+>   thresholds and shows no change for large effects that don't cross
+>   thresholds.
+> - Most effects from patching are linear and additive in logit space.
+>   Probability is exponential in logit space, so it overemphasises
+>   effects near a threshold and suppresses effects elsewhere, creating
+>   overly sharp patching plots.
+> - Logprob can saturate, and cannot control for a patch that boosts
+>   both the correct and incorrect answer(s).
+
 ## Source notes
 
 - Tier A (arXiv preprint, methodology paper authored by Heimersheim and
@@ -172,3 +217,5 @@ The paper enumerates problems for each metric type:
 - Companion to `kb/excerpts/zhang2023-apatching` — Zhang & Nanda 2023
   is the systematic empirical study; Heimersheim & Nanda 2024 is the
   practitioner's playbook.
+
+[Verified from PDF on 2026-05-12] Added #sec-attribution-patching (fast-approximation reference + [TODO] for formula not present in this PDF), #sec-5-summary (verbatim §5 practical recommendations list). Abstract verified verbatim against arXiv:2404.15255v1. Extraction failure: attribution patching formula `(a_corrupt - a_clean) · ∂L/∂a` does not appear in this paper; it is delegated to Nanda 2023 blogpost (Tier B source only).

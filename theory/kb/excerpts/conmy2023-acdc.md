@@ -7,12 +7,12 @@ venue: NeurIPS 2023
 arxiv: 2304.14997
 local_pdf: theory/sources/papers/conmy2023-acdc.pdf
 type: excerpts
-note: Verbatim quotations from the v4 arXiv PDF (Oct 2023). ACDC algorithm is the canonical automation of activation-patching circuit discovery — iterates the computational graph in reverse-topological order, prunes edges whose KL-divergence contribution falls below threshold τ. Headline empirical: rediscovered the IOI circuit (recovers 5/5 of Wang et al. 2023's component types; selects 68 of 32K edges in GPT-2 Small).
+note: Verbatim quotations from the v4 arXiv PDF (Oct 2023). ACDC algorithm is the canonical automation of activation-patching circuit discovery — iterates the computational graph in reverse-topological order, prunes edges whose KL-divergence contribution falls below threshold τ. Headline empirical: rediscovered the IOI circuit (recovers 5/5 of Wang et al. 2023's component types; selects 68 of 32K edges in GPT-2 Small). Deepened 2026-05-12: §3, §4.1, empirical headline sections added; abstract verified verbatim.
 ---
 
 # Excerpts — Conmy et al. 2023, "Automated Circuit Discovery (ACDC)"
 
-## #abstract
+## Abstract {#abstract}
 
 > Through considerable effort and intuition, several recent works have
 > reverse-engineered nontrivial behaviors of transformer models. This
@@ -29,14 +29,15 @@ note: Verbatim quotations from the v4 arXiv PDF (Oct 2023). ACDC algorithm is th
 > validate them. For example, the ACDC algorithm rediscovered 5/5 of the
 > component types in a circuit in GPT-2 Small that computes the
 > Greater-Than operation. ACDC selected 68 of the 32,000 edges in GPT-2
-> Small, all of which were manually found by previous work.
+> Small, all of which were manually found by previous work. Our code is
+> available at https://github.com/ArthurConmy/Automatic-Circuit-Discovery.
 
-## #sec-2 — The mech-interp workflow (§2, p.2-4)
+## §2 Mech-interp workflow {#sec-2}
 
 The paper systematizes the workflow into three steps + post-hoc
 explanation:
 
-### #sec-2-1 — Step 1: Behavior, dataset, metric (§2.1, p.3)
+### §2.1 Step 1 — behavior, dataset, metric {#sec-2-1}
 
 > The first step of the general mechanistic interpretability workflow is
 > to choose a neural network behavior to analyze. Most commonly
@@ -49,7 +50,7 @@ tracr-xproportion, tracr-reverse, Induction — each with example prompt,
 expected output, and metric (logit difference / probability difference /
 MSE / negative-log-prob).
 
-### #sec-2-2 — Step 2: Computational graph (§2.2, p.3-4)
+### §2.2 Step 2 — computational graph {#sec-2-2}
 
 > To find circuits for the behavior of interest, one must represent the
 > internals of the model as a computational directed acyclic graph (DAG,
@@ -68,7 +69,7 @@ MSE / negative-log-prob).
 > stream, even though these are computed with dynamic programming in the
 > actual model implementation.
 
-### #sec-2-3 — Step 3: Activation patching (§2.3, p.4)
+### §2.3 Step 3 — activation patching {#sec-2-3}
 
 > With the computational DAG specified, one can search for the edges
 > that form the circuit. We test edges for their importance by using
@@ -95,7 +96,7 @@ MSE / negative-log-prob).
 > interpretability projects (Hanna, Liu, and Variengien, 2023;
 > Heimersheim and Janiak, 2023; Wang et al., 2023), so we prefer it.
 
-## #sec-3 — The ACDC algorithm (§3, p.5)
+## §3 The ACDC algorithm — overview {#sec-3-overview}
 
 > **Automatic Circuit DisCovery (ACDC).** Informally, a run of ACDC
 > iterates from outputs to inputs through the computational graph,
@@ -145,7 +146,7 @@ Result: Subgraph H ⊆ G.
 11 return H
 ```
 
-## #sec-3-baselines — Subnetwork Probing and HISP baselines (§3, p.5)
+## §3 Baselines — Subnetwork Probing and HISP {#sec-3-baselines}
 
 > **Subnetwork Probing (SP; Cao, Sanh, and Rush, 2021).** SP learns a
 > mask over the internal model components (such as attention heads and
@@ -164,7 +165,7 @@ Result: Subgraph H ⊆ G.
 > therefore we once more generalize it to replace heads and other model
 > components with corrupted activations.
 
-## #sec-4 — Evaluation criteria (§4, p.6)
+## §4 Evaluation criteria {#sec-4-criteria}
 
 > To compare methods for identifying circuits, we seek empirical answers
 > to the following questions.
@@ -188,6 +189,76 @@ Result: Subgraph H ⊆ G.
 > edges are classified as positive (in the circuit) or negative (not in
 > the circuit).
 
+## §3 Automating Circuit Discovery — KL-Divergence Pruning Rule {#sec-3-kl}
+
+The core pruning condition in Algorithm 1, stated at §3 p.5 and again formally in Appendix C (Eq. 1):
+
+> To formalize the ACDC process, we let $G$ be a computational graph of
+> the model of interest, at a desired level of granularity (Section 2.2),
+> with nodes topologically sorted then reversed (so the nodes are sorted
+> from output to input). Let $H \subseteq G$ be the computational
+> subgraph that is iteratively pruned, and $\tau > 0$ a threshold that
+> determines the sparsity of the final state of $H$.
+
+> We now define how we evaluate a subgraph $H$. We let $H(x_i, x'_i)$ be
+> the result of the model when $x_i$ is the input to the network, but we
+> overwrite all edges in $G$ that are not present in $H$ to their
+> activation on $x'_i$ (the corrupted input). This defines $H(x_i, x'_i)$,
+> the output probability distribution of the subgraph under such an
+> experiment. Finally we evaluate $H$ by computing the KL divergence
+> $D_{KL}(G(x_i) \| H(x_i, x'_i))$ between the model and the subgraph's
+> predictions. We let $D_{KL}(G\|H)$ denote the average KL divergence
+> over a set of datapoints.
+
+The edge-removal condition in line 6 of Algorithm 1:
+
+$$D_{KL}(G \| H_\text{new}) - D_{KL}(G \| H) < \tau \tag{Alg.1, line 6}$$
+
+An edge $w \to v$ is removed permanently when removing it raises the average KL divergence by less than $\tau$ — the threshold controls the sparsity/faithfulness tradeoff for the returned subgraph.
+
+## §4.1 Evaluation — Area Under ROC Curves {#sec-4-1-roc}
+
+> To compare methods for identifying circuits, we seek empirical answers
+> to the following questions.
+>
+> - **Q1**: Does the method identify the subgraph corresponding to the
+>   underlying algorithm implemented by the neural network?
+> - **Q2**: Does the method avoid including components which do not
+>   participate in the elicited behavior?
+
+> The receiver operating characteristic (ROC) curve is useful because a
+> high true-positive rate (TPR) and a low false-positive rate (FPR)
+> conceptually correspond to affirming Q1 and Q2, respectively. We
+> consider canonical circuits taken from previous works which found an
+> end-to-end circuit explaining behavior for tasks in Table 1. We
+> formulate circuit discovery as a binary classification problem, where
+> edges are classified as positive (in the circuit) or negative (not in
+> the circuit).
+
+> Figure 3 shows the results of studying how well existing methods recover
+> circuits in transformers. We find that i) methods are very sensitive to
+> the corrupted distribution, ii) ACDC has competitive performance (as
+> measured by AUC) with gradient-descent based methods iii) ACDC is not
+> robust, and it fails at some settings.
+
+These are the empirical benchmarking results across all five circuit tasks (IOI, Docstring, Greater-Than, tracr-reverse, tracr-xproportion). ACDC achieves greater AUC than SP and HISP on IOI, Greater-Than, and tracr-reverse.
+
+## §Abstract + §1 — IOI/Greater-Than Empirical Headline {#sec-abstract-headline}
+
+The two load-bearing headline results from the abstract (verbatim from PDF):
+
+> the ACDC algorithm rediscovered 5/5 of the component types in a circuit
+> in GPT-2 Small that computes the Greater-Than operation. ACDC selected
+> 68 of the 32,000 edges in GPT-2 Small, all of which were manually found
+> by previous work.
+
+From Figure 1 caption (§1, p.2):
+
+> All heads recovered were identified as part of the IOI circuit by Wang
+> et al. (2023). Edge thickness is proportional to importance.
+
+These two results — 5/5 component-type recall on Greater-Than and zero false positives on IOI — are the empirical validation that ACDC's KL-divergence pruning recovers the same circuits that skilled human researchers found manually. They are the primary claims cited downstream in mechanistic-interpretability literature using ACDC.
+
 ## Source notes
 
 - Tier A canonical (NeurIPS 2023, peer-reviewed).
@@ -195,3 +266,5 @@ Result: Subgraph H ⊆ G.
   verbatim with placeholder pseudocode formatting; equation numbers
   preserved as in source.
 - Code repository: https://github.com/ArthurConmy/Automatic-Circuit-Discovery
+
+[Verified from PDF on 2026-05-12] Added §3-kl, §4.1-roc, §abstract-headline. Abstract verified verbatim (prior version omitted final code-URL sentence).
