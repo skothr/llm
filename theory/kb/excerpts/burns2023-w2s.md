@@ -5,7 +5,7 @@ authors: Burns, Izmailov, Kirchner, Baker, Gao, Aschenbrenner, Chen, Ecoffet, Jo
 year: 2023
 venue: ICML 2024
 arxiv: 2312.09390
-local_pdf: null
+local_pdf: theory/sources/papers/burns2023-w2s.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox); full abstract retrieved verbatim via WebFetch on arXiv 2312.09390 abstract page (2026-05-05). PGR (Performance Gap Recovered) is the central metric; deeper definition pending PDF access. Numerical results below verbatim from landing page.
 ---

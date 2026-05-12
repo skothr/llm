@@ -5,7 +5,7 @@ authors: Mialon, Fourrier, Wolf, Lavril, LeCun, et al.
 year: 2023
 venue: arXiv (HuggingFace + Meta)
 arxiv: 2311.12983
-local_pdf: null
+local_pdf: theory/sources/papers/mialon2023-gaia.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); abstract content retrieved verbatim via WebFetch on arXiv 2311.12983 abstract page (2026-05-05). The 466-question split, level-1/2/3 difficulty bands, and gated-leaderboard methodology are public on the HF leaderboard space. `[PDF-VERIFY]` tags mark claims from external public materials that need PDF confirmation.
 ---

@@ -5,7 +5,7 @@ authors: Wang, Ma, Wang, Wei, Lyu, Yang, et al. (TIGER Lab)
 year: 2024
 venue: NeurIPS 2024 D&B (Spotlight)
 arxiv: 2406.01574
-local_pdf: null
+local_pdf: theory/sources/papers/wang2024-mmlu-pro.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2406.01574 abstract page (2026-05-05). Distractor-construction protocol details tagged `[PDF-VERIFY]`.
 ---

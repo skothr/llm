@@ -5,7 +5,7 @@ authors: Kirchenbauer, Geiping, Wen, Katz, Miers, Goldstein
 year: 2023
 venue: ICML 2023
 arxiv: 2301.10226
-local_pdf: null
+local_pdf: theory/sources/papers/kirchenbauer2023-watermark.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2301.10226 (2026-05-05). The green/red list mechanism, gamma/delta parameters, and z-score detection statistic are described below from secondary sources; deeper section anchors with the precise default-value choices (γ=0.25, δ=2.0) pending PDF access.
 ---

@@ -5,7 +5,7 @@ authors: Xie, Zhang, Chen, Lou, Liu, Hu, Xing, Hu, Lin, Liu, Yu
 year: 2024
 venue: NeurIPS 2024 (Datasets & Benchmarks)
 arxiv: 2404.07972
-local_pdf: null
+local_pdf: theory/sources/papers/xie2024-osworld.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2404.07972 abstract page (2026-05-05). Operating system, app coverage, and task-distribution numbers tagged `[PDF-VERIFY]`.
 ---

@@ -5,7 +5,7 @@ authors: Mazeika, Phan, Yin, Zou, Wang, Mu, Sakhaee, Li, Basart, Li, Forsyth, He
 year: 2024
 venue: arXiv 2402.04249; ICML 2024 Workshop
 arxiv: 2402.04249
-local_pdf: null
+local_pdf: theory/sources/papers/harmbench2024.pdf
 type: excerpts
 note: PDF not yet downloaded; excerpts from arXiv 2402.04249 abstract (verified via WebSearch 2026-05-04). The standardized red-team evaluation framework. Used in `kb/notes/alignment/safety-evaluation.md` §2.1.
 ---

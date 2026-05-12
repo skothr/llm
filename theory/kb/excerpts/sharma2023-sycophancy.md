@@ -5,7 +5,7 @@ authors: Sharma, Tong, Korbak, Duvenaud, Askell, Bowman, Cheng, Durmus, Hatfield
 year: 2023
 venue: ICLR 2024
 arxiv: 2310.13548
-local_pdf: null
+local_pdf: theory/sources/papers/sharma2023-sycophancy.pdf
 type: excerpts
 note: PDF download blocked; excerpts from arXiv abstract page (WebFetch 2026-05-04). The five-task SycophancyEval is the operational core; section anchors below mark abstract-level claims and named tasks. Deeper section excerpts pending PDF access.
 ---

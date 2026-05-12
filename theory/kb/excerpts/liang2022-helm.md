@@ -5,7 +5,7 @@ authors: Liang, Bommasani, Lee, Tsipras, Soylu, Yasunaga, Zhang, Narayanan, Wu, 
 year: 2022
 venue: arXiv (Stanford CRFM)
 arxiv: 2211.09110
-local_pdf: null
+local_pdf: theory/sources/papers/liang2022-helm.pdf
 type: excerpts
 note: Excerpts from arXiv abstract (verbatim). The 7-metric x 16-scenario matrix and the "core scenarios" methodology are documented on https://crfm.stanford.edu/helm/. `[PDF-VERIFY]` flags claims relying on the public site rather than the (1000+ page) PDF.
 ---

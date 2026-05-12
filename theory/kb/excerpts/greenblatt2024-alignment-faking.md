@@ -5,7 +5,7 @@ authors: Greenblatt, Denison, Wright, Roger, MacDiarmid, Marks, Treutlein, Belon
 year: 2024
 venue: arXiv (Anthropic / Redwood Research)
 arxiv: 2412.14093
-local_pdf: null
+local_pdf: theory/sources/papers/greenblatt2024-alignment-faking.pdf
 type: excerpts
 note: PDF download was blocked in this Phase 2 pass; excerpts below are drawn from the arXiv abstract page (verified 2026-05-04 via WebFetch). Quoted percentages and behaviors are verbatim from the abstract / paper landing page. Section anchors here mark abstract-level claims; deeper section excerpts pending PDF access.
 ---

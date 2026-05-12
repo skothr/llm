@@ -5,7 +5,7 @@ authors: (et al., EMNLP 2025 — see arXiv listing)
 year: 2025
 venue: EMNLP 2025
 arxiv: 2502.17521
-local_pdf: null
+local_pdf: theory/sources/papers/contamination-survey-2025.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2502.17521 abstract page (2026-05-05). Detailed contamination taxonomy not available without PDF access — `[PDF-VERIFY]` flagged where needed.
 ---

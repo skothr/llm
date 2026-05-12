@@ -5,7 +5,7 @@ authors: Russinovich, Salem, Eldan
 year: 2024
 venue: USENIX Security 2025 (arXiv 2404.01833, April 2024)
 arxiv: 2404.01833
-local_pdf: null
+local_pdf: theory/sources/papers/russinovich2024-crescendo.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2404.01833 abstract page (2026-05-05). Models tested per abstract: ChatGPT, Gemini Pro, Gemini-Ultra, LlaMA-2 70B Chat, LlaMA-3 70B Chat, and Anthropic Chat. Used in `kb/notes/alignment/safety-evaluation.md` §2.1.
 ---

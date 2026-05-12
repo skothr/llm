@@ -5,7 +5,7 @@ authors: Glazer, Erdil, Besiroglu, Chen, Hickman, Patel, Vivekanandan, Chen, Jai
 year: 2024
 venue: arXiv
 arxiv: 2411.04872
-local_pdf: null
+local_pdf: theory/sources/papers/glazer2024-frontiermath.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2411.04872 abstract page (2026-05-05). Plus widely cited details from Epoch AI's project page (https://epoch.ai/frontiermath/). Marked `[PDF-VERIFY]` where PDF text needed.
 ---
