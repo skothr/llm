@@ -436,6 +436,20 @@ struct Model {
     virtual void  saveProbe         ([[maybe_unused]] std::string_view name)    {}
     virtual void  exportSnapshot    ([[maybe_unused]] std::string_view path)    {}
 
+    // ── Checkpoint lifecycle (ENGINE_API.md §2.2) ────────────────────────
+    // The base default returns a no-op success (lets MockModel keep
+    // demoing).  A real backend overrides to actually load the file +
+    // populate getModelInfo so AppState::loadFromModel can refresh the
+    // topology display.  See ENGINE_API.md §2.2 for the async-load
+    // contract: validate header synchronously, do heavy work on a worker
+    // thread, fan progress through drainEngineLogs.
+    struct CheckpointResult {
+        bool        ok    = true;
+        std::string error;
+    };
+    virtual CheckpointResult loadCheckpoint([[maybe_unused]] std::string_view path) { return {}; }
+    virtual void             unloadCheckpoint() {}
+
     // ── Training workspace ───────────────────────────────────────────────
     virtual TrainingState                   getTrainingState   ()                = 0;
     virtual std::vector<TrainingMetricCard> getTrainingMetrics ()                = 0;
