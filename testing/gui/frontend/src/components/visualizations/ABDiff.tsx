@@ -342,12 +342,14 @@ export function ABDiff({ resultA, resultB }: Props) {
             .attr("rx", 2)
             .style("cursor", "pointer")
             .on("click", (event) => {
+              // clientX/Y (viewport-relative); PinnedCard / Tooltip render
+              // with position:fixed, so pageX/Y would drift by scroll offset.
               setPinned({
                 source: { kind: side, msg },
                 rowLabel: row.label,
                 posIdx,
-                x: event.pageX + 10,
-                y: event.pageY + 10,
+                x: event.clientX + 10,
+                y: event.clientY + 10,
               });
               setTooltip(null);
             })
@@ -359,8 +361,8 @@ export function ABDiff({ resultA, resultB }: Props) {
                 .map((p, i) => `${show[i].padEnd(maxLen)}  ${(p.prob * 100).toFixed(3).padStart(7)}%`)
                 .join("\n");
               setTooltip({
-                x: event.pageX + 10,
-                y: event.pageY - 10,
+                x: event.clientX + 10,
+                y: event.clientY - 10,
                 content: `${label} ${row.label} pos ${posIdx}\n${lines}`,
               });
             })
@@ -492,16 +494,16 @@ export function ABDiff({ resultA, resultB }: Props) {
                   source: { kind: "compare", frame, cell },
                   rowLabel: row.label,
                   posIdx,
-                  x: event.pageX + 10,
-                  y: event.pageY + 10,
+                  x: event.clientX + 10,
+                  y: event.clientY + 10,
                 });
                 setTooltip(null);
               })
               .on("mouseenter", (event) => {
                 const c = cell.compare;
                 setTooltip({
-                  x: event.pageX + 10,
-                  y: event.pageY - 10,
+                  x: event.clientX + 10,
+                  y: event.clientY - 10,
                   content: [
                     `${row.label} pos ${posIdx}`,
                     `A top-1: ${cell.top_k_a[0]?.token ?? "?"} (${((cell.top_k_a[0]?.prob ?? 0) * 100).toFixed(3)}%)`,
@@ -534,8 +536,8 @@ export function ABDiff({ resultA, resultB }: Props) {
               .style("cursor", "pointer")
               .on("mouseenter", (event) => {
                 setTooltip({
-                  x: event.pageX + 10,
-                  y: event.pageY - 10,
+                  x: event.clientX + 10,
+                  y: event.clientY - 10,
                   content: `${row.label} pos ${posIdx}\nA: ${predsA[0].token} (${(predsA[0].prob * 100).toFixed(3)}%)\nB: ${predsB[0].token} (${(predsB[0].prob * 100).toFixed(3)}%)\n\u0394: ${(diff * 100).toFixed(3)}%`,
                 });
               })

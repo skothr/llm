@@ -129,8 +129,9 @@ export function CrossResultPCA({ results, onClose }: Props) {
         .attr("opacity", 0.7)
         .style("cursor", "pointer")
         .on("mouseenter", (event) => {
+          // clientX/Y: tooltip renders with position:fixed.
           setTooltip({
-            x: event.pageX + 10, y: event.pageY - 10,
+            x: event.clientX + 10, y: event.clientY - 10,
             content: `${s.sessionName}\nL${s.layer} pos ${s.position}\ntoken: ${displayToken(s.topToken)}\nPC1=${p[0].toFixed(3)}  PC2=${p[1].toFixed(3)}`,
           });
         })

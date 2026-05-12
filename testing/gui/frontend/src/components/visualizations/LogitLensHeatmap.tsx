@@ -261,9 +261,12 @@ export function LogitLensHeatmap({ result }: Props) {
                   `H     = ${cellMetrics.entropy.toFixed(3)} nats`,
                 ].join("\n") + "\n\n"
               : "";
+            // clientX/Y matches the PinnedCard above — both are rendered with
+            // position:fixed (viewport-relative), so pageX/Y would drift by
+            // the window's scroll offset.
             setTooltip({
-              x: event.pageX + 10,
-              y: event.pageY - 10,
+              x: event.clientX + 10,
+              y: event.clientY - 10,
               content: `L${msg.layer}.${msg.sublayer} pos ${posIdx}\n${metricLines}${topkLines}`,
             });
           })
