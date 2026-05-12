@@ -12,9 +12,13 @@ import os
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
+import sys
+from io import TextIOWrapper
+from typing import cast
+cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
+
 import gc
 import time
-from typing import cast
 
 import torch
 
