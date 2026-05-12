@@ -5,7 +5,7 @@ authors: DeepSeek-AI
 year: 2025
 venue: "arXiv (Nature 2025)"
 arxiv: 2501.12948
-local_pdf: null
+local_pdf: theory/sources/papers/deepseek-r1.pdf
 type: excerpts
 note: |
   Most quotes (§2.1 GRPO Eq.1/Eq.3, §2.1 hyper-params, §2.3 AIME, §3
@@ -54,9 +54,13 @@ The paper trains two reasoning models on the DeepSeek-V3 base:
   language-consistency), then a second SFT stage on rejection-sampled
   reasoning + general data, then a final RL alignment stage.
 
-[NOTE — pdf-not-available] Section numbers are based on the standard
-structure as referenced by downstream papers; re-verify against the PDF
-when downloaded.
+[Verified from PDF on 2026-05-12] Section structure confirmed against
+arXiv v2 PDF: §1 Introduction; §2 DeepSeek-R1-Zero (§2.1 GRPO, §2.2
+Reward Design, §2.3 Incentivize Reasoning); §3 DeepSeek-R1 (§3.1
+Model-based Rewards, §3.2 Training Details); §4 Experiment; §6
+Conclusion. GRPO Eq. (1) sequence-level form verified verbatim in the
+shao2024 audit. All KB section anchors (sec-2-1-grpo, sec-2-2-reward,
+sec-2-3-aime, sec-2-3-aha, sec-2-1-hp, sec-3-pipeline) map correctly.
 
 ## §2.1 GRPO objective (Eq. 1, verified) {#sec-2-1-grpo}
 

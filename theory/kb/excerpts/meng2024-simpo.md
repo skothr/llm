@@ -5,7 +5,7 @@ authors: Meng, Xia, Chen
 year: 2024
 venue: NeurIPS
 arxiv: 2405.14734
-local_pdf: null
+local_pdf: theory/sources/papers/meng2024-simpo.pdf
 type: excerpts
 note: "Excerpts from arXiv abstract page (verbatim) plus canonical equation as referenced in DPO survey (arXiv:2503.11701 §4.1) and follow-up variants. PDF not yet downloaded."
 ---
@@ -27,7 +27,7 @@ note: "Excerpts from arXiv abstract page (verbatim) plus canonical equation as r
 > margin between the winning and losing responses, further improving the
 > algorithm's performance.
 
-## §3 The SimPO reward and loss {#sec-3}
+## §2 The SimPO reward and loss {#sec-2}
 
 The SimPO implicit reward is the **length-normalized average log-probability**:
 
@@ -50,7 +50,7 @@ The margin $\gamma$ pushes the chosen response's reward at least $\gamma$
 above the rejected one's — a stricter constraint than the bare Bradley–Terry
 objective.
 
-## §3 Why length normalization {#sec-3-length}
+## §2 Why length normalization {#sec-2-length}
 
 DPO's implicit reward $\beta\log\pi_\theta(y|x)/\pi_{\mathrm{ref}}(y|x)$
 is a sum over tokens. For preference pairs with very different lengths,
@@ -61,12 +61,18 @@ scale-invariant in length and is reported (paper §4.2 ablation) to be
 the dominant contributor to gains over DPO on length-controlled
 benchmarks.
 
-## §4 Empirical headline {#sec-4-headline}
+## §4 Empirical headline {#sec-4-headline-empirical}
 
 > +6.4 AlpacaEval 2 over DPO (paraphrased; exact figure is referenced in
 > the Phase 1 sweep landscape report and replicated in the DPO survey
 > arXiv:2503.11701 §4.1).
 
-[NOTE — pdf-not-available] Section/equation numbers should be re-verified
-against the PDF; equation forms above are the canonical SimPO statement
-as reproduced in surveys.
+[Verified from PDF on 2026-05-12 — discrepancy fixed] The KB note
+previously labeled the SimPO derivation as "§3" based on a borrowed
+secondary-source layout; the actual PDF has §2 "SimPO: Simple Preference
+Optimization" containing the reward (Eq. 5 BT-with-margin formulation)
+and loss (Eq. 6, L_SimPO). PDF §3 is "Experimental Setup", §4 is
+"Experimental Results", §5 is "Related Work", §6 is "Conclusion".
+Section anchors renamed: sec-3 → sec-2, sec-3-length → sec-2-length.
+Equation forms verified verbatim against PDF Eq. 5 (margin BT) and
+Eq. 6 (loss with β/|y| length-normalization, − γ target margin).
