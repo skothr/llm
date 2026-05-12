@@ -5,7 +5,7 @@ authors: Alain, Bengio
 year: 2016
 venue: ICLR 2017 Workshop (arXiv 1610.01644)
 arxiv: 1610.01644
-local_pdf: null
+local_pdf: theory/sources/papers/alain-bengio-2017.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 1610.01644 abstract page (2026-05-05). The foundational paper for the linear-classifier-probe methodology, applied to vision models (Inception v3, ResNet-50). Key findings used in the probing note: (i) the formal probe definition, (ii) the monotonic-linear-separability finding.
 ---

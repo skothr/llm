@@ -5,7 +5,7 @@ authors: Rein, Hou, Stickland, Petty, Pang, Dirani, Michael, Bowman
 year: 2023
 venue: COLM 2024 / arXiv
 arxiv: 2311.12022
-local_pdf: null
+local_pdf: theory/sources/papers/rein2023-gpqa.pdf
 type: excerpts
 note: Excerpts from the arXiv abstract (verbatim).
 ---

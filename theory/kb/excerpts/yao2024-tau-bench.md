@@ -5,7 +5,7 @@ authors: Yao, Zhao, Wang, Schick, Lewis, Yih, Lecun, Yu (Sierra Research)
 year: 2024
 venue: arXiv (Sierra Research)
 arxiv: 2406.12045
-local_pdf: null
+local_pdf: theory/sources/papers/yao2024-tau-bench.pdf
 type: excerpts
 note: Excerpts from arXiv abstract (verbatim).
 ---

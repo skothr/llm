@@ -5,7 +5,7 @@ authors: Jimenez, Yang, Wettig, Yao, Pei, Press, Narasimhan
 year: 2024
 venue: ICLR 2024
 arxiv: 2310.06770
-local_pdf: null
+local_pdf: theory/sources/papers/jimenez2024-swebench.pdf
 type: excerpts
 note: Excerpts compiled from the arXiv abstract page (verbatim) plus widely cited details about the evaluation protocol from the public companion site (https://www.swebench.com/) and the README of https://github.com/princeton-nlp/SWE-bench. PDF not yet verified — claims tagged below as `[PDF-VERIFY]` should be confirmed against the v3 PDF before propagating into LaTeX series.
 ---

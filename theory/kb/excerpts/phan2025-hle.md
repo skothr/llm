@@ -5,7 +5,7 @@ authors: Phan, Gabriel, Pareyat, et al. (Scale AI / Center for AI Safety)
 year: 2025
 venue: arXiv (Scale AI / CAIS)
 arxiv: 2501.14249
-local_pdf: null
+local_pdf: theory/sources/papers/phan2025-hle.pdf
 type: excerpts
 note: Excerpts from arXiv abstract (verbatim). Multimodal subset percentages tagged `[PDF-VERIFY]`.
 ---

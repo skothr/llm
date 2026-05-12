@@ -5,7 +5,7 @@ authors: Chao, Debenedetti, Robey, Andriushchenko, Croce, Sehwag, Dobriban, Flam
 year: 2024
 venue: NeurIPS 2024 D&B
 arxiv: 2404.01318
-local_pdf: null
+local_pdf: theory/sources/papers/chao2024-jailbreakbench.pdf
 type: excerpts
 note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2404.01318 abstract page (2026-05-05). Judge identity (per arXiv comments): Llama-3-70B with custom prompt for harmfulness; Llama-3-8B for semantic refusal. Used in `kb/notes/alignment/safety-evaluation.md` §2.1.
 ---

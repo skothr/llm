@@ -5,7 +5,7 @@ authors: Wei, Haghtalab, Steinhardt
 year: 2023
 venue: NeurIPS 2023
 arxiv: 2307.02483
-local_pdf: null
+local_pdf: theory/sources/papers/wei2023-jailbroken.pdf
 type: excerpts
 note: PDF not yet downloaded; excerpts from arXiv 2307.02483 abstract / NeurIPS 2023 proceedings (verified via WebSearch 2026-05-04). The conceptual-framework paper for jailbreak failure modes. Used in `kb/notes/alignment/safety-evaluation.md` §2.1.
 ---
