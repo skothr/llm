@@ -446,9 +446,19 @@ def _sanitize_full_def(text: str) -> str:
     return "".join(parts)
 
 
-def render_glossary_section(records: list[dict], used_keys: set[str]) -> str:
-    """Render paper-N/glossary-section.tex content for the keys used in this paper."""
+def render_glossary_section(
+    records: list[dict],
+    used_keys: set[str],
+    first_mention_label: dict[str, str] | None = None,
+) -> str:
+    """Render paper-N/glossary-section.tex content for the keys used in this paper.
+
+    If `first_mention_label[key]` is set, the entry gets a small rust-colored
+    arrow next to its name that hyperref's to that section label — readers
+    of the glossary can jump to where the term is introduced in the body.
+    """
     by_key = {r["key"]: r for r in records}
+    first_mention_label = first_mention_label or {}
     items: list[str] = []
     for key in sorted(used_keys):
         r = by_key.get(key)
@@ -459,9 +469,28 @@ def render_glossary_section(records: list[dict], used_keys: set[str]) -> str:
         full_def = _sanitize_full_def(r["full_def"])
         cite = _format_kb_cite(r.get("kb_cite"))
         alias_part = f" ({', '.join(aliases)})" if aliases else ""
+        section_link = ""
+        sec_label = first_mention_label.get(key)
+        if sec_label:
+            # \hyperref[label]{visible} jumps the reader to the section
+            # where this term is introduced. The arrow is rust-colored to
+            # match the body-text \glsterm tint, so the visual language
+            # is consistent across both link directions.
+            #
+            # Important: this goes into the description ITEM BODY, not the
+            # \item[label] argument. \item[...] is a moving argument
+            # (LaTeX writes it to PDF bookmarks via hyperref's babel
+            # normalisation pipeline), and math-mode tokens ($\to$) trip
+            # the normaliser. Putting the link in the body avoids that
+            # entirely — the body is regular typeset text where math
+            # works fine. UX-wise the arrow ends up immediately preceding
+            # the definition, reading naturally as "→ definition…".
+            section_link = (
+                rf"\hyperref[{sec_label}]{{\textcolor{{glscolor}}{{$\to$}}}} "
+            )
         items.append(
             rf"\item[\hypertarget{{glossary:{key}}}{{{primary}}}{alias_part}]"
-            f"\n{full_def}{cite}"
+            f"\n{section_link}{full_def}{cite}"
         )
     body = "\n\n".join(items)
     header = (
@@ -552,21 +581,32 @@ def process_paper(paper_dir: Path, records: list[dict], dry_run: bool = False) -
     keys_used: set[str] = set()
     per_section_keys: dict[str, list[str]] = {}
     sections_modified: list[str] = []
+    # first_mention_label[key] = section label of the file where the key
+    # first appears. We assume each section file declares one primary
+    # \label{sec:...} (the file's top-level section anchor); subsection
+    # labels are ignored for the glossary-back-link target.
+    first_mention_label: dict[str, str] = {}
     # Hoist the records-only state out of the per-section loop.
     surface_map = _build_surface_to_key(records)
     rx = build_term_regex(records)
     for sec in sections:
         original = sec.read_text(encoding="utf-8")
+        # First \label{sec:...} in the file is the section's primary anchor.
+        sec_label_match = re.search(r"\\label\{(sec:[^}]+)\}", original)
+        sec_label = sec_label_match.group(1) if sec_label_match else None
         result = wrap_body(original, records, surface_map=surface_map, rx=rx)
         per_section_keys[sec.name] = sorted(result.keys_used)
         keys_used |= result.keys_used
+        if sec_label is not None:
+            for key in result.keys_used:
+                first_mention_label.setdefault(key, sec_label)
         if result.text != original:
             sections_modified.append(sec.name)
             if not dry_run:
                 _atomic_write(sec, result.text)
     section_path = paper_dir / "glossary-section.tex"
     tooltips_path = paper_dir / "glossary-tooltips.tex"
-    section_content = render_glossary_section(records, keys_used)
+    section_content = render_glossary_section(records, keys_used, first_mention_label)
     # Note: transitive wrapping (wrapping terms inside glossary entry
     # definitions) is intentionally NOT applied here. The glossary-section
     # LaTeX structure uses \item[\hypertarget{...}{...}] and \begin{description}
