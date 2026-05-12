@@ -22,6 +22,8 @@
 //   docs/MODEL_HOOKS.md catalogues each method, its callers, and what a
 //   real backend should plumb.
 
+#include "appstate.hpp"     // for LogEntry / Severity (used by drainEngineLogs)
+
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -481,7 +483,13 @@ struct Model {
     virtual DiffStats               getDiffStats    (std::string_view name)            = 0;
 
     // ── Engine / runtime ─────────────────────────────────────────────────
-    virtual EngineMetrics getEngineMetrics() = 0;
+    virtual EngineMetrics         getEngineMetrics() = 0;
+
+    // ── Engine log bridge ────────────────────────────────────────────────
+    // Pulled once per frame.  Implementations should return any log
+    // lines the engine has emitted since the last call (FIFO ring is
+    // typical) and clear their internal buffer.  MockModel returns {}.
+    virtual std::vector<LogEntry> drainEngineLogs() = 0;
 };
 
 // MockModel — see model/mock_model.cpp.  When the build-time flag
@@ -557,7 +565,8 @@ struct MockModel : Model {
     DECL_OVERRIDE(std::vector<std::vector<float>>, getDiffSlice2D  (std::string_view name, int rows, int cols));
     DECL_OVERRIDE(DiffStats,                       getDiffStats    (std::string_view name));
 
-    DECL_OVERRIDE(EngineMetrics, getEngineMetrics());
+    DECL_OVERRIDE(EngineMetrics,           getEngineMetrics());
+    DECL_OVERRIDE(std::vector<LogEntry>,   drainEngineLogs());
 #undef DECL_OVERRIDE
 
     // Probe-training tick (mock side effect): step counter advances when
