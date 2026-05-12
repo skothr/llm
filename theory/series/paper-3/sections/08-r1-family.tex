@@ -134,7 +134,7 @@ following on the broader prompt distribution) \citep[\S
 DeepSeek-R1 weights are the output of this stage. Only Stage 2 of the
 four is purely \glsterm{rlvr-3}{RLVR}; Stage 4 is an \glsterm{rlvr-3}{RLVR}/\glsterm{rlhf}{RLHF} hybrid whose preference
 component is the same machinery as the ``RL stage'' that bookends
-post-training in Paper~2 §RL-stage. The two SFT stages (Stage 1 and
+post-training in \hyperref[P2-sec:rlhf]{Paper~2 §RLHF} / \hyperref[P2-sec:rlvr-grpo]{§RLVR}. The two SFT stages (Stage 1 and
 Stage 3) bookend the reasoning RL phase: cold-start SFT seeds it,
 \glsterm{rejection-sampling-sft}{rejection-sampling SFT} consolidates its outputs.
 
@@ -361,7 +361,7 @@ boundary, and as of 2026-Q2 no third-party study has reproduced an
 audit on R1's pretraining mix. The cross-paper treatment of
 contamination methodology is \hyperref[P5-sec:contamination]{Paper~5 §contamination}, which catalogues
 the methodologies that disagree on what counts as contamination, and
-Paper~3 §14 (contradictions) returns to this specific
+\cref{sec:contradictions} returns to this specific
 AIME-2024-on-R1 question with the post-2026 evidence base.
 \end{contradiction}
 
@@ -411,8 +411,8 @@ causally drive the answers --- whether the verifier's binary signal
 selects for traces $z$ such that
 $p_\theta(y \mid x, z) \neq p_\theta(y \mid x, z')$ on
 intervention-corrupted $z'$ --- which is the load-bearing question
-for any downstream use of \glsterm{chain-of-thought}{CoT} as a \glsterm{probe-2}{probe} surface (Paper~4
-§interpretability) or a monitorable channel (Paper~5 §alignment).
+for any downstream use of \glsterm{chain-of-thought}{CoT} as a \glsterm{probe-2}{probe} surface (\hyperref[P4-sec:introduction]{Paper~4}
+in toto) or a monitorable channel (\hyperref[P5-sec:alignment-faking]{Paper~5 §alignment-faking}).
 \Cref{sec:prm-survival} re-asks the
 contradiction of \cref{sec:prm-post-r1}: given that R1 achieved its
 headline with terminal verifier rewards alone, do PRMs survive the

@@ -225,7 +225,7 @@ self-reflective patterns
 \citep[\S 2.3]{deepseek-r1}.\footnote{KB excerpt:
 \texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aha}.} The verifier reward
 contains no length term — the policy discovers that long traces win on
-math and code, on its own. Cross-paper to Paper~3 §4 for the
+math and code, on its own. Cross-paper to \hyperref[P3-sec:inference-compute-scaling]{Paper~3 §4} for the
 inference-time-compute interpretation of this growth.
 
 \paragraph{The ``aha moment.''} \citet[\S 2.3]{deepseek-r1} report a
@@ -247,7 +247,7 @@ default. R1's reasoning capability matches \glsterm{r1-zero}{R1-Zero}'s; the col
 read by the authors as primarily stylistic.
 
 \paragraph{Distillation transfer (cross-link to \cref{sec:adaptation}
-and Paper~3 §8).} R1 generates $800$K reasoning traces (600K reasoning
+and \hyperref[P3-sec:r1-family]{Paper~3 §8}).} R1 generates $800$K reasoning traces (600K reasoning
 + 200K non-reasoning), and \emph{pure SFT} on this dataset transfers
 reasoning capability into Qwen-class small models — distilled-32B
 matches or exceeds OpenAI o1-mini on multiple reasoning benchmarks
@@ -377,11 +377,11 @@ better-than-empirical-mean rollouts.
 \label{sec:rlvr-paper3-link}
 
 This section is also Paper~2's anchor for Paper~3's reasoning triangle.
-The triangle (Paper~3 §1, §7) has three legs: inference-time compute
+The triangle (\hyperref[P3-sec:introduction]{Paper~3 §1}, \hyperref[P3-sec:rlvr-grpo-dapo]{§7}) has three legs: inference-time compute
 scaling (\glsterm{chain-of-thought}{chain-of-thought}, \glsterm{self-consistency-2}{self-consistency}, sampling-based test-time
 compute), inference-time verifier signals (process reward models, beam
 / MCTS search, generative PRMs), and \emph{RL on verifiable rewards} —
-the leg developed here. Paper~3 §7 cites
+the leg developed here. \hyperref[P3-sec:rlvr-grpo-dapo]{Paper~3 §7} cites
 \cref{eq:verifier-reward}, \cref{eq:grpo}, \cref{eq:grpo-advantage}, and
 the four \glsterm{dapo-2}{DAPO} equations as the canonical statement of the \glsterm{rlvr-3}{RLVR} leg, and
 develops the inference-time interactions (proposer/verifier, MCTS over
@@ -410,7 +410,7 @@ solvable at any $K$. The \glsterm{capability-ceiling}{capability ceiling} is set
 2026-Q2 the open-source consensus leans toward Yue with caveats: the
 result is benchmark-, temperature-, and sample-budget-conditional, and
 generalization to non-math (e.g., agentic, long-horizon) \glsterm{rlvr-3}{RLVR} is
-single-source. Cross-paper to Paper~3 §14 for the resolution attempt.
+single-source. Cross-paper to \hyperref[P3-sec:contradictions]{Paper~3 §14} for the resolution attempt.
 \end{contradiction}
 
 \begin{contradiction}
