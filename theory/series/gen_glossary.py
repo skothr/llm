@@ -97,10 +97,26 @@ def derive_key(primary_form: str, used: set[str] | None = None) -> str:
     return f"{base}-{n}"
 
 
+_ABBREVS = (
+    "e.g", "i.e", "cf", "vs", "viz", "etc", "et al",
+    "Dr", "Prof", "Mr", "Mrs", "Ms", "Inc", "Ltd", "Co", "Corp", "St",
+    "Sr", "Jr", "Ph.D", "approx", "approx", "ca", "Eq", "Fig", "Tab",
+)
+
+
 def short_def(full: str, limit: int = 140) -> str:
-    """First sentence of `full`, truncated to ≤limit chars."""
-    # Split on first ". " (sentence boundary).
-    head = re.split(r"(?<=\.)\s", full, maxsplit=1)[0]
+    """First sentence of `full`, truncated to ≤limit chars.
+
+    Preserves common abbreviations (e.g., i.e., et al., Dr., Fig., Eq.)
+    by replacing their dot with a placeholder before splitting and
+    restoring after — otherwise `e.g.` splits the sentence mid-clause.
+    """
+    sentinel = "\x00"
+    safe = full
+    for abbr in _ABBREVS:
+        safe = re.sub(rf"\b{re.escape(abbr)}\.", abbr + sentinel, safe)
+    head = re.split(r"(?<=\.)\s", safe, maxsplit=1)[0]
+    head = head.replace(sentinel, ".")
     if len(head) <= limit:
         return head
     return head[: limit - 1].rstrip() + "…"
