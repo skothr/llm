@@ -76,6 +76,57 @@ should return 0. Any unresolved citation will leave a literal
 PDFs ship in-repo under each paper directory; intermediate
 `*.aux/.log/.bbl/.blg/.out/.toc/.upa/.upb` files are git-ignored.
 
+## Cross-paper references
+
+The series uses `xr-hyper` so each paper can hyperlink labels in
+sibling papers. Each `paper-N/main.tex` declares the other four via
+`\externaldocument[PM-]{../paper-M/main}` with a `PM-` prefix —
+e.g. paper-3's main.tex contains:
+
+```latex
+\externaldocument[P1-]{../paper-1/main}
+\externaldocument[P2-]{../paper-2/main}
+\externaldocument[P4-]{../paper-4/main}
+\externaldocument[P5-]{../paper-5/main}
+```
+
+In body prose, wrap a cross-paper mention in `\hyperref[PM-label]{...}`:
+
+```latex
+... see \hyperref[P2-sec:rlhf]{Paper~2 §RLHF} for the pipeline ...
+... cf.\ \hyperref[P4-sec:rome]{Paper~4 §10} (cross-method circuits) ...
+```
+
+The visible prose stays whatever you write; the link target is the
+labelled section in the sibling paper. Section labels in this series
+follow `\label{sec:<topic>}` convention — see the headings in
+`paper-N/sections/*.tex` for the canonical names.
+
+**Build order matters**: xr-hyper needs each sibling's `.aux` file
+on disk before this paper can resolve cross-refs. The robust
+sequence from project root is:
+
+```bash
+# Round 1: build each paper once, run bibtex
+for p in paper-{1,2,3,4,5}; do
+  (cd theory/series/$p
+   pdflatex -interaction=nonstopmode main.tex; bibtex main)
+done
+# Round 2: re-resolve everything against the sibling aux files
+for p in paper-{1,2,3,4,5}; do
+  (cd theory/series/$p
+   pdflatex -interaction=nonstopmode main.tex
+   pdflatex -interaction=nonstopmode main.tex
+   pdflatex -interaction=nonstopmode main.tex)
+done
+```
+
+As of 2026-05-12 only a small handful of references have been
+converted from inline-text prose to `\hyperref[...]` form; the rest
+of the ~10 cross-paper mentions in body sections are still
+descriptive text (e.g. "Paper~3 §reasoning-architectures" — no
+matching label yet). Convert as you encounter them.
+
 ## Glossary feature
 
 Every body-text occurrence of a glossary term (sourced from
@@ -145,9 +196,10 @@ emits the PDF, but writes exit code 1. The long-running
 \deepencite{...}]` (missing mandatory `{key}` arg) in §13's
 "Full activation patching" paragraph; natbib was consuming the
 next character as a single-letter cite key. Replaced with bare
-`\deepencite{}` annotation. Cross-paper references are inline-text
-rather than `\cref` since each paper builds independently; xr-hyper
-would lift this if ever desired.
+`\deepencite{}` annotation. Cross-paper references are now wired via
+xr-hyper (see the **Cross-paper references** section above);
+conversion of existing inline-text mentions to `\hyperref[...]` form
+is an ongoing as-encountered cleanup.
 
 ## Status (2026-05-05)
 

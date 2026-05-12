@@ -42,6 +42,13 @@
 \usepackage[hidelinks]{hyperref}
 \hypersetup{colorlinks=true, citecolor=blue!50!black, linkcolor=black, urlcolor=blue!50!black}
 
+% xr-hyper enables \cref / \ref to point into sibling papers' .aux files.
+% Per-paper main.tex declares which siblings to import via \externaldocument
+% with a [PN-] prefix on each (P2-sec:rlhf, P3-sec:rlvr-grpo-objective, etc.).
+% Must be loaded AFTER hyperref. \cref still requires cleveref (not loaded
+% project-wide); writers can fall back to \ref{PN-...} until cleveref lands.
+\usepackage{xr-hyper}
+
 % ----- glossary linking (clickable cross-link + hover tooltip)
 \usepackage{pdfcomment}  % requires TeXLive 2018+; project uses TL2022+
 

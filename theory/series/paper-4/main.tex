@@ -3,6 +3,14 @@
 \input{../preamble}
 \input{glossary-tooltips}
 
+% Cross-paper refs via xr-hyper (see preamble.tex). Build sequence
+% from project root: build every paper once for .aux, then rebuild
+% each twice more to resolve cross-paper labels.
+\externaldocument[P1-]{../paper-1/main}
+\externaldocument[P2-]{../paper-2/main}
+\externaldocument[P3-]{../paper-3/main}
+\externaldocument[P5-]{../paper-5/main}
+
 \title{
   The internal computation can be partially read: \\
   a method-pluralist account of LLM interpretability, 2016--2026

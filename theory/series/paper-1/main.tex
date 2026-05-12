@@ -3,6 +3,14 @@
 \input{../preamble}
 \input{glossary-tooltips}
 
+% Cross-paper references: \cref{P2-sec:rlhf} etc. Sibling papers must
+% have been built once to produce their .aux files; this paper then
+% needs two more rebuilds to pull labels in.
+\externaldocument[P2-]{../paper-2/main}
+\externaldocument[P3-]{../paper-3/main}
+\externaldocument[P4-]{../paper-4/main}
+\externaldocument[P5-]{../paper-5/main}
+
 \title{
   The modern Transformer is a small set of choices: \\
   convergent architecture in frontier LLMs, 2017--2026
