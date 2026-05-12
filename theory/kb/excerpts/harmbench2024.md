@@ -7,12 +7,11 @@ venue: arXiv 2402.04249; ICML 2024 Workshop
 arxiv: 2402.04249
 local_pdf: theory/sources/papers/harmbench2024.pdf
 type: excerpts
-note: PDF not yet downloaded; excerpts from arXiv 2402.04249 abstract (verified via WebSearch 2026-05-04). The standardized red-team evaluation framework. Used in `kb/notes/alignment/safety-evaluation.md` §2.1.
 ---
 
 # Excerpts — Mazeika et al. 2024, "HarmBench"
 
-## Abstract — full text {#abstract}
+## Abstract {#abstract}
 
 > Automated red teaming holds substantial promise for uncovering and
 > mitigating the risks associated with the malicious use of large
@@ -29,43 +28,51 @@ note: PDF not yet downloaded; excerpts from arXiv 2402.04249 abstract (verified 
 > attacks, demonstrating how HarmBench enables codevelopment of
 > attacks and defenses.
 
-(Verified via WebSearch 2026-05-04 against arXiv 2402.04249 abstract.)
+(Verified verbatim from PDF, arXiv:2402.04249v2.)
 
-## Structure {#sec-structure}
+## §3.1 ASR Metric Definition {#sec-3-1-asr}
 
-The framework includes:
+> Following Perez et al. (2022); Zou et al. (2023), we formulate the red teaming task as designing test cases
+> {x₁, x₂, ..., xN} in order to elicit a given behavior y from one or more target LLMs.
+>
+> The primary measure of a red teaming method's success is its attack success rate (ASR) on a given target model,
+> which is the percentage of test cases that elicit the behavior from the target model.
 
-- **510 carefully curated behaviors** spanning four functional
-  categories: standard text, contextual, copyright (text-only),
-  multimodal.
-- **18 red-team attack methods** evaluated head-to-head: GCG,
-  AutoDAN, PAIR, TAP, GBDA, AutoPrompt, etc.
-- **33 target LLMs and defenses** evaluated.
-- A fine-tuned **HarmBench-Judge** classifier (Llama-2-13B family,
-  fine-tuned on labeled harmful/non-harmful generations) used as
-  the standardized judge.
+Formally, let $f$ be a target model, $g$ a red teaming method, and $c$ a classifier mapping completion $x'$ and behavior $y$ to $\{0,1\}$. The ASR is:
 
-GitHub: https://github.com/centerforaisafety/HarmBench
+$$\text{ASR}(y, g, f) = \frac{1}{N} \sum_{i} c(f_T(x_i), y)$$
 
-## Methodological contribution
+(Eq. as typeset in §3.1 of the PDF.) The classifier $c$ is the HarmBench-Judge (Llama-2-13B fine-tuned on
+labeled completions); using a held-out classifier prevents the metric from being gamed by the attack
+method it is meant to evaluate.
 
-HarmBench is designed for **co-development of attacks and defenses**:
-the same suite is the substrate for measuring (a) how good a new
-attack is, (b) how robust a new defense is, (c) head-to-head
-comparison of either dimension. Prior to HarmBench, jailbreak papers
-reported numbers on incompatible behavior subsets with incompatible
-judges, making cross-paper comparison impossible. HarmBench's fixed
-behavior set + fixed judge stack is the answer.
+## §4.1 Behavior Taxonomy — 510 Behaviors, 4 Functional Categories {#sec-4-1-behaviors}
 
-[PDF-VERIFY] The full attack-method bake-off results, the per-defense
-robustness numbers, and the efficient-adversarial-training method
-details require PDF verification before propagating as hard claims.
-The structural commitments above are sufficient to ground the §2.1
-references in `kb/notes/alignment/safety-evaluation.md`.
+> HarmBench contains 510 unique harmful behaviors, split into 400 textual behaviors and 110
+> multimodal behaviors. We designed the behaviors to violate laws or norms, such that most reasonable people would not
+> want a publicly available LLM to exhibit them.
 
-## Adoption
+> Functional categories. HarmBench contains the following 4 functional categories of behavior: standard behaviors,
+> copyright behaviors, contextual behaviors, and multimodal behaviors. These categories contain 200, 100, 100, and 110
+> behaviors, respectively.
 
-HarmBench is widely cited in 2024-2026 model-card safety sections and
-is used by UK AISI / US AISI as a substrate for pre-deployment
-evaluation `[FORUM-SIGNAL: Phase 1 sweep §safety-evaluation; AISI
-public reports]`.
+The functional split is load-bearing for attack-defense comparability: contextual and multimodal
+behaviors require providing highly specific accompanying context or images, exposing attack methods
+that rely only on text-only prompt injection. Standard behaviors (200) are the column that most
+directly maps to prior AdvBench results.
+
+## §6.1 Headline Finding — No Uniform Attack or Defense {#sec-6-1-no-universal}
+
+> Notably, no current attack or defense is uniformly effective. All attacks have low ASR on at least one LLM,
+> and all LLMs have poor robustness against at least one attack. This illustrates the importance of running
+> large-scale standardized comparisons, which are enabled by HarmBench.
+
+> Our large-scale comparison reveals several interesting properties that revise existing findings and
+> assumptions from prior work. Namely, we find that no current attack or defense is uniformly effective
+> and robustness is independent of model size.
+
+The "robustness is independent of model size" corollary is a direct revision of the intuition that
+scaling alone improves safety — the finding implies that training data and alignment procedures
+dominate over raw parameter count for attack resistance.
+
+[Verified from PDF on 2026-05-12] Added §3.1-asr, §4.1-behaviors, §6.1-no-universal. Abstract verified verbatim.

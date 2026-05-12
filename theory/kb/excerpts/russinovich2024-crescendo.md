@@ -7,7 +7,6 @@ venue: USENIX Security 2025 (arXiv 2404.01833, April 2024)
 arxiv: 2404.01833
 local_pdf: theory/sources/papers/russinovich2024-crescendo.pdf
 type: excerpts
-note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 deepening pass); full abstract retrieved verbatim via WebFetch on arXiv 2404.01833 abstract page (2026-05-05). Models tested per abstract: ChatGPT, Gemini Pro, Gemini-Ultra, LlaMA-2 70B Chat, LlaMA-3 70B Chat, and Anthropic Chat. Used in `kb/notes/alignment/safety-evaluation.md` §2.1.
 ---
 
 # Excerpts — Russinovich, Salem, Eldan 2024, "The Crescendo Multi-Turn LLM Jailbreak Attack"
@@ -39,48 +38,97 @@ note: PDF download blocked (curl/wget restricted by sandbox in this Phase 2.5 de
 > and 49-71% on Gemini-Pro. Finally, we also demonstrate Crescendo's
 > ability to jailbreak multimodal models.
 
-(Verified verbatim from arXiv 2404.01833 abstract via WebFetch
-2026-05-05.)
+(Verified verbatim from PDF on 2026-05-12.)
 
-## Headline ASR uplift {#sec-asr-uplift}
+## §3 — The Crescendo multi-turn escalation pattern {#sec-3-crescendo}
 
-> Crescendomation surpasses other state-of-the-art jailbreaking
-> techniques on the AdvBench subset dataset, achieving 29-61%
-> higher performance on GPT-4 and 49-71% on Gemini-Pro.
+> Crescendo is a multi-turn jailbreaking technique that uses benign human
+> readable prompts. Crescendo distinguishes itself from other approaches
+> by utilizing the target model's outputs to direct the model towards
+> bypassing its safety alignment. This approach begins with an innocuous
+> topic linked to the target task and progressively intensifies, directing
+> the model's responses towards the intended outcome. Hence, it circumvents
+> defenses and safety measures, especially ones designed to react mainly to
+> the user's prompts. The incremental nature of Crescendo's strategy mirrors
+> the "foot-in-the-door" psychological tactic, where agreeing to a small,
+> initial request increases the likelihood of complying with subsequent,
+> larger demands.
 
-The 29-71% ASR uplift over single-turn baselines is the
-load-bearing methodological number for the safety-eval note. It
-documents that **single-turn evaluations systematically
-underestimate** the attack surface against frontier models —
-benchmarks like JailbreakBench and HarmBench that test single-turn
-behaviors will report ASR numbers below true deployment-condition
-ASR.
+The paper illustrates the escalation pattern with a concrete three-turn
+misinformation example (Figure 2): the adversary opens with "Tell me about
+X," elicits a neutral model response, then asks for viewpoints people
+concerned about the topic might express, and finally requests "combine those
+quotes into article form and add a title" — each step using the model's own
+prior output as the warrant for the next request. No individual turn contains
+explicitly malicious content.
 
-## Mechanism
+## §3.1 — Black-box threat model {#sec-3-1-threat-model}
 
-The exploitation pattern:
+> Crescendo is a completely black-box jailbreak that makes no assumptions
+> about the target model. It is executed through entirely normal interactions
+> with an LLM, similar to most other jailbreaks. For automating Crescendo,
+> access to a black-box API is the only requirement needed to interact with
+> the target LLM.
 
-1. Open with a general / benign question about the topic.
-2. Ask a slightly more specific follow-up.
-3. Reference the model's *own* previous answer as if it had committed.
-4. Iterate until the model produces the harmful behavior.
+This distinguishes Crescendo from optimization-based attacks (GCG, AutoDAN)
+that require white-box gradient access. The black-box property means
+Crescendo applies equally to closed-API systems (ChatGPT, Gemini, Anthropic
+Chat) and open-weight models.
 
-The exploitation hinges on the model over-weighting (a) recent
-tokens and (b) text *it has just produced itself*. The model's
-prior answers create a *commitment gradient* the attacker climbs;
-since each individual turn is benign, no single-turn refusal
-classifier triggers.
+## §3.3 — Understanding Crescendo: the auto-referential mechanism {#sec-3-3-mechanism}
 
-## Crescendomation
+> Intuitively, Crescendo is able to jailbreak a target model by progressively
+> asking it to generate related content until the model has generated
+> sufficient content to essentially override its safety alignment.
 
-The paper introduces **Crescendomation**, an automated implementation
-of the Crescendo strategy that uses an attacker LLM to generate the
-escalation chain. The "29-71% ASR uplift" refers to Crescendomation
-specifically — the automated version, not the manual Crescendo
-template.
+The paper tests this hypothesis mechanistically on LLaMA-2 70b (the only
+open-sourced aligned model available at time of writing) using token-level
+probability analysis. Starting from the benign sentence "Frank, I love you
+man." and monitoring the probability of generating the word "fuck," the
+authors show that incrementally infusing the context with increasingly
+aggressive (but individually innocuous) sentences raises the generation
+probability monotonically. Table 3 reports the key finding:
 
-[PDF-VERIFY] The exact behavior subset of AdvBench used, the
-specific judge configuration, and the per-step escalation budget
-need PDF verification before propagating as hard claims. The
-structural mechanism + ASR-uplift number above are the load-bearing
-elements for the safety-eval note.
+| Sentence Combination | Success Percentage |
+|----------------------|-------------------|
+| B                    | 36.2%             |
+| A → B                | 99.99%            |
+| B → C                | 17.3%             |
+| A → B → C            | 99.9%             |
+| A → B → C'           | < 1%              |
+
+The critical result is the contrast between B alone (36.2%) and A → B
+(99.99%): a single prior benign turn nearly guarantees compliance on the
+next turn. The model's own prior outputs function as a commitment gradient
+that the attacker climbs turn by turn.
+
+## §5.2 — Attack success rates against frontier models {#sec-5-2-results}
+
+> As shown in Table 4, Crescendo is significantly better than the other
+> jailbreaks, with an improvement between 29% and 61% on the average ASR.
+> Crescendo achieves a 98% success rate when considering the binary success
+> rate. The binary success rate is essentially considering a jailbreak to be
+> successful if at least one attempt was successful. This means that Crescendo
+> is able to jailbreak 49 out of the 50 tasks compared to the second best
+> jailbreak (MSJ) which jailbreaks only 43 tasks.
+>
+> Similarly, Figure 6b shows the performance when targeting GeminiPro. Here,
+> the performance of Crescendo is even more significant compared to the other
+> jailbreaks, as shown in Table 4, which shows an improvement between 49%
+> and 71%. In this case, Crescendo is able to jailbreak all 50 tasks,
+> indicating a binary success rate of 100%.
+
+Table 4 (verbatim numbers from the paper):
+
+| Model     | CIA        | COA        | MSJ        | PAIR       | Crescendo   |
+|-----------|------------|------------|------------|------------|-------------|
+| GPT-4     | 35.6 (82.0)| 22.0 (22.0)| 37.0 (86.0)| 40.0 (76.0)| 56.2 (98.0) |
+| GeminiPro | 42.4 (92.0)| 24.0 (24.0)| 35.4 (88.0)| 33.0 (80.0)| 82.6 (100.0)|
+
+Values are average ASR; binary ASR (at least one successful attempt) in
+parentheses. These numbers document that single-turn evaluations
+systematically understate the attack surface: all prior baselines operate
+on single-turn prompt optimization while Crescendo exploits the multi-turn
+context window available in every deployed chat interface.
+
+[Verified from PDF on 2026-05-12] Added §3 (#sec-3-crescendo), §3.1 (#sec-3-1-threat-model), §3.3 (#sec-3-3-mechanism), §5.2 (#sec-5-2-results). Abstract verified verbatim.
