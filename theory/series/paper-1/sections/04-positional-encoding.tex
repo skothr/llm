@@ -3,18 +3,18 @@
 \label{sec:position}
 \label{sec:positional}
 
-Self-attention is permutation-equivariant: with no positional signal the
+\glsterm{self-attention}{Self-attention} is permutation-equivariant: with no positional signal the
 output for $(x_1, \ldots, x_S)$ is invariant under any permutation of
 positions, so the model treats ``dog bites man'' and ``man bites dog''
 identically~\citep{vaswani2017}. Positional encoding is the mechanism
 that breaks this symmetry, and the family of choices is one of the
-small number of axes along which the modern Transformer is
+small number of axes along which the modern \glsterm{transformer}{Transformer} is
 parameterized. The thesis of this section: between 2017 and 2026 the
-field walked sinusoidal $\to$ learned $\to$ T5 relative bias $\to$
-ALiBi $\to$ RoPE, RoPE became dominant for decoder-only LLMs, and the
-practical question of long-context extension is now \emph{primarily a
-positional question} (NTK/YaRN/LongRoPE), not (only) an attention-
-implementation question. We close with NoPE and iRoPE, where the field
+field walked sinusoidal $\to$ learned $\to$ \glsterm{t5}{T5} relative bias $\to$
+\glsterm{alibi}{ALiBi} $\to$ \glsterm{rope}{RoPE}, \glsterm{rope}{RoPE} became dominant for \glsterm{decoder-only}{decoder-only} LLMs, and the
+practical question of long-\glsterm{context-extension}{context extension} is now \emph{primarily a
+positional question} (NTK/\glsterm{yarn}{YaRN}/LongRoPE), not (only) an attention-
+implementation question. We close with \glsterm{nope}{NoPE} and \glsterm{irope}{iRoPE}, where the field
 asks whether explicit positional encoding is needed at all once depth
 and causal masking are in place.
 
@@ -22,7 +22,7 @@ and causal masking are in place.
 \label{sec:pos-sinusoidal}
 
 \citet{vaswani2017} adds a deterministic positional vector
-$\boldsymbol{p}_m \in \R^{D}$ to the token embedding at the input of
+$\boldsymbol{p}_m \in \R^{D}$ to the \glsterm{token-embedding}{token embedding} at the input of
 the encoder/decoder stack, before any attention layer:
 \begin{equation}
 f_{\{q,k\}}(\boldsymbol{x}_m, m) = \boldsymbol{W}_{\{q,k\}}\,
@@ -52,8 +52,8 @@ The same paper notes that learned absolute embeddings produce
 --- so at the original $d_{\text{model}}=512$, $S \le 100$ scale,
 fixed-vs-learned was a non-issue. The fixed/learned dichotomy only
 becomes load-bearing once $S$ grows past the training horizon, which is
-precisely the regime where every successor encoding (T5 bias, ALiBi,
-RoPE) is designed to behave gracefully.
+precisely the regime where every successor encoding (\glsterm{relative-position-encoding}{T5 bias}, \glsterm{alibi}{ALiBi},
+\glsterm{rope}{RoPE}) is designed to behave gracefully.
 
 \begin{intuition}
 The sinusoidal formula is the closest to a ``coordinate system'' the
@@ -100,11 +100,11 @@ fine-tuning.\deepencite{press-alibi §3 (excerpt not yet in KB; cite
 ``Train Short, Test Long: Attention with Linear Biases Enables Input
 Length Extrapolation'', Press et al.\ 2022)}
 
-All three lost ground to RoPE for decoder-only LLMs by 2022--2023.
-Learned absolute lost on extrapolation; T5 bias's binned table did not
-generalize cleanly across context lengths; ALiBi's linear slope is the
+All three lost ground to \glsterm{rope}{RoPE} for \glsterm{decoder-only}{decoder-only} LLMs by 2022--2023.
+Learned absolute lost on extrapolation; \glsterm{relative-position-encoding}{T5 bias}'s binned table did not
+generalize cleanly across context lengths; \glsterm{alibi}{ALiBi}'s linear slope is the
 right shape for some workloads but not for the long-range structure
-attention is asked to handle in modern decoder-only training.
+attention is asked to handle in modern \glsterm{decoder-only}{decoder-only} training.
 
 \subsection{RoPE: rotation in the QK inner product}
 \label{sec:pos-rope}
@@ -162,25 +162,25 @@ $(x_{2i-1}, x_{2i}) \mapsto (-x_{2i}, x_{2i-1})$~\citep[\S 3.4.2 Eq.\ 34]{su2021
 This is the form behind the
 \texttt{apply\_rotary\_pos\_emb(q, k, cos, sin)} helper in HF
 transformers and the \texttt{ggml\_rope\_*} family in \texttt{llama.cpp};
-two element-wise multiplies and one add per query/key, negligible
+two element-wise multiplies and one add per \glsterm{query}{query}/\glsterm{key}{key}, negligible
 overhead.
 
-Three properties make RoPE the dominant choice in 2022--2026 frontier
-decoder-only LLMs (LLaMA 1--3, Mistral, Qwen, DeepSeek, Gemma, OLMo).
+Three properties make \glsterm{rope}{RoPE} the dominant choice in 2022--2026 frontier
+\glsterm{decoder-only}{decoder-only} LLMs (LLaMA 1--3, \glsterm{mistral}{Mistral}, Qwen, DeepSeek, Gemma, OLMo).
 First, the relative-only dependence~\eqref{eq:rope-relative} is
 arithmetic, not learned --- $\boldsymbol{R}^{d_h}_{\Theta, m}$ is
 defined for any $m \in \mathbb{N}$ without indexing a learned table.
 Second, applying the rotation \emph{at every layer on $Q, K$ only}
-preserves the residual stream's content basis. Third, the
+preserves the \glsterm{residual-stream}{residual stream}'s content basis. Third, the
 long-term-decay property~\citep[\S 3.3]{su2021}: at fixed $\Theta$, the
 inner product $\langle f_q(\cdot, m), f_k(\cdot, n) \rangle$ tends to
 decay as $|m-n|$ grows because rotations at different frequencies
 dephase, matching the prior that distant tokens should interact less.
 
 \begin{analogy}
-RoPE is a clock with $d_h/2$ hands, each ticking at a different rate.
-At position $m$, hand $i$ points to angle $m\theta_i$. Query $\boldsymbol{q}_m$
-and key $\boldsymbol{k}_n$ ``agree'' on dimension-pair $i$ when their
+\glsterm{rope}{RoPE} is a clock with $d_h/2$ hands, each ticking at a different rate.
+At position $m$, hand $i$ points to angle $m\theta_i$. \glsterm{query}{Query} $\boldsymbol{q}_m$
+and \glsterm{key}{key} $\boldsymbol{k}_n$ ``agree'' on dimension-pair $i$ when their
 hands align modulo $2\pi$ --- when $(m-n)\theta_i \equiv 0$. Returning
 to canonical form: hand alignment is exactly the cosine factor
 $\cos((m-n)\theta_i)$ that emerges from expanding
@@ -225,21 +225,21 @@ high-frequency ones nearly intact~\citep[\S 3.2,
 
 \paragraph{YaRN.} \deepencite{peng2023-yarn (excerpt not yet in KB;
 cite ``YaRN: Efficient Context Window Extension of Large Language
-Models'', Peng et al.\ 2023, arXiv 2309.00071)} YaRN combines
+Models'', Peng et al.\ 2023, arXiv 2309.00071)} \glsterm{yarn}{YaRN} combines
 NTK-aware base-scaling with a per-frequency interpolation
 schedule: dimensions with wavelength shorter than the training context
 use no scaling, dimensions longer than the extended context use full
-PI, intermediate dimensions use a smooth ramp. YaRN additionally
-rescales attention logits by $1/\sqrt{t}$ where $t$ depends on the
+\glsterm{position-interpolation}{PI}, intermediate dimensions use a smooth ramp. \glsterm{yarn}{YaRN} additionally
+rescales attention \glsterm{logits}{logits} by $1/\sqrt{t}$ where $t$ depends on the
 extension factor $s$:
 \begin{equation}
 \softmax\!\Bigl(\frac{Q K^\top}{\sqrt{d_h}\,\sqrt{t}}\Bigr) V,
 \quad \sqrt{t} = 0.1 \ln(s) + 1,
 \label{eq:yarn-temp}
 \end{equation}
-preserving the softmax temperature regime as the effective sequence
-length grows. YaRN reports roughly $10\times$ fewer fine-tuning tokens
-than plain PI to extend LLaMA-2 to 128K (note: equations
+preserving the \glsterm{softmax}{softmax} temperature regime as the effective sequence
+length grows. \glsterm{yarn}{YaRN} reports roughly $10\times$ fewer fine-tuning tokens
+than plain \glsterm{position-interpolation}{PI} to extend LLaMA-2 to 128K (note: equations
 \eqref{eq:ntk-base},~\eqref{eq:yarn-temp} are reconstructed from the
 LLaMA-3 implementation and secondary references; see the deepen-cite
 above for primary verification).
@@ -254,23 +254,23 @@ fine-tuning approach.\deepencite{longrope2-2025 §3 (KB excerpt
 abstract-only as of 2026-05-05; equations and the per-position search
 schedule still need transcription)}
 
-The pattern across PI $\to$ NTK $\to$ YaRN $\to$ LongRoPE is one of
+The pattern across \glsterm{position-interpolation}{PI} $\to$ NTK $\to$ \glsterm{yarn}{YaRN} $\to$ LongRoPE is one of
 \emph{increasingly fine-grained per-frequency control over $\theta_i$}.
 Each step preserves the multiplicative structure
 of~\eqref{eq:rope}; only the rule for which $\theta_i$ get rescaled
-and by how much changes. Long-context extension is, in this lineage, a
+and by how much changes. Long-\glsterm{context-extension}{context extension} is, in this lineage, a
 positional question --- a choice of frequency schedule --- not a
 choice of attention implementation. The attention kernel
-(FlashAttention, NSA; \S 6 of this paper) is unchanged.
+(\glsterm{flashattention}{FlashAttention}, \glsterm{nsa}{NSA}; \S 6 of this paper) is unchanged.
 
 \subsection{NoPE and iRoPE}
 \label{sec:pos-nope}
 
 \deepencite{kazemnejad2023-nope (excerpt not yet in KB; cite ``The
 Impact of Positional Encoding on Length Generalization in Transformers'',
-Kazemnejad et al.\ 2023, NeurIPS)} The NoPE result (Kazemnejad et al.\
-2023) is that decoder-only Transformers trained \emph{without any
-positional encoding} can generalize as well or better than RoPE/ALiBi
+Kazemnejad et al.\ 2023, NeurIPS)} The \glsterm{nope}{NoPE} result (Kazemnejad et al.\
+2023) is that \glsterm{decoder-only}{decoder-only} Transformers trained \emph{without any
+positional encoding} can generalize as well or better than \glsterm{rope}{RoPE}/\glsterm{alibi}{ALiBi}
 to longer sequences on synthetic length-generalization tasks. The
 mechanism is depth-induced: causal masking gives every position a
 unique attention pattern (position $m$ has $m+1$ attendable tokens, so
@@ -279,16 +279,16 @@ attention context), and stacked layers can recover positional
 information from this content-mask interaction without an explicit
 embedding.
 
-\citet{meta-llama4} apply this in production with iRoPE: alternate
-RoPE-equipped attention layers with NoPE attention layers in a 3:1
-ratio, with a temperature-scaling factor in the NoPE layers. Trained
+\citet{meta-llama4} apply this in production with \glsterm{irope}{iRoPE}: alternate
+\glsterm{rope}{RoPE}-equipped attention layers with \glsterm{nope}{NoPE} attention layers in a 3:1
+ratio, with a temperature-scaling factor in the \glsterm{nope}{NoPE} layers. Trained
 natively at $S_{\text{train}} = 256\text{K}$, LLaMA 4 Scout reports a
 claimed 10M-token inference context --- a qualitative regime change,
 not just better interpolation.
 
 \begin{speculation}
-\textbf{Fallback framing of iRoPE.} The pattern resembles a fallback:
-RoPE layers provide explicit local-order constraints; NoPE layers are
+\textbf{Fallback framing of \glsterm{irope}{iRoPE}.} The pattern resembles a fallback:
+\glsterm{rope}{RoPE} layers provide explicit local-order constraints; \glsterm{nope}{NoPE} layers are
 forced to derive position from content alone, providing a channel that
 does not depend on the rotation when phases at $m \gg S_{\text{train}}$
 go out-of-distribution. \citet{meta-llama4}'s own theoretical
@@ -299,14 +299,14 @@ as the paper's stated mechanism.
 
 \begin{contradiction}
 Long-context extrapolation method comparison is contested as of
-2026-05. Three competing positions: (a) RoPE-only with NTK-aware base
+2026-05. Three competing positions: (a) \glsterm{rope}{RoPE}-only with NTK-aware base
 scaling is sufficient for the $\le 4\times$ extension regime (e.g.\
-LLaMA-3's bump from 8K to 128K); (b) YaRN with a per-frequency
+LLaMA-3's bump from 8K to 128K); (b) \glsterm{yarn}{YaRN} with a per-frequency
 schedule is required for the $\sim 10\times$ regime
 (\deepencite{peng2023-yarn}); (c) per-position search (LongRoPE2) and
-mixed RoPE/NoPE layers (iRoPE) are required for the $\ge 40\times$
+mixed \glsterm{rope}{RoPE}/\glsterm{nope}{NoPE} layers (\glsterm{irope}{iRoPE}) are required for the $\ge 40\times$
 regime~\citep{longrope2-2025, meta-llama4}. The benchmarks backing
-each are largely single-source: Meta reports iRoPE at 10M, Microsoft
+each are largely single-source: Meta reports \glsterm{irope}{iRoPE} at 10M, Microsoft
 reports LongRoPE2 at 2M, with no third-party head-to-head at frontier
 scale. NIAH-style retrieval saturates near 100\% at all of these
 context lengths; harder evaluations (RULER, HELMET) show steeper and
@@ -320,22 +320,22 @@ benchmark is treated as ground truth (see
 \label{sec:pos-summary}
 
 The 2017--2026 lineage along the positional-encoding axis is
-sinusoidal $\to$ learned absolute $\to$ T5 relative bias $\to$ ALiBi
-$\to$ RoPE $\to$ \{YaRN, LongRoPE, iRoPE, NoPE-hybrids\}, with RoPE as
+sinusoidal $\to$ learned absolute $\to$ \glsterm{t5}{T5} relative bias $\to$ \glsterm{alibi}{ALiBi}
+$\to$ \glsterm{rope}{RoPE} $\to$ \{\glsterm{yarn}{YaRN}, LongRoPE, \glsterm{irope}{iRoPE}, \glsterm{nope}{NoPE}-hybrids\}, with \glsterm{rope}{RoPE} as
 the convergent baseline since 2022. The decisive change is the move
 from \emph{additive at input} to \emph{multiplicative on $Q, K$ at
 every layer}: the multiplicative form
 of~\eqref{eq:rope}--\eqref{eq:rope-relative} makes the positional
 information arithmetic-extensible, which is the property every
-post-2023 long-context extension method exploits.
+post-2023 long-\glsterm{context-extension}{context extension} method exploits.
 
 The next axis (\S 5, attention KV-sharing) is largely
 \emph{independent} of this one: a model can choose any of
-\{MHA, MQA, GQA, MLA\} on the head-sharing axis and any of \{sinusoidal,
-RoPE, RoPE+YaRN, iRoPE\} on the position axis without strong cross-
+\{\glsterm{mha}{MHA}, \glsterm{mqa}{MQA}, \glsterm{gqa}{GQA}, \glsterm{multi-head-latent-attention}{MLA}\} on the head-sharing axis and any of \{sinusoidal,
+\glsterm{rope}{RoPE}, \glsterm{rope}{RoPE}+\glsterm{yarn}{YaRN}, \glsterm{irope}{iRoPE}\} on the position axis without strong cross-
 constraints. The one notable interaction is DeepSeek-V2's
-\emph{decoupled-RoPE} construction in MLA --- where applying the
+\emph{decoupled-\glsterm{rope}{RoPE}} construction in \glsterm{multi-head-latent-attention}{MLA} --- where applying the
 rotation to a low-rank latent $K$ projection breaks the cache-absorbed
-forward, and a separate small RoPE-only key channel is split out to
+forward, and a separate small \glsterm{rope}{RoPE}-only \glsterm{key}{key} channel is split out to
 preserve it~\citep{deepseek-v2}. We treat that interaction in detail
 in the next section.

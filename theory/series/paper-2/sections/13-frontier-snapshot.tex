@@ -22,8 +22,8 @@ falls out is the load-bearing claim: every disclosed pipeline since
 inputs and outputs at each stage boundary; agreement on the
 architecture of the recipe is broader than agreement on the
 load-bearing variables; and the disagreements that remain are
-localized at stage boundaries (token budget, optimizer, TP-yes-vs-no,
-FP8-vs-BF16-base, DPO-vs-PPO-vs-GRPO mix, distill-from-reasoner
+localized at stage boundaries (token budget, optimizer, \glsterm{tensor-parallel}{TP}-yes-vs-no,
+\glsterm{fp8}{FP8}-vs-BF16-base, \glsterm{dpo}{DPO}-vs-PPO-vs-\glsterm{grpo-2}{GRPO} mix, distill-from-reasoner
 yes/no, merge yes/no) rather than at the
 pipeline's structure. \Cref{sec:contradictions} concentrates the
 boundary-localized disagreements; this section establishes that the
@@ -39,9 +39,9 @@ pre-training corpus and mixing strategy of \cref{sec:pre-training-data});
 (the parallelism plan from \cref{sec:distributed-training} and the
 working precision from \cref{sec:mixed-precision}); \textbf{SFT}
 (scale and rejection-sampling iteration from \cref{sec:sft});
-\textbf{Pref-RL} (the DPO / PPO / RLAIF / CAI choice from
+\textbf{Pref-RL} (the \glsterm{dpo}{DPO} / PPO / \glsterm{rlaif-3}{RLAIF} / \glsterm{constitutional-ai}{CAI} choice from
 \cref{sec:rlhf,sec:dpo,sec:rlaif-cai}); \textbf{Reasoning-RL +
-Adapt} (RLVR / GRPO presence and merge ingredients from
+Adapt} (\glsterm{rlvr-3}{RLVR} / \glsterm{grpo-2}{GRPO} presence and merge ingredients from
 \cref{sec:rlvr-grpo,sec:adaptation-and-merging}). Cells marked
 \emph{opaque} are those where the lab has not publicly disclosed the
 choice; cells marked with a citation give the choice exactly as the
@@ -54,105 +54,105 @@ paper or model card reports.
 \toprule
 \textbf{Model} & \textbf{Data} & \textbf{Scale + opt.} & \textbf{Distrib./Prec.} & \textbf{SFT} & \textbf{Pref-RL} & \textbf{Reason-RL + Adapt} \\
 \midrule
-DeepSeek-V3 \citep{deepseek-v3} &
+\glsterm{precision-pinning}{DeepSeek-V3} \citep{deepseek-v3} &
 diverse $14.8$T tok; high-qual mix &
-$D / N_{\text{act}} \!\approx\! 400$ MoE; AdamW; WSD-cooldown &
-ZeRO-1 + EP$\,16$ + PP$\,16$ DualPipe, \emph{no} TP; \textbf{FP8} fine-grained &
+$D / N_{\text{act}} \!\approx\! 400$ MoE; \glsterm{adamw}{AdamW}; WSD-cooldown &
+ZeRO-1 + \glsterm{expert-parallel}{EP}$\,16$ + \glsterm{pipeline-parallel}{PP}$\,16$ \glsterm{dualpipe}{DualPipe}, \emph{no} \glsterm{tensor-parallel}{TP}; \textbf{\glsterm{fp8}{FP8}} fine-grained &
 $1.5$M instruct + reasoning &
-\emph{group-relative} (GRPO \citep{shao2024}) directly &
-RLVR via GRPO; merging not used \\
+\emph{group-relative} (\glsterm{grpo-2}{GRPO} \citep{shao2024}) directly &
+\glsterm{rlvr-3}{RLVR} via \glsterm{grpo-2}{GRPO}; merging not used \\
 \addlinespace[2pt]
 DeepSeek-R1 \citep{deepseek-r1} &
 inherits V3 base &
-GRPO over base; cold-start SFT optional (R1-Zero $\to$ R1) &
+\glsterm{grpo-2}{GRPO} over base; cold-start SFT optional (\glsterm{r1-zero}{R1-Zero} $\to$ R1) &
 inherits V3 plan &
 $800$K samples for R1-Distill targets &
-optional preference-DPO post-RLVR &
-\textbf{RLVR-GRPO}; R1-Distill exports to dense $1.5$B--$70$B \\
+optional preference-\glsterm{dpo}{DPO} post-\glsterm{rlvr-3}{RLVR} &
+\textbf{\glsterm{rlvr-3}{RLVR}-\glsterm{grpo-2}{GRPO}}; R1-Distill exports to dense $1.5$B--$70$B \\
 \addlinespace[2pt]
 Llama 3 405B / 70B / 8B \citep{meta-llama3} &
 $\sim 15$T tok; classifier-filtered web &
-$D/N \in \{37, 214, 1875\}$; AdamW; cosine &
-DP+TP$\,8$+PP+CP; BF16 weights, FP8 activations selectively &
-multi-round \emph{rejection-sampling SFT} ($10$M+ samples) &
-\textbf{DPO} \citep{rafailov2023-dpo} on iterated preferences &
-no public RLVR phase; no merge \\
+$D/N \in \{37, 214, 1875\}$; \glsterm{adamw}{AdamW}; cosine &
+\glsterm{data-parallel}{DP}+\glsterm{tensor-parallel}{TP}$\,8$+\glsterm{pipeline-parallel}{PP}+\glsterm{context-parallel}{CP}; BF16 weights, \glsterm{fp8}{FP8} activations selectively &
+multi-round \emph{\glsterm{rejection-sampling-sft}{rejection-sampling SFT}} ($10$M+ samples) &
+\textbf{\glsterm{dpo}{DPO}} \citep{rafailov2023-dpo} on iterated preferences &
+no public \glsterm{rlvr-3}{RLVR} phase; no merge \\
 \addlinespace[2pt]
 Llama 4 \citep{meta-llama4} &
 $\sim 30$T multimodal tok &
-MoE; ``MetaP'' HP transfer; AdamW &
-\textbf{FP8 pre-training} disclosed &
+MoE; ``\glsterm{metap}{MetaP}'' HP transfer; \glsterm{adamw}{AdamW} &
+\textbf{\glsterm{fp8}{FP8} pre-training} disclosed &
 opaque scale; multimodal SFT &
-DPO + on-policy preference iter. &
-opaque RLVR; no merge disclosed \\
+\glsterm{dpo}{DPO} + on-policy preference iter. &
+opaque \glsterm{rlvr-3}{RLVR}; no merge disclosed \\
 \addlinespace[2pt]
 Qwen 2.5 \citep{qwen2-5} &
 $18$T tok; multilingual + code-heavy &
-dense; AdamW; cosine &
+dense; \glsterm{adamw}{AdamW}; cosine &
 opaque parallelism; BF16 &
-SFT $+$ rejection sampling &
-DPO $+$ on-policy preference iter. &
-no public RLVR for 2.5; no merge \\
+SFT $+$ \glsterm{rejection-sampling}{rejection sampling} &
+\glsterm{dpo}{DPO} $+$ on-policy preference iter. &
+no public \glsterm{rlvr-3}{RLVR} for 2.5; no merge \\
 \addlinespace[2pt]
 Qwen 3 \citep{qwen3} &
 $36$T tok; \emph{thinking-mode toggle} via system-prompt &
-MoE + dense lineup; AdamW &
+MoE + dense lineup; \glsterm{adamw}{AdamW} &
 opaque parallelism; BF16 &
 multi-stage SFT (think + non-think) &
-DPO + GRPO mix &
-\textbf{RLVR-GRPO} for thinking-mode; no merge \\
+\glsterm{dpo}{DPO} + \glsterm{grpo-2}{GRPO} mix &
+\textbf{\glsterm{rlvr-3}{RLVR}-\glsterm{grpo-2}{GRPO}} for thinking-mode; no merge \\
 \addlinespace[2pt]
 Phi-4 \citep{phi4} &
 $\sim\!80\%$ \textbf{synthetic} ($\sim 400$B / $50$ pipelines) &
-$14$B; AdamW; \textbf{midtrain} (WSD-cooldown) &
+$14$B; \glsterm{adamw}{AdamW}; \textbf{midtrain} (WSD-cooldown) &
 opaque parallelism; BF16 &
 synthetic-heavy SFT mirrors pretrain mix &
-DPO &
-no RLVR; no merge \\
+\glsterm{dpo}{DPO} &
+no \glsterm{rlvr-3}{RLVR}; no merge \\
 \addlinespace[2pt]
 Tülu 3 \citep{tulu3} &
 inherits Llama-3 base &
 post-training only &
 inherits base &
 $\sim\!939$K curated multi-source &
-\textbf{DPO} on iterated on-policy data &
-\textbf{RLVR-GRPO} on math/code subsets; no merge \\
+\textbf{\glsterm{dpo}{DPO}} on iterated on-policy data &
+\textbf{\glsterm{rlvr-3}{RLVR}-\glsterm{grpo-2}{GRPO}} on math/code subsets; no merge \\
 \addlinespace[2pt]
 OLMo 2 \citep{olmo2} &
 \textbf{Dolmino} mix (mid-train cooldown data) &
-$7$B / $13$B / $32$B; AdamW; WSD &
-DP/FSDP; BF16 &
+$7$B / $13$B / $32$B; \glsterm{adamw}{AdamW}; WSD &
+\glsterm{data-parallel}{DP}/\glsterm{fsdp}{FSDP}; BF16 &
 $\sim 1$M Tülu-style mix &
-DPO &
-late RLVR (instruct line); no merge \\
+\glsterm{dpo}{DPO} &
+late \glsterm{rlvr-3}{RLVR} (instruct line); no merge \\
 \addlinespace[2pt]
-Mistral Large
+\glsterm{mistral}{Mistral} Large
 \deepencite{mistral-large-2 — bibkey not in references.bib;
 release notes used as source} &
 opaque corpus; multilingual focus &
-opaque $D / N$; AdamW &
+opaque $D / N$; \glsterm{adamw}{AdamW} &
 opaque parallelism; BF16 &
 opaque SFT scale &
-DPO disclosed in release notes &
-opaque RLVR; merge \emph{used} via fine-tunes from base \\
+\glsterm{dpo}{DPO} disclosed in release notes &
+opaque \glsterm{rlvr-3}{RLVR}; merge \emph{used} via fine-tunes from base \\
 \addlinespace[2pt]
 Gemma 3 \citep{gemma3} &
 opaque ($\sim 15$T-class) &
 opaque optimizer specifics &
 TPU; opaque parallelism; BF16 &
-SFT + rejection sampling &
-\textbf{PPO} with WARM/WARP \citep{warm-2024,warp-2024} &
-no public RLVR; merge via WARM/WARP RM ensembles \\
+SFT + \glsterm{rejection-sampling}{rejection sampling} &
+\textbf{PPO} with \glsterm{warm}{WARM}/\glsterm{warp}{WARP} \citep{warm-2024,warp-2024} &
+no public \glsterm{rlvr-3}{RLVR}; merge via \glsterm{warm}{WARM}/\glsterm{warp}{WARP} RM ensembles \\
 \addlinespace[2pt]
-Claude 3.7-class
+\glsterm{claude}{Claude} 3.7-class
 \deepencite{claude-3-7-system-card — bibkey not in references.bib;
 Anthropic system cards} &
 opaque &
 opaque &
 opaque &
 opaque &
-\textbf{RLAIF / CAI} \citep{bai2022-cai} &
-opaque RLVR (extended-thinking exposed in API); merge opaque \\
+\textbf{\glsterm{rlaif-3}{RLAIF} / \glsterm{constitutional-ai}{CAI}} \citep{bai2022-cai} &
+opaque \glsterm{rlvr-3}{RLVR} (extended-thinking exposed in API); merge opaque \\
 \addlinespace[2pt]
 GPT-4o / o-series
 \deepencite{openai-o-series-system-cards — bibkey not in references.bib;
@@ -161,8 +161,8 @@ opaque &
 opaque &
 opaque &
 opaque &
-\textbf{RLHF}-class (per InstructGPT lineage \citep{ouyang2022-instructgpt}) &
-o-series \textbf{trained for reasoning} (RLVR-class, opaque); merge opaque \\
+\textbf{\glsterm{rlhf}{RLHF}}-class (per InstructGPT lineage \citep{ouyang2022-instructgpt}) &
+o-series \textbf{trained for reasoning} (\glsterm{rlvr-3}{RLVR}-class, opaque); merge opaque \\
 \addlinespace[2pt]
 Gemini 2.5 \citep{gemini2-5} &
 opaque (multimodal mixed) &
@@ -170,7 +170,7 @@ opaque optimizer; thinking-budget exposed &
 TPU; opaque parallelism; BF16 &
 opaque SFT scale &
 opaque preference-RL mix &
-opaque RLVR; \texttt{thinkingBudget} exposes test-time compute axis \\
+opaque \glsterm{rlvr-3}{RLVR}; \texttt{thinkingBudget} exposes \glsterm{test-time-compute}{test-time compute} axis \\
 \bottomrule
 \end{tabularx}
 \caption{Frontier-2026 pipeline choices per stage. Cells with citations
@@ -197,14 +197,14 @@ disclosed frontier.
 
 \paragraph{FineWeb-class web pipeline.}
 Every open-weights frontier corpus we have visibility into uses the
-curate--ablate--mix loop introduced by FineWeb \citep{fineweb2024}:
-WARC-trafilatura extraction, language-ID filtering, MinHash
+curate--ablate--mix loop introduced by \glsterm{custom-heuristic-filters}{FineWeb} \citep{fineweb2024}:
+WARC-\glsterm{trafilatura}{trafilatura} extraction, language-ID filtering, MinHash
 $14 \times 8$ deduplication \emph{per snapshot} rather than globally
 \citep[\S 3.4]{fineweb2024}, quality classifier on top.
-\citet{deepseek-v3} explicitly cites the FineWeb-style design
+\citet{deepseek-v3} explicitly cites the \glsterm{custom-heuristic-filters}{FineWeb}-style design
 \citep[\S 2]{deepseek-v3}, OLMo 2's Dolma / Dolmino lineage
 \citep{olmo2} adopts an open variant, and DCLM-Baseline / RedPajama-V2
-/ Nemotron-CC are explicit FineWeb-class open releases
+/ Nemotron-\glsterm{common-crawl}{CC} are explicit \glsterm{custom-heuristic-filters}{FineWeb}-class open releases
 (\cref{sec:pre-training-data}). The per-snapshot dedup result is the
 specific methodological agreement: all of these pipelines
 deliberately do \emph{not} dedup globally because
@@ -224,32 +224,32 @@ $36$T multilingual \citep{qwen3}, Llama 4 multimodal $\sim\!30$T
 is the new frontier-2026 anchor.
 
 \paragraph{AdamW + cosine-or-WSD.}
-Every disclosed pretrain optimizer is AdamW
+Every disclosed pretrain optimizer is \glsterm{adamw}{AdamW}
 (\cref{sec:optimization}); every disclosed schedule is either
-cosine-decay (Llama-3, Qwen 2.5) or Warmup--Stable--Decay
-\citep[\S 3.3]{muon-moonlight2025} (DeepSeek-V3, OLMo 2 Dolmino,
-Phi-4 midtrain). Muon \citep{muon-moonlight2025} appears at the
+cosine-decay (Llama-3, Qwen 2.5) or \glsterm{warmup}{Warmup}--Stable--Decay
+\citep[\S 3.3]{muon-moonlight2025} (\glsterm{precision-pinning}{DeepSeek-V3}, OLMo 2 Dolmino,
+Phi-4 midtrain). \glsterm{per-shape-rms-scaling}{Muon} \citep{muon-moonlight2025} appears at the
 $16$B-MoE Moonlight scale but no $70$B+ dense or $600$B+ MoE
 deployment uses it as of 2026-Q2; the $\sim\!2\times$ compute-
-efficiency lift Muon claims is unverified at frontier scale. The
+efficiency lift \glsterm{per-shape-rms-scaling}{Muon} claims is unverified at frontier scale. The
 schedule choice is therefore where the largest variance lives, with
 WSD's cooldown phase doubling as the data-mixture-injection vehicle
 that pairs with \cref{sec:adaptation-and-merging}'s continual /
-late-stage pre-training (Phi-4 midtrain, OLMo 2 Dolmino, DeepSeek-V3
+late-stage pre-training (Phi-4 midtrain, OLMo 2 Dolmino, \glsterm{precision-pinning}{DeepSeek-V3}
 context-extension).
 
 \paragraph{FSDP / ZeRO-1 + BF16, FP8 increasingly.}
-Every disclosed parallelism plan composes ZeRO-1 (Llama 3, DeepSeek-V3)
-or full FSDP (OLMo 2, Tülu 3 inherits) along the data-parallel axis
+Every disclosed parallelism plan composes ZeRO-1 (Llama 3, \glsterm{precision-pinning}{DeepSeek-V3})
+or full \glsterm{fsdp}{FSDP} (OLMo 2, Tülu 3 inherits) along the data-parallel axis
 \citep[\S 2.1.2]{torchtitan2024}. Working precision is BF16 across
-the board with selective FP8 GEMM acceleration where the stack
-supports it: DeepSeek-V3 ran $14.8$T tokens of \emph{pre-training}
-in fine-grained FP8 with zero irrecoverable loss spikes
-\citep[abstract]{deepseek-v3}; Llama 4 reports FP8 pre-training
-\citep{meta-llama4}; Llama 3 reports FP8 selectively for activations
-\citep{meta-llama3}. The 2026 frontier-precision floor is now FP8 on
+the board with selective \glsterm{fp8}{FP8} GEMM acceleration where the stack
+supports it: \glsterm{precision-pinning}{DeepSeek-V3} ran $14.8$T tokens of \emph{pre-training}
+in fine-grained \glsterm{fp8}{FP8} with zero irrecoverable loss spikes
+\citep[abstract]{deepseek-v3}; Llama 4 reports \glsterm{fp8}{FP8} pre-training
+\citep{meta-llama4}; Llama 3 reports \glsterm{fp8}{FP8} selectively for activations
+\citep{meta-llama3}. The 2026 frontier-precision floor is now \glsterm{fp8}{FP8} on
 the GEMM where the hardware supports it, BF16 working / FP32 master
-elsewhere; sub-FP8 (NVFP4 / BitNet) remains unconfirmed at frontier
+elsewhere; sub-\glsterm{fp8}{FP8} (\glsterm{nvfp4}{NVFP4} / BitNet) remains unconfirmed at frontier
 scale (\cref{sec:contradictions}).
 
 \paragraph{SFT first, preference-RL second.}
@@ -261,23 +261,23 @@ on $\pi^{\mathrm{SFT}}$ via $\beta\,\KL(\pi_\theta \| \pi^{\mathrm{SFT}})$
 $\pi^*(y \mid x) \propto \pi^{\mathrm{SFT}}(y \mid x) \exp(r / \beta)$
 is the load-bearing object \emph{every} preference family inverts or
 optimizes (\cref{sec:rlhf-ppo,sec:dpo-derivation}); only the source
-of $r$ varies (human-RLHF \citep{ouyang2022-instructgpt}, AI-judge
+of $r$ varies (human-\glsterm{rlhf}{RLHF} \citep{ouyang2022-instructgpt}, AI-judge
 \citep{bai2022-cai}, implicit policy log-ratio \citep{rafailov2023-dpo},
 verifier \citep{shao2024}).
 
 \paragraph{RLVR-GRPO for the reasoning lines.}
-Where a model has a publicly disclosed reasoning variant, GRPO over
+Where a model has a publicly disclosed reasoning variant, \glsterm{grpo-2}{GRPO} over
 $\{0, 1\}$ verifiers is the recipe. DeepSeek-R1 \citep{deepseek-r1},
 Tülu 3 \citep{tulu3}, and Qwen 3 thinking-mode \citep{qwen3} all
-report GRPO with binary verifiers (sympy-equivalence, unit-tests,
-exact-match) plus a small format reward
-(\cref{sec:rlvr-grpo-objective}). DAPO's four targeted improvements
-\citep{dapo2025} (Clip-Higher, Dynamic Sampling, Token-Level Loss,
+report \glsterm{grpo-2}{GRPO} with binary verifiers (sympy-equivalence, unit-tests,
+exact-match) plus a small \glsterm{format-reward}{format reward}
+(\cref{sec:rlvr-grpo-objective}). \glsterm{dapo-2}{DAPO}'s four targeted improvements
+\citep{dapo2025} (\glsterm{clip-higher}{Clip-Higher}, \glsterm{dynamic-sampling}{Dynamic Sampling}, Token-Level Loss,
 Overlong Reward Shaping) appear in subsequent open-source replications.
-The closed-lab reasoning models (o-series, Claude extended-thinking,
+The closed-lab reasoning models (o-series, \glsterm{claude}{Claude} extended-thinking,
 Gemini 2.5) do not disclose the inner-loop algorithm but expose a
 \emph{thinking-budget} or \emph{reasoning-effort} parameter that is
-behaviorally consistent with an RLVR-trained reasoner under
+behaviorally consistent with an \glsterm{rlvr-3}{RLVR}-trained reasoner under
 test-time-compute scaling (cross-link to Paper~3).
 
 \subsection{Where the frontier diverges}
@@ -294,37 +294,37 @@ on the same axis. The split is now \emph{deployment-conditional}
 (\cref{tab:frontier-NDC}): small dense models destined for billions
 of inference queries over-train hard; large MoE models intended for
 quality-sensitive serving sit closer to Chinchilla. Phi-4 at
-$\sim\!400$B synthetic / $14$B parameters and DeepSeek-V3 at
+$\sim\!400$B synthetic / $14$B \glsterm{parameters}{parameters} and \glsterm{precision-pinning}{DeepSeek-V3} at
 $D / N_{\text{act}} \approx 400$ are both deliberate and both legal;
 the open question is the joint $(C_{\text{train}}, C_{\text{test}}, b, q)$
-scaling law \cref{sec:scaling-map} flagged.
+\glsterm{scaling-law}{scaling law} \cref{sec:scaling-map} flagged.
 
 \paragraph{Pure-Muon vs.\ AdamW.}
 Only the Moonlight $16$B-MoE / $5.7$T tokens run \citep{muon-moonlight2025}
-has reported a pure-Muon pre-training at frontier-class scale; the
-disclosed $70$B+ dense and $600$B+ MoE runs are all AdamW. Whether
-the $\sim 2\times$ compute-efficiency lift Muon advertises holds at
+has reported a pure-\glsterm{per-shape-rms-scaling}{Muon} pre-training at frontier-class scale; the
+disclosed $70$B+ dense and $600$B+ MoE runs are all \glsterm{adamw}{AdamW}. Whether
+the $\sim 2\times$ compute-efficiency lift \glsterm{per-shape-rms-scaling}{Muon} advertises holds at
 $70$B / dense or $600$B / MoE is the original paper's own §1 open
 question and remains unanswered.
 
 \paragraph{TP-yes-vs-TP-no.}
-Llama 3 \citep{meta-llama3} runs TP$\,8$ inside-node plus PP plus DP plus
-CP --- heavy multi-axis parallelism. DeepSeek-V3 \citep{deepseek-v3}
-runs ZeRO-1 + EP$\,16$ + PP$\,16$ DualPipe with \emph{no} TP, and
-explicitly argues that fine-grained FP8 plus DualPipe and the
+Llama 3 \citep{meta-llama3} runs \glsterm{tensor-parallel}{TP}$\,8$ inside-node plus \glsterm{pipeline-parallel}{PP} plus \glsterm{data-parallel}{DP} plus
+\glsterm{context-parallel}{CP} --- heavy multi-axis parallelism. \glsterm{precision-pinning}{DeepSeek-V3} \citep{deepseek-v3}
+runs ZeRO-1 + \glsterm{expert-parallel}{EP}$\,16$ + \glsterm{pipeline-parallel}{PP}$\,16$ \glsterm{dualpipe}{DualPipe} with \emph{no} \glsterm{tensor-parallel}{TP}, and
+explicitly argues that fine-grained \glsterm{fp8}{FP8} plus \glsterm{dualpipe}{DualPipe} and the
 cross-node all-to-all kernel relieves enough activation pressure that
-TP becomes unnecessary \citep[\S 3.2.2]{deepseek-v3}. The two
+\glsterm{tensor-parallel}{TP} becomes unnecessary \citep[\S 3.2.2]{deepseek-v3}. The two
 recipes are architecture-conditional, not generally substitutable;
 \cref{sec:dt-contradictions} treats the disagreement.
 
 \paragraph{FP8 base vs.\ BF16 base.}
-DeepSeek-V3 \citep[\S 3.3]{deepseek-v3} and Llama 4
-\citep{meta-llama4} report FP8 \emph{base} pre-training. Llama 3 uses
-FP8 selectively (activations-only on FP8 GEMMs; BF16 weights and
+\glsterm{precision-pinning}{DeepSeek-V3} \citep[\S 3.3]{deepseek-v3} and Llama 4
+\citep{meta-llama4} report \glsterm{fp8}{FP8} \emph{base} pre-training. Llama 3 uses
+\glsterm{fp8}{FP8} selectively (activations-only on \glsterm{fp8}{FP8} GEMMs; BF16 weights and
 master-FP32) \citep{meta-llama3}. OLMo 2, Phi-4, Qwen 2.5, Gemma 3
-remain BF16-base. The DeepSeek-V3 zero-spike $14.8$T-token result
+remain BF16-base. The \glsterm{precision-pinning}{DeepSeek-V3} zero-spike $14.8$T-token result
 \citep[abstract]{deepseek-v3} is the strongest single data point we
-have for frontier-scale FP8 training, but it is single-source until
+have for frontier-scale \glsterm{fp8}{FP8} training, but it is single-source until
 Llama 4 publishes a comparable spike-rate figure
 (\cref{sec:contradictions}).
 
@@ -341,31 +341,31 @@ controlled frontier-scale ablation has yet resolved.
 \paragraph{DPO vs.\ PPO vs.\ GRPO mix; RLAIF / CAI presence.}
 Llama 3 \citep{meta-llama3}, Tülu 3 \citep{tulu3}, OLMo 2
 \citep{olmo2}, Qwen 2.5 \citep{qwen2-5}, and the Phi-4 line
-\citep{phi4} all ship DPO \citep{rafailov2023-dpo} or its variants
+\citep{phi4} all ship \glsterm{dpo}{DPO} \citep{rafailov2023-dpo} or its variants
 on the preference-RL leg. DeepMind's Gemma 3 \citep{gemma3} is the
 load-bearing exception: PPO with weight-averaged reward models
-(WARM \citep{warm-2024} / WARP \citep{warp-2024}) is the disclosed
-choice. Anthropic's Claude line is the second exception: RLAIF / CAI
-\citep{bai2022-cai} (now C3AI \citep{c3ai-2025} / R-CAI
+(\glsterm{warm}{WARM} \citep{warm-2024} / \glsterm{warp}{WARP} \citep{warp-2024}) is the disclosed
+choice. Anthropic's \glsterm{claude}{Claude} line is the second exception: \glsterm{rlaif-3}{RLAIF} / \glsterm{constitutional-ai}{CAI}
+\citep{bai2022-cai} (now C3AI \citep{c3ai-2025} / \glsterm{r-cai-2}{R-CAI}
 \citep{r-cai-2026}) replaces the preference source itself with an
-AI-judge-under-a-constitution. DeepSeek-R1 takes a third path:
-direct GRPO over the SFT base \citep{deepseek-r1} with optional
-preference-DPO \emph{after} the RLVR phase. The DPO-vs-PPO question at
+AI-judge-under-a-\glsterm{constitution}{constitution}. DeepSeek-R1 takes a third path:
+direct \glsterm{grpo-2}{GRPO} over the SFT base \citep{deepseek-r1} with optional
+preference-\glsterm{dpo}{DPO} \emph{after} the \glsterm{rlvr-3}{RLVR} phase. The \glsterm{dpo}{DPO}-vs-PPO question at
 frontier scale is the \cref{sec:dpo-contradictions} contradiction;
 neither has produced a controlled head-to-head at $70$B+.
 
 \paragraph{R1-distill yes/no; merge yes/no.}
 DeepSeek-R1 \citep{deepseek-r1} reports $800$K SFT samples generated
-by the RLVR-trained R1, distilled into dense $1.5$B / $7$B / $32$B /
+by the \glsterm{rlvr-3}{RLVR}-trained R1, distilled into dense $1.5$B / $7$B / $32$B /
 $70$B targets that nearly match o1-mini on AIME at the $32$B size;
 this is the strongest published evidence that reasoning capability
 transfers through pure SFT \citep[\S 4]{deepseek-r1}. The other
 disclosed labs do not publicly report a parallel distill-from-reasoner
 SFT pass on a publicly-available reasoning teacher. On the merge axis,
-Gemma 3's WARM/WARP \citep{warm-2024,warp-2024} is the only disclosed
+Gemma 3's \glsterm{warm}{WARM}/\glsterm{warp}{WARP} \citep{warm-2024,warp-2024} is the only disclosed
 production merge as a load-bearing pipeline component
-(\cref{sec:adaptation-and-merging}); Mistral and the open-weights
-community use MergeKit \citep{mergekit2024} extensively post-release
+(\cref{sec:adaptation-and-merging}); \glsterm{mistral}{Mistral} and the open-weights
+community use \glsterm{mergekit}{MergeKit} \citep{mergekit2024} extensively post-release
 but as a community add-on rather than as a stage of the canonical
 pipeline.
 
@@ -373,9 +373,9 @@ pipeline.
 \label{sec:snap-opaque}
 
 The opaque cells are not random. \Cref{tab:frontier-snapshot} shows
-the closed labs (Anthropic, OpenAI, DeepMind in part, partly Mistral)
-disclose only the post-training \emph{family} --- RLAIF / CAI for
-Anthropic, RLHF-class for OpenAI, PPO+WARM/WARP for DeepMind --- and
+the closed labs (Anthropic, OpenAI, DeepMind in part, partly \glsterm{mistral}{Mistral})
+disclose only the post-training \emph{family} --- \glsterm{rlaif-3}{RLAIF} / \glsterm{constitutional-ai}{CAI} for
+Anthropic, \glsterm{rlhf}{RLHF}-class for OpenAI, PPO+\glsterm{warm}{WARM}/\glsterm{warp}{WARP} for DeepMind --- and
 keep the data, scale, optimizer, parallelism, precision, and SFT
 details opaque. The open-weights labs (DeepSeek, Meta, Alibaba, AI2,
 Microsoft Research) disclose the upstream stages by paper or model
@@ -389,7 +389,7 @@ For \textmu P at frontier scale (\cref{sec:scaling-mup}), the
 disclosure asymmetry is one of \cref{sec:contradictions}'s open
 items: independent positive results outside the
 Microsoft / Cerebras / Graphcore ecosystem at $10$B+ scale are
-scarce, and the Llama 4 \citep{meta-llama4} ``MetaP'' citation has
+scarce, and the Llama 4 \citep{meta-llama4} ``\glsterm{metap}{MetaP}'' citation has
 thin published detail.
 
 \begin{contradiction}
@@ -398,8 +398,8 @@ thin published detail.
 \cref{tab:frontier-snapshot} answer is that every disclosed pipeline
 since 2024 has all six stages in the same order, and where stages
 are missing it is by design (Tülu 3 has no pre-training because it
-inherits Llama 3's; Mistral Large does not publicly disclose
-RLVR; Phi-4 does not run RLVR by choice). What the table cannot
+inherits Llama 3's; \glsterm{mistral}{Mistral} Large does not publicly disclose
+\glsterm{rlvr-3}{RLVR}; Phi-4 does not run \glsterm{rlvr-3}{RLVR} by choice). What the table cannot
 distinguish is whether the convergence is genuine pipeline-shape
 discovery or whether it is recipe-zoo bias: the disclosed labs
 read each other's papers, hire from each other, and run on overlapping
@@ -419,16 +419,16 @@ A useful mental picture is that the table is a $14 \times 6$ matrix
 of cells where the column-marginals (\cref{sec:snap-agree}) tell us
 the structural shape and the row-marginals (\cref{sec:snap-disagree})
 tell us each lab's identity. Columns with high agreement
-(SFT-first, BF16+ working precision, AdamW pretrain optimizer,
+(SFT-first, BF16+ working precision, \glsterm{adamw}{AdamW} pretrain optimizer,
 $\KL$-anchored preference-RL) are the structure of the recipe.
-Columns with high variance (token budget $D/N$, FP8-vs-BF16-base,
-DPO-vs-PPO mix, RLVR yes/no, merge yes/no)
+Columns with high variance (token budget $D/N$, \glsterm{fp8}{FP8}-vs-BF16-base,
+\glsterm{dpo}{DPO}-vs-PPO mix, \glsterm{rlvr-3}{RLVR} yes/no, merge yes/no)
 are the surface where the next round of empirics will settle. The
 opaque cells in the closed-lab rows tell us where labs treat the
 choice as competitive advantage rather than research artifact ---
 the post-training data and reward sources for OpenAI / Anthropic;
 the parallelism plan and precision for DeepMind. Returning to math:
-each cell's value is, in the language of the
+each cell's \glsterm{value}{value} is, in the language of the
 \cref{sec:intro-buy} intuition box, a choice of $(\pi^{\mathrm{ref}}, r,
 \mathcal{D})$ for that stage's KL-constrained reweighting. The
 table is the lab-by-lab realization of the same recipe template;
@@ -443,20 +443,20 @@ space the lab chose.
 six stages, in order, with localized disagreement at five of the six
 boundaries (data, scale + optimizer, distrib. + precision,
 preference-RL family, reasoning-RL + merge) and structural
-near-universal agreement on the remaining axes (FineWeb-class web
-pipeline, AdamW, FSDP/ZeRO-1, BF16+ working precision, SFT-first /
-preference-RL-second / RLVR-for-reasoning ordering,
+near-universal agreement on the remaining axes (\glsterm{custom-heuristic-filters}{FineWeb}-class web
+pipeline, \glsterm{adamw}{AdamW}, \glsterm{fsdp}{FSDP}/ZeRO-1, BF16+ working precision, SFT-first /
+preference-RL-second / \glsterm{rlvr-3}{RLVR}-for-reasoning ordering,
 KL-anchored closed-form preference optimum). The next section
 \cref{sec:contradictions} concentrates the boundary-localized
 disagreements and asks, for each, what evidence would close the
 question: the Kaplan-vs-Chinchilla compute allocation under the
 inference-cost re-objective, optimizer speedups conditional on
-training-loss vs.\ downstream evaluation, TP-yes-vs-TP-no
-under different MoE \emph{vs.\ }dense architectures, FP8 / NVFP4 /
-BitNet production status outside the DeepSeek-V3 single-source
+training-loss vs.\ downstream evaluation, \glsterm{tensor-parallel}{TP}-yes-vs-\glsterm{tensor-parallel}{TP}-no
+under different MoE \emph{vs.\ }dense architectures, \glsterm{fp8}{FP8} / \glsterm{nvfp4}{NVFP4} /
+BitNet production status outside the \glsterm{precision-pinning}{DeepSeek-V3} single-source
 result, SFT data quantity-vs-quality across regime boundaries,
-reward-hacking as fundamental or tractable, DPO-vs-PPO at frontier
-scale, RLAIF / CAI as internalization or surface mimicry, RLVR as
+reward-hacking as fundamental or tractable, \glsterm{dpo}{DPO}-vs-PPO at frontier
+scale, \glsterm{rlaif-3}{RLAIF} / \glsterm{constitutional-ai}{CAI} as internalization or surface mimicry, \glsterm{rlvr-3}{RLVR} as
 new-capability or sampling-efficient sharpening, merge guarantees
 under linear-mode-connectivity, the precision $\times$ token-count
 interaction the over-training strategy collides with, and \textmu P

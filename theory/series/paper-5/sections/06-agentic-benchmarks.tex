@@ -6,8 +6,8 @@
 \section{Agentic benchmarks: what an LLM can DO}
 \label{sec:agentic-benchmarks}
 
-The MMLU lineage (\cref{sec:knowledge-benchmarks}) measures what a model
-\emph{knows}: a single text response, scored against a fixed answer key
+The \glsterm{mmlu}{MMLU} lineage (\cref{sec:knowledge-benchmarks}) measures what a model
+\emph{knows}: a single text response, scored against a fixed answer \glsterm{key}{key}
 by exact match. The lineage taken up in this section measures what a
 model \emph{does}: a sequence of actions in an environment --- code
 edits, mouse clicks, web fetches, tool calls --- scored against the
@@ -22,7 +22,7 @@ GitHub-issue contamination and long-tail spec ambiguity. OSWorld buys
 desktop-OS realism with a vision-grounding bottleneck that confounds
 the metric. GAIA buys low contamination with hand-crafted items and
 a string-match verifier on the final answer field. $\tau$-Bench buys
-dialogue-and-policy realism by replacing the user with another LLM,
+dialogue-and-policy realism by replacing the user with another \glsterm{llm}{LLM},
 which is the easiest piece to simulate and the noisiest one to
 interpret. None of the four solves the realism-vs-measurability
 problem; each picks a corner of it.
@@ -32,7 +32,7 @@ $\mathcal{B} = (s_0, \mathcal{A}, \mathcal{T}, \rho, g, V)$%
 \footnote{KB note: \texttt{kb/notes/evaluation/agentic-benchmarks.md\#sec-1}.}
 --- initial environment state $s_0$, action space $\mathcal{A}$,
 transition $\mathcal{T}$, task description $\rho$, goal $g$, and an
-end-state verifier $V(s_T, g) \in \{0, 1\}$ that accepts or rejects
+\glsterm{end-state-verifier}{end-state verifier} $V(s_T, g) \in \{0, 1\}$ that accepts or rejects
 the trajectory. The agent under test maps $(\rho, s_t, h_t) \to a_t$
 at each step, with history $h_t$, until a stop condition or step
 budget is hit. The structural break from QA benchmarks is that $V$
@@ -73,15 +73,15 @@ deletion: a patch that satisfies the bug-test by breaking unrelated
 functionality fails this term \citep[\S{}sec-eval-protocol]{jimenez2024-swebench}.
 
 The launch number is small enough to publish:
-``Claude 2 \ldots\ resolves only 1.96\% of the issues''
+``\glsterm{claude}{Claude} 2 \ldots\ resolves only 1.96\% of the issues''
 \citep[\S{}sec-headline]{jimenez2024-swebench}. By mid-2025 the
-SWE-Bench Verified leaderboard sits above $70\%$ for frontier reasoning
+\glsterm{swe-bench-verified}{SWE-Bench Verified} leaderboard sits above $70\%$ for frontier reasoning
 agents, a $\sim 35\times$ jump in $\sim 18$ months. Two methodological
 artifacts shaped that arc. First, \citet{jimenez2024-swebench} report
 that many of the original $2{,}294$ items are under-specified: the
 issue text does not uniquely determine which tests count as ``bug
 fixed,'' so a correct patch may still fail \textsf{FAIL\_TO\_PASS}.
-SWE-Bench Verified (OpenAI, August 2024) filters the pool to $500$
+\glsterm{swe-bench-verified}{SWE-Bench Verified} (OpenAI, August 2024) filters the pool to $500$
 human-validated instances where professional software engineers
 confirmed unambiguous specs, fair test sets, and reproducible
 environments; about one-third of original tasks are rejected at this
@@ -135,22 +135,22 @@ state $s_T$ against the goal. The action space is mouse and keyboard
 events on the live GUI (typically over VNC), not a structured API:
 the agent must convert a natural-language instruction like ``click
 the Save button'' into pixel coordinates, which makes vision-based
-GUI grounding an unavoidable sub-capability of every score.
+\glsterm{gui-grounding}{GUI grounding} an unavoidable sub-capability of every score.
 
 The launch headline is the methodological one
 \citep[\S{}abstract]{xie2024-osworld}:
 
 \begin{quote}\itshape
 While humans can accomplish over 72.36\% of the tasks, the best model
-achieves only 12.24\% success, primarily struggling with GUI grounding
+achieves only 12.24\% success, primarily struggling with \glsterm{gui-grounding}{GUI grounding}
 and operational knowledge.
 \end{quote}
 
 The $72.36\% \to 12.24\%$ gap at submission was the largest among
 published 2024 agentic benchmarks. Subsequent computer-use systems
-(Anthropic's October 2024 ``computer use'' Claude release, and
+(Anthropic's October 2024 ``computer use'' \glsterm{claude}{Claude} release, and
 follow-on agentic VLMs) push the AI number higher, but the failure
-mode the abstract names --- GUI grounding, not high-level planning
+mode the abstract names --- \glsterm{gui-grounding}{GUI grounding}, not high-level planning
 --- has not gone away.
 
 \begin{contradiction}
@@ -198,7 +198,7 @@ knowledge; Level 2 is multi-tool web-browsing plans; Level 3 is
 long-horizon tool use with multi-document synthesis, sometimes more
 than ten hops. Answers are checked by exact-match-after-normalization
 on a single short string --- a number, a date, a name --- not by
-LLM-as-judge. The verifier is mechanical and reproducible, which
+\glsterm{llm-as-judge}{LLM-as-judge}. The verifier is mechanical and reproducible, which
 matters because the test gold answers are kept private and submissions
 are run server-side by the GAIA team to delay contamination via
 training-data leakage. The $92\%$ expert baseline and the $15\%$
@@ -208,7 +208,7 @@ any single capability the model lacks.
 
 The 2026 frontier picture: leaderboard entries above $50\%$ now exist,
 narrowing but not closing the human gap on Levels 1 and 2; Level 3
-remains far from saturation. Why expert humans hit $\sim 92\%$ and
+remains far from \glsterm{saturation}{saturation}. Why expert humans hit $\sim 92\%$ and
 frontier models hit $\sim 52\%$ at the time of writing is mostly
 the long-horizon failure mode --- accumulating small mistakes over
 ten-plus tool calls compounds into wrong final-string answers --- not
@@ -243,7 +243,7 @@ Two domains ship in the original release: \emph{retail} (e-commerce
 return-and-exchange policy) and \emph{airline} (rebooking and
 policy enforcement). The verifier is end-state DB equality --- the
 final database rows must match the annotated goal state ---
-sidestepping LLM-as-judge contamination on the agent side. The
+sidestepping \glsterm{llm-as-judge}{LLM-as-judge} contamination on the agent side. The
 methodologically novel piece is the $\mathrm{pass}^k$ metric%
 \footnote{KB excerpt: \texttt{kb/excerpts/yao2024-tau-bench.md\#sec-passk}.}
 \citep[\S{}sec-passk]{yao2024-tau-bench}:
@@ -289,7 +289,7 @@ trajectories.)
 
 The four benchmarks make a single tradeoff explicit:
 \emph{the more an environment looks like real deployment, the harder
-it is to score reliably}. SWE-Bench Verified is the most ecologically
+it is to score reliably}. \glsterm{swe-bench-verified}{SWE-Bench Verified} is the most ecologically
 realistic --- the codebases are real, the issues are real, the tests
 are the developers' own --- but its construction history (the original
 $2{,}294$-task set being filtered down to $500$ human-vetted
@@ -301,7 +301,7 @@ construct it advertises. GAIA buys very-low contamination and a
 mechanical verifier by hand-crafting items, but the cost is item
 scarcity ($466$ total) and the slow gated-evaluation cycle. $\tau$-Bench
 is the most measurable --- DB-row equality is unambiguous --- but
-the user side of the conversation is itself an LLM, which makes the
+the user side of the conversation is itself an \glsterm{llm}{LLM}, which makes the
 score partly a measurement of how well the agent handles the
 specific generation distribution of the user simulator, not a
 deployment-grade user interaction.
@@ -319,7 +319,7 @@ cost.
 \subsection{What slips through}
 \label{sec:agentic-slips-through}
 
-The end-state verifier $V(s_T, g)$ is silent on a class of failure
+The \glsterm{end-state-verifier}{end-state verifier} $V(s_T, g)$ is silent on a class of failure
 modes that show up only in the trajectory $(s_0, a_0, s_1, \ldots, s_T)$.
 Three failure modes are now documented enough to name. \emph{Long-horizon
 coherence loss} --- the agent succeeds on Level 1 GAIA tasks and
@@ -341,9 +341,9 @@ reasoned about the bug from first principles.''
 Are agentic benchmarks now the bottleneck on capability evaluation,
 or are they leaky proxies that overstate generality? Both readings
 are defensible from the 2026 evidence. The bottleneck reading: the
-$1.96\% \to 70\%$ SWE-Bench Verified arc and the $15\% \to 50\%+$
+$1.96\% \to 70\%$ \glsterm{swe-bench-verified}{SWE-Bench Verified} arc and the $15\% \to 50\%+$
 GAIA arc are the most informative single capability measurements
-the field has produced since MMLU saturated, and the realism gap is
+the field has produced since \glsterm{mmlu}{MMLU} saturated, and the realism gap is
 closing fast enough that the next eval generation will need to
 target what current agentic benchmarks miss. The leaky-proxy reading:
 SWE-Bench scores are conflated with scaffold engineering, OSWorld
@@ -352,16 +352,16 @@ answers cannot be audited externally, and $\tau$-Bench's user
 simulator is itself a model in training distribution. The field's
 own response --- replacement benchmarks (Multi-SWE-bench, SWE-Lancer,
 $\tau$2-Bench), cost-aware leaderboards (Aider Polyglot's
-$\$$-per-task axis), and METR's task-horizon metric%
+$\$$-per-task axis), and \glsterm{task-horizon-metric}{METR}'s \glsterm{task-horizon-metric}{task-horizon metric}%
 \footnote{KB note: \texttt{kb/notes/evaluation/agentic-benchmarks.md\#5-frontier}.}
 --- is consistent with believing both readings simultaneously: agentic
 benchmarks are the best capability instruments we have, and we do
-not yet trust them to predict deployment value.
+not yet trust them to predict deployment \glsterm{value}{value}.
 \end{contradiction}
 
 The next layer of the layered defense, taken up in
 \cref{sec:safety-adversarial-robustness}, asks not what the agent
 \emph{can} do but what it \emph{will} do under adversarial pressure
---- the jailbreak-resistance and dangerous-capability evaluation
+--- the jailbreak-resistance and \glsterm{dangerous-capability-evaluation-2}{dangerous-capability evaluation}
 surface, where the construct is no longer task completion but
 behavior under deliberate attack.

@@ -42,24 +42,24 @@ acquire resources, evade shutdown, and instantiate copies of itself
 in new environments.
 
 The cleanest publicly-reproducible instrument lives on the
-autonomy axis. METR's autonomy evaluation suite ships $77$ tasks
+autonomy axis. \glsterm{task-horizon-metric}{METR}'s autonomy evaluation suite ships $77$ tasks
 spanning autonomous research, agent-level operation, and
 self-replication-relevant primitives, each calibrated to a
 \emph{human time-to-complete distribution} measured against
 contractor baselines%
-\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#metr-autonomy-task-suite}.}
+\footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#\glsterm{task-horizon-metric}{metr}-autonomy-task-suite}.}
 \citep{metr-autonomy-2024}. The methodological move is to recast
 ``does the model solve task $X$'' into ``how long would a human take
 to solve task $X$, and at what task-difficulty threshold does the
 model succeed at $> 50\%$.'' The induced quantity is the
-\emph{task-horizon metric}: the human-equivalent time horizon over
+\emph{\glsterm{task-horizon-metric}{task-horizon metric}}: the human-equivalent time horizon over
 which the model maintains coherent task pursuit. Recasting capability
 as a horizon-extension trajectory enables forecasting in a way that
-binary task accuracy does not, and grounds RSP-style triggers in a
+binary task accuracy does not, and grounds \glsterm{responsible-scaling-policy}{RSP}-style triggers in a
 quantity that has trended smoothly upward across model generations.
 
 The cleanest publicly-reproducible instrument on the cyber axis is
-\citet{cybench2024}, which builds an end-to-end CTF agent benchmark
+\citet{cybench2024}, which builds an end-to-end \glsterm{capture-the-flag}{CTF} agent benchmark
 from $40$ professional capture-the-flag tasks. The agent is given a
 shell, a browser, and a tool environment, and graded on whether it
 recovers the flag. Cybench overlaps both safety-eval and agentic-eval
@@ -78,14 +78,14 @@ deployment-readiness-review processes
 
 The 2023--2024 frontier labs converged on a shared structure for
 turning capability evals into deployment commitments. Anthropic's
-\emph{Responsible Scaling Policy} \citep{anthropic-rsp-2024}
-defines an AI Safety Level (ASL) tier framework. ASL-1 covers
-no-autonomy / low-risk systems; ASL-2 is the current frontier
-baseline (Claude 3 / Claude 4 family) with basic containment and a
-list of capability triggers that must \emph{not} be reached; ASL-3
+\emph{\glsterm{responsible-scaling-policy}{Responsible Scaling Policy}} \citep{anthropic-rsp-2024}
+defines an \glsterm{asl}{AI Safety Level} (\glsterm{asl}{ASL}) tier framework. \glsterm{asl}{ASL}-1 covers
+no-autonomy / low-risk systems; \glsterm{asl}{ASL}-2 is the current frontier
+baseline (\glsterm{claude}{Claude} 3 / \glsterm{claude}{Claude} 4 family) with basic containment and a
+list of capability triggers that must \emph{not} be reached; \glsterm{asl}{ASL}-3
 specifies elevated-risk thresholds on cyber, biology, and autonomy
 axes, with deployment requiring hardened security, escalation
-procedures, and external evaluation; ASL-4 is reserved for
+procedures, and external evaluation; \glsterm{asl}{ASL}-4 is reserved for
 autonomous-AI risk and remains underspecified by design. The
 load-bearing structural commitment is that each tier specifies
 \emph{capability evaluations} that must be run before crossing into
@@ -97,8 +97,8 @@ met \emph{at} the tier; deployment is a conjunction over the two%
 The three frontier-lab framework documents are tier-B sources by the
 discipline of \cref{sec:knowledge-benchmarks}: vendor policy
 publications, not peer-reviewed papers, and not held to the same
-external-replication bar. Anthropic's Responsible Scaling Policy
-\citep{anthropic-rsp-2024} defines the ASL tier framework cited
+external-replication bar. Anthropic's \glsterm{responsible-scaling-policy}{Responsible Scaling Policy}
+\citep{anthropic-rsp-2024} defines the \glsterm{asl}{ASL} tier framework cited
 above. OpenAI's \emph{Preparedness Framework}
 \deepencite{openai-preparedness-2023 §framework, citation-pending}
 defines parallel risk tiers across cybersecurity, CBRN, persuasion,
@@ -112,14 +112,14 @@ tier structure --- capability triggers cross-checked against
 mitigation commitments --- and disagree on specific thresholds and
 evaluation protocols%
 \footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#anthropic-responsible-scaling-policy-rsp}; cross-comparison sourced from the AI Index 2025.}.
-External evaluators --- UK AISI, US AISI, METR, Apollo Research ---
+External evaluators --- UK AISI, US AISI, \glsterm{task-horizon-metric}{METR}, Apollo Research ---
 serve as the external-validation half of these frameworks. Pre-
 deployment access agreements between vendors and AISIs are themselves
 new institutional infrastructure, on the order of a couple of years
 old at the time of writing, and not yet stable.
 \end{forumsignal}
 
-The structural contribution of the RSP frame is to commit a vendor,
+The structural contribution of the \glsterm{responsible-scaling-policy}{RSP} frame is to commit a vendor,
 ahead of capability gain, to specific evaluation protocols and
 abandonment thresholds. This is a substantial shift in deployment
 discipline relative to the 2020--2022 norm of post-hoc safety
@@ -128,7 +128,7 @@ sections in tech reports. It also makes capability evals
 gates deployment is no longer a research instrument, it is part of
 the deployment artifact. The dual-use, expert-grading, and
 threshold-vs-trend problems below are problems precisely because the
-RSP frame raises the consequences of getting them wrong.
+\glsterm{responsible-scaling-policy}{RSP} frame raises the consequences of getting them wrong.
 
 \subsection{Methodological problem (a): dual-use publication}
 \label{sec:dangerous-capability-dual-use}
@@ -150,13 +150,13 @@ granted.
 
 The downstream consequence is that the externally-verifiable surface
 of dangerous-capability evals is much smaller than the verifiable
-surface of jailbreak benchmarks. HarmBench \citep{harmbench2024}
+surface of jailbreak benchmarks. \glsterm{harmbench-2}{HarmBench} \citep{harmbench2024}
 ships $510$ behaviors, $18$ attack methods, and $33$ target LLMs as
-a public package. The bio and CBRN evaluations cited in vendor RSP
+a public package. The bio and CBRN evaluations cited in vendor \glsterm{responsible-scaling-policy}{RSP}
 disclosures
 \deepencite{anthropic-rsp-2024 §rsp-evaluations, citation-pending}
 do not. A reader who wants to verify a vendor's claim that its
-model has \emph{not} crossed an ASL-3 bio-uplift trigger does not
+model has \emph{not} crossed an \glsterm{asl}{ASL}-3 bio-uplift trigger does not
 have the option of running the eval; the most a reader can do is
 trust the vendor's self-report and the vendor's choice of external
 evaluator.
@@ -165,12 +165,12 @@ evaluator.
 \label{sec:dangerous-capability-experts}
 
 The second structural distinction is that scoring is expensive. A
-multiple-choice MMLU item costs essentially zero to grade once the
-gold key is built (\cref{sec:knowledge-mmlu}); a SWE-Bench instance
+multiple-choice \glsterm{mmlu}{MMLU} item costs essentially zero to grade once the
+gold \glsterm{key}{key} is built (\cref{sec:knowledge-mmlu}); a SWE-Bench instance
 costs the price of running a test suite (\cref{sec:agentic-swebench}).
 A bio-uplift task involves expert scientists evaluating whether the
 model's output meaningfully advances a synthesis plan over what a
-non-augmented attacker could produce; a cyber-uplift CTF task may
+non-augmented attacker could produce; a cyber-uplift \glsterm{capture-the-flag}{CTF} task may
 require a security professional's judgment on partial credit and
 exploit feasibility; a persuasion eval requires controlled
 human-subject comparison against a human-persuader baseline. Expert
@@ -202,7 +202,7 @@ behavior of the model.)
 \end{intuition}
 
 The second-order effect is that external replication is both rare
-and informally negotiated. METR autonomy results
+and informally negotiated. \glsterm{task-horizon-metric}{METR} autonomy results
 \citep{metr-autonomy-2024} are partially externally verifiable
 because the task suite is public and the model APIs are accessible;
 bio and CBRN results are not, and the field substitutes
@@ -215,7 +215,7 @@ benchmark publication.
 \subsection{Methodological problem (c): threshold-vs-trend tension}
 \label{sec:dangerous-capability-threshold}
 
-The third structural distinction is the tension between the RSP
+The third structural distinction is the tension between the \glsterm{responsible-scaling-policy}{RSP}
 frame's commitment to \emph{thresholds} and the empirical reality of
 \emph{trends}. RSPs commit a vendor to specific actions when a
 capability score crosses a specified line: deploy, deploy with
@@ -228,11 +228,11 @@ discrete decision out of a continuous quantity, and small differences
 in score near the threshold produce large differences in deployment
 posture. Two failure modes follow.
 
-The first is \emph{threshold sandbagging}: incentives push toward
+The first is \emph{threshold \glsterm{sandbagging}{sandbagging}}: incentives push toward
 designing or interpreting the eval such that the model's score lands
 just below the threshold, since crossing it imposes substantial
 mitigation cost. This is structurally analogous to the
-sycophancy-in-rater-data Goodhart pattern of
+\glsterm{sycophancy}{sycophancy}-in-rater-data Goodhart pattern of
 \cref{sec:sycophancy-rlhf}: when the eval is itself a
 preference-ranked artifact (vendor design vs.\ vendor commitment),
 the gradient on item difficulty and grading rubric is not aligned
@@ -261,9 +261,9 @@ redacted (dual-use), whose grading is expert-mediated (expensive
 and small-$N$), and whose threshold commitments are pegged to
 smoothly-trending capability scores. The result is that external
 parties cannot openly verify vendor claims that a given model is, or
-is not, above a given RSP-defined trigger. The vendor side argues
+is not, above a given \glsterm{responsible-scaling-policy}{RSP}-defined trigger. The vendor side argues
 that this regime is the best feasible given dual-use constraints
-and that external-evaluator access (UK AISI, US AISI, METR, Apollo)
+and that external-evaluator access (UK AISI, US AISI, \glsterm{task-horizon-metric}{METR}, Apollo)
 substitutes for open verification. The critic side argues that
 deployment-gating decisions of this consequence cannot rest on a
 trust model the public cannot audit, and that the absence of a
@@ -286,12 +286,12 @@ The threats taken up in
 construct of evaluation in a different direction. Where this section
 asks whether the model has dangerous capabilities, the next layer
 asks whether the model's \emph{behavior under deployment} aligns
-with its operator's intent. Sycophancy is a Goodhart artifact of
+with its operator's intent. \glsterm{sycophancy}{Sycophancy} is a Goodhart artifact of
 preference-RL that does not require capability for deception
-(\cref{sec:sycophancy}). Scheming is capability for in-context
+(\cref{sec:sycophancy}). \glsterm{scheming}{Scheming} is capability for in-context
 strategic deception under an instructed goal
 (\cref{sec:scheming}). Alignment-faking is strategy under training
-distribution shift, and reuses the legible-CoT signal as part of its
+distribution shift, and reuses the legible-\glsterm{chain-of-thought}{CoT} signal as part of its
 detection surface (\cref{sec:alignment-faking}). The cross-paper
 thread runs back to the post-training pipeline of Paper 2: RSPs
 intervene at the SFT and RL boundary --- the point at which a

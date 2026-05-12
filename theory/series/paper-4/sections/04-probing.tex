@@ -10,32 +10,32 @@
 \section{Probing}
 \label{sec:probing}
 
-A \emph{probe} is the supervised correlational readout: a (typically
+A \emph{\glsterm{probe-2}{probe}} is the supervised correlational readout: a (typically
 linear) classifier trained on \emph{frozen} activations of a pre-trained
-transformer to predict an external property — truth, sentiment, syntactic
-role, factuality, sycophancy. Where the lens of \S\ref{sec:logit-lens-family}
+\glsterm{transformer}{transformer} to predict an external property — truth, sentiment, syntactic
+role, factuality, \glsterm{sycophancy}{sycophancy}. Where the lens of \S\ref{sec:logit-lens-family}
 reuses the model's own unembedding $W_U$ to ask \emph{what would the
-model predict at layer $\ell$}, a probe trains a fresh classifier on
+model predict at layer $\ell$}, a \glsterm{probe-2}{probe} trains a fresh classifier on
 $\mathbf{h}^{(\ell, t)}$ to ask a different question: \emph{is the
 property $y$ linearly decodable from the activation at layer $\ell$,
 position $t$?} The implicit claim that motivates the methodology is
-sharper than the question: if a high-accuracy probe exists for property
+sharper than the question: if a high-accuracy \glsterm{probe-2}{probe} exists for property
 $y$ in $\mathbf{h}^{(\ell, t)}$, then the model \emph{linearly
 represents} $y$ at that layer–position. Whether the model also
 \emph{uses} that representation is the correlation–causation gap that
 \S\ref{sec:correlation-causation} takes up; this section sets up the
-methodology, the canonical four probe families, and the layer-position
-story that lets a probe-accuracy curve diagnose \emph{where} a property
+methodology, the canonical four \glsterm{probe-2}{probe} families, and the layer-position
+story that lets a \glsterm{probe-2}{probe}-accuracy curve diagnose \emph{where} a property
 is encoded.
 
 \subsection{Setup: the linear probe}
 \label{sec:probe-setup}
 
-Let $\mathcal{M}$ be a frozen pre-trained transformer with $L$ layers and
+Let $\mathcal{M}$ be a frozen pre-trained \glsterm{transformer}{transformer} with $L$ layers and
 hidden size $D$ (Paper~1 notation). For an input sequence $\mathbf{x}$,
 write $\mathbf{h}^{(\ell, t)}(\mathbf{x}) \in \mathbb{R}^D$ for the
 residual-stream activation at layer $\ell$, position $t$. A
-\emph{linear probe} for a binary property $y$ is a classifier
+\emph{\glsterm{linear-probe}{linear probe}} for a binary property $y$ is a classifier
 \begin{equation}
   \hat y \;=\; g(\mathbf{h}^{(\ell, t)})
   \;=\; \sigma\!\left(\mathbf{w}^\top \mathbf{h}^{(\ell, t)} + b\right),
@@ -44,26 +44,26 @@ residual-stream activation at layer $\ell$, position $t$. A
 with $\mathbf{w} \in \mathbb{R}^D$, $b \in \mathbb{R}$, and $\sigma$ the
 sigmoid \citep{alain-bengio-2017}\footnote{KB excerpt:
 \texttt{kb/excerpts/alain-bengio-2017.md\#abstract}.}. For a
-multiclass property $y \in \{1, \dots, K\}$ the probe is a softmax
-classifier with $\mathbf{W} \in \mathbb{R}^{K \times D}$. The probe is
+multiclass property $y \in \{1, \dots, K\}$ the \glsterm{probe-2}{probe} is a \glsterm{softmax}{softmax}
+classifier with $\mathbf{W} \in \mathbb{R}^{K \times D}$. The \glsterm{probe-2}{probe} is
 fit on a labeled dataset
 $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}$ by minimizing a regularized
-cross-entropy loss
+\glsterm{cross-entropy-loss}{cross-entropy loss}
 \begin{equation}
   \mathcal{L}(\mathbf{w}, b)
   \;=\; \frac{1}{|\mathcal{D}|}\sum_{i}\mathcal{L}_{\mathrm{CE}}\!\left(g(\mathbf{h}^{(\ell, t)}(\mathbf{x}_i)),\, y_i\right)
   \;+\; \lambda \|\mathbf{w}\|_2^2,
   \label{eq:probe-loss}
 \end{equation}
-with $\mathcal{M}$'s parameters held fixed throughout. The layer $\ell$
+with $\mathcal{M}$'s \glsterm{parameters}{parameters} held fixed throughout. The layer $\ell$
 and the token position $t$ are hyperparameters on equal footing with
-$\lambda$. Probe accuracy on a held-out test split is the headline
+$\lambda$. \glsterm{probe-2}{Probe} accuracy on a held-out test split is the headline
 diagnostic; per the control-task convention of
 \citet{hewitt2019-control-tasks}, it must be reported alongside an
 \emph{accuracy delta} against a randomly-initialized-model baseline so
-that the probe's expressivity does not masquerade as the model's
+that the \glsterm{probe-2}{probe}'s expressivity does not masquerade as the model's
 representation. Tensor-shape note: a batched cache of activations at
-layer $\ell$ is $\BSH$; the probe
+layer $\ell$ is $\BSH$; the \glsterm{probe-2}{probe}
 output is $\mathsf{B}\!\times\!\mathsf{S}\!\times\!1$ (binary) or
 $\mathsf{B}\!\times\!\mathsf{S}\!\times\!K$ (multiclass).
 
@@ -71,11 +71,11 @@ $\mathsf{B}\!\times\!\mathsf{S}\!\times\!K$ (multiclass).
 ResNet-50 and reported that ``the linear separability of features
 increase[s] monotonically along the depth of the
 model''\footnote{KB excerpt: \texttt{kb/excerpts/alain-bengio-2017.md\#abstract}
-(verbatim).}: a class-label probe at layer $\ell$ does at least as well
-as the same probe at any earlier layer. The result anchored the
+(verbatim).}: a class-label \glsterm{probe-2}{probe} at layer $\ell$ does at least as well
+as the same \glsterm{probe-2}{probe} at any earlier layer. The result anchored the
 ``hierarchical-abstraction'' picture that subsequent NLP probing work
 inherits — though, as we will see in \S\ref{sec:probe-layer-position},
-the LLM picture is non-monotonic and property-dependent in ways the
+the \glsterm{llm}{LLM} picture is non-monotonic and property-dependent in ways the
 vision result does not anticipate.
 
 \subsection{The structural probe: from binary to geometric}
@@ -86,12 +86,12 @@ single class label. Many properties of interest — syntactic dependency
 trees, coreference chains, semantic role frames — are higher-arity:
 they are \emph{relations between} tokens, not labels \emph{on} tokens.
 \citet{hewitt2019-structural-probe} generalize the framework with a
-\emph{structural probe}: a learned linear transform
+\emph{\glsterm{structural-probe}{structural probe}}: a learned linear transform
 $\mathbf{B} \in \mathbb{R}^{k \times D}$ such that, in $\mathbf{B}$-space,
 the squared $L_2$ distance between two tokens' activations approximates
 the parse-tree distance between those tokens
 \citep{hewitt2019-structural-probe}\footnote{KB excerpt:
-\texttt{kb/excerpts/hewitt2019-structural-probe.md\#abstract}.}:
+\texttt{kb/excerpts/hewitt2019-structural-\glsterm{probe-2}{probe}.md\#abstract}.}:
 \begin{equation}
   \boxed{\;
   d_{\mathbf{B}}(\mathbf{h}_i, \mathbf{h}_j)^2
@@ -104,23 +104,23 @@ where $d_T(w_i, w_j)$ is the number of edges on the parse-tree path
 between tokens $w_i$ and $w_j$. A companion variant probes scalar
 \emph{tree depth} via $\|\mathbf{B}\mathbf{h}_i\|_2^2 \approx
 \mathrm{depth}_T(w_i)$. The rank $k$ is a hyperparameter; the entire
-probe is a single $k \times D$ matrix per (model, layer). Hewitt and
+\glsterm{probe-2}{probe} is a single $k \times D$ matrix per (model, layer). Hewitt and
 Manning report that such $\mathbf{B}$ exists for ELMo and BERT but
 \emph{not} for randomly-initialized baselines, providing evidence that
 ``entire syntax trees are embedded implicitly in deep models' vector
 geometry''~\citep{hewitt2019-structural-probe}. The methodological
-point: a structural probe shifts the question from ``does the model
+point: a \glsterm{structural-probe}{structural probe} shifts the question from ``does the model
 represent $y$?'' to ``does the model represent the \emph{structure} of
 $y$?'', and the answer is geometric rather than classificatory.
 
 \subsection{Mass-mean probing: closed-form, parameter-free}
 \label{sec:mass-mean}
 
-The 2023+ truth-direction literature found that a probe with no learned
-parameters at all often suffices, and is in fact \emph{more} causally
+The 2023+ truth-direction literature found that a \glsterm{probe-2}{probe} with no learned
+\glsterm{parameters}{parameters} at all often suffices, and is in fact \emph{more} causally
 implicated than its trained counterparts. Given a balanced labeled set
 $\{(\mathbf{h}_i, y_i \in \{+, -\})\}$ at a chosen $(\ell, t)$, the
-\emph{mass-mean} (or \emph{difference-in-means}) probe direction is
+\emph{mass-mean} (or \emph{difference-in-means}) \glsterm{probe-2}{probe} direction is
 \citep{marks-tegmark-2023-truth}\footnote{KB excerpt:
 \texttt{kb/excerpts/marks-tegmark-2023-truth.md\#abstract},
 \texttt{\#sec-1-contributions}.}:
@@ -152,13 +152,13 @@ caveats.
 \subsection{Burns CCS: probing without labels}
 \label{sec:ccs}
 
-A fourth probe family drops the label requirement entirely. Contrast-Consistent
+A fourth \glsterm{probe-2}{probe} family drops the label requirement entirely. Contrast-Consistent
 Search (CCS) \deepencite{burns2022-ccs §3, citation-pending} fits a
-linear probe by minimizing a self-consistency loss across paired
+\glsterm{linear-probe}{linear probe} by minimizing a \glsterm{self-consistency-2}{self-consistency} loss across paired
 contrast prompts (e.g., ``X is true.'' / ``X is false.''), enforcing
-that the probe's outputs on the two completions of a contrast pair
+that the \glsterm{probe-2}{probe}'s outputs on the two completions of a contrast pair
 should sum to one and be confident. The headline claim is that CCS
-recovers a \emph{truth-like} direction in LLM activations without
+recovers a \emph{truth-like} direction in \glsterm{llm}{LLM} activations without
 ever observing a truth label, and that the recovered direction's
 classification accuracy is competitive with supervised probes on
 in-distribution examples. \citet{marks-tegmark-2023-truth} situate
@@ -169,28 +169,28 @@ report that subsequent work has documented generalization failures
 under negation — CCS-discovered directions on `cities` do not transfer
 cleanly to `neg\_cities`. The unsupervised commitment is methodologically
 appealing (it removes the curated-label confound) but inherits a strong
-form of the spurious-correlate failure: any consistent latent feature
+form of the spurious-correlate failure: any consistent latent \glsterm{feature}{feature}
 that distinguishes the two halves of the contrast set, not just truth,
 is a candidate. The deeper treatment of CCS's geometry — why it works,
 where it fails, what it shares with mass-mean — is in
 \S\ref{sec:truth-directions}.
 
 \begin{intuition}
-A probe is a \emph{point-spread function} on the model's representation
+A \glsterm{probe-2}{probe} is a \emph{point-spread function} on the model's representation
 space. Like the optical PSF of a microscope, it is the linear filter
 $\mathbf{w}^\top \mathbf{h}$ in Eq.~\eqref{eq:linear-probe} through which
 we observe the model's activation at $(\ell, t)$ — and the property $y$
-must be \emph{in focus along that filter axis} for the probe to detect
+must be \emph{in focus along that filter axis} for the \glsterm{probe-2}{probe} to detect
 it. The mass-mean direction
 $\mathbf{d}_{\mathrm{MM}} = \boldsymbol{\mu}_+ - \boldsymbol{\mu}_-$ in
 Eq.~\eqref{eq:mass-mean} is a closed-form choice of PSF: the axis along
 which the two classes are maximally separated in expectation. The
-structural probe in Eq.~\eqref{eq:structural-probe} replaces the scalar
+\glsterm{structural-probe}{structural probe} in Eq.~\eqref{eq:structural-probe} replaces the scalar
 projection with a $k$-dimensional one, so the PSF becomes a
 $k$-dimensional subspace rather than a single axis. Returning to
-canonical form: in every case the probe is a linear map
+canonical form: in every case the \glsterm{probe-2}{probe} is a linear map
 $\mathbb{R}^D \to \mathbb{R}^k$ (with $k = 1$ for binary, $k > 1$ for
-structural) followed by a fixed decision rule, and probe accuracy
+structural) followed by a fixed decision rule, and \glsterm{probe-2}{probe} accuracy
 quantifies how well the chosen $k$-dimensional subspace separates the
 labeled data.
 \end{intuition}
@@ -198,15 +198,15 @@ labeled data.
 \subsection{Where to probe: layer and token position}
 \label{sec:probe-layer-position}
 
-Probe accuracy is a function of $(\ell, t)$, and the shape of that
+\glsterm{probe-2}{Probe} accuracy is a function of $(\ell, t)$, and the shape of that
 function tells a structural story about \emph{where} a property is
-represented. Three regimes recur across the LLM probing literature.
+represented. Three regimes recur across the \glsterm{llm}{LLM} probing literature.
 
 \paragraph{Surface features early.} Token identity, basic part-of-speech
-role, and other surface-syntactic properties probe highest in
-\emph{early} layers; the probe accuracy curve rises steeply through the
-embedding and first few transformer blocks and then plateaus or decays
-\citep{hewitt2019-structural-probe}. The structural probe of
+role, and other surface-syntactic properties \glsterm{probe-2}{probe} highest in
+\emph{early} layers; the \glsterm{probe-2}{probe} accuracy curve rises steeply through the
+embedding and first few \glsterm{transformer}{transformer} blocks and then plateaus or decays
+\citep{hewitt2019-structural-probe}. The \glsterm{structural-probe}{structural probe} of
 \S\ref{sec:structural-probe} is the canonical demonstration: parse-tree
 distances are recovered with $\mathbf{B}$ trained on early-to-mid BERT
 layers.
@@ -214,7 +214,7 @@ layers.
 \paragraph{Syntax mid.} Tree-structure properties — dependency-parse
 distances, constituent boundaries, agreement features — peak in
 \emph{middle} layers. \citet{alain-bengio-2017} report monotonic
-linear separability with depth on vision class labels, but the LLM
+linear separability with depth on vision class labels, but the \glsterm{llm}{LLM}
 generalization is non-monotonic: information about syntactic structure
 is most accessible mid-stack and degrades thereafter as later layers
 recombine it for downstream prediction.
@@ -224,7 +224,7 @@ sentiment, speaker stance — properties that require the model to
 integrate information across a clause — peak in \emph{late-mid} layers
 and stay accurate through the end of the stack. The
 \citet{marks-tegmark-2023-truth} finding on LLaMA-2-13B is the canonical
-worked example: the truth direction localizes around layers 12--15 and
+worked example: the \glsterm{truth-direction-2}{truth direction} localizes around layers 12--15 and
 remains salient through layer 35, with PCA visualizations showing the
 linear true/false separation emerging in early-middle layers and
 ``emerg[ing] later for datasets of more structurally complex statements
@@ -233,7 +233,7 @@ excerpt: \texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-3-layers},
 \texttt{\#sec-4-misalignment}.}.
 
 \paragraph{Position selection: the period-token trick.} For free-form
-text, the most-informative probe position is often the
+text, the most-informative \glsterm{probe-2}{probe} position is often the
 \emph{end-of-statement punctuation token} (typically the period). The
 intuition is summarization: the period sits one position past the last
 content token, and the model's attention pattern at that position has had
@@ -246,7 +246,7 @@ representation of the statement's truth''\footnote{KB excerpt:
 \texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-3-layers}.}. The
 period-token convention is now standard in the truth-direction
 literature; \citet{marks-tegmark-2023-truth} cite Tigges et al.\ 2023 as
-the prior empirical observation of the same summarization behavior on
+the prior empirical observation of the same \glsterm{summarization-behavior}{summarization behavior} on
 sentiment.
 
 \subsection{Probe lineage: eight families on one timeline}
@@ -260,23 +260,23 @@ Compiled from \texttt{kb/notes/interpretability/probing.md} \S 4.1.}
 \small
 \begin{tabularx}{\linewidth}{l l X X}
 \toprule
-\textbf{Family} & \textbf{Year} & \textbf{Probe form} & \textbf{Key limitation} \\
+\textbf{Family} & \textbf{Year} & \textbf{\glsterm{probe-2}{Probe} form} & \textbf{\glsterm{key}{Key} limitation} \\
 \midrule
 Linear logistic regression \citep{alain-bengio-2017}
   & 2017
   & $\sigma(\mathbf{w}^\top \mathbf{h} + b)$ on frozen $\mathbf{h}$
   & correlational; needs $\ell_2$ regularization to avoid overfit \\
-MLP probe
+MLP \glsterm{probe-2}{probe}
   & 2010s
   & small feedforward net on $\mathbf{h}$
-  & probe leakage: a powerful probe learns $y$ from low-information features \citep{hewitt2019-control-tasks} \\
-Structural probe \citep{hewitt2019-structural-probe}
+  & \glsterm{probe-2}{probe} leakage: a powerful \glsterm{probe-2}{probe} learns $y$ from low-information features \citep{hewitt2019-control-tasks} \\
+\glsterm{structural-probe}{Structural probe} \citep{hewitt2019-structural-probe}
   & 2019
   & $\|\mathbf{B}(\mathbf{h}_i - \mathbf{h}_j)\|^2 \approx d_T(w_i, w_j)$
   & confounded with task-difficulty when comparing layers \\
 Control-task baseline \citep{hewitt2019-control-tasks}
   & 2019
-  & same probe on randomly-permuted labels
+  & same \glsterm{probe-2}{probe} on randomly-permuted labels
   & required ablation; inflates accuracy delta on poorly-initialized models \\
 Logistic regression for truth \citep{marks-tegmark-2023-truth}
   & 2023
@@ -292,29 +292,29 @@ Difference-in-means $+$ steering
   & within-model only; cross-family transfer untested \\
 Contrastive / CCS unsupervised
   & 2022
-  & linear probe, self-consistency loss, no labels
+  & \glsterm{linear-probe}{linear probe}, \glsterm{self-consistency-2}{self-consistency} loss, no labels
   & generalization failures under negation \citep[\S 1.1]{marks-tegmark-2023-truth} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 Table~\ref{tab:probe-families} traces the eight families that anchor the
-LLM probing literature, in the form lifted from
+\glsterm{llm}{LLM} probing literature, in the form lifted from
 \texttt{kb/notes/interpretability/probing.md} \S 4.1. The lineage tells
 a coherent story. The 2017--2019 wave (rows 1--4) establishes the
 methodology and the first methodology critique: the control-task
 baseline of \citet{hewitt2019-control-tasks} is the explicit recognition
-that probe accuracy alone is insufficient, since a sufficiently
-expressive probe can learn $y$ from features the model itself does not
+that \glsterm{probe-2}{probe} accuracy alone is insufficient, since a sufficiently
+expressive \glsterm{probe-2}{probe} can learn $y$ from features the model itself does not
 use. The 2022 review of \citet{belinkov2022-probing-survey}\footnote{KB
 excerpt: \texttt{kb/excerpts/belinkov2022-probing-survey.md\#abstract}.}
-consolidates the critique into three confounders — probe expressivity,
+consolidates the critique into three confounders — \glsterm{probe-2}{probe} expressivity,
 spurious correlation, vestigial information — and surveys the
 ``advances'' that pair probes with causal interventions
 \citep[\S abstract; advances]{belinkov2022-probing-survey}. Rows 5--8 are
 the 2022+ post-critique wave: closed-form probes that minimize moving
 parts (mass-mean), unsupervised probes that remove the curated-label
-confound (CCS), and the activation-steering family that turns a probe
+confound (CCS), and the activation-steering family that turns a \glsterm{probe-2}{probe}
 direction into a behavioral intervention. \S\ref{sec:correlation-causation}
 takes up the methodological turn that connects rows 1--4 and rows 5--8;
 \S\ref{sec:truth-directions} unpacks the row-5--6 case study at the level
@@ -323,7 +323,7 @@ of cross-dataset alignment.
 \subsection{The probing protocol in six steps}
 \label{sec:probe-protocol}
 
-Synthesizing across the four probe families, the practical recipe for
+Synthesizing across the four \glsterm{probe-2}{probe} families, the practical recipe for
 probing a property $y$ at layer $\ell$, position $t$ is the following
 six-step pipeline:
 \begin{enumerate}
@@ -340,7 +340,7 @@ six-step pipeline:
     one forward pass per example. Cost is $|\mathcal{D}|$ forward
     passes plus storage for $|\mathcal{D}| \cdot D$ floats per
     $(\ell, t)$ slice.
-  \item \textbf{Fit} a probe — Eq.~\eqref{eq:linear-probe} via logistic
+  \item \textbf{Fit} a \glsterm{probe-2}{probe} — Eq.~\eqref{eq:linear-probe} via logistic
     regression, Eq.~\eqref{eq:mass-mean} closed-form, or
     Eq.~\eqref{eq:structural-probe} via least-squares regression — on a
     train split. Multi-$(\ell, t)$ runs are common.
@@ -350,12 +350,12 @@ six-step pipeline:
   \item \textbf{Generalization tests} (optional but increasingly
     standard). Train on $\mathcal{D}_1$, evaluate on $\mathcal{D}_2$ at
     a structurally distinct distribution; failures here reveal that
-    the probe was reading a surface confounder rather than the abstract
+    the \glsterm{probe-2}{probe} was reading a surface confounder rather than the abstract
     property. \citet[\S 1, \S 4]{marks-tegmark-2023-truth} make
     cross-dataset transfer the cornerstone of their analysis.
   \item \textbf{Causal validation} (optional, but the \emph{closing}
-    step for any claim that the model \emph{uses} the probe direction).
-    Ablate $\mathbf{d}_y$ from the residual stream during a forward pass
+    step for any claim that the model \emph{uses} the \glsterm{probe-2}{probe} direction).
+    Ablate $\mathbf{d}_y$ from the \glsterm{residual-stream}{residual stream} during a forward pass
     and measure behavioral change; or add $\alpha \hat{\mathbf{d}}_y$
     to steer the model. The ablation operator and the steering rule
     are spelled out in \S\ref{sec:correlation-causation}.
@@ -374,25 +374,25 @@ and is the methodological centerpiece of the next section.
 Probes are read from \emph{training-time activations}: the property
 $y$ is whatever the model has acquired by the end of pre-training (or
 post-training, depending on which checkpoint the activations are cached
-from), and the probe-accuracy curve is a snapshot of the model's
+from), and the \glsterm{probe-2}{probe}-accuracy curve is a snapshot of the model's
 representational competence at that checkpoint. The training pipeline
 of Paper~2 is therefore the upstream substrate of every claim made in
-this section: probe-accuracy results read off a checkpoint at
+this section: \glsterm{probe-2}{probe}-accuracy results read off a checkpoint at
 post-pre-training time inherit whatever pre-training data, mixture, and
-optimizer choices produced that checkpoint, and a probe-accuracy
+optimizer choices produced that checkpoint, and a \glsterm{probe-2}{probe}-accuracy
 \emph{shift} between two checkpoints (e.g., pre-SFT vs.\ post-SFT) is
 itself a probing measurement of how a training stage moves the model's
 internal representation of $y$.
 
 The methodological gap that probing alone leaves open — that a
-high-accuracy probe is correlational, not causal — is the
+high-accuracy \glsterm{probe-2}{probe} is correlational, not causal — is the
 load-bearing critique that
 \S\ref{sec:correlation-causation} closes by pairing probes with
-activation interventions: direction ablation
+activation interventions: \glsterm{direction-ablation}{direction ablation}
 $\mathbf{h} \mapsto \mathbf{h} - (\mathbf{h}^\top \hat{\mathbf{d}}_y)\hat{\mathbf{d}}_y$
 tests whether the direction is causally used, and direction addition
 $\mathbf{h} \mapsto \mathbf{h} + \alpha \hat{\mathbf{d}}_y$ is the
-activation-steering family that turns a probe direction into an
+activation-steering family that turns a \glsterm{probe-2}{probe} direction into an
 inference-time control surface. \S\ref{sec:truth-directions} then
 returns to the geometry-of-truth case study at full depth: when probes
 across datasets agree at late layers but diverge at early layers, what

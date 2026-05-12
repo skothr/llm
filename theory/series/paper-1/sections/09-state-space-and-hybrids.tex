@@ -8,27 +8,27 @@
 \label{sec:state-space}
 
 The architectural axes of \S\ref{sec:positional-encoding}--\S\ref{sec:normalization-axis}
-all live inside the attention-and-FFN-with-residuals scaffold inherited
+all live inside the attention-and-\glsterm{ffn}{FFN}-with-residuals scaffold inherited
 from~\citet{vaswani2017}. A different lineage drops that scaffold for
-the residual stream while keeping it for the per-token mixing function:
-the \emph{state-space model} (SSM) replaces the attention block's
+the \glsterm{residual-stream}{residual stream} while keeping it for the per-token mixing function:
+the \emph{\glsterm{state-space-model}{state-space model}} (\glsterm{state-space-model}{SSM}) replaces the attention block's
 $\mathrm{softmax}(QK^\top)V$ with a \emph{recurrent state}
 $\boldsymbol{h}_t \in \mathbb{R}^d$ that summarizes the prefix in fixed
-size. The thesis of this section is that the SSM lineage --
-S4/S5 $\to$ Mamba $\to$ Mamba-2 -- has produced (i) an architecture with
+size. The thesis of this section is that the \glsterm{state-space-model}{SSM} lineage --
+\glsterm{s4}{S4}/S5 $\to$ \glsterm{selective-ssm}{Mamba} $\to$ \glsterm{selective-ssm}{Mamba}-2 -- has produced (i) an architecture with
 $O(N d^2)$ training cost and $O(d^2)$ per-token decode, (ii) a theorem
-(\citealp{mamba2}'s State Space Duality) that recasts a class of SSMs
+(\citealp{mamba2}'s \glsterm{state-space-duality}{State Space Duality}) that recasts a class of SSMs
 as structurally restricted attention, and (iii) a family of
-\emph{hybrid} models that interleave SSM and attention blocks. As of
-mid-2026, no pure-SSM model has been deployed at frontier scale; the
+\emph{hybrid} models that interleave \glsterm{state-space-model}{SSM} and attention blocks. As of
+mid-2026, no pure-\glsterm{state-space-model}{SSM} model has been deployed at frontier scale; the
 deployed long-context architectures are either attention-based or
-SSM-attention hybrids, and the gap between hybrid demos and frontier
+\glsterm{state-space-model}{SSM}-attention hybrids, and the gap between hybrid demos and frontier
 attention models has not been closed by third-party reproduction.
 
 \subsection{The state-space recurrence form}
 \label{sec:ssm-recurrence}
 
-A linear continuous-time SSM of dimension $d$ on scalar input
+A linear continuous-time \glsterm{state-space-model}{SSM} of dimension $d$ on scalar input
 $u(t) \in \mathbb{R}$ is the classical control-theory system
 \begin{equation}
   \frac{d \boldsymbol{h}(t)}{d t} \;=\; A\,\boldsymbol{h}(t) + B\,u(t),
@@ -59,34 +59,34 @@ Second, for fixed $\bar{A}, \bar{B}, C$ the output equals a 1-D
 convolution of $u$ with a kernel
 $\bar{K} = (C\bar{B},\, C\bar{A}\bar{B},\, C\bar{A}^2\bar{B}, \ldots)$,
 so $y_{1:N}$ can be computed in $O(N \log N)$ via FFT during training
-while still streamable as an RNN at decode time -- the
+while still streamable as an \glsterm{rnn}{RNN} at decode time -- the
 \emph{convolution-recurrence dual} that \citet{gu2023-mamba} inherit
-from S4.
+from \glsterm{s4}{S4}.
 
-The S4 line~\citep[no KB entry; \deepencite{gu2022-s4 (Gu, Goel, R\'e
+The \glsterm{s4}{S4} line~\citep[no KB entry; \deepencite{gu2022-s4 (Gu, Goel, R\'e
 2022): HiPPO-structured $A$ matrix, Eq.~(2)--(3) of S4 paper}]{}
-chooses $A$ to be a HiPPO operator that ``optimally compresses'' input
+chooses $A$ to be a \glsterm{hippo}{HiPPO} operator that ``optimally compresses'' input
 history under an orthogonal-polynomial basis; S5~\deepencite{smith2023-s5
 (no KB entry): diagonal-plus-low-rank $A$ replacing S4's HiPPO-NPLR
 parameterization, Eq.~(4)} simplifies the parameterization to a diagonal
 $A$ with multi-input-multi-output recurrence. Both share
 \eqref{eq:ssm-discrete}; both rely on the convolution-recurrence dual to
-get parallel training. In modern decoder-only notation, the SSM mixer
+get parallel training. In modern \glsterm{decoder-only}{decoder-only} notation, the \glsterm{state-space-model}{SSM} mixer
 takes a tensor of shape $\BSH$ and applies \eqref{eq:ssm-discrete}
-independently along each of the $\mathsf{D}$ feature channels with a
+independently along each of the $\mathsf{D}$ \glsterm{feature}{feature} channels with a
 shared (or per-channel) parameterization.
 
 \subsection{Selective SSMs: Mamba}
 \label{sec:ssm-mamba}
 
-\citet{gu2023-mamba}'s ``Mamba'' breaks the convolution-recurrence dual
-deliberately. The SSM \eqref{eq:ssm-discrete} is
+\citet{gu2023-mamba}'s ``\glsterm{selective-ssm}{Mamba}'' breaks the convolution-recurrence dual
+deliberately. The \glsterm{state-space-model}{SSM} \eqref{eq:ssm-discrete} is
 \emph{linear-time-invariant}: $\bar{A}, \bar{B}, C$ do not depend on
 $u_t$, so the same kernel $\bar{K}$ applies to every position. This
-means the SSM cannot \emph{select} which inputs to incorporate vs.\
+means the \glsterm{state-space-model}{SSM} cannot \emph{select} which inputs to incorporate vs.\
 ignore -- a problem on associative-recall, copying, and induction-head
 tasks where the model must conditionally route information based on
-content. Mamba's fix: make $\bar{A}, \bar{B}, C$ \emph{input-dependent}
+content. \glsterm{selective-ssm}{Mamba}'s fix: make $\bar{A}, \bar{B}, C$ \emph{input-dependent}
 via per-token linear projections $s_B(\cdot), s_C(\cdot),
 s_\Delta(\cdot)$ of the current input,
 \begin{equation}
@@ -110,47 +110,47 @@ where $\bar{A}_t, \bar{B}_t$ now vary with position. The
 \emph{selection mechanism} is $\Delta_t$: large $\Delta_t$ means the
 recurrence ``forgets'' more of $\boldsymbol{h}_{t-1}$ and absorbs more
 of $u_t$, while small $\Delta_t$ preserves state. Per-token control of
-$\Delta_t$ lets Mamba implement input-dependent gating analogous to the
-update gate of an LSTM, but with the recurrence's matrix form intact.
+$\Delta_t$ lets \glsterm{selective-ssm}{Mamba} implement input-dependent gating analogous to the
+update gate of an \glsterm{lstm}{LSTM}, but with the recurrence's matrix form intact.
 
 The cost is that \eqref{eq:mamba-selective} is no longer a convolution
 (the kernel changes per position), so the FFT-based parallel training
-recipe of S4/S5 fails. Mamba recovers training-time GPU parallelism via
-a hardware-aware \emph{parallel scan}~\citep[\S
+recipe of \glsterm{s4}{S4}/S5 fails. \glsterm{selective-ssm}{Mamba} recovers training-time GPU parallelism via
+a hardware-aware \emph{\glsterm{parallel-scan}{parallel scan}}~\citep[\S
 3.3]{gu2023-mamba}.\deepencite{gu2023-mamba \S 3.3 (KB excerpt missing;
 verify the selective-scan algorithm and the SRAM-tiled implementation
 described as ``hardware-aware'')} The scan uses an associative
 combination of the per-position transition tuples
 $(\bar{A}_t, \bar{B}_t u_t)$ to compute all
 $\boldsymbol{h}_{1:N}$ in $O(\log N)$ depth on GPU, and avoids
-materializing the full state by keeping the scan in SRAM. The Mamba
-block wraps the selective SSM in a gated-MLP envelope (a SiLU-gated
-linear unit, with a residual addition and an RMSNorm at the
+materializing the full state by keeping the scan in SRAM. The \glsterm{selective-ssm}{Mamba}
+block wraps the selective \glsterm{state-space-model}{SSM} in a gated-MLP envelope (a SiLU-gated
+linear unit, with a residual addition and an \glsterm{rmsnorm}{RMSNorm} at the
 input)~\citep[\S 3.4]{gu2023-mamba} so the unit is drop-in-replaceable
-for an attention~+~FFN sublayer pair.
+for an attention~+~\glsterm{ffn}{FFN} sublayer pair.
 
 \begin{intuition}
 The state $\boldsymbol{h}_t \in \mathbb{R}^d$ is a fixed-size
 \emph{compression buffer} for the prefix $u_{1:t}$. Each new $u_t$
 overwrites part of the buffer; $\Delta_t$ controls how much. Attention,
 by contrast, keeps every prior $u_{1:t}$ in addressable form via the
-KV cache and pays $O(N)$ memory for it. The SSM's buffer is $O(d^2)$
+\glsterm{kv-cache}{KV cache} and pays $O(N)$ memory for it. The \glsterm{state-space-model}{SSM}'s buffer is $O(d^2)$
 regardless of $N$ -- cheap, but lossy: any token whose information has
 been overwritten is unrecoverable. Returning to math: per-token decode
-cost is $O(d^2)$ for the SSM (one application of \eqref{eq:ssm-discrete})
-versus $O(N d_h)$ for attention (one query against the cache). The
-crossover where SSM is cheaper is at $N \sim d^2 / d_h$, which for
-$d \approx 16$ (Mamba's state width) and $d_h = 128$ is on the order of
-a few tokens -- the SSM is essentially always cheaper at decode.
+cost is $O(d^2)$ for the \glsterm{state-space-model}{SSM} (one application of \eqref{eq:ssm-discrete})
+versus $O(N d_h)$ for attention (one \glsterm{query}{query} against the cache). The
+crossover where \glsterm{state-space-model}{SSM} is cheaper is at $N \sim d^2 / d_h$, which for
+$d \approx 16$ (\glsterm{selective-ssm}{Mamba}'s state width) and $d_h = 128$ is on the order of
+a few tokens -- the \glsterm{state-space-model}{SSM} is essentially always cheaper at decode.
 \end{intuition}
 
 \subsection{State Space Duality: Mamba-2}
 \label{sec:ssm-mamba2}
 
-\citet{mamba2}'s contribution is the \emph{State Space Duality} (SSD):
+\citet{mamba2}'s contribution is the \emph{\glsterm{state-space-duality}{State Space Duality}} (\glsterm{state-space-duality}{SSD}):
 a theorem-and-framework showing that a class of selective SSMs and a
 restricted form of attention compute the same function. Concretely, the
-authors show that the input-output map of a Mamba-2 block can be
+authors show that the input-output map of a \glsterm{selective-ssm}{Mamba}-2 block can be
 written
 \begin{equation}
   \boldsymbol{y} \;=\; M\,\boldsymbol{u},
@@ -160,38 +160,38 @@ written
   \label{eq:ssd}
 \end{equation}
 where $\boldsymbol{u} = u_{1:N}$ is the stacked input and $M$ is a
-lower-triangular \emph{semi-separable} matrix with rank at most the SSM
+lower-triangular \emph{semi-separable} matrix with rank at most the \glsterm{state-space-model}{SSM}
 state width $d$.\deepencite{mamba2 \S 3 (KB excerpt missing; verify the
 SSD theorem statement, the semi-separable rank bound, and the duality
 between the recurrent form \eqref{eq:mamba-selective} and the matrix
 form \eqref{eq:ssd})} The semi-separable structure both (i) recovers
 $O(N d^2)$ flops via a structured matmul that reuses
-FlashAttention-style block tiling, and (ii) frames Mamba-2 as a vanilla
+\glsterm{flashattention}{FlashAttention}-style block \glsterm{tiling}{tiling}, and (ii) frames \glsterm{selective-ssm}{Mamba}-2 as a vanilla
 attention with a structurally restricted attention matrix. The reported
-2--8$\times$ wall-clock speedup over Mamba-1 comes from this
+2--8$\times$ wall-clock speedup over \glsterm{selective-ssm}{Mamba}-1 comes from this
 matmul-friendly form.\deepencite{mamba2 \S 6 (KB excerpt missing;
 benchmarks vs Mamba-1 and FlashAttention-2)}
 
 \begin{analogy}
-Mamba-2 is ``attention with a bandwidth budget.'' Vanilla causal
+\glsterm{selective-ssm}{Mamba}-2 is ``attention with a bandwidth budget.'' Vanilla causal
 attention computes a dense lower-triangular $N \times N$
 matrix $A_{ij} = \mathrm{softmax}(QK^\top)_{ij}$ with no rank
-constraint; FlashAttention-class kernels just compute it efficiently.
-Mamba-2 constrains the analogous matrix $M$ in \eqref{eq:ssd} to be
+constraint; \glsterm{flashattention}{FlashAttention}-class kernels just compute it efficiently.
+\glsterm{selective-ssm}{Mamba}-2 constrains the analogous matrix $M$ in \eqref{eq:ssd} to be
 rank-$\le d$ semi-separable -- the same recurrent state's information
 bottleneck rewritten in attention notation. The continuum is: vanilla
-attention (unconstrained) $\to$ sliding-window attention (banded) $\to$
-Mamba-2 (rank-restricted). Returning to math: the cost of attention is
+attention (unconstrained) $\to$ \glsterm{sliding-window-attention}{sliding-window attention} (banded) $\to$
+\glsterm{selective-ssm}{Mamba}-2 (rank-restricted). Returning to math: the cost of attention is
 $O(N^2 d_h)$ flops to fill the unconstrained $N \times N$ matrix; the
-cost of Mamba-2 is $O(N d \cdot d)$ flops to apply the rank-$d$
+cost of \glsterm{selective-ssm}{Mamba}-2 is $O(N d \cdot d)$ flops to apply the rank-$d$
 factorization \eqref{eq:ssd}. The bandwidth budget $d$ is exactly the
 ratio of the two.
 \end{analogy}
 
-The SSD theorem matters less for raw speed (FlashAttention-3 closes
+The \glsterm{state-space-duality}{SSD} theorem matters less for raw speed (\glsterm{flashattention}{FlashAttention}-3 closes
 much of that gap on H100/H200; cf.\
 \S\ref{sec:hardware-implementation-axis}) than for taxonomy: it tells
-us that the practical distinction between attention and SSM is not
+us that the practical distinction between attention and \glsterm{state-space-model}{SSM} is not
 ``recurrent vs.\ parallel'' but rather \emph{which structural restriction
 on the attention matrix the architecture imposes}. This is the
 theoretical lens under which hybrids stop being weird and start looking
@@ -200,71 +200,71 @@ like a deliberate mix of low- and high-rank attention layers.
 \subsection{Hybrid architectures}
 \label{sec:ssm-hybrids}
 
-The hybrid lineage drops the all-or-nothing question -- ``SSM or
+The hybrid lineage drops the all-or-nothing question -- ``\glsterm{state-space-model}{SSM} or
 attention?'' -- and treats the decoder stack as a place to interleave
 both. The layout question becomes: at what ratio, in what pattern, with
 what bridge between the two block types? Four representative designs
 illustrate the choices:
 
 \paragraph{Jamba (AI21, 2024).}
-\citet{lieber2024-jamba} interleave \emph{1 attention layer per 7 Mamba
+\citet{lieber2024-jamba} interleave \emph{1 attention layer per 7 \glsterm{selective-ssm}{Mamba}
 layers} on a 12B active / 52B total MoE backbone, with full causal
-attention on the attention layers (using GQA;
-\S\ref{sec:attention-mechanism-axis}) and Mamba-1 selective SSMs on the
-SSM layers.\deepencite{lieber2024-jamba \S 3 (KB excerpt missing; verify
+attention on the attention layers (using \glsterm{gqa}{GQA};
+\S\ref{sec:attention-mechanism-axis}) and \glsterm{selective-ssm}{Mamba}-1 selective SSMs on the
+\glsterm{state-space-model}{SSM} layers.\deepencite{lieber2024-jamba \S 3 (KB excerpt missing; verify
 the 1:7 ratio, the MoE configuration, and the placement of attention
 layers within the stack)} The 1:7 ratio is enough attention to cover
 recall-style needs (associative-recall, induction, copying) while
-keeping the cheaper SSM substrate dominant; AI21 report comparable
+keeping the cheaper \glsterm{state-space-model}{SSM} substrate dominant; AI21 report comparable
 quality to similar-active-parameter dense Transformers at lower KV-cache
 cost.
 
 \paragraph{Samba (Microsoft, 2024).}
-A finer interleaving: SSM and sliding-window attention alternate at a
+A finer interleaving: \glsterm{state-space-model}{SSM} and \glsterm{sliding-window-attention}{sliding-window attention} alternate at a
 near-1:1 ratio, with the attention restricted to a local window rather
-than full causal. The design assumes the SSM substrate handles
+than full causal. The design assumes the \glsterm{state-space-model}{SSM} substrate handles
 long-range mixing while the local-window attention handles
 short-range exact-recall.\deepencite{ren2024-samba (no KB entry; verify
 the alternation pattern, the window size, and the small-LM scale at
 which Samba is reported)}
 
 \paragraph{Zamba2 (Zyphra, 2024).}
-A different bridge: a Mamba-2 backbone with two \emph{shared}
+A different bridge: a \glsterm{selective-ssm}{Mamba}-2 backbone with two \emph{shared}
 attention blocks applied periodically across the stack. The shared-block
-design lets a single set of attention weights act at multiple depths,
+design lets a single set of \glsterm{attention-weights}{attention weights} act at multiple depths,
 amortizing the attention parameter cost; the authors report a
 $\sim 6\times$ KV-cache reduction relative to Zamba1.\deepencite{zamba2-2024
 (no KB entry; verify the shared-attention-block mechanism, the
 backbone-layer count, and the $6\times$ KV-cache claim)}
 
 \paragraph{Hymba (NVIDIA, 2024).}
-A \emph{parallel} rather than serial hybrid: each block has SSM heads
+A \emph{parallel} rather than serial hybrid: each block has \glsterm{state-space-model}{SSM} heads
 and attention heads operating on the same input in parallel, with the
-outputs concatenated before the FFN. The design avoids the serial
+outputs concatenated before the \glsterm{ffn}{FFN}. The design avoids the serial
 attention-bottleneck on long sequences (the attention layer in a Jamba
-stack must wait for all 7 prior SSM outputs at decode) at the cost of
+stack must wait for all 7 prior \glsterm{state-space-model}{SSM} outputs at decode) at the cost of
 running both mixers per block.\deepencite{hymba-2024 (no KB entry;
 verify the parallel-head architecture, the head-count split between
 SSM and attention, and the small-LM benchmark scale)}
 
-The interleaving ratio is the key knob. Jamba's 1:7 says attention is
+The interleaving ratio is the \glsterm{key}{key} knob. Jamba's 1:7 says attention is
 \emph{rare-but-essential}; Samba's $\sim$1:1 says local attention is
-worth pairing with every SSM layer; Zamba2's shared-attention says one
-set of attention weights amortizes across depth; Hymba's parallel design
+worth pairing with every \glsterm{state-space-model}{SSM} layer; Zamba2's shared-attention says one
+set of \glsterm{attention-weights}{attention weights} amortizes across depth; Hymba's parallel design
 says compute both mixers always and let the concat-and-project step
 choose. None of these are head-to-head compared at matched
-parameters/compute in published work, and all four are at sub-frontier
+\glsterm{parameters}{parameters}/compute in published work, and all four are at sub-frontier
 scale (12B active is the largest deployed example,
 \citet{lieber2024-jamba}).
 
 \begin{speculation}
 \textbf{Why the 1:7 hybrid ratio is roughly right.} An attention layer
 once every $\sim 8$ tokens of stack-depth gives the model enough
-exact-recall capacity to handle the rare positions where the SSM
-substrate cannot, while keeping the cheaper SSM dominant for the
+exact-recall capacity to handle the rare positions where the \glsterm{state-space-model}{SSM}
+substrate cannot, while keeping the cheaper \glsterm{state-space-model}{SSM} dominant for the
 routine residual-stream work. The optimal ratio likely depends on the
 task distribution: code probably benefits from more attention,
-narrative summarization benefits from more SSM. The published lineage
+narrative summarization benefits from more \glsterm{state-space-model}{SSM}. The published lineage
 has not run that ratio sweep at frontier scale, so this remains a
 plausible heuristic rather than a derived constant.
 \end{speculation}
@@ -272,13 +272,13 @@ plausible heuristic rather than a derived constant.
 \subsection{Why pure SSM has not won at frontier}
 \label{sec:ssm-frontier}
 
-Three obstacles keep pure SSM models from displacing attention at the
+Three obstacles keep pure \glsterm{state-space-model}{SSM} models from displacing attention at the
 frontier as of mid-2026, all traceable to the fixed-state information
 bottleneck of \eqref{eq:ssm-discrete}.
 
 \paragraph{In-context learning and exact recall.}
-A pure SSM compresses the entire prefix into $\boldsymbol{h}_t \in
-\mathbb{R}^d$ ($d \approx 16$ for Mamba; $d \approx 128$ for some
+A pure \glsterm{state-space-model}{SSM} compresses the entire prefix into $\boldsymbol{h}_t \in
+\mathbb{R}^d$ ($d \approx 16$ for \glsterm{selective-ssm}{Mamba}; $d \approx 128$ for some
 follow-ups). Tasks that require \emph{exact retrieval} of a specific
 prior token -- copying, hashing, multi-hop induction,
 needle-in-haystack -- expose this bottleneck: by the time the relevant
@@ -287,14 +287,14 @@ it.\deepencite{mamba2 \S 7, jamba2024 ablations (KB excerpts missing;
 both papers' ablations show pure-Mamba below Transformer baselines on
 associative-recall and needle-in-haystack at matched compute)} This is
 the empirical motivation for hybrids: an attention layer is the
-straightforward fix to the recall bottleneck, and one or two attention
+straightforward fix to the \glsterm{recall-bottleneck}{recall bottleneck}, and one or two attention
 layers per stack already close most of the gap.
 
 \paragraph{Retrieval-style task brittleness.}
 Beyond pure recall, tasks that depend on attending to specific tokens
 based on \emph{content} (retrieval-augmented QA, code-completion that
 references a specific function name, multi-document reasoning) degrade
-faster on pure SSM than on attention as context grows. The forum-signal
+faster on pure \glsterm{state-space-model}{SSM} than on attention as context grows. The forum-signal
 consensus is that this is the real ceiling, but it has not been
 quantitatively reported at frontier
 scale.\deepencite{tier-B benchmarks: HuggingFace open-LLM leaderboard
@@ -302,38 +302,38 @@ scale.\deepencite{tier-B benchmarks: HuggingFace open-LLM leaderboard
 no primary paper}
 
 \paragraph{Training-data efficiency.}
-A subtler claim made informally in the Mamba-2 follow-up
+A subtler claim made informally in the \glsterm{selective-ssm}{Mamba}-2 follow-up
 literature~\deepencite{mamba2 \S 7 (KB excerpt missing; verify whether
 the paper makes a quantitative training-token-efficiency claim or only
-an inference-FLOPs claim)}: pure SSMs at matched parameters require
+an inference-FLOPs claim)}: pure SSMs at matched \glsterm{parameters}{parameters} require
 \emph{more} pretraining tokens to reach the same loss as Transformers,
 because the recall-limited mixer makes some training signal harder to
-absorb. If true, this changes the cost calculus: the SSM's training
+absorb. If true, this changes the cost calculus: the \glsterm{state-space-model}{SSM}'s training
 flop savings are partly offset by needing more tokens.
 
 \begin{contradiction}
 \label{con:ssm-frontier-quality}
-Quality of SSM-attention hybrids at frontier scale (the 100B-active
-range, where DeepSeek-V3, Llama-4, and the Claude/GPT-class systems
+Quality of \glsterm{state-space-model}{SSM}-attention hybrids at frontier scale (the 100B-active
+range, where \glsterm{precision-pinning}{DeepSeek-V3}, Llama-4, and the \glsterm{claude}{Claude}/GPT-class systems
 operate) is an open question as of 2026-Q2. Vendor demos
 (\citealp{lieber2024-jamba} at 52B total / 12B active; Zamba2 at 7B;
 Hymba at 1.5B) are not third-party-reproduced at frontier scale, and no
 controlled head-to-head exists between (Jamba 1:7), (Samba $\sim$1:1),
 (Zamba2 shared-attention), and (Hymba parallel) at matched
-parameters/compute. \citet{mamba2}'s SSD theorem is \emph{evidence} that
+\glsterm{parameters}{parameters}/compute. \citet{mamba2}'s \glsterm{state-space-duality}{SSD} theorem is \emph{evidence} that
 a hybrid stack with a small attention budget should be Pareto-better
-than pure SSM, but the optimal interleaving pattern, ratio, and
+than pure \glsterm{state-space-model}{SSM}, but the optimal interleaving pattern, ratio, and
 attention-block count remain settled by neither theory nor the
 publicly-deployed model zoo.
 \end{contradiction}
 
 The frontier-2026 deployed long-context architectures
-(DeepSeek-V3~\citep{deepseek-v3}, Llama-4~\citep{meta-llama3},
-Qwen3~\citep{qwen3}, Mistral Large~\citep{jiang2023}) are all
-attention-based; none ship an SSM block. The forum signal is that
-hybrids will appear at scale eventually -- the SSD theorem and the
+(\glsterm{precision-pinning}{DeepSeek-V3}~\citep{deepseek-v3}, Llama-4~\citep{meta-llama3},
+Qwen3~\citep{qwen3}, \glsterm{mistral}{Mistral} Large~\citep{jiang2023}) are all
+attention-based; none ship an \glsterm{state-space-model}{SSM} block. The forum signal is that
+hybrids will appear at scale eventually -- the \glsterm{state-space-duality}{SSD} theorem and the
 demonstrated long-context FLOP advantage are real -- but the public
-leaderboard as of 2026-05 contains no SSM-hybrid model in the top
+leaderboard as of 2026-05 contains no \glsterm{state-space-model}{SSM}-hybrid model in the top
 quality tier.
 
 \subsection{What this section settles, and what comes next}
@@ -344,20 +344,20 @@ the attention scaffold of \S\ref{sec:positional-encoding}--\S\ref{sec:normalizat
 and it has produced a real architectural family with a real cost
 advantage on long sequences. Two facts are stable: (i) selective SSMs
 \eqref{eq:mamba-selective} are linear-time per-token mixers with
-$O(d^2)$ decode cost regardless of $N$; (ii) the SSD theorem
+$O(d^2)$ decode cost regardless of $N$; (ii) the \glsterm{state-space-duality}{SSD} theorem
 \eqref{eq:ssd} unifies a class of SSMs with rank-restricted attention.
 Two facts are open: (a) whether hybrid stacks scale to frontier quality,
 and (b) what the optimal interleaving pattern is. The
 conclusion is that as of mid-2026 the field has \emph{retained}
-attention as the high-rank exact-recall mechanism, and added SSM blocks
+attention as the high-rank exact-recall mechanism, and added \glsterm{state-space-model}{SSM} blocks
 where cheap context-mixing is the binding constraint -- but only in
 secondary models, not in the deployed frontier.
 
 The next section (\S\ref{sec:multi-token-output}) returns to the
 attention scaffold and asks a different question: at the
 \emph{output} side of the decoder, what changes when the model predicts
-multiple tokens at once? Multi-Token Prediction
+multiple tokens at once? \glsterm{multi-token-prediction}{Multi-Token Prediction}
 (\citealp{gloeckle2024-mtp}; productionized in
 \citealp{deepseek-v3}) is an architectural choice on the output head,
-orthogonal to the SSM-vs-attention question of this section, and to the
+orthogonal to the \glsterm{state-space-model}{SSM}-vs-attention question of this section, and to the
 KV-sharing axis of \S\ref{sec:attention-mechanism-axis}.

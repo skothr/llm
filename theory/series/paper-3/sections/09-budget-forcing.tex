@@ -12,11 +12,11 @@
 compute as a \emph{sampling} or \emph{search} budget --- $N$ parallel
 traces, $B$ branches, $N_\text{rollout}$ MCTS simulations. A third
 family holds $N = 1$ but lengthens the single trace, spending compute
-inside one autoregressive decode rather than across many. This is the
+inside one \glsterm{autoregressive}{autoregressive} decode rather than across many. This is the
 o1 / R1 / QwQ / Gemini-2.5-thinking
 paradigm.\footnote{KB note: \texttt{kb/notes/reasoning/test-time-compute.md\#2.3}.}
 \citet{s1-2025} establish the minimum recipe for it: $1{,}000$
-curated long-CoT exemplars for SFT, plus a \textbf{budget forcing} rule
+curated long-\glsterm{chain-of-thought}{CoT} exemplars for SFT, plus a \textbf{\glsterm{budget-forcing}{budget forcing}} rule
 that appends the literal token \texttt{Wait} to extend thinking and
 appends an end-of-thinking delimiter to truncate it
 \citep[\S 3.1]{s1-2025}.\footnote{KB excerpt:
@@ -25,7 +25,7 @@ appends an end-of-thinking delimiter to truncate it
 (\cref{sec:r1-family}) is doing the test-time scaling work, and in
 doing so locates a \textbf{reasoning-architecture} axis that is
 separate from the base-architecture axis of Paper~1: the same
-Transformer, but a training-and-inference protocol that designates
+\glsterm{transformer}{Transformer}, but a training-and-inference protocol that designates
 \texttt{<think>...</think>} as a structurally distinct phase from the
 answer phase. This section formalises the thinking-token budget $L$ as
 the operative compute knob, transcribes the s1 mechanism, draws the
@@ -37,7 +37,7 @@ trade-off.
 \label{sec:budget-knob}
 
 Let $x$ be a problem and $z = (z_1, \ldots, z_L)$ a thinking trace
-emitted before the answer phase. \emph{Sequential} test-time compute
+emitted before the answer phase. \emph{Sequential} \glsterm{test-time-compute}{test-time compute}
 holds $N = 1$ but treats $L$ as the explicit compute knob:
 \begin{equation}
   z \sim p_\theta\bigl(\cdot \mid x;\; \text{length budget } L\bigr),
@@ -47,7 +47,7 @@ holds $N = 1$ but treats $L$ as the explicit compute knob:
 \end{equation}
 The compute cost grows in $L$ along two terms: a per-token decode that
 is itself $O(L)$ in the prefix-attention pass, so total cost is
-$\Theta(L^2)$ in the trace-length-bound regime where the KV cache
+$\Theta(L^2)$ in the trace-length-bound regime where the \glsterm{kv-cache}{KV cache}
 dominates.\footnote{KB note:
 \texttt{kb/notes/reasoning/test-time-compute.md\#2.3}.} At inference
 time the trace is bracketed by special tokens
@@ -56,7 +56,7 @@ emits the answer; the brackets are part of the chat template and the
 \texttt{</think>} delimiter is the model's signal that thinking is
 complete.
 
-This is the third TTC family of \cref{sec:test-time-compute}: not
+This is the third \glsterm{test-time-compute}{TTC} family of \cref{sec:test-time-compute}: not
 $N$ samples (sampling, \cref{sec:self-consistency}), not branching
 (search, \cref{sec:tree-search}), but length. The two control surfaces
 exposed in production are:
@@ -67,7 +67,7 @@ exposed in production are:
         \texttt{thinking} block with token caps.\footnote{KB note:
         \texttt{kb/notes/reasoning/test-time-compute.md\#2.3} §1.}
         The user sets a target $L$; the serving stack honours it.
-  \item \textbf{Budget forcing.} A purely test-time edit to the
+  \item \textbf{\glsterm{budget-forcing}{Budget forcing}.} A purely test-time edit to the
         decoding loop, requiring no API surface and no retraining
         \citep[\S 3.1]{s1-2025}. We turn to it next.
 \end{enumerate}
@@ -75,8 +75,8 @@ exposed in production are:
 \subsection{The s1 budget-forcing rule}
 \label{sec:s1-rule}
 
-\citet[\S 3.1]{s1-2025} define budget forcing as two single-line
-edits to autoregressive decoding, parameterised by a minimum budget
+\citet[\S 3.1]{s1-2025} define \glsterm{budget-forcing}{budget forcing} as two single-line
+edits to \glsterm{autoregressive}{autoregressive} decoding, parameterised by a minimum budget
 $L_\text{min}$ and a maximum budget $L_\text{max}$. Let
 $\ell$ denote the current trace length and let $\langle/\text{think}\rangle$
 denote the end-of-thinking token. Then:
@@ -101,44 +101,44 @@ often fixing incorrect reasoning steps''
 
 The recipe is then three lines:
 \begin{enumerate}
-  \item Curate $1{,}000$ (problem, long-CoT trace, answer) examples
+  \item Curate $1{,}000$ (problem, long-\glsterm{chain-of-thought}{CoT} trace, answer) examples
         filtered by quality, difficulty, and diversity
         \citep[\S 2.2]{s1-2025}.\footnote{KB excerpt:
         \texttt{kb/excerpts/s1-2025.md\#sec-2-2-curation}.}
   \item SFT a Qwen2.5-32B-Instruct base on these $1{,}000$ traces
         ($\sim 7$ H100-GPU-hours).
-  \item Apply budget forcing at test time per
+  \item Apply \glsterm{budget-forcing}{budget forcing} at test time per
         \cref{eq:bf-min,eq:bf-max}.
 \end{enumerate}
-No reward model. No RL. No search tree. The budget-forcing rule itself
+No \glsterm{reward-model}{reward model}. No RL. No search tree. The budget-forcing rule itself
 is $\sim 10$ lines of decoder code.
 
 \begin{intuition}
-Budget forcing lives on Snell's test-time-compute axis
+\glsterm{budget-forcing}{Budget forcing} lives on Snell's test-time-compute axis
 (\cref{sec:test-time-compute}) but exercises it from the
 \emph{sequential} side: where Snell varies $N$ at fixed $L$, s1 varies
 $L$ at $N = 1$. Operationally, \texttt{Wait} tokens are the
 sequential analogue of resampling --- each \texttt{Wait} forces the
 model to revisit its own partial trace and emit a refinement, much as
-each new sample in self-consistency (\cref{sec:self-consistency})
+each new sample in \glsterm{self-consistency-2}{self-consistency} (\cref{sec:self-consistency})
 draws a fresh attempt at the problem. Returning to math: the compute
 expended per problem is $C \propto L$ for sequential and $C \propto N$
 for sampling, and the two axes can be swept independently. s1's
 ablation \citep[\S 5.1]{s1-2025}\footnote{KB excerpt:
 \texttt{kb/excerpts/s1-2025.md\#sec-5-1-ablation}.} shows the
 sequential axis is non-trivial in isolation: AIME~2024 lifts from
-$50.0\%$ (SFT only, no budget forcing) to $56.7\%$ (SFT plus budget
-forcing) on the same checkpoint. The lift is what budget forcing
-\emph{adds} on top of SFT --- the sequential TTC dial, exposed as a
+$50.0\%$ (SFT only, no \glsterm{budget-forcing}{budget forcing}) to $56.7\%$ (SFT plus budget
+forcing) on the same checkpoint. The lift is what \glsterm{budget-forcing}{budget forcing}
+\emph{adds} on top of SFT --- the sequential \glsterm{test-time-compute}{TTC} dial, exposed as a
 post-hoc decoder edit.
 \end{intuition}
 
 \subsection{Logarithmic-ish returns to $L$}
 \label{sec:log-returns}
 
-The s1 paper sweeps $L$ through budget forcing and reports
+The s1 paper sweeps $L$ through \glsterm{budget-forcing}{budget forcing} and reports
 extrapolation \emph{beyond} the SFT trace lengths
-\citep[abstract, \S 4.2]{s1-2025}: pushing the minimum-thinking budget
+\citep[abstract, \S 4.2]{s1-2025}: pushing the minimum-\glsterm{thinking-budget-2}{thinking budget}
 upward continues to lift accuracy past the lengths the model saw in
 training. The concrete numbers from
 Table~1 \citep[\S 4.2]{s1-2025}:\footnote{KB excerpt:
@@ -149,9 +149,9 @@ Table~1 \citep[\S 4.2]{s1-2025}:\footnote{KB excerpt:
 \small
 \begin{tabular}{lrrr}
 \toprule
-Model & AIME24 & MATH500 & GPQA Diamond \\
+Model & AIME24 & MATH500 & \glsterm{gpqa-diamond-2}{GPQA Diamond} \\
 \midrule
-s1-32B (with budget forcing) & $56.7\%$ & $93.0\%$ & $59.6\%$ \\
+s1-32B (with \glsterm{budget-forcing}{budget forcing}) & $56.7\%$ & $93.0\%$ & $59.6\%$ \\
 o1-preview                    & $44.6\%$ & $85.5\%$ & $73.3\%$ \\
 Qwen2.5-32B-Instruct (base)   & $26.7\%$ & $84.0\%$ & $49.0\%$ \\
 \bottomrule
@@ -170,7 +170,7 @@ broader scientific QA.}
 
 The shape of accuracy as a function of $L$ on the s1 curves is
 \emph{monotone-concave} in $\log L$ over the range tested
-\citep[\S 4.2]{s1-2025}; no closed-form scaling law is reported. This
+\citep[\S 4.2]{s1-2025}; no closed-form \glsterm{scaling-law}{scaling law} is reported. This
 is consistent with the broader Snell-style framing of
 \cref{sec:test-time-compute} that posits inference-time compute as a
 scaling axis comparable to training compute, but with the functional
@@ -179,13 +179,13 @@ form left empirical \citep[\S 1]{snell2024}. The headline ablation
 \emph{interaction} between SFT data scale and the budget-forcing
 rule: training on the full $59{,}000$-example pool reaches $53.3\%$
 AIME~2024 in $\sim 394$ H100-GPU-hours, while the curated $1{,}000$
-plus budget forcing reaches $56.7\%$ in
+plus \glsterm{budget-forcing}{budget forcing} reaches $56.7\%$ in
 $\sim 7$ H100-GPU-hours.\footnote{KB excerpt:
 \texttt{kb/excerpts/s1-2025.md\#sec-5-1-ablation}.} Curation does most
-of the SFT-side work; budget forcing extracts the rest at inference.
+of the SFT-side work; \glsterm{budget-forcing}{budget forcing} extracts the rest at inference.
 
 \begin{contradiction}
-The s1 thesis --- $1{,}000$ examples plus budget forcing
+The s1 thesis --- $1{,}000$ examples plus \glsterm{budget-forcing}{budget forcing}
 \emph{suffices} for o1-preview-level competition math --- is in
 explicit tension with the DeepSeek-R1 framing
 (\cref{sec:r1-family}) that \emph{RL on top of SFT} is required for
@@ -203,13 +203,13 @@ training-compute axis.
 \subsection{Inference-time discipline vs.\ training-time discipline}
 \label{sec:bf-vs-cold-start}
 
-Budget forcing and R1's cold-start SFT (\cref{sec:r1-family}) are
+\glsterm{budget-forcing}{Budget forcing} and R1's cold-start SFT (\cref{sec:r1-family}) are
 \emph{both} mechanisms that shape the same \texttt{<think>} channel,
 but at different stages of the pipeline. The distinction is
 load-bearing for cross-paper bookkeeping:
 
 \begin{itemize}
-  \item \textbf{Budget forcing is inference-time.}
+  \item \textbf{\glsterm{budget-forcing}{Budget forcing} is inference-time.}
         \cref{eq:bf-min,eq:bf-max} change the decoding loop, not the
         weights. The model is whatever the SFT step left behind; the
         rule is a post-hoc dial on $L$ at serve time. This is the same
@@ -217,16 +217,16 @@ load-bearing for cross-paper bookkeeping:
         \texttt{reasoning\_effort} --- a knob exposed to the user or
         the serving stack, not baked into $\theta$.
 
-  \item \textbf{Cold-start SFT is training-time.} R1's Stage~1
+  \item \textbf{\glsterm{cold-start-sft-2}{Cold-start SFT} is training-time.} R1's Stage~1
         \citep[\S 2.3]{deepseek-r1} fine-tunes the base model on
-        long-CoT exemplars before any RL, ensuring readable traces and
+        long-\glsterm{chain-of-thought}{CoT} exemplars before any RL, ensuring readable traces and
         a starting point that matches the chat template's
         \texttt{<think>}~$\ldots$~\texttt{</think>}
         format.\footnote{KB note:
         \texttt{kb/notes/reasoning/reasoning-training.md\#2} (Stage~1).}
         It changes $\theta$. Whatever distribution-shape the base
         model has after Stage~1 is what every later mechanism ---
-        Stage~2 GRPO, Stage~3 rejection-sampling SFT, and any
+        Stage~2 \glsterm{grpo-2}{GRPO}, Stage~3 \glsterm{rejection-sampling-sft}{rejection-sampling SFT}, and any
         inference-time budget rule --- operates on top of.
 \end{itemize}
 
@@ -234,7 +234,7 @@ The two compose. s1 exhibits the inference-time leg in isolation by
 running on a Qwen2.5-32B-Instruct base whose pretraining and
 instruction tuning supply the latent reasoning capability
 \citep[\S 5.1]{s1-2025}. R1 exhibits the training-time leg in
-isolation through R1-Zero, where GRPO from the base model produces the
+isolation through \glsterm{r1-zero}{R1-Zero}, where \glsterm{grpo-2}{GRPO} from the base model produces the
 trace-lengthening behaviour without any cold-start SFT
 \citep[\S 2.2.4]{deepseek-r1}. The frontier-2026 picture
 (\cref{sec:frontier-snapshot}) is models that ship \emph{both} ---
@@ -244,7 +244,7 @@ budget exposure as a productionised dial.
 \begin{intuition}
 The architecture taxonomy of Paper~1 (Paper~1 §reasoning-architectures)
 treats reasoning as an architectural element by asking what changes in
-the Transformer when it must emit and consume long traces:
+the \glsterm{transformer}{Transformer} when it must emit and consume long traces:
 long-context attention, KV-cache reuse, position-encoding behaviour at
 extrapolated lengths. The training taxonomy of Paper~2 (Paper~2
 §SFT and §post-training) treats it as a training-pipeline element:
@@ -264,13 +264,13 @@ of the architectural and training axes.
 \subsection{Reasoning-architecture as a third axis}
 \label{sec:reasoning-arch-axis}
 
-The cross-paper claim worth stating sharply: budget forcing is the
+The cross-paper claim worth stating sharply: \glsterm{budget-forcing}{budget forcing} is the
 \emph{simplest possible} demonstration that reasoning-architecture is a
 distinct degree of freedom from base architecture and from training
 recipe. The same Qwen2.5-32B-Instruct base that
 \cref{tab:s1-headline} reports at $26.7\%$ AIME~2024 zero-shot lifts
 to $50.0\%$ under SFT-on-1K-traces and to $56.7\%$ under SFT plus
-budget forcing \citep[\S 4.2, \S 5.1]{s1-2025}. The base architecture
+\glsterm{budget-forcing}{budget forcing} \citep[\S 4.2, \S 5.1]{s1-2025}. The base architecture
 did not change. The training-data scale changed by a factor of
 $\sim 30$ relative to the 59K-pool ablation but only marginally
 relative to instruction tuning. The reasoning-architecture --- the
@@ -289,8 +289,8 @@ This locates two cross-paper bookkeeping items:
         not an architectural primitive; it lives at the
         protocol layer.
   \item In the training taxonomy of Paper~2 (Paper~2 §SFT,
-        §post-training), reasoning shows up as the curated long-CoT
-        SFT stage and the RLVR stage that follows
+        §post-training), reasoning shows up as the curated long-\glsterm{chain-of-thought}{CoT}
+        SFT stage and the \glsterm{rlvr-3}{RLVR} stage that follows
         (\cref{sec:rlvr,sec:r1-family}). The \emph{format} of the
         traces (delimiters, line-by-line structure, inline
         verification) is part of what SFT installs; what RL does is
@@ -298,7 +298,7 @@ This locates two cross-paper bookkeeping items:
         format \citep[\S 2.2.2]{deepseek-r1}.
 \end{enumerate}
 The third axis --- the reasoning-architecture / serve-time-protocol
-layer --- is where budget forcing, \texttt{thinkingBudget} APIs,
+layer --- is where \glsterm{budget-forcing}{budget forcing}, \texttt{thinkingBudget} APIs,
 \texttt{reasoning\_effort} levels, and Anthropic's \texttt{thinking}
 blocks all live. None of them changes the model weights; all of them
 modify what $L$ the model is allowed (or required) to spend.
@@ -306,11 +306,11 @@ modify what $L$ the model is allowed (or required) to spend.
 \subsection{Forward link}
 \label{sec:bf-forward}
 
-Budget forcing exposes $L$ as a clean inference-time knob, but it
+\glsterm{budget-forcing}{Budget forcing} exposes $L$ as a clean inference-time knob, but it
 leaves the central operational question of the reasoning triangle
 unanswered: at fixed total compute, when does spending marginal FLOPs
 on \emph{more} thinking-token budget pay better than spending them on
-RLVR training, on parallel sampling (\cref{sec:self-consistency}), or
+\glsterm{rlvr-3}{RLVR} training, on parallel sampling (\cref{sec:self-consistency}), or
 on a verifier-guided search (\cref{sec:tree-search})? s1's headline
 suggests the trade-off is real --- 7 GPU-hours of SFT plus a longer
 $L$ at inference beats 394 GPU-hours of SFT at the same inference
@@ -319,9 +319,9 @@ through a many-dimensional surface. \Cref{sec:search-vs-rl} picks up
 the search-vs-RL fixed-compute trade-off directly, transcribing
 Snell's FLOPs-matched curves \citep[\S 6]{snell2024} for the
 inference-vs-pretraining axis and lining them up against
-DAPO's step-efficiency and R1's training-token costs for the
+\glsterm{dapo-2}{DAPO}'s step-efficiency and R1's training-token costs for the
 inference-vs-RL axis. The thinking-token budget $L$ that this section
 formalised becomes one of three FLOPs-bearing variables on that
 trade-off surface, alongside the parallel-sample count $N$ of
-\cref{sec:self-consistency} and the RLVR step count of
+\cref{sec:self-consistency} and the \glsterm{rlvr-3}{RLVR} step count of
 \cref{sec:rlvr}.

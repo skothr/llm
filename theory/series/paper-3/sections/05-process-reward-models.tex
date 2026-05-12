@@ -12,20 +12,20 @@ The third corner of the reasoning triangle is the \emph{verifier}: a
 learned signal that scores a candidate solution at granularity finer
 than the final answer, and uses that score to re-rank, re-weight, or
 guide further computation. Its canonical artefact is the
-\textbf{process reward model (PRM)} — a function that scores each step
-of a chain-of-thought trace
+\textbf{process \glsterm{reward-model}{reward model} (\glsterm{process-reward-model}{PRM})} — a function that scores each step
+of a \glsterm{chain-of-thought}{chain-of-thought} trace
 \citep[\S 2.2]{lightman2023-prm800k}.\footnote{KB excerpt:
 \texttt{kb/excerpts/lightman2023-prm800k.md\#sec-2-2}.} PRMs were
 introduced by \citet{lightman2023-prm800k} as the contrast to outcome
 reward models (ORMs), which score only the final answer; the headline
 finding of that paper — process supervision substantially outperforms
 outcome supervision on the MATH benchmark — supplies the empirical
-motivation for the entire 2024--2026 PRM lineage. This section
+motivation for the entire 2024--2026 \glsterm{process-reward-model}{PRM} lineage. This section
 formalises the per-step reward, walks the four canonical aggregation
-rules, transcribes the PRM800K experiment, traces the lineage through
-Math-Shepherd's automated labelling and ThinkPRM's generative-verifier
+rules, transcribes the \glsterm{prm800k}{PRM800K} experiment, traces the lineage through
+Math-Shepherd's automated labelling and \glsterm{generative-prm}{ThinkPRM}'s generative-verifier
 shift, and closes on the open question of whether external PRMs still
-add value once the policy itself has been RL-trained for verifiable
+add \glsterm{value}{value} once the policy itself has been RL-trained for verifiable
 reasoning.
 
 \subsection{What a process reward model commits to}
@@ -34,7 +34,7 @@ reasoning.
 Let $x$ denote a problem and $z = (s_1, s_2, \ldots, s_T)$ a reasoning
 trace decomposed into $T$ steps, with each $s_t$ a contiguous span of
 trace tokens (a sentence, an equation line, a paragraph). A
-\textbf{process reward model} is a function%
+\textbf{process \glsterm{reward-model}{reward model}} is a function%
 \footnote{KB note: \texttt{kb/notes/reasoning/process-supervision.md\#1.2}.}
 \begin{equation}
   R^P_\phi : \bigl(x,\; s_1, \ldots, s_t\bigr) \;\longmapsto\; r_t \in [0, 1],
@@ -47,17 +47,17 @@ The training objective is binary cross-entropy on the prefix
   \mathcal{L}_\text{PRM} \;=\; -\;\E_{(x,\, s_{1:t},\, c_t) \sim \mathcal{D}}\!\!\left[\, c_t \log R^P_\phi(x, s_{1:t}) + (1 - c_t)\log\!\bigl(1 - R^P_\phi(x, s_{1:t})\bigr)\right].
   \label{eq:prm-loss}
 \end{equation}
-The conditioning is the only structural change from the ORM loss
+The conditioning is the only structural change from the \glsterm{outcome-reward-model}{ORM} loss
 \citep[\S 2.1]{lightman2023-prm800k}:
 \begin{equation}
   \mathcal{L}_\text{ORM} \;=\; -\;\E_{(x,\, z,\, y,\, c) \sim \mathcal{D}}\!\!\left[\, c \log R^O_\phi(x, z, y) + (1 - c)\log\!\bigl(1 - R^O_\phi(x, z, y)\bigr)\right],
   \label{eq:orm-loss}
 \end{equation}
 where $c \in \{0,1\}$ is the outcome correctness label on the final
-answer $y$. A PRM emits one score per prefix; an ORM emits one score
+answer $y$. A \glsterm{process-reward-model}{PRM} emits one score per prefix; an \glsterm{outcome-reward-model}{ORM} emits one score
 per trace.
 
-To compare a PRM and an ORM at fixed $N$ in best-of-$N$ reranking, the
+To compare a \glsterm{process-reward-model}{PRM} and an \glsterm{outcome-reward-model}{ORM} at fixed $N$ in best-of-$N$ reranking, the
 $T$-vector $(r_1, \ldots, r_T)$ must be aggregated to a scalar.
 Three rules dominate the literature
 \citep[\S 3.1]{lightman2023-prm800k}:
@@ -69,13 +69,13 @@ Three rules dominate the literature
 The min reading treats one bad step as fatal; the product reading
 treats steps as conditionally-independent multiplicands; the last-step
 reading scores only the final state. \citet[\S 4.2]{lightman2023-prm800k}
-ablate all three on PRM800K-grade verifiers and find
+ablate all three on \glsterm{prm800k}{PRM800K}-grade verifiers and find
 \textbf{min-aggregation} the strongest;\footnote{KB excerpt:
 \texttt{kb/excerpts/lightman2023-prm800k.md\#sec-4-2}.} we return to
 this finding in \cref{sec:prm-prm800k}.
 
 \begin{intuition}
-A PRM is a per-step graded checkmark; an ORM is one final
+A \glsterm{process-reward-model}{PRM} is a per-step graded checkmark; an \glsterm{outcome-reward-model}{ORM} is one final
 thumbs-up-or-down at the end of the trace. Returning to math: the
 supervisory signal in \cref{eq:prm-loss} is concentrated at $T$
 distinct prefixes $s_{1:t}$ for $t = 1, \ldots, T$, while
@@ -89,16 +89,16 @@ entire $10^3$--$10^4$-token trace.
 \subsection{PRM800K: the canonical process-supervision experiment}
 \label{sec:prm-prm800k}
 
-\citet{lightman2023-prm800k} construct \textbf{PRM800K}, a dataset of
+\citet{lightman2023-prm800k} construct \textbf{\glsterm{prm800k}{PRM800K}}, a dataset of
 $\approx 800{,}000$ human step-correctness labels on GPT-4-generated
 solutions to MATH problems \citep[\S 3]{lightman2023-prm800k}.\footnote{KB
 excerpt: \texttt{kb/excerpts/lightman2023-prm800k.md\#sec-3}.} The
 construction protocol: a generator (a GPT-4 variant) emits several
 candidate solutions per problem; human annotators label each step as
 positive, negative, or neutral; the dataset is released openly. The
-resulting verifier is the foundational reference PRM against which all
-subsequent open-source efforts (Math-Shepherd, ThinkPRM, R-PRM,
-EDU-PRM) benchmark.
+resulting verifier is the foundational reference \glsterm{process-reward-model}{PRM} against which all
+subsequent open-source efforts (Math-Shepherd, \glsterm{generative-prm}{ThinkPRM}, R-\glsterm{process-reward-model}{PRM},
+EDU-\glsterm{process-reward-model}{PRM}) benchmark.
 
 The headline experiment fixes $N$ across two reranking strategies and
 measures best-of-$N$ accuracy on MATH test
@@ -108,10 +108,10 @@ measures best-of-$N$ accuracy on MATH test
   \hat y_\text{ORM} \;&=\; y^{(n^\star)}, \quad n^\star \in \argmax_n R^O_\phi\!\bigl(x, z^{(n)}, y^{(n)}\bigr), \label{eq:bon-orm} \\
   \hat y_\text{PRM} \;&=\; y^{(n^\star)}, \quad n^\star \in \argmax_n R^P_{\min}\!\bigl(z^{(n)}\bigr). \label{eq:bon-prm}
 \end{align}
-Across the full sweep $N \in [1, 1024]$ the PRM dominates the ORM at
+Across the full sweep $N \in [1, 1024]$ the \glsterm{process-reward-model}{PRM} dominates the \glsterm{outcome-reward-model}{ORM} at
 matched $N$, with the gap widest at moderate $N$
 \citep[Fig. 4]{lightman2023-prm800k}. Both reranking strategies in
-turn dominate plain self-consistency
+turn dominate plain \glsterm{self-consistency-2}{self-consistency}
 (\cref{eq:self-consistency}) at the same sample budget. The
 process-supervised verifier solves \textbf{78\%} of problems on a
 representative MATH test subset
@@ -126,17 +126,17 @@ under a step-independence assumption, allows many high-scored steps
 to mask one low-scored step in the geometric mean. The last-step rule
 discards intermediate signal entirely. Empirically
 \citep[\S 4.2]{lightman2023-prm800k} the min wins by a margin large
-enough that it is the default aggregator in every downstream PRM
+enough that it is the default aggregator in every downstream \glsterm{process-reward-model}{PRM}
 paper. \citet[\S 4.3]{lightman2023-prm800k} additionally show that
-PRM-weighted self-consistency — majority vote with each ballot
-weighted by the trace's min-PRM score — improves over plain
-majority vote, recovering some of the PRM gain at lower verifier-cost
+\glsterm{process-reward-model}{PRM}-weighted \glsterm{self-consistency-2}{self-consistency} — majority vote with each ballot
+weighted by the trace's min-\glsterm{process-reward-model}{PRM} score — improves over plain
+majority vote, recovering some of the \glsterm{process-reward-model}{PRM} gain at lower verifier-cost
 overhead.
 
 \begin{intuition}
 Why min wins: if a single algebraic slip turns ``$3x = 12$'' into
 ``$x = 5$'', every subsequent step inherits the error. The trace's
-truth-value is bounded above by its weakest step. Mean and product
+truth-\glsterm{value}{value} is bounded above by its weakest step. Mean and product
 let many strong steps mask one critical error; the min surfaces it.
 The empirical advantage of \cref{eq:prm-min} is consistent with
 this picture, and the structural form of the gain is a
@@ -147,7 +147,7 @@ for every $t$, with equality at the worst step.
 \subsection{Math-Shepherd: removing the human-annotation bottleneck}
 \label{sec:prm-mathshepherd}
 
-The PRM800K protocol is human-expensive --- $\approx 800$K step-labels
+The \glsterm{prm800k}{PRM800K} protocol is human-expensive --- $\approx 800$K step-labels
 at expert-level math annotation cost. \citet{wang2024-mathshepherd}
 remove the bottleneck by generating per-step labels automatically from
 \emph{Monte Carlo rollout completion rate}.\deepencite{wang2024-mathshepherd
@@ -173,21 +173,21 @@ process supervision on the prefixes.
 
 The implication is structural: any reasoning policy plus a verifiable
 outcome checker (an arithmetic verifier, a Python interpreter, a
-regex on the boxed final answer) can manufacture its own PRM training
+regex on the boxed final answer) can manufacture its own \glsterm{process-reward-model}{PRM} training
 data. The human-annotation cost collapses from $O(\text{PRM800K})$
 to the compute cost of $K \times T$ rollout extensions per training
 example. Math-Shepherd-style automatic labelling is the substrate
-that subsequent generative-PRM efforts (\cref{sec:prm-thinkprm}) and
+that subsequent generative-\glsterm{process-reward-model}{PRM} efforts (\cref{sec:prm-thinkprm}) and
 reasoning-trained PRMs (\cref{sec:prm-r-edu}) build on.
 
 \begin{analogy}
-Math-Shepherd is the PRM equivalent of Q-learning's bootstrapped
-value estimate: the value of a state is approximated by the
+Math-Shepherd is the \glsterm{process-reward-model}{PRM} equivalent of Q-learning's bootstrapped
+\glsterm{value}{value} estimate: the \glsterm{value}{value} of a state is approximated by the
 empirical return-from-state under the current policy, rather than by
 human labelling of the state. Returning to math: \cref{eq:mathshepherd-label}
 is a Monte Carlo estimator of the true success probability
 $\Pr_{z \sim p_\theta(\cdot \mid x, s_{1:t})}[y^\star(x)]$, and the
-PRM trained on \cref{eq:prm-loss} with $\tilde c_t$ in place of $c_t$
+\glsterm{process-reward-model}{PRM} trained on \cref{eq:prm-loss} with $\tilde c_t$ in place of $c_t$
 is a learned approximator to that conditional success probability.
 The bias-variance characteristics are the standard ones of $K$-sample
 Monte Carlo.
@@ -197,11 +197,11 @@ Monte Carlo.
 \label{sec:prm-thinkprm}
 
 The 2025 standout shift: instead of a classifier head that emits one
-scalar per prefix, the verifier is itself a small reasoning LLM that
-reads the prefix, emits its own short verification chain-of-thought,
+scalar per prefix, the verifier is itself a small reasoning \glsterm{llm}{LLM} that
+reads the prefix, emits its own short verification \glsterm{chain-of-thought}{chain-of-thought},
 and outputs a verdict token \citep[\S 3]{thinkprm2025}.\footnote{KB
 excerpt: \texttt{kb/excerpts/thinkprm2025.md\#sec-3}.} Formally,
-ThinkPRM replaces the discriminative $R^P_\phi$ of \cref{eq:prm-signature}
+\glsterm{generative-prm}{ThinkPRM} replaces the discriminative $R^P_\phi$ of \cref{eq:prm-signature}
 with a generative verifier
 \begin{equation}
   R^{P,\text{gen}}_\phi(x, s_{1:t}) \;=\; p_\phi\!\bigl(\langle\text{verdict}\rangle = \mathsf{correct} \;\big|\; x,\; s_{1:t},\; v\bigr), \quad v \sim p_\phi\!\bigl(\cdot \mid x, s_{1:t}\bigr),
@@ -210,29 +210,29 @@ with a generative verifier
 where $v$ is the verifier's own reasoning trace over the candidate
 prefix.
 
-The headline result: a long-CoT verifier fine-tuned on
-\textbf{1\%} of PRM800K (roughly 8K step-labels rather than 800K)
+The headline result: a long-\glsterm{chain-of-thought}{CoT} verifier fine-tuned on
+\textbf{1\%} of \glsterm{prm800k}{PRM800K} (roughly 8K step-labels rather than 800K)
 plus self-generated synthetic verification traces beats discriminative
-verifiers trained on the full PRM800K
+verifiers trained on the full \glsterm{prm800k}{PRM800K}
 \citep[abstract]{thinkprm2025}.\footnote{KB excerpt:
 \texttt{kb/excerpts/thinkprm2025.md\#abstract}.} On out-of-domain
-evaluation, ThinkPRM exceeds the full-PRM800K discriminative baseline
+evaluation, \glsterm{generative-prm}{ThinkPRM} exceeds the full-\glsterm{prm800k}{PRM800K} discriminative baseline
 by \textbf{8\%} on a GPQA-Diamond subset and \textbf{4.5\%} on
-LiveCodeBench, and beats LLM-as-a-Judge by \textbf{7.2\%} on
-ProcessBench at matched verification-token budget
+LiveCodeBench, and beats \glsterm{llm}{LLM}-as-a-Judge by \textbf{7.2\%} on
+\glsterm{processbench}{ProcessBench} at matched verification-token budget
 \citep[abstract]{thinkprm2025}.\footnote{KB excerpt:
 \texttt{kb/excerpts/thinkprm2025.md\#headline}.} The data-efficiency
 ratio is two orders of magnitude on labels, traded for verification
 compute.
 
-The cost asymmetry is real: best-of-$N$ with a discriminative PRM
-costs $O(N)$ classifier passes; with a generative PRM,
+The cost asymmetry is real: best-of-$N$ with a \glsterm{discriminative-prm}{discriminative PRM}
+costs $O(N)$ classifier passes; with a generative \glsterm{process-reward-model}{PRM},
 $O(N \times L_\text{verify})$ tokens, where $L_\text{verify}$ is the
 verification trace length. The asymmetry is the same one that
-distinguishes a chain-of-thought policy from a direct-answer policy
+distinguishes a \glsterm{chain-of-thought}{chain-of-thought} policy from a direct-answer policy
 (\cref{sec:cot-phenomenon}), applied now to the verifier role: spend
 inference compute inside the verifier to extract more signal per
-labelled example. The mechanism: a verifier's CoT can apply
+labelled example. The mechanism: a verifier's \glsterm{chain-of-thought}{CoT} can apply
 algebraic-verification, type-checking, and dimensional-analysis
 checks that a feed-forward classifier cannot internalise from
 labelled examples alone \citep[\S 5]{thinkprm2025}.\footnote{KB
@@ -241,45 +241,45 @@ excerpt: \texttt{kb/excerpts/thinkprm2025.md\#sec-5}.}
 \subsection{R-PRM and EDU-PRM: the 2025 PRM lineage}
 \label{sec:prm-r-edu}
 
-The 2025 PRM literature splits along two axes orthogonal to the
+The 2025 \glsterm{process-reward-model}{PRM} literature splits along two axes orthogonal to the
 discriminative-vs-generative split:
 
-\paragraph{Reasoning-aware PRMs.} \citet{she2025-r-prm} train a PRM
+\paragraph{Reasoning-aware PRMs.} \citet{she2025-r-prm} train a \glsterm{process-reward-model}{PRM}
 that emits a short reasoning step before scoring; the architecture is
 discriminative (a verdict head) but the input now includes a brief
 verifier-reasoning prefix. This generalises better across distribution
 shifts than vanilla discriminative PRMs.\deepencite{she2025-r-prm \S3
 (excerpt skeleton-only as of 2026-05)} The contrast with
-\cref{eq:thinkprm-gen} is one of degree: ThinkPRM's verifier emits a
-full long-CoT trace and a verdict token; R-PRM emits a short
+\cref{eq:thinkprm-gen} is one of degree: \glsterm{generative-prm}{ThinkPRM}'s verifier emits a
+full long-\glsterm{chain-of-thought}{CoT} trace and a verdict token; R-\glsterm{process-reward-model}{PRM} emits a short
 reasoning preamble and a discriminative score. The two converge as
 the preamble length grows.
 
 \paragraph{Entropy-driven step boundaries.} \citet{cao2025-edu-prm}
 challenge the common assumption that steps are fixed by the policy's
-linebreaks or paragraph markers. EDU-PRM defines step boundaries by a
+linebreaks or paragraph markers. EDU-\glsterm{process-reward-model}{PRM} defines step boundaries by a
 local entropy spike in the policy's per-token distribution: a step
 ends where the model is most uncertain about the next token, on the
 intuition that high-entropy positions correlate with reasoning
 branch-points. Trained on \textbf{1.5\%} of the data of Math-Shepherd,
-EDU-PRM matches or beats Math-Shepherd on
-ProcessBench.\deepencite{cao2025-edu-prm \S3 (excerpt skeleton-only as
+EDU-\glsterm{process-reward-model}{PRM} matches or beats Math-Shepherd on
+\glsterm{processbench}{ProcessBench}.\deepencite{cao2025-edu-prm \S3 (excerpt skeleton-only as
 of 2026-05)} The framing recasts step labelling from a syntactic
 problem (where do paragraphs end?) to an information-theoretic one
 (where does the model branch?).
 
-The two strands jointly suggest that the 2023 PRM800K formulation —
+The two strands jointly suggest that the 2023 \glsterm{prm800k}{PRM800K} formulation —
 human-labelled, syntactically-bounded, classifier-head — was a
 specific, easily-relaxable instantiation of a more general per-step
-verification programme. Each relaxation (Math-Shepherd, ThinkPRM,
-R-PRM, EDU-PRM) trades human labels or syntactic priors for some
+verification programme. Each relaxation (Math-Shepherd, \glsterm{generative-prm}{ThinkPRM},
+R-\glsterm{process-reward-model}{PRM}, EDU-\glsterm{process-reward-model}{PRM}) trades human labels or syntactic priors for some
 combination of automated rollouts, verifier compute, and
 information-theoretic boundaries.
 
 \subsection{The 2025 PRM survey landscape}
 \label{sec:prm-survey}
 
-\citet{zheng2025-prm-survey} catalogue the 2023--2025 PRM landscape
+\citet{zheng2025-prm-survey} catalogue the 2023--2025 \glsterm{process-reward-model}{PRM} landscape
 along the discriminative-vs-generative axis and the
 test-time-vs-training-time axis.\deepencite{zheng2025-prm-survey
 overview (excerpt skeleton-only as of 2026-05)} The survey's
@@ -289,12 +289,12 @@ treatment%
 runs in two parts. First, generative PRMs win on competition-math
 benchmarks where each step has a verifiable certificate
 (algebraic verification, equation manipulation, type-checking) the
-verifier's CoT can apply; discriminative PRMs remain competitive on
+verifier's \glsterm{chain-of-thought}{CoT} can apply; discriminative PRMs remain competitive on
 broader domains where step-level checks are not formal. Second, and
 more consequentially, the survey reports that most PRMs improve
 test-time-compute performance \emph{until the base model becomes a
-strong reasoning model itself} — at which point the marginal gain
-from an external PRM at test time decreases. This is the opening of
+strong \glsterm{reasoning-model}{reasoning model} itself} — at which point the marginal gain
+from an external \glsterm{process-reward-model}{PRM} at test time decreases. This is the opening of
 the contradiction discussed in \cref{sec:prm-post-r1}.
 
 \subsection{PRM utility post-R1: the open contradiction}
@@ -302,57 +302,57 @@ the contradiction discussed in \cref{sec:prm-post-r1}.
 
 \citet{deepseek-r1} achieved the headline AIME 2024 jump from
 $15.6\%$ to $77.9\%$ pass\@1 with \emph{terminal verifier rewards
-only} — no PRM in the RL loop \citep[\S 2.2]{deepseek-r1}.\footnote{KB
+only} — no \glsterm{process-reward-model}{PRM} in the RL loop \citep[\S 2.2]{deepseek-r1}.\footnote{KB
 excerpt: \texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}.} The
 R1 reward is rule-based: an answer-match check on math problems and a
 compiler / unit-test check on code, returning a single binary outcome
 reward per trajectory. PRMs do not appear in the headline RL loop of
-the strongest open-weight reasoning model.
+the strongest open-weight \glsterm{reasoning-model}{reasoning model}.
 
 The implication, surfaced jointly by \citet{thinkprm2025} and
 \citet{zheng2025-prm-survey}: as the policy itself internalises
-verification through long-CoT RL, the marginal value of an external
-PRM at test time shrinks. The 2026 picture is mixed; the contradiction
+verification through long-\glsterm{chain-of-thought}{CoT} RL, the marginal \glsterm{value}{value} of an external
+\glsterm{process-reward-model}{PRM} at test time shrinks. The 2026 picture is mixed; the contradiction
 deserves explicit treatment.
 
 \begin{contradiction}
-\textbf{PRM utility post-R1 — diminishing or persistent?}
-The PRM800K-era headline ``PRM > ORM at matched $N$'' was established
+\textbf{\glsterm{process-reward-model}{PRM} utility post-R1 — diminishing or persistent?}
+The \glsterm{prm800k}{PRM800K}-era headline ``\glsterm{process-reward-model}{PRM} > \glsterm{outcome-reward-model}{ORM} at matched $N$'' was established
 on a non-reasoning-trained generator (a GPT-4 variant)
 \citep[\S 4]{lightman2023-prm800k}. As the policy class moves to
-RLVR-trained reasoning models, the picture shifts. Some 2026
-measurements show PRM-best-of-$N$ over R1-distill outputs still
+\glsterm{rlvr-3}{RLVR}-trained reasoning models, the picture shifts. Some 2026
+measurements show \glsterm{process-reward-model}{PRM}-best-of-$N$ over R1-distill outputs still
 delivers gains; others find diminishing returns as the policy's own
-internal verification approaches the PRM's signal
-\citep[\S 5]{thinkprm2025}. The 2025 PRM survey
+internal verification approaches the \glsterm{process-reward-model}{PRM}'s signal
+\citep[\S 5]{thinkprm2025}. The 2025 \glsterm{process-reward-model}{PRM} survey
 \citep{zheng2025-prm-survey} reports that most PRMs improve
 test-time-compute performance until the base model becomes a strong
-reasoning model itself. Whether external PRMs survive the
+\glsterm{reasoning-model}{reasoning model} itself. Whether external PRMs survive the
 reasoning-trained-model era as a training signal --- as opposed to
 inference-time rerankers --- is unresolved as of 2026-Q2; \cref{sec:prm-survival}
 revisits the question with the post-R1 evidence.
 \end{contradiction}
 
-A second, related tension: \emph{process hacking}. PRM-shaped RLVR
+A second, related tension: \emph{process hacking}. \glsterm{process-reward-model}{PRM}-shaped \glsterm{rlvr-3}{RLVR}
 \citep[\S 2.4]{lightman2023-prm800k}\footnote{KB note:
 \texttt{kb/notes/reasoning/process-supervision.md\#4.2}.} replaces or
-augments the binary outcome reward of RLVR (\cref{sec:rlvr}) with a
-per-step PRM score. The middle-ground appeal is theoretical: dense
+augments the binary outcome reward of \glsterm{rlvr-3}{RLVR} (\cref{sec:rlvr}) with a
+per-step \glsterm{process-reward-model}{PRM} score. The middle-ground appeal is theoretical: dense
 signal beats sparse signal for credit assignment. The empirical risk:
-a misaligned PRM rewards steps that \emph{look} correct without
+a misaligned \glsterm{process-reward-model}{PRM} rewards steps that \emph{look} correct without
 producing the right answer, the step-level analogue of outcome-hacking
-under a learned reward. Whether PRM-shaped GRPO actually outperforms
-verifier-only GRPO at matched compute is benchmark-specific and
+under a learned reward. Whether \glsterm{process-reward-model}{PRM}-shaped \glsterm{grpo-2}{GRPO} actually outperforms
+verifier-only \glsterm{grpo-2}{GRPO} at matched compute is benchmark-specific and
 unsettled in 2026.
 
 \subsection{Forward link}
 \label{sec:prm-forward}
 
-The PRM scores per-step value $r_t \in [0, 1]$ on a partial prefix
+The \glsterm{process-reward-model}{PRM} scores per-step \glsterm{value}{value} $r_t \in [0, 1]$ on a partial prefix
 $s_{1:t}$. With this signal in hand, the inference decoder can do
 more than rerank --- it can \emph{steer expansion} during generation.
 \Cref{sec:tree-search} introduces the tree-search families (best-first,
-beam, MCTS) that use a PRM as the value function $V_\phi(s_{1:t}) =
+beam, MCTS) that use a \glsterm{process-reward-model}{PRM} as the \glsterm{value}{value} function $V_\phi(s_{1:t}) =
 R^P_\phi(x, s_{1:t})$ in the canonical AlphaZero-style recurrence,
 formalises the rStar-Math UCT rule, and presents the cost analysis
 of $O(N_\text{rollout} \cdot D \cdot L_\text{step})$ per simulation.
@@ -360,7 +360,7 @@ The aggregation rules of
 \cref{eq:prm-min,eq:prm-prod,eq:prm-last} carry over: tree-search
 nodes are scored by $R^P_{\min}$ over their root-to-node prefix, so
 the weakest-link inequality of \cref{sec:prm-prm800k} continues to
-shape which branches survive expansion. The PRM is then re-encountered
+shape which branches survive expansion. The \glsterm{process-reward-model}{PRM} is then re-encountered
 in \cref{sec:prm-survival} as the centerpiece of the post-R1 survival
 question --- whether external verifiers still earn their training and
 inference cost once the policy itself reasons.

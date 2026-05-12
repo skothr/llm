@@ -6,13 +6,13 @@
 \section{Contamination: the boundary between well-known and leaked}
 \label{sec:contamination}
 
-The MMLU lineage of \cref{sec:knowledge-benchmarks} closes on the
+The \glsterm{mmlu}{MMLU} lineage of \cref{sec:knowledge-benchmarks} closes on the
 question this section opens. A frontier model that scores within the
 verifier-error band of a saturated knowledge benchmark either
 \emph{knows} the material in the deployment-relevant sense or has
 \emph{seen} the material during pre-training in a way that lets it
-reproduce the answer key. The boundary between those two states is
-fuzzy by construction --- the same exam-bank items that make MMLU a
+reproduce the answer \glsterm{key}{key}. The boundary between those two states is
+fuzzy by construction --- the same exam-bank items that make \glsterm{mmlu}{MMLU} a
 broad-coverage benchmark are exactly the items that pre-training
 scrapes from public web text --- and the field has not converged on a
 protocol that draws the boundary cleanly. The thesis of this section
@@ -35,7 +35,7 @@ chains and narrower answer distributions.
 \citep[\S{}abstract]{contamination-survey-2025}:
 
 \begin{quote}\itshape
-To mitigate the risk of potential data contamination, LLM benchmarking
+To mitigate the risk of potential \glsterm{data-contamination}{data contamination}, \glsterm{llm}{LLM} benchmarking
 has undergone a transformation from static to dynamic benchmarking.
 \ldots\ We first examine methods that enhance static benchmarks and
 identify their inherent limitations. We then highlight a critical
@@ -55,8 +55,8 @@ question $\rho$ and (often) the gold answer $a^\star$ are tokens in the
 training sequence; the model's score on that item is partially a
 recall of the training distribution rather than a measurement of the
 construct the benchmark advertises. This is the failure mode that
-$n$-gram-overlap decontamination filters target. \citet{hendrycks2021-mmlu}'s
-MMLU was constructed from publicly-available exam banks (AP exams,
+$n$-gram-overlap \glsterm{decontamination}{decontamination} filters target. \citet{hendrycks2021-mmlu}'s
+\glsterm{mmlu}{MMLU} was constructed from publicly-available exam banks (AP exams,
 GRE, MCAT, professional licensing exams), which is exactly the
 distribution that web crawls preserve at high redundancy.
 
@@ -84,7 +84,7 @@ context. This is structurally different from the first two: no
 amount of training-corpus auditing closes it, because the channel is
 the eval harness itself. \textsc{rag}-augmented model cards that
 report \textsc{mmlu} scores under tool-use, agentic-benchmark
-scaffolds that browse the live web, and \textsc{llm}-as-judge
+scaffolds that browse the live web, and \textsc{\glsterm{situational-awareness}{llm}}-as-judge
 pipelines whose judge has been fine-tuned on the same task are all
 instances. The contamination-survey abstract does not name this mode
 explicitly, but the dynamic-benchmark gap it calls out --- ``the lack
@@ -95,7 +95,7 @@ methodological-contamination problem dressed in a positive frame.
 \begin{intuition}
 The three modes correspond to three distinct repair points in the
 layered-defense framing of \cref{sec:introduction}. \emph{Direct}
-contamination is repaired upstream of training, by decontamination
+contamination is repaired upstream of training, by \glsterm{decontamination}{decontamination}
 filters on the corpus. \emph{Indirect} contamination is repaired at
 benchmark construction, by contamination-resistant items (Google-proof
 \cref{sec:knowledge-gpqa}; unpublished \cref{sec:knowledge-frontiermath}).
@@ -140,14 +140,14 @@ the embedding model under-represents will be missed.
 \paragraph{Prompted recall (Min-K\% Prob, perplexity gap).} For a
 candidate item, compute a model-internal memorization signal:
 $\sum_{i \in K\%\text{-lowest}} \log P(x_i)$ \deepencite{shi2024-min-k};
-or the ratio of the model's perplexity on the held-out test split
-to its perplexity on training-distribution-matched text. Memorized
-items have characteristic flat-low-perplexity signatures.
+or the ratio of the model's \glsterm{perplexity}{perplexity} on the held-out test split
+to its \glsterm{perplexity}{perplexity} on training-distribution-matched text. Memorized
+items have characteristic flat-low-\glsterm{perplexity}{perplexity} signatures.
 \textbf{Model-internal --- does not need access to the training corpus.}
 False-positive profile: confounded by item difficulty and stylistic
 familiarity; an easy item the model would always assign high
 probability to looks contaminated even when it is not. False-negative
-profile: degraded by post-training (RLHF / instruction-tuning) which
+profile: degraded by post-training (\glsterm{rlhf}{RLHF} / instruction-tuning) which
 overwrites base-model probability surfaces; the signal is strongest
 on base models and weakens substantially on chat-tuned variants.
 
@@ -166,7 +166,7 @@ training distribution leaked the answer.
 
 The methods are non-redundant: each catches a different leak channel,
 and the correlation between their flags across a benchmark is far
-from one. The field's open-source decontamination pipelines run a
+from one. The field's open-source \glsterm{decontamination}{decontamination} pipelines run a
 subset (typically just $n$-gram overlap); vendor pipelines reportedly
 run more (LLaMA 3 and Phi-4 model cards document multi-method
 filters), but the audits are vendor-internal and not externally
@@ -185,14 +185,14 @@ the load-bearing illustration%
 \citep[\S{}2.3]{deepseek-r1}:
 
 \begin{quote}\itshape
-Figure 1(a) depicts the performance trajectory of DeepSeek-R1-Zero on
+Figure 1(a) depicts the performance trajectory of DeepSeek-\glsterm{r1-zero}{R1-Zero} on
 the AIME 2024 benchmark throughout the RL training process, where the
 average pass@1 score on AIME 2024 shows a significant increase,
 jumping from an initial 15.6\% to 77.9\%.
 \end{quote}
 
 The headline jump from $15.6\%$ to $77.9\%$ at $\mathrm{pass}@1$
-(further to $86.7\%$ under self-consistency) is the load-bearing
+(further to $86.7\%$ under \glsterm{self-consistency-2}{self-consistency}) is the load-bearing
 RL-on-verifiable-rewards demonstration of Paper~3 (§reasoning-RL).
 What the contamination question asks of that result is whether the RL
 optimization is teaching new reasoning computation or learning to
@@ -249,7 +249,7 @@ multi-method audits that would close the loop are not run
 field-wide. As of 2026-Q2, no contamination protocol ships alongside
 benchmark releases the way \texttt{requirements.txt} ships alongside
 Python code; each lab certifies its own pipeline against its own bar.
-The two positions are not formally inconsistent --- decontamination
+The two positions are not formally inconsistent --- \glsterm{decontamination}{decontamination}
 \emph{by some procedure} is a real artifact --- but they make
 incompatible claims about what reported benchmark scores mean,
 because they implicitly fix different procedures as the procedure.
@@ -272,7 +272,7 @@ which corpus slice --- and the right answer plausibly differs across
 benchmarks. \textsc{mmlu-redux} \citep{mmlu-redux-2024} is a partial
 analogue at the verifier-error layer (a published per-question
 correction set that subsequent runs can use), and its partial
-adoption --- the Open LLM Leaderboard moved its primary headline to
+adoption --- the Open \glsterm{llm}{LLM} Leaderboard moved its primary headline to
 \textsc{mmlu-pro} while many model cards still report raw \textsc{mmlu}
 \citep[\S{}implications]{mmlu-redux-2024} --- is the diagnostic for
 how field-wide adoption of a heavier contamination protocol would
@@ -280,12 +280,12 @@ likely play out.
 
 The structural reason is that the incentives diverge. A vendor
 reporting on its own model is rewarded for a clean score and for a
-documented decontamination story; a third party auditing the same
+documented \glsterm{decontamination}{decontamination} story; a third party auditing the same
 score has no comparable reward. \citet{contamination-survey-2025}'s
 EMNLP-2025 framing is the closest the field has come to a
 field-standard \emph{discussion}, but the survey is a description of
 what exists, not a protocol that ships. The methodological
-dynamic-benchmark proposals (MathArena, LiveCodeBench, GAIA's gated
+dynamic-benchmark proposals (\glsterm{matharena}{MathArena}, LiveCodeBench, GAIA's gated
 leaderboard) work around contamination rather than measure it; that
 is the right move where it is feasible, but it abandons the question
 of what to do with the legacy benchmarks the field continues to

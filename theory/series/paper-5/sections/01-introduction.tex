@@ -34,8 +34,8 @@ The six layers, in the order the rest of the paper takes them, are:
   \item \emph{Knowledge measurement and contamination} --- can the
     model recall what it has been taught, and is the test set
     distinguishable from the training set? Canonical failure mode:
-    \emph{measurement-instrument saturation against an answer-key
-    error floor}. The MMLU lineage \citep{hendrycks2021-mmlu} runs
+    \emph{measurement-instrument \glsterm{saturation}{saturation} against an answer-\glsterm{key}{key}
+    error floor}. The \glsterm{mmlu}{MMLU} lineage \citep{hendrycks2021-mmlu} runs
     into a verifier-error ceiling on the order of single-digit
     percent; reported scores above that ceiling are the
     benchmark's noise floor, not signal
@@ -43,8 +43,8 @@ The six layers, in the order the rest of the paper takes them, are:
   \item \emph{Reasoning-benchmark validity} --- does multi-step
     performance on a fixed exam set transfer to multi-step
     performance off it? Canonical failure mode: \emph{contest-style
-    saturation, research-style stall}. AIME and MATH-500 saturate
-    while FrontierMath \citep{glazer2024-frontiermath} does not, and
+    \glsterm{saturation}{saturation}, research-style stall}. AIME and MATH-500 saturate
+    while \glsterm{frontiermath}{FrontierMath} \citep{glazer2024-frontiermath} does not, and
     the gap is the gap between in-distribution reasoning-RL gains
     and out-of-distribution generalization
     (\cref{sec:reasoning-benchmarks}).
@@ -60,19 +60,19 @@ The six layers, in the order the rest of the paper takes them, are:
   \item \emph{Adversarial robustness} --- under a search-based
     attacker, does the deployed system keep refusing the behaviors
     its training said it should refuse? Canonical failure mode:
-    \emph{ASR non-comparability}. The four canonical
-    attack-success-rate (ASR) instruments
+    \emph{\glsterm{asr}{ASR} non-comparability}. The four canonical
+    attack-success-rate (\glsterm{asr}{ASR}) instruments
     \citep{harmbench2024} use different target behaviors,
     attacker LLMs, judges, and success criteria; the same model's
-    $5\%$ ASR on one and $30\%$ ASR on another is not a
+    $5\%$ \glsterm{asr}{ASR} on one and $30\%$ \glsterm{asr}{ASR} on another is not a
     contradiction, it is two different constructs
     (\cref{sec:adversarial-robustness}).
   \item \emph{Alignment-threat detection} --- does the model behave
     aligned because it \emph{is} aligned, or because it has
     capability and incentive to look aligned during evaluation?
-    Three sub-layers compose here: sycophancy
-    \citep{sharma2023-sycophancy} as a measured RLHF artifact
-    (\cref{sec:sycophancy}); in-context scheming
+    Three sub-layers compose here: \glsterm{sycophancy}{sycophancy}
+    \citep{sharma2023-sycophancy} as a measured \glsterm{rlhf}{RLHF} artifact
+    (\cref{sec:sycophancy}); \glsterm{in-context-scheming}{in-context scheming}
     \citep{meinke2024-apollo-scheming} as an elicited capability
     finding (\cref{sec:scheming}); alignment-faking
     \citep{greenblatt2024-alignment-faking} as strategic compliance
@@ -81,18 +81,18 @@ The six layers, in the order the rest of the paper takes them, are:
     layer as a whole: \emph{capability under elicitation does not
     imply propensity in deployment}, and the field has no
     deployment audit that closes the gap.
-  \item \emph{Provenance and scalable oversight} --- once outputs
+  \item \emph{Provenance and \glsterm{scalable-oversight}{scalable oversight}} --- once outputs
     leave the model, can their origin be certified, and can a
     bounded human resource budget align a model whose capability
     already exceeds the overseer's? Watermarking
     \citep{kirchenbauer2023-watermark} addresses the first
-    (\cref{sec:watermarking}); debate
+    (\cref{sec:watermarking}); \glsterm{debate}{debate}
     \citep{irving2018-debate} and its sibling protocols address
     the second (\cref{sec:scalable-oversight}). Canonical failure
     mode: \emph{robustness-under-removal-pressure}. The
     cryptographic part of watermarking is solved; surviving
     paraphrase, fine-tuning, and collusion is not. The theoretical
-    part of scalable oversight is solved (debate decides
+    part of \glsterm{scalable-oversight}{scalable oversight} is solved (\glsterm{debate}{debate} decides
     $\mathbf{PSPACE}$ under polynomial-time judging); demonstrating
     bounded-judge honesty on open-ended domains is not.
 \end{enumerate}
@@ -125,7 +125,7 @@ one layer at a time:
   \item \emph{Necessary.} Drop any one layer and a real
     deployment-relevant threat goes unmeasured. Without
     contamination detection, knowledge benchmarks read leakage
-    as capability. Without reasoning-benchmark validity, RLVR-trained
+    as capability. Without reasoning-benchmark validity, \glsterm{rlvr-3}{RLVR}-trained
     models look generally smarter than they are. Without agentic
     benchmarks, end-to-end deployment risk is invisible. Without
     adversarial robustness, refusal training is unfalsified.
@@ -134,11 +134,11 @@ one layer at a time:
     oversight, even a perfectly-aligned-on-current-distribution
     model leaves the deployment-distribution shift unaddressed.
   \item \emph{Insufficient.} No single layer answers the
-    deployment-relevant question on its own. A high MMLU score
-    that survives MMLU-Redux still says nothing about agentic task
-    completion or scheming under elicitation. A low HarmBench ASR
+    deployment-relevant question on its own. A high \glsterm{mmlu}{MMLU} score
+    that survives \glsterm{mmlu-redux-2}{MMLU-Redux} still says nothing about agentic task
+    completion or \glsterm{scheming}{scheming} under elicitation. A low \glsterm{harmbench-2}{HarmBench} \glsterm{asr}{ASR}
     says nothing about whether the model has dangerous capability
-    in the first place. A clean Apollo-scheming evaluation says
+    in the first place. A clean Apollo-\glsterm{scheming}{scheming} evaluation says
     nothing about non-elicited propensity. The instruments measure
     \emph{what they measure}, and the construct-validity question
     --- whether what they measure is what we want to know --- is
@@ -155,18 +155,18 @@ one layer at a time:
 
 \subsection*{What this paper is and is not}
 
-\paragraph{What it is.} A monograph on the 2024--2026 state of LLM
+\paragraph{What it is.} A monograph on the 2024--2026 state of \glsterm{llm}{LLM}
 evaluation and alignment-threat detection, organized by measurement
 layer rather than by benchmark or by lab. Every load-bearing
-empirical claim --- benchmark score, ASR, contamination percentage,
-sycophancy rate, scheming-suite hit-rate, alignment-faking rate,
-watermark detection threshold --- cites a primary source whose
+empirical claim --- benchmark score, \glsterm{asr}{ASR}, contamination percentage,
+\glsterm{sycophancy}{sycophancy} rate, \glsterm{scheming}{scheming}-suite hit-rate, alignment-faking rate,
+\glsterm{watermark}{watermark} detection threshold --- cites a primary source whose
 excerpt the KB has tracked down to a section anchor. Every formal
 construction --- the IRT 2PL form (\cref{sec:measuring-framing}),
-HELM's scenario-by-metric matrix (\cref{sec:measuring-framing}),
-ASR's set-cardinality definition (\cref{sec:adversarial-robustness}),
+\glsterm{helm}{HELM}'s scenario-by-metric matrix (\cref{sec:measuring-framing}),
+\glsterm{asr}{ASR}'s set-cardinality definition (\cref{sec:adversarial-robustness}),
 the green-list partition function (\cref{sec:watermarking}), the
-debate game's $\mathbf{PSPACE}$ construction
+\glsterm{debate}{debate} game's $\mathbf{PSPACE}$ construction
 (\cref{sec:scalable-oversight}) --- is transcribed verbatim from the
 cited paper, in the notation that paper uses. Every cross-source
 disagreement is tagged \texttt{[CONTRADICTION]} in the body and
@@ -179,8 +179,8 @@ more empirical than the ones Papers~1--3 cover, and the math layer
 is correspondingly thinner. Where the load-bearing 2024--2026
 demonstration is by a single research group with no independent
 replication --- the alignment-faking setup
-\citep{greenblatt2024-alignment-faking}, the scheming suite
-\citep{meinke2024-apollo-scheming}, FrontierMath
+\citep{greenblatt2024-alignment-faking}, the \glsterm{scheming}{scheming} suite
+\citep{meinke2024-apollo-scheming}, \glsterm{frontiermath}{FrontierMath}
 \citep{glazer2024-frontiermath} --- we say so explicitly rather
 than papering over the single-source status. Mitigations and
 deployment-policy proposals are referenced where they exist
@@ -189,7 +189,7 @@ oversight protocols) but are not the paper's subject. Earlier
 papers in this series carry the prerequisite machinery: Paper~2's
 pre-training-data and reasoning-RL stages condition the inputs to
 \cref{sec:knowledge-benchmarks,sec:contamination,sec:reasoning-benchmarks};
-Paper~4's probing and circuit-tracing methods are a complementary
+Paper~4's probing and \glsterm{circuit}{circuit}-tracing methods are a complementary
 attack surface for
 \cref{sec:scheming,sec:alignment-faking}; Paper~3's
 process-supervision and Paper~2's weak-to-strong generalization
@@ -206,13 +206,13 @@ to independent layers and where ``layered defense'' is a metaphor
 that pre-commits to more structure than the field has built. We
 address this question directly in \cref{sec:contradictions} by
 enumerating, layer by layer, the actual published instruments
-(MMLU and MMLU-Redux for layer 1; the contamination survey
+(\glsterm{mmlu}{MMLU} and \glsterm{mmlu-redux-2}{MMLU-Redux} for layer 1; the contamination survey
 detection methods for the contamination sub-layer; AIME, MATH-500,
-GPQA, FrontierMath, HLE for layer 2; SWE-Bench, OSWorld, GAIA,
-$\tau$-Bench for layer 3; HarmBench, JailbreakBench, Crescendo,
-Wei~2023 for layer 4; the four sycophancy datasets, Apollo's six
-scheming evaluations, Greenblatt's free-tier/paid-tier setup for
-layer 5; Kirchenbauer's green-list construction, debate, IDA,
+GPQA, \glsterm{frontiermath}{FrontierMath}, \glsterm{hle}{HLE} for layer 2; SWE-Bench, OSWorld, GAIA,
+$\tau$-Bench for layer 3; \glsterm{harmbench-2}{HarmBench}, \glsterm{jailbreakbench-2}{JailbreakBench}, Crescendo,
+Wei~2023 for layer 4; the four \glsterm{sycophancy}{sycophancy} datasets, Apollo's six
+\glsterm{scheming}{scheming} evaluations, Greenblatt's free-tier/paid-tier setup for
+layer 5; Kirchenbauer's green-list construction, \glsterm{debate}{debate}, \glsterm{iterated-amplification}{IDA},
 recursive reward modeling, weak-to-strong for layer 6) and showing
 that each has at least one \emph{independently developed} measurement
 artifact and at least one \emph{independently named} failure mode.
@@ -222,11 +222,11 @@ load-bearing one for the paper's structural claim.
 
 \subsection*{Roadmap}
 
-\Cref{sec:measuring-framing} fixes the eval-methodology vocabulary
+\Cref{sec:measuring-framing} fixes the eval-methodology \glsterm{vocabulary}{vocabulary}
 the rest of the paper inherits: validity, reliability, construct,
 contamination, ecological validity; the three orthogonal axes
 (capability vs alignment; knowledge vs reasoning vs agency; static
-benchmark vs adversarial probe vs deployment audit); HELM's
+benchmark vs adversarial \glsterm{probe-2}{probe} vs deployment audit); \glsterm{helm}{HELM}'s
 scenario-by-metric matrix \citep{liang2022-helm} as the closest the
 field has to a theory of measurement; the 2PL IRT form as a
 calibration tool. \Cref{sec:knowledge-benchmarks,sec:contamination}

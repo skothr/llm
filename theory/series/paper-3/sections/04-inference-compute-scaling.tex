@@ -9,11 +9,11 @@
 \label{sec:inference-compute-axis}
 \label{sec:test-time-compute}
 
-\Cref{sec:cot-phenomenon,sec:self-consistency} treat chain-of-thought and
-self-consistency as decoder-side tactics: the model is fixed, the prompt
+\Cref{sec:cot-phenomenon,sec:self-consistency} treat \glsterm{chain-of-thought}{chain-of-thought} and
+\glsterm{self-consistency-2}{self-consistency} as decoder-side tactics: the model is fixed, the prompt
 is fixed, and a knob (sample $T$, sample count $N$) is turned. They are
 correctly described as ``prompting tricks'' in the 2022 literature.
-\citet{snell2024} reframe the entire family. Test-time compute, in
+\citet{snell2024} reframe the entire family. \glsterm{test-time-compute}{Test-time compute}, in
 their formulation, is not a bag of tricks but a \emph{scaling axis} ---
 a quantitative dimension along which loss, accuracy, and FLOP cost trade
 off in measurable, allocateable ways, structurally analogous to the
@@ -40,13 +40,13 @@ remains unsettled as of 2026.
 \subsection{The compute-optimal test-time strategy}
 \label{sec:snell-compute-optimal}
 
-Fix a base LLM and a prompt $q$. Let $y^\ast(q)$ denote the
+Fix a base \glsterm{llm}{LLM} and a prompt $q$. Let $y^\ast(q)$ denote the
 ground-truth correct response to $q$, and let $\mathrm{Target}(\theta,
 N, q)$ denote the distribution over output tokens induced by running
-the LLM on $q$ under test-time hyperparameters $\theta$ with a compute
+the \glsterm{llm}{LLM} on $q$ under test-time hyperparameters $\theta$ with a compute
 budget of $N$ inference FLOPs (or, equivalently, generated tokens).
 \citet[\S 3.1, Eq.~1]{snell2024} define the
-\textbf{test-time compute-optimal scaling strategy}%
+\textbf{\glsterm{test-time-compute-optimal-scaling-strategy}{test-time compute-optimal scaling strategy}}%
 \footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-3-1}. Notation note: \citet{snell2024} write the subscript with mixed labels $a^\ast$ in the index and $y^\ast$ in the indicator; we unify to $y^\ast(q)$ throughout for readability without altering the equation's content.} as
 \begin{equation}
   \theta^\ast_{q,\, y^\ast(q)}(N)
@@ -71,7 +71,7 @@ Symbol & Meaning \\
 \midrule
 $q$                                     & the prompt / question \\
 $y^\ast(q)$                             & ground-truth correct response \\
-$N$                                     & test-time compute budget (FLOPs or token count) \\
+$N$                                     & \glsterm{test-time-compute}{test-time compute} budget (FLOPs or token count) \\
 $\theta$                                & test-time hyperparameters of a chosen strategy \\
 $\mathrm{Target}(\theta, N, q)$         & output distribution induced by spending $N$ FLOPs with strategy $\theta$ \\
 $\mathbb{1}_{y = y^\ast(q)}$            & indicator: $1$ if $y$ matches ground-truth, else $0$ \\
@@ -118,18 +118,18 @@ toward $y^\ast(q)$ most efficiently.
 \label{sec:snell-proposer-verifier}
 
 Across the otherwise-disparate test-time-compute literature ---
-chain-of-thought (\cref{sec:cot-phenomenon}), self-consistency
+\glsterm{chain-of-thought}{chain-of-thought} (\cref{sec:cot-phenomenon}), \glsterm{self-consistency-2}{self-consistency}
 (\cref{sec:self-consistency}), best-of-$N$ with verifier
 (\cref{sec:process-reward-models}), beam search and MCTS
-(\cref{sec:tree-search}), revision-finetuned models, RLVR-trained
-long-CoT --- \citet[\S 2]{snell2024}%
+(\cref{sec:tree-search}), revision-finetuned models, \glsterm{rlvr-3}{RLVR}-trained
+long-\glsterm{chain-of-thought}{CoT} --- \citet[\S 2]{snell2024}%
 \footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-2-proposer-verifier}.}
 identify two and only two structural levers for shaping
 $\mathrm{Target}(\theta, N, q)$:
 \begin{enumerate}
 \item \textbf{Modify the proposal distribution.} Augment the prompt
-with additional tokens the LLM conditions on to obtain a different
-output distribution. Concretely: prepend a chain-of-thought instruction
+with additional tokens the \glsterm{llm}{LLM} conditions on to obtain a different
+output distribution. Concretely: prepend a \glsterm{chain-of-thought}{chain-of-thought} instruction
 \citep{wei2022-cot, kojima2022}, finetune the model to iteratively
 revise its own answer \citep[\S 2]{snell2024}, or RL-train the model so
 its base distribution itself emits long thinking traces
@@ -137,19 +137,19 @@ its base distribution itself emits long thinking traces
 $\mathrm{Target}(\theta, N, q)$ from the inside.
 \item \textbf{Apply a verifier on outputs.} Sample $K$ candidates from
 the (unchanged) base distribution and select among them with a learned
-scorer. Concretely: best-of-$N$ with an outcome reward model, best-of-$N$
-with a process reward model
+scorer. Concretely: best-of-$N$ with an outcome \glsterm{reward-model}{reward model}, best-of-$N$
+with a process \glsterm{reward-model}{reward model}
 (\cref{sec:process-reward-models}), beam search or MCTS guided by a
-PRM \citep[\S 5.2]{snell2024}.%
+\glsterm{process-reward-model}{PRM} \citep[\S 5.2]{snell2024}.%
 \footnote{KB excerpt: \texttt{kb/excerpts/snell2024.md\#sec-5-2-search}.}
 This reshapes $\mathrm{Target}(\theta, N, q)$ from the outside, by
 post-hoc reweighting.
 \end{enumerate}
 
-The two levers compose. Self-consistency is the proposer-only special
+The two levers compose. \glsterm{self-consistency-2}{Self-consistency} is the proposer-only special
 case at unit verifier weight (\cref{sec:self-consistency}); best-of-$N$
-with ORM is the verifier-only special case on a fixed base distribution;
-RLVR-trained long-CoT plus PRM-weighted self-consistency
+with \glsterm{outcome-reward-model}{ORM} is the verifier-only special case on a fixed base distribution;
+\glsterm{rlvr-3}{RLVR}-trained long-\glsterm{chain-of-thought}{CoT} plus \glsterm{process-reward-model}{PRM}-weighted \glsterm{self-consistency-2}{self-consistency}
 (\cref{sec:r1-family,sec:prm-prm800k}) deploys both levers
 simultaneously. \citet[\S 2]{snell2024} argue that every published
 test-time-compute method to date is one of $\{$proposer-only,
@@ -172,7 +172,7 @@ $\E_{y \sim \mathrm{Target}(\theta,N,q)}\!\left[\mathbb{1}_{y=y^\ast(q)}\right]$
 and the proposer/verifier decomposition factors $\theta$ into a
 proposal-shaping component (the kernel-analog --- prompt augmentation,
 revision, RL-training of the base distribution) and a verifier-applying
-component (the accept-rule-analog --- ORM, PRM, search-against-PRM).
+component (the accept-rule-analog --- \glsterm{outcome-reward-model}{ORM}, \glsterm{process-reward-model}{PRM}, search-against-\glsterm{process-reward-model}{PRM}).
 Both components shape the same $\mathrm{Target}(\theta, N, q)$;
 optimising over both jointly is the content of \cref{eq:snell-compute-optimal}.
 \end{analogy}
@@ -187,7 +187,7 @@ introduce a tractable approximation by replacing the per-prompt argmax
 with a \textbf{difficulty-conditional} argmax over a discrete bucket of
 prompts.
 
-The operationalisation: take the base LLM, sample $2048$ completions on
+The operationalisation: take the base \glsterm{llm}{LLM}, sample $2048$ completions on
 each test-set prompt $q$, and compute the empirical pass@$1$
 \begin{equation}
   \widehat{\mathrm{pass@}1}(q)
@@ -230,7 +230,7 @@ accuracy is \emph{qualitatively different} across bins:
 the proposal). The model already nearly solves the problem; the right
 move is to refine the existing draft.
 \item \textbf{Intermediate prompts} benefit most from \emph{search}
-(best-of-$N$-weighted, beam-search, or MCTS against a PRM
+(best-of-$N$-weighted, beam-search, or MCTS against a \glsterm{process-reward-model}{PRM}
 \citep[\S 5.2]{snell2024}). The model occasionally solves the problem;
 the right move is to sample many and let the verifier select.
 \item \textbf{The hardest prompts} fail to benefit from current
@@ -272,7 +272,7 @@ iterative refine would suffice.
 
 \begin{forumsignal}
 The $4\times$ figure is sometimes informally cited as ``Snell's
-$4\times$.'' The number is specific to the MATH benchmark, the PaLM
+$4\times$.'' The number is specific to the MATH benchmark, the \glsterm{palm}{PaLM}
 $2$-S\* base model, and the strategy menu of best-of-$N$-weighted, beam
 search, and revision under the test-time-compute setup of
 \citet[\S 5--6]{snell2024}. It is not a universal exchange rate. Cited
@@ -305,20 +305,20 @@ report:
 \begin{quote}
 On easy and intermediate questions, and even hard questions
 (depending on the specific conditions on the pretraining and inference
-workload), additional test-time compute is often preferable to scaling
+workload), additional \glsterm{test-time-compute}{test-time compute} is often preferable to scaling
 pretraining. \ldots\ \emph{[I]n some settings it is be more effective to
 pretrain smaller models with less compute, and then apply test-time
 compute to improve model outputs.} That said, with the most challenging
 questions, we observe very little benefits from scaling up test-time
 compute. Instead, we find that on these questions, it is more effective
 to make progress by applying additional pretraining compute,
-demonstrating that current approaches to scaling test-time compute may
+demonstrating that current approaches to scaling \glsterm{test-time-compute}{test-time compute} may
 not be 1-to-1 exchangeable with scaling pretraining.
 \end{quote}
 
 The 14$\times$ substitution ratio is therefore \emph{conditional on the
 difficulty regime}. For easy and intermediate prompts (which are most
-prompts in deployment), test-time compute substitutes one-for-one with
+prompts in deployment), \glsterm{test-time-compute}{test-time compute} substitutes one-for-one with
 \emph{at least} $14\times$ more pretraining FLOPs at matched accuracy.
 For the hardest tail (the very hard bin, the bin where the base model's
 $\widehat{\mathrm{pass@}1}(q)$ is near zero), the substitution breaks
@@ -328,7 +328,7 @@ down and pretraining FLOPs cannot be replaced by inference FLOPs.
 section transcribes \citet[\S 3, Eq.~2]{hoffmann2022-chinchilla}'s
 parametric loss
 $L(N, D) = E + A/N^\alpha + B/D^\beta$ and derives the compute-optimal
-allocation between parameters $N$ and tokens $D$ at fixed training
+allocation between \glsterm{parameters}{parameters} $N$ and tokens $D$ at fixed training
 compute $C_\text{train} = 6 N D$. \citet{snell2024}'s Eq.~1 (transcribed
 as \cref{eq:snell-compute-optimal} above) is the inference-side
 analog: an argmax over inference-strategy hyperparameters $\theta$ at
@@ -342,7 +342,7 @@ two budgets: at fixed total FLOPs $C_\text{train} + C_\text{test}$,
 how much of each should be spent? The empirical answer of
 \citet[\S 6]{snell2024} is that the two budgets substitute on easy and
 intermediate prompts and decouple on the hardest tail. A
-\emph{joint} closed-form $L(N, D, \theta, C_\text{test})$ scaling law
+\emph{joint} closed-form $L(N, D, \theta, C_\text{test})$ \glsterm{scaling-law}{scaling law}
 that subsumes Chinchilla and Snell remains an open question
 (\cref{sec:snell-open}, \cref{sec:search-vs-rl}).
 
@@ -359,12 +359,12 @@ For reference:
 \toprule
 Strategy class & Components of $\theta$ & Cost in $N$ \\
 \midrule
-Best-of-$N$ with ORM            & $(K, T)$                 & $K \cdot L_\text{ans}$ \\
-Best-of-$N$-weighted with PRM   & $(K, T, \text{agg})$     & $K \cdot L_\text{ans} \cdot (1 + c_\text{verify})$ \\
-Beam search against PRM         & $(K, M, T)$              & $K \cdot D \cdot c_\text{step}$ \\
-MCTS against PRM                & $(N_\text{rollout}, c_\text{puct}, D)$ & $N_\text{rollout} \cdot D \cdot L_\text{step}$ \\
+Best-of-$N$ with \glsterm{outcome-reward-model}{ORM}            & $(K, T)$                 & $K \cdot L_\text{ans}$ \\
+Best-of-$N$-weighted with \glsterm{process-reward-model}{PRM}   & $(K, T, \text{agg})$     & $K \cdot L_\text{ans} \cdot (1 + c_\text{verify})$ \\
+Beam search against \glsterm{process-reward-model}{PRM}         & $(K, M, T)$              & $K \cdot D \cdot c_\text{step}$ \\
+MCTS against \glsterm{process-reward-model}{PRM}                & $(N_\text{rollout}, c_\text{puct}, D)$ & $N_\text{rollout} \cdot D \cdot L_\text{step}$ \\
 Revision chain                  & $(K_\text{revisions}, T)$ & $K_\text{revisions} \cdot L_\text{ans}$ \\
-Self-consistency                & $(N, T)$                 & $N \cdot L_\text{ans}$ \\
+\glsterm{self-consistency-2}{Self-consistency}                & $(N, T)$                 & $N \cdot L_\text{ans}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -377,7 +377,7 @@ budget $N$ in \cref{eq:snell-compute-optimal} is the sum of the
 right-hand cost column. The strategy menu \citet[\S 5--6]{snell2024}
 explore is the $\{$best-of-$N$-weighted, beam search, revision$\}$
 subset; later sections of this paper (\cref{sec:tree-search,sec:rlvr})
-extend the menu to MCTS and to RL-trained long-CoT proposers.
+extend the menu to MCTS and to RL-trained long-\glsterm{chain-of-thought}{CoT} proposers.
 
 The pass@1 difficulty estimator of \cref{eq:pass-at-1-binning} is, in
 operational terms, a $|\text{test set}| \times 2048$ shape of
@@ -411,11 +411,11 @@ benchmark family.
 \begin{contradiction}
 \textbf{The functional form $L(\theta, N)$ is unsettled.}
 \citet{snell2024} report empirical accuracy-vs-FLOPs curves but stop
-short of fitting a parametric scaling law. \citet{s1-2025} report
+short of fitting a parametric \glsterm{scaling-law}{scaling law}. \citet{s1-2025} report
 roughly logarithmic returns to thinking-token budget on a small
 reasoning-trained model. \citet{deepseek-r1} report monotone increase
 of AIME 2024 pass@1 with response-length ramp from $\sim 200$ to
-$\sim 10\,000$ tokens during GRPO training (\cref{sec:r1-family}), but
+$\sim 10\,000$ tokens during \glsterm{grpo-2}{GRPO} training (\cref{sec:r1-family}), but
 do not parameterise the inference-time accuracy-vs-budget curve at
 fixed training. The candidate functional forms are: power law in $N$
 (Kaplan-style), logarithmic in $N$ (s1-suggestive), bounded sigmoid
@@ -428,7 +428,7 @@ an open research direction (\cref{sec:search-vs-rl,sec:contradictions}).
 \end{contradiction}
 
 A second open frontier: \citet[\S 4--6]{snell2024} run their entire
-analysis on the MATH benchmark using PaLM~2-S\* (Codey) as the base
+analysis on the MATH benchmark using \glsterm{palm}{PaLM}~2-S\* (Codey) as the base
 model. The 14$\times$ substitution ratio, the 4$\times$
 compute-optimal-vs-fixed-best-of-$N$ gain, and the difficulty-bin
 strategy split are all measured on this single benchmark/model
@@ -448,26 +448,26 @@ The Snell framing is the load-bearing scaffolding for the rest of this
 paper:
 \begin{itemize}
 \item \Cref{sec:process-reward-models} deepens the verifier leg of
-\cref{sec:snell-proposer-verifier}: \citet{lightman2023-prm800k}'s PRM
-loss, the three aggregation rules, and the post-2023 PRM lineage. The
+\cref{sec:snell-proposer-verifier}: \citet{lightman2023-prm800k}'s \glsterm{process-reward-model}{PRM}
+loss, the three aggregation rules, and the post-2023 \glsterm{process-reward-model}{PRM} lineage. The
 verifier-only special case of
 \cref{eq:snell-compute-optimal} is what
 \cref{sec:process-reward-models} formalises.
 \item \Cref{sec:tree-search} deepens the search side: beam search, BFS,
 and MCTS are the three strategies that operationalise
-\citet[\S 5.2]{snell2024}'s ``search against a PRM'' under the
+\citet[\S 5.2]{snell2024}'s ``search against a \glsterm{process-reward-model}{PRM}'' under the
 $\theta = (K, M, c_\text{puct}, D)$ rows of
 \cref{sec:snell-tensor-shapes}.
 \item \Cref{sec:rlvr,sec:r1-family} treat the proposer leg's
-training-time form: RL-trained long-CoT models (DeepSeek-R1, o1, the
+training-time form: RL-trained long-\glsterm{chain-of-thought}{CoT} models (DeepSeek-R1, o1, the
 distilled-Qwen variants) ship a base distribution that is itself
 shaped to emit long thinking traces, so $\mathrm{Target}(\theta, N, q)$
 becomes a different object before any test-time strategy is applied.
 \item \Cref{sec:search-vs-rl} returns to the FLOPs-matched experiment
 of \cref{eq:flops-matched} and asks the deeper question: at fixed total
-compute, when do the marginal FLOPs go to inference search, RLVR
+compute, when do the marginal FLOPs go to inference search, \glsterm{rlvr-3}{RLVR}
 training, or pretraining? Snell's curves give one slice
-(inference vs.\ pretraining); the RLVR literature gives partial
+(inference vs.\ pretraining); the \glsterm{rlvr-3}{RLVR} literature gives partial
 answers for inference vs.\ RL.
 \end{itemize}
 
@@ -476,7 +476,7 @@ The structural picture: Snell's Eq.~1 (transcribed as
 Chinchilla compute-optimal allocation in Paper~2 \S scaling-laws. Both
 are constrained-optimisation problems with empirically-fitted exchange
 rates between dimensions; both produce headline substitution-ratio
-numbers (Chinchilla: parameters-vs-tokens at fixed
+numbers (Chinchilla: \glsterm{parameters}{parameters}-vs-tokens at fixed
 $C_\text{train}$; Snell: strategy-choice at fixed $C_\text{test}$, and
 $14\times$ inference-vs-pretraining at fixed
 $C_\text{train} + C_\text{test}$); and both leave open how to compose

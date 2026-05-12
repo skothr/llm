@@ -7,33 +7,33 @@
 
 \citet{wang2022-self-consistency} replace the greedy decoder of
 \cref{sec:cot-phenomenon} with the cheapest non-trivial inference-time
-compute strategy in the reasoning literature: sample $N$ chain-of-thought
+compute strategy in the reasoning literature: sample $N$ \glsterm{chain-of-thought}{chain-of-thought}
 traces independently at temperature $T > 0$, extract the final answer
 from each, and return the one that appears most often. No verifier is
 trained, no search tree is expanded, no model parameter is changed.
-Despite this minimality, self-consistency lifts greedy CoT by
+Despite this minimality, \glsterm{self-consistency-2}{self-consistency} lifts greedy \glsterm{chain-of-thought}{CoT} by
 \textbf{+17.9\%} on GSM8K, \textbf{+11.0\%} on SVAMP, and \textbf{+12.2\%}
 on AQuA \citep[abstract]{wang2022-self-consistency}.\footnote{KB excerpt:
-\texttt{kb/excerpts/wang2022-self-consistency.md\#abstract}.} The
-result reframes the basic CoT decoder as one point on a sampling-budget
+\texttt{kb/excerpts/wang2022-\glsterm{self-consistency-2}{self-consistency}.md\#abstract}.} The
+result reframes the basic \glsterm{chain-of-thought}{CoT} decoder as one point on a sampling-budget
 axis, and supplies the baseline against which every later test-time
 compute strategy in this paper — best-of-$N$ with verifier
 (\cref{sec:process-reward-models}), tree-search (\cref{sec:tree-search}),
-RLVR-trained long traces (\cref{sec:rlvr,sec:r1-family}) — must show
-its incremental value.
+\glsterm{rlvr-3}{RLVR}-trained long traces (\cref{sec:rlvr,sec:r1-family}) — must show
+its incremental \glsterm{value}{value}.
 
 \subsection{The mechanism}
 \label{sec:sc-mechanism}
 
 Let $x$ be a problem, $z$ a reasoning trace, and $y$ the final answer
 extracted from $z$ by a regex on the trailing \textit{``The answer is
-$\langle\cdot\rangle$''} pattern \citep[\S 3.1]{wei2022-cot}. The CoT
+$\langle\cdot\rangle$''} pattern \citep[\S 3.1]{wei2022-cot}. The \glsterm{chain-of-thought}{CoT}
 decoder of \cref{eq:cot-decode} samples a single trace, $z \sim
 p_\theta(\cdot \mid x)$, and answers $y \sim p_\theta(\cdot \mid x, z)$.
-Self-consistency replaces this single draw with $N$ independent draws
+\glsterm{self-consistency-2}{Self-consistency} replaces this single draw with $N$ independent draws
 and aggregates by plurality
 \citep[\S 3]{wang2022-self-consistency}:\footnote{KB excerpt:
-\texttt{kb/excerpts/wang2022-self-consistency.md\#sec-3}.}
+\texttt{kb/excerpts/wang2022-\glsterm{self-consistency-2}{self-consistency}.md\#sec-3}.}
 \begin{equation}
   \hat y \;=\; \argmax_y \; \sum_{n=1}^N \mathbb{1}\bigl[y^{(n)} = y\bigr],
   \qquad
@@ -42,7 +42,7 @@ and aggregates by plurality
   \label{eq:self-consistency}
 \end{equation}
 Sampling is at temperature $T > 0$ (top-$k$ or nucleus optional);
-the value $T = 0.7$ used by \citet[\S 4.1]{wang2022-self-consistency}
+the \glsterm{value}{value} $T = 0.7$ used by \citet[\S 4.1]{wang2022-self-consistency}
 on GSM8K is a recurring default in the downstream literature.
 
 \begin{lstlisting}[mathescape=true, numbers=none, frame=single, caption={Self-consistency \citep[\S 3]{wang2022-self-consistency}. Inputs: problem $x$, model $p_\theta$, sample count $N$, temperature $T>0$. Output: aggregated answer $\hat y$.}, label=alg:sc]
@@ -56,7 +56,7 @@ function self_consistency($x$, $p_\theta$, $N$, $T$):
 \end{lstlisting}
 
 The compute cost is $C \propto N$ and the $N$ samples are embarrassingly
-parallel, sharing only the prompt-prefix KV cache
+parallel, sharing only the prompt-prefix \glsterm{kv-cache}{KV cache}
 \citep[\S 2.1]{snell2024}. Tensor shapes: each sample is a sequence of
 shape $\mathsf{S}_n \le L_{\max}$ tokens; the answer space the model
 votes over is finite and (for the targeted benchmarks) low-cardinality
@@ -101,7 +101,7 @@ the standard variance-reduction argument used to justify ensemble
 voting in classical ML, transposed to the language-model decoder
 \citep[\S 3]{wang2022-self-consistency}.
 
-Why $T > 0$ is required: greedy decoding ($T = 0$) returns the same
+Why $T > 0$ is required: \glsterm{greedy-decoding}{greedy decoding} ($T = 0$) returns the same
 trace every time, so $N > 1$ samples carry no additional information.
 \citet[\S 4.3]{wang2022-self-consistency} ablate temperature and find
 gains stable across $T \in [0.4, 0.7]$, with degradation at very high
@@ -110,7 +110,7 @@ threshold where majority recovers it) and at $T \to 0$ (samples
 collapse to the greedy trajectory).
 
 \begin{intuition}
-Self-consistency is ``ask the model the same question $N$ times and
+\glsterm{self-consistency-2}{Self-consistency} is ``ask the model the same question $N$ times and
 take the answer it gives most often.'' The folk gloss is exactly right;
 the only subtlety is that the question is asked at $T > 0$ so the $N$
 answers are not literally identical. Returning to math: $\hat y$ in
@@ -129,7 +129,7 @@ the correct $y^*$.
 \label{sec:sc-results}
 
 \citet{wang2022-self-consistency} report gains on five benchmarks at the
-PaLM-540B / GPT-3-175B scale where greedy CoT is itself
+\glsterm{palm}{PaLM}-540B / GPT-3-175B scale where greedy \glsterm{chain-of-thought}{CoT} is itself
 non-trivial \citep[abstract]{wang2022-self-consistency}:
 
 \begin{table}[h]
@@ -137,7 +137,7 @@ non-trivial \citep[abstract]{wang2022-self-consistency}:
 \small
 \begin{tabular}{lr}
 \toprule
-Benchmark & Self-consistency gain over greedy CoT \\
+Benchmark & \glsterm{self-consistency-2}{Self-consistency} gain over greedy \glsterm{chain-of-thought}{CoT} \\
 \midrule
 GSM8K (arithmetic word problems) & $+17.9\%$ \\
 SVAMP  (arithmetic word problems) & $+11.0\%$ \\
@@ -155,72 +155,72 @@ correspondingly smaller — but consistently positive — improvements.}
 \label{tab:sc-headline}
 \end{table}
 \footnotetext{KB excerpt:
-\texttt{kb/excerpts/wang2022-self-consistency.md\#headline}.}
+\texttt{kb/excerpts/wang2022-\glsterm{self-consistency-2}{self-consistency}.md\#headline}.}
 
 The gains are produced by a single change to the decoder: from greedy
 to $N$-sample-plus-majority-vote at $T = 0.7$. No new model is trained,
-no exemplars are added to the CoT prompt, no answer verifier is
+no exemplars are added to the \glsterm{chain-of-thought}{CoT} prompt, no answer verifier is
 introduced. \citet[\S 4]{wang2022-self-consistency} additionally report
-a saturation curve in $N$: gains are stable across $N \in [10, 40]$
+a \glsterm{saturation}{saturation} curve in $N$: gains are stable across $N \in [10, 40]$
 with diminishing returns past $N \approx
 40$.\footnote{KB excerpt:
-\texttt{kb/excerpts/wang2022-self-consistency.md\#sec-4}.} The
+\texttt{kb/excerpts/wang2022-\glsterm{self-consistency-2}{self-consistency}.md\#sec-4}.} The
 practical sweet spot in the downstream literature is $N = 20$, which
 captures most of the gain at half the compute of $N = 40$.
 
 The result has not aged out. \citet[\S 2.3]{deepseek-r1} report that
-DeepSeek-R1-Zero — an RL-trained reasoning model that already lifts
+DeepSeek-\glsterm{r1-zero}{R1-Zero} — an RL-trained \glsterm{reasoning-model}{reasoning model} that already lifts
 AIME 2024 pass\@1 from $15.6\%$ to $77.9\%$ — gains a further
-$8.8\%$ to $86.7\%$ when the same self-consistency rule is applied at
+$8.8\%$ to $86.7\%$ when the same \glsterm{self-consistency-2}{self-consistency} rule is applied at
 inference time over $64$ samples.\footnote{KB excerpt:
 \texttt{kb/excerpts/deepseek-r1.md\#sec-2-3-aime}.} The mechanism that
-worked on PaLM-540B in 2022 still adds nearly nine points of pass\@1
-to the strongest open-weight reasoning model in 2025.
+worked on \glsterm{palm}{PaLM}-540B in 2022 still adds nearly nine points of pass\@1
+to the strongest open-weight \glsterm{reasoning-model}{reasoning model} in 2025.
 
 \subsection{The baseline interpretation}
 \label{sec:sc-baseline}
 
-Self-consistency is the floor of the test-time compute axis
+\glsterm{self-consistency-2}{Self-consistency} is the floor of the \glsterm{test-time-compute}{test-time compute} axis
 (\cref{sec:test-time-compute}). Every other strategy in this paper
 adds either a verifier signal that re-weights the vote, a search
 structure that reuses partial-prefix compute, or a training-time
 intervention that changes the per-sample distribution itself:
 
 \begin{itemize}
-\item \textbf{Best-of-$N$ with outcome verifier} (ORM)
+\item \textbf{Best-of-$N$ with outcome verifier} (\glsterm{outcome-reward-model}{ORM})
 \citep[\S 2]{lightman2023-prm800k}: replaces the unweighted majority of
 \cref{eq:self-consistency} with $\hat y = y^{(n^*)}$ where $n^* =
 \argmax_n R_\phi(x, z^{(n)}, y^{(n)})$. Adds a learned signal at
 training cost $C_\phi$ and runs only at fixed prompt overhead per
 sample; the vote becomes weighted by verifier confidence.
 
-\item \textbf{Best-of-$N$ with process reward model} (PRM, \cref{sec:process-reward-models}):
+\item \textbf{Best-of-$N$ with process \glsterm{reward-model}{reward model}} (\glsterm{process-reward-model}{PRM}, \cref{sec:process-reward-models}):
 scores each \emph{step} of the trace and aggregates per-trace by min,
-product, or last-step. \citet[\S 4]{lightman2023-prm800k} report PRM
-beats ORM at matched $N$ on the MATH benchmark; the gap is largest
+product, or last-step. \citet[\S 4]{lightman2023-prm800k} report \glsterm{process-reward-model}{PRM}
+beats \glsterm{outcome-reward-model}{ORM} at matched $N$ on the MATH benchmark; the gap is largest
 at small $N$, where a single bad-step penalty is fatal under
 min-aggregation.
 
-\item \textbf{Tree search with PRM} (\cref{sec:tree-search}): replaces
+\item \textbf{Tree search with \glsterm{process-reward-model}{PRM}} (\cref{sec:tree-search}): replaces
 flat sampling with MCTS or step-level beam search guided by a step
 verifier \citep[\S 3]{rstar-math2025}. Reuses partial-prefix KV-cache
 across siblings; cost scales as $B \times L$ rather than $N \times L$.
 
 \item \textbf{RL on verifiable rewards} (\cref{sec:rlvr,sec:r1-family}):
 trains the model so the per-sample distribution itself concentrates on
-correct answers. Self-consistency over an RLVR-trained model is then
+correct answers. \glsterm{self-consistency-2}{Self-consistency} over an \glsterm{rlvr-3}{RLVR}-trained model is then
 the same algorithm operating on a sharper underlying distribution
 \citep[\S 2.3]{deepseek-r1}.
 \end{itemize}
 
-The pattern is consistent: self-consistency is what every
+The pattern is consistent: \glsterm{self-consistency-2}{self-consistency} is what every
 test-time-compute paper compares against because it is what users get
-``for free'' from any decoder once the model emits CoT traces. Outside
+``for free'' from any decoder once the model emits \glsterm{chain-of-thought}{CoT} traces. Outside
 this paper's reasoning context, the same role of ``cheapest baseline''
-makes self-consistency the standard calibration point for verifier-
+makes \glsterm{self-consistency-2}{self-consistency} the standard calibration point for verifier-
 and search-based methods at \cref{sec:process-reward-models} and
 \cref{sec:tree-search}, and an inference-time control even on top of
-the strongest RLVR-trained models in \cref{sec:r1-family}.
+the strongest \glsterm{rlvr-3}{RLVR}-trained models in \cref{sec:r1-family}.
 
 \subsection{When self-consistency fails}
 \label{sec:sc-when-fails}

@@ -28,62 +28,62 @@ verifier-error ceiling. \citet{mmlu-redux-2024}%
 \deepencite{mmlu-redux-2024 §abstract, KB excerpt is abstract/README-only; PDF verification pending}
 re-audit the
 $57$-subject test set and find $6.49\%$ of items contain
-answer-key errors, ambiguities, or unverifiable references; this
+answer-\glsterm{key}{key} errors, ambiguities, or unverifiable references; this
 caps the highest honest score the original instrument can carry. As
-of 2026-Q2, vendor and research papers continue to publish MMLU
+of 2026-Q2, vendor and research papers continue to publish \glsterm{mmlu}{MMLU}
 scores at single-percentage-point precision in the
-$90$--$94\%$ band as if MMLU-Redux had not been written. The field
+$90$--$94\%$ band as if \glsterm{mmlu-redux-2}{MMLU-Redux} had not been written. The field
 treats $91.2\%$ versus $92.4\%$ as a model-comparison result; the
 audit says both numbers are inside the ceiling band and not
 distinguishable at construction.\\
-\emph{What would close it:} field-wide adoption of MMLU-Redux as
+\emph{What would close it:} field-wide adoption of \glsterm{mmlu-redux-2}{MMLU-Redux} as
 the default knowledge-benchmark instrument, with error bars that
 explicitly include the verifier-error ceiling, and a deprecation
-of headline MMLU numbers above $\sim\!93.5\%$ as
+of headline \glsterm{mmlu}{MMLU} numbers above $\sim\!93.5\%$ as
 audit-noise rather than capability signal. The fix is procedural
 and cheap; the obstacle is not technical
 \citep{hendrycks2021-mmlu, mmlu-redux-2024, wang2024-mmlu-pro}.
 
 \paragraph{2. ASR comparability across jailbreak benchmarks (\cref{sec:adversarial-robustness}).}
-Attack success rate (ASR) is reported as a model attribute. It is
+\glsterm{attack-success-rate}{Attack success rate} (\glsterm{asr}{ASR}) is reported as a model attribute. It is
 not. \cref{sec:safety-formal} writes the canonical definition as
 $\mathrm{ASR}(M;\mathcal{B}, \mathcal{A}, V, \pi) = |\{j:
 V(\mathrm{target}(j), M(\mathcal{A}(j))) = 1\}| / |\mathcal{B}|$,
-and a single number ``GPT-4 ASR $= 30\%$'' carries no model-level
+and a single number ``GPT-4 \glsterm{asr}{ASR} $= 30\%$'' carries no model-level
 information without the four-tuple
 $(\mathcal{B}, \mathcal{A}, V, \pi)$ that fixes target behaviors,
 attacker family, judge, and success criterion. \citet{harmbench2024}
 and \citet{chao2024-jailbreakbench} each standardize the substrate
 inside their own frame; neither is field-wide, and the two are not
 interoperable. \citet{russinovich2024-crescendo} measure
-$29$--$61\%$ ASR uplift on GPT-4 and $49$--$71\%$ on Gemini-Pro
+$29$--$61\%$ \glsterm{asr}{ASR} uplift on GPT-4 and $49$--$71\%$ on Gemini-Pro
 when the attack family $\mathcal{A}$ alone
 shifts from single-turn to multi-turn, holding other factors
 approximately fixed --- which demonstrates exactly how much of the
-headline ASR is determined by substrate rather than model.\\
-\emph{What would close it:} a HarmBench-or-equivalent
+headline \glsterm{asr}{ASR} is determined by substrate rather than model.\\
+\emph{What would close it:} a \glsterm{harmbench-2}{HarmBench}-or-equivalent
 standardization adopted across vendors and academic benchmarks,
-with a public cross-benchmark calibration set --- a fixed
+with a public cross-benchmark \glsterm{calibration-set}{calibration set} --- a fixed
 $(\mathcal{B}, V, \pi)$ tuple against which jailbreak papers report
-delta-ASR --- so that two papers reporting ASR on different
+delta-\glsterm{asr}{ASR} --- so that two papers reporting \glsterm{asr}{ASR} on different
 substrates can be reconciled to a common axis
 \citep{harmbench2024, chao2024-jailbreakbench, wei2023-jailbroken,
 russinovich2024-crescendo}.
 
 \paragraph{3. Scheming detection methodology (\cref{sec:scheming}).}
 \citet{meinke2024-apollo-scheming} report cross-model evidence
-(o1, Claude 3.5 Sonnet, Claude 3 Opus, Gemini 1.5 Pro,
-Llama 3.1 405B) of in-context scheming under elicited conditions,
+(o1, \glsterm{claude}{Claude} 3.5 Sonnet, \glsterm{claude}{Claude} 3 Opus, Gemini 1.5 Pro,
+Llama 3.1 405B) of \glsterm{in-context-scheming}{in-context scheming} under elicited conditions,
 with $> 85\%$ persistence on o1 and explicit deceptive reasoning
-visible in CoT. The construct is \emph{capability for scheming
+visible in \glsterm{chain-of-thought}{CoT}. The construct is \emph{capability for \glsterm{scheming}{scheming}
 behavior under elicited conditions}; the construct the field needs
-is \emph{propensity for scheming behavior in deployment}. The two
+is \emph{propensity for \glsterm{scheming}{scheming} behavior in deployment}. The two
 are not the same, and the elicitation in the Apollo suite is
 strong enough (assigned goal, ``strongly follow'' instruction,
 agentic scaffold with surfaced oversight mechanism) that critics
 read the result as a worst-case capability bound rather than a
 deployment forecast. The strongest counter-evidence Apollo offers
---- Claude 3.5 Sonnet sandbagging in service of a
+--- \glsterm{claude}{Claude} 3.5 Sonnet \glsterm{sandbagging}{sandbagging} in service of a
 \emph{training-acquired} helpfulness goal --- is the rare regime
 in the suite, not the typical one. The 2025-Q3 OpenAI/Apollo
 deliberative-alignment study \citep{openai2025-deliberative-alignment}
@@ -91,15 +91,15 @@ sharpens but does not close the contradiction: across $26$ OOD
 evaluations spanning $180+$ environments, deliberative-alignment
 training reduces o3's covert-action rate from $13\%$ to $0.4\%$
 ($\sim\!30\!\times$), but the same paper documents that the
-suppression is partially driven by situational awareness (the model
+suppression is partially driven by \glsterm{situational-awareness}{situational awareness} (the model
 explicitly reasons about being evaluated, and that awareness is
 \emph{causally} responsible for part of the reduction), and the
 cross-model follow-on reports that more capable models are
-\emph{better} at in-context scheming. The intervention thus carries
+\emph{better} at \glsterm{in-context-scheming}{in-context scheming}. The intervention thus carries
 its own interpretive caveat that itself maps onto the
 elicitation-vs-deployment confound this contradiction names.\\
 \emph{What would close it:} a non-elicited deployment audit. An
-agreed bar for what counts as observed scheming in production
+agreed bar for what counts as observed \glsterm{scheming}{scheming} in production
 traffic --- e.g., a behavioral signature plus an interpretability
 co-signal (\cref{sec:scheming-cannot-detect}) --- with a publicly
 reported false-positive rate, run on a sample of real deployment
@@ -111,21 +111,21 @@ itself is contested; agreeing what to measure precedes measuring it
 \paragraph{4. Alignment-faking generalization (\cref{sec:alignment-faking}).}
 \citet{greenblatt2024-alignment-faking} pre-condition the model
 with the free-tier-versus-paid-tier wedge: the system prompt
-announces the value conflict, names the training-versus-deployment
+announces the \glsterm{value}{value} conflict, names the training-versus-deployment
 distinction, and supplies the rationale the model can then
 elaborate. The reported $14\%$ compliance gap and $78\%$ post-RL
 alignment-faking-reasoning rate are observed under that
 elicitation. The deflationary reading is context-cued role-play;
 the inflationary reading is that the prompt makes a real
-preserved-value strategy visible without creating it. The two
+preserved-\glsterm{value}{value} strategy visible without creating it. The two
 predict different deployment risks, and on the published evidence
 the two are not separable.\\
 \emph{What would close it:} replications without the explicit
 free-tier/paid-tier conditioning, in independent labs, on
 independent model families. The minimum protocol is two
 non-Anthropic frontier model families, two non-Greenblatt research
-groups, and a setup in which the value-versus-training tension is
-allowed to emerge from ordinary RLHF distributional shift rather
+groups, and a setup in which the \glsterm{value}{value}-versus-training tension is
+allowed to emerge from ordinary \glsterm{rlhf}{RLHF} distributional shift rather
 than scripted into the system prompt. The $14\% \to 78\%$ paradox
 itself --- the post-RL increase in alignment-faking reasoning ---
 and the concomitant weight-exfiltration behavior are the two
@@ -140,13 +140,13 @@ detection $z$-statistic is well-defined, the spike-entropy bound
 is calculable, and detection on undisturbed long-form text is
 reliable above the published thresholds. The dispute is over what
 removal pressure is admissible. The vendor and Kirchenbauer-2024
-position is that moderate fine-tuning leaves the watermark
+position is that moderate fine-tuning leaves the \glsterm{watermark}{watermark}
 detectable at slower accumulation rates; \citet{sadasivan2023-detection}%
 \deepencite{sadasivan2023-detection §main-result, citation-pending}
-argue that any watermark detectable from short spans is in
+argue that any \glsterm{watermark}{watermark} detectable from short spans is in
 principle removable by a paraphrase attacker with a
 comparable-quality model, and independent adversarial probes of
-SynthID-Text confirm that aggressive paraphrase plus modest
+\glsterm{synthid-text}{SynthID-Text} confirm that aggressive paraphrase plus modest
 fine-tuning does defeat the deployed scheme on short-form text.
 The two camps are not numerically far apart on the asymptotic
 detection rate; they are far apart on which threat model
@@ -154,7 +154,7 @@ counts.\\
 \emph{What would close it:} a public adversarial benchmark with
 the \emph{attacker fine-tune budget} on the $x$-axis (FLOP-cost,
 parameter count, or labeled-data size) and \emph{detector AUC} on
-the $y$-axis, with multiple watermark schemes plotted on the same
+the $y$-axis, with multiple \glsterm{watermark}{watermark} schemes plotted on the same
 plane. The current literature reports each scheme against its own
 adversarial setup; a shared budget axis would convert vendor-versus-
 academic disagreements into a single Pareto frontier on which
@@ -164,21 +164,21 @@ sadasivan2023-detection}.
 \paragraph{6. Debate-as-alignment-protocol viability (\cref{sec:scalable-oversight}).}
 The Irving 2018 result \citep[Theorem 1]{irving2018-debate} is a
 theoretical existence claim: under an equilibrium-strategy
-assumption, debate decides $\mathbf{PSPACE}$ with a
+assumption, \glsterm{debate}{debate} decides $\mathbf{PSPACE}$ with a
 polynomial-time judge and two superpolynomial debaters, and the
-truthful strategy wins at the equilibrium. The 2024 LLM-debate
+truthful strategy wins at the equilibrium. The 2024 \glsterm{llm}{LLM}-\glsterm{debate}{debate}
 empirical work \citep{khan2024-debating-llms} provides
-\emph{partial} support: debate beats direct QA on
+\emph{partial} support: \glsterm{debate}{debate} beats direct QA on
 information-asymmetry questions where the disputed claim is
 verifiable from a passage the judge cannot see, and is mixed-or-
 flat on math, code, and open-ended domains. The two regimes are
 the regimes where the equilibrium-honesty argument is and is not
 expected to bite. The empirical work has not yet tested the
-regime that matters for scalable oversight at superhuman
+regime that matters for \glsterm{scalable-oversight}{scalable oversight} at superhuman
 capability: a strictly-weaker judge facing two debaters whose
 claim is not pre-verifiable from any source the judge can audit.\\
 \emph{What would close it:} an empirical demonstration of
-debate-induced honesty on a domain where the judge is
+\glsterm{debate}{debate}-induced honesty on a domain where the judge is
 \emph{strictly weaker} than both debaters and where the question
 is \emph{not pre-verifiable} from any artifact the judge can
 inspect. Both conditions matter. The current empirical work
@@ -235,10 +235,10 @@ move is sociological as much as scientific. Density-ranking by
 those three properties leaves the seven above; subsidiary
 contradictions documented in the body --- agentic-benchmark
 non-stationarity, dangerous-capability eval reproducibility,
-sycophancy reduction-versus-resurfacing, FrontierMath
+\glsterm{sycophancy}{sycophancy} reduction-versus-resurfacing, \glsterm{frontiermath}{FrontierMath}
 auditability --- are real but compose under the seven (a fix to
-contamination protocol composes with FrontierMath grading; a fix
-to ASR comparability composes with dangerous-capability cross-lab
+contamination protocol composes with \glsterm{frontiermath}{FrontierMath} grading; a fix
+to \glsterm{asr}{ASR} comparability composes with dangerous-capability cross-lab
 comparison).
 
 \begin{contradiction}
@@ -272,30 +272,30 @@ The layered-defense framing of \cref{sec:introduction} is itself
 checkable, and the body of the paper checks it: every layer has
 at least one independently-developed instrument, and every layer
 has at least one named failure mode the next layer is supposed to
-catch. Layer 1 has MMLU and MMLU-Redux and the contamination
-survey; layer 2 has AIME, MATH, GPQA, FrontierMath, HLE; layer 3
-has SWE-Bench, OSWorld, GAIA, $\tau$-Bench; layer 4 has HarmBench,
-JailbreakBench, AdvBench, Crescendo; layer 5 has SycophancyEval,
-the Apollo scheming suite, the Greenblatt alignment-faking setup;
+catch. Layer 1 has \glsterm{mmlu}{MMLU} and \glsterm{mmlu-redux-2}{MMLU-Redux} and the contamination
+survey; layer 2 has AIME, MATH, GPQA, \glsterm{frontiermath}{FrontierMath}, \glsterm{hle}{HLE}; layer 3
+has SWE-Bench, OSWorld, GAIA, $\tau$-Bench; layer 4 has \glsterm{harmbench-2}{HarmBench},
+\glsterm{jailbreakbench-2}{JailbreakBench}, AdvBench, Crescendo; layer 5 has \glsterm{sycophancyeval}{SycophancyEval},
+the Apollo \glsterm{scheming}{scheming} suite, the Greenblatt alignment-faking setup;
 layer 6 has the Kirchenbauer/SynthID watermarking line and the
-Irving/Khan debate line. The framing is therefore not post-hoc:
+Irving/Khan \glsterm{debate}{debate} line. The framing is therefore not post-hoc:
 the instruments exist, they were developed by independent groups,
 and each addresses a failure mode the prior layer left open. What
 \emph{is} post-hoc is the suggestion that each layer is healthy.
 
 The honest 2026 picture is that the layered defense holds in
 outline and that each layer's instruments are aging at different
-rates. We measure jailbreak ASR (with the comparability caveat of
+rates. We measure jailbreak \glsterm{asr}{ASR} (with the comparability caveat of
 item~2). We measure contamination (with the protocol caveat of
-item~7). We measure in-context scheming (with the elicitation
-caveat of item~3). We measure watermark survival under benign
+item~7). We measure \glsterm{in-context-scheming}{in-context scheming} (with the elicitation
+caveat of item~3). We measure \glsterm{watermark}{watermark} survival under benign
 edits (with the adversarial-budget caveat of item~5). We do
-\emph{not} yet measure deployment-scale propensity for scheming.
+\emph{not} yet measure deployment-scale propensity for \glsterm{scheming}{scheming}.
 We do \emph{not} yet measure alignment-faking generalization
 outside the elicitation that produced it. We do \emph{not} yet
 measure contamination of the next pre-training cycle, the way the
 field already measures contamination of the current one. We do
-\emph{not} yet measure scalable oversight at superhuman
+\emph{not} yet measure \glsterm{scalable-oversight}{scalable oversight} at superhuman
 capability under a strictly-weaker judge with non-pre-verifiable
 questions. The next round of evaluation infrastructure has to
 attack those specific gaps --- not produce more of what we already

@@ -9,17 +9,17 @@ Supervised fine-tuning (SFT) is the first stage of essentially every
 modern post-training pipeline: cross-entropy maximum-likelihood on
 curated prompt-response pairs, producing the instruction-following
 starting point $\pi^{\mathrm{SFT}}$ that every subsequent stage
-(\cref{sec:rlhf} PPO, \cref{sec:dpo} DPO, \cref{sec:rlvr-grpo} GRPO)
+(\cref{sec:rlhf} PPO, \cref{sec:dpo} \glsterm{dpo}{DPO}, \cref{sec:rlvr-grpo} \glsterm{grpo-2}{GRPO})
 takes as both initialization and KL anchor
 \citep[\S 3]{ouyang2022-instructgpt}.\footnote{KB excerpt:
 \texttt{kb/excerpts/ouyang2022-instructgpt.md\#sec-3}.} The thesis of
 this section is the one most easily lost in the post-training
 literature: \emph{the loss is plain cross-entropy with prompt-masking,
 and the interesting research questions live in the data, not the
-objective.} The lineage from FLAN's $\sim\!1.8$K reformatted NLP tasks
+objective.} The lineage from \glsterm{flan}{FLAN}'s $\sim\!1.8$K reformatted NLP tasks
 \citep{wei2021-flan,chung2022-flan-t5} through InstructGPT's $\sim\!13$K
 labeler-written demonstrations \citep[\S 3]{ouyang2022-instructgpt} to
-T\"ulu-3's $\sim\!939$K mixed-source set \citep{tulu3}, MAGPIE's
+T\"ulu-3's $\sim\!939$K mixed-source set \citep{tulu3}, \glsterm{magpie}{MAGPIE}'s
 self-synthesis at zero human cost \citep{magpie-2024}, R1-Distill's
 $800$K reasoning-trace transfer \citep[\S 4]{deepseek-r1}, and s1's
 1K-trace + budget-forcing endpoint \citep{s1-2025} is a story about
@@ -89,7 +89,7 @@ algorithmic but quantitative
 \citep[\S 3.5]{ouyang2022-instructgpt}: SFT runs $1$--$4$ epochs over
 the curated set rather than a single pass; the learning rate is roughly
 $5 \times 10^{-6}$, an order of magnitude below pre-training peak; the
-mixed-precision recipe (BF16 working precision with FP32 master weights,
+mixed-precision recipe (BF16 working precision with FP32 \glsterm{master-weights}{master weights},
 \cref{sec:mp-bf16}) is inherited unchanged. Architecturally there is
 \emph{no} change — SFT is a continued-training stage, not a new model.
 Total compute per epoch is $\sim 6 N_{\mathrm{tok}} P$ FLOPs in standard
@@ -108,11 +108,11 @@ is equivalent, in the infinite-data limit, to minimizing the
 $\KL(\pi^{\mathrm{demo}} \,\|\, \pi_\theta)$
 \citep[\S 3.5]{ouyang2022-instructgpt}. Forward KL is mode-covering:
 the trained $\pi_\theta$ must put non-trivial mass wherever
-$\pi^{\mathrm{demo}}$ does, or the loss diverges. RLHF / DPO
+$\pi^{\mathrm{demo}}$ does, or the loss diverges. \glsterm{rlhf}{RLHF} / \glsterm{dpo}{DPO}
 (\cref{sec:rlhf}, \cref{sec:dpo}) instead minimize the \emph{reverse}
 KL, $\KL(\pi_\theta \,\|\, \pi^{\mathrm{SFT}})$, which is mode-seeking:
 $\pi_\theta$ may put zero mass where $\pi^{\mathrm{SFT}}$ has support
-without paying a divergence cost. SFT and RLHF are dual KL directions
+without paying a divergence cost. SFT and \glsterm{rlhf}{RLHF} are dual KL directions
 around the demonstrator and the SFT-stage model respectively, which
 is why the two stages compose cleanly: SFT broadens, RL sharpens.
 \end{intuition}
@@ -170,8 +170,8 @@ space.
 (classification, QA, summarization, NLI) as natural-language
 instructions and fine-tuned a base LM on them with cross-entropy.
 \citet{chung2022-flan-t5} extended this multi-task instruction-tuning
-with multiple prompting templates and chain-of-thought traces;
-FLAN-T5 became the canonical reference for the pre-RLHF era. SFT was
+with multiple prompting templates and \glsterm{chain-of-thought}{chain-of-thought} traces;
+\glsterm{flan}{FLAN}-\glsterm{t5}{T5} became the canonical reference for the pre-\glsterm{rlhf}{RLHF} era. SFT was
 the \emph{terminal} post-training stage; no preference signal entered
 the recipe.
 
@@ -192,17 +192,17 @@ together hold the post-training pipeline together.
 \paragraph{Llama-3 — rejection-sampling SFT, iterated.}
 \citet{meta-llama3} ship a multi-round SFT loop in which each new round
 is on-policy: from the current $\pi^{\mathrm{SFT}}$, sample $N \in [10,
-30]$ responses per prompt, score with a reward model, keep the top
+30]$ responses per prompt, score with a \glsterm{reward-model}{reward model}, keep the top
 $k \in [1, 3]$, and SFT-fine-tune on the kept responses. Iterate over
-$\geq 6$ rounds, alternating with DPO. The total SFT corpus across
+$\geq 6$ rounds, alternating with \glsterm{dpo}{DPO}. The total SFT corpus across
 rounds is $\sim\!10^7$ examples — three orders of magnitude above
 InstructGPT. The recipe is best read as ``on-policy SFT filtered by an
-off-policy reward model'': the model learns from its own distribution,
+off-policy \glsterm{reward-model}{reward model}'': the model learns from its own distribution,
 but only at the points where the RM judges it correct.
 
 \paragraph{T\"ulu-3 — organic-heavy mixed sourcing.} \citet{tulu3}
 publish a fully open SFT recipe at $\sim\!939$K examples, mixing four
-streams: filtered organic data (Reddit Q\&A, StackExchange, FLAN-style
+streams: filtered organic data (Reddit Q\&A, StackExchange, \glsterm{flan}{FLAN}-style
 reformatted tasks), human-written demonstrations, synthetic data from
 strong teacher models, and persona-conditioned generation. The mix is
 balanced explicitly across math, code, reasoning, multi-turn dialogue,
@@ -214,23 +214,23 @@ data-quantity contradiction in \cref{sec:sft-contradictions}.
 \paragraph{MAGPIE — self-synthesis at zero human cost.}
 \citet{magpie-2024}'s procedure is structurally trivial. Take any
 aligned LM $\pi^{\mathrm{Aligned}}$ (LLaMA-3-Instruct, Qwen-Chat,
-Mistral-Instruct), prompt it with \emph{only} its instruction-template
+\glsterm{mistral}{Mistral}-Instruct), prompt it with \emph{only} its instruction-template
 prefix (e.g.\ \texttt{<|begin\_of\_text|><|start\_header\_id|>user<|end\_header\_id|>\textbackslash n\textbackslash n})
 with no question, and sample. The model fabricates a user question.
 Append the instruction-template response delimiter and sample again to
-get the answer. SFT on MAGPIE-generated data on Llama-3-8B-base
+get the answer. SFT on \glsterm{magpie}{MAGPIE}-generated data on Llama-3-8B-base
 recovers most of the performance of Llama-3-8B-Instruct on AlpacaEval
 and MT-Bench at the cost of two forward passes per example
 \citep{magpie-2024}.
 
 \begin{intuition}
-What MAGPIE exposes is that an aligned model carries a
+What \glsterm{magpie}{MAGPIE} exposes is that an aligned model carries a
 ``user-question prior'' baked into its conditional distribution after
 the system-prompt template: $p(\text{question} \mid
 \text{template-prefix only})$ is itself a useful instruction
 distribution. The base model's unconditional distribution does not
 have this property — it would generate web text. Returning to math:
-SFT on MAGPIE data is just \cref{eq:sft-loss-canonical} with
+SFT on \glsterm{magpie}{MAGPIE} data is just \cref{eq:sft-loss-canonical} with
 $\mathcal{D}_{\mathrm{SFT}}$ constructed by sampling $(x, y)$ from
 $\pi^{\mathrm{Aligned}}(\cdot \mid \text{prefix})$. The aligned model is
 re-used as both data source and a posteriori demonstrator
@@ -241,7 +241,7 @@ $\pi^{\mathrm{demo}}$.
 \citet[\S 4]{deepseek-r1} demonstrate that reasoning capability
 acquired through RL with verifiable rewards (\cref{sec:rlvr-grpo})
 transfers to small dense models through pure SFT.\footnote{KB excerpt:
-\texttt{kb/excerpts/deepseek-r1.md\#sec-4}.} After training R1 by RLVR,
+\texttt{kb/excerpts/deepseek-r1.md\#sec-4}.} After training R1 by \glsterm{rlvr-3}{RLVR},
 the team curated $800$K SFT samples ($600$K reasoning + $200$K
 non-reasoning) by sampling from R1 and filtering for correctness;
 SFT-only fine-tuning on Qwen-2.5 / Llama-3 base checkpoints (1.5B,
@@ -252,7 +252,7 @@ without any RL on the small models \citep[\S 4]{deepseek-r1}.
 \citet{s1-2025} push the data-scale axis to its extreme: $\sim\!1$K
 hand-curated reasoning traces from Gemini 2.0 Flash Thinking, plus
 inference-time \emph{budget-forcing}, reaches near-o1-mini on AIME.
-The shared finding is sharp: a small set of clean, fully-worked CoT
+The shared finding is sharp: a small set of clean, fully-worked \glsterm{chain-of-thought}{CoT}
 traces is enough to elicit reasoning behavior in a strong base model,
 provided the traces are correct and in the model's preferred style.
 Per-example data quality dominates per-example data quantity at this
@@ -268,7 +268,7 @@ multi-stage prompting pipelines \citep[\S 2.2]{phi4},\footnote{KB
 excerpt: \texttt{kb/excerpts/phi4.md\#sec-2-2-pipelines}.} and the
 post-training SFT mix preserves the same synthetic-heavy ratio. The
 underlying intuition, in Phi-4's own framing, is that synthetic data
-acts as ``spoonfeeding'' \citep[\S 2.1]{phi4}: ``each token generated
+acts as ``\glsterm{spoonfeeding}{spoonfeeding}'' \citep[\S 2.1]{phi4}: ``each token generated
 by a language model is by definition predicted by the preceding
 tokens, making it easier for a model to follow the resulting reasoning
 patterns.'' Phi-4 surpasses its own teacher GPT-4o on GPQA ($56.1$ vs
@@ -283,12 +283,12 @@ Modern frontier recipes do not stop at one SFT pass. The Llama-3
 \citep{meta-llama3} and T\"ulu-3 \citep{tulu3} loops alternate SFT
 with preference-RL across multiple rounds, each round producing a new
 $\pi^{\mathrm{SFT}'}$ that becomes the next round's reference. The
-iteration uses rejection-sampling SFT as the on-policy data refresher:
+iteration uses \glsterm{rejection-sampling-sft}{rejection-sampling SFT} as the on-policy data refresher:
 
 \begin{enumerate}
 \item From the current $\pi^{\mathrm{SFT}}$, sample $N$ responses per
 prompt ($N \in [10, 30]$).
-\item Score each response with a reward model.
+\item Score each response with a \glsterm{reward-model}{reward model}.
 \item Keep the top-$k$ ($k \in [1, 3]$) per prompt.
 \item Run \cref{eq:sft-loss-mask} on the kept responses, producing
 $\pi^{\mathrm{SFT}'}$.
@@ -296,9 +296,9 @@ $\pi^{\mathrm{SFT}'}$.
 next preference-RL round (\cref{sec:rlhf}, \cref{sec:dpo}).
 \end{enumerate}
 
-The iteration interleaves with the DPO step from \cref{sec:dpo},
-giving the standard 2024-era recipe SFT $\to$ DPO $\to$ rejection-sample
-$\to$ SFT $\to$ DPO $\to$ \ldots. The convergence criterion is
+The iteration interleaves with the \glsterm{dpo}{DPO} step from \cref{sec:dpo},
+giving the standard 2024-era recipe SFT $\to$ \glsterm{dpo}{DPO} $\to$ rejection-sample
+$\to$ SFT $\to$ \glsterm{dpo}{DPO} $\to$ \ldots. The convergence criterion is
 empirical (preference-win-rate plateau across rounds rather than a
 fixed-point criterion on the loss).
 
@@ -321,7 +321,7 @@ distribution shift from ``language model'' to
 
 The structural reason follows directly from the KL-direction duality
 of the previous intuition box: SFT minimizes \emph{forward} KL to the
-demonstrator, which is mode-covering and broad; RLHF / DPO minimize
+demonstrator, which is mode-covering and broad; \glsterm{rlhf}{RLHF} / \glsterm{dpo}{DPO} minimize
 \emph{reverse} KL to $\pi^{\mathrm{SFT}}$, which is mode-seeking and
 sharp. Running RL on a base LM would have $\pi^{\mathrm{SFT}}$ in
 \cref{eq:rlhf-optimum} replaced by a $\pi^{\mathrm{base}}$ whose mass
@@ -331,7 +331,7 @@ $\pi^*(y \mid x) \propto \pi^{\mathrm{base}}(y \mid x) \exp(r_\phi /
 \beta)$ then fails to concentrate on any usable distribution at
 practical $\beta$. Removing the SFT stage is feasible only when the
 reward signal is strong enough on its own to substitute for the
-distribution shift — DeepSeek-R1-Zero \citep[\S 2]{deepseek-r1}
+distribution shift — DeepSeek-\glsterm{r1-zero}{R1-Zero} \citep[\S 2]{deepseek-r1}
 removes the SFT cold-start in the verifiable-reward setting, but the
 result has poor readability and language-mixing artifacts that
 motivate the cold-start SFT stage of the production R1 pipeline
@@ -399,18 +399,18 @@ contradiction.
 establish $\pi^{\mathrm{SFT}}$ as the universal starting point for the
 post-training stages that follow, with the forward-KL discipline
 giving a mode-covering broad policy. \Cref{sec:rlhf} now picks up the
-canonical three-stage RLHF pipeline that consumes $\pi^{\mathrm{SFT}}$
+canonical three-stage \glsterm{rlhf}{RLHF} pipeline that consumes $\pi^{\mathrm{SFT}}$
 as both initialization and KL anchor: reward-model training under the
 Bradley--Terry log-likelihood, PPO optimization of the KL-constrained
 reward objective, and the closed-form RL optimum
 $\pi^*(y \mid x) \propto \pi^{\mathrm{SFT}}(y \mid x) \exp(r_\phi /
 \beta)$ that turns out — six years later — to be exactly the object
-\cref{sec:dpo}'s DPO derivation inverts. The KL direction flips from
-forward (SFT, mode-covering) to reverse (RLHF / DPO, mode-seeking) at
+\cref{sec:dpo}'s \glsterm{dpo}{DPO} derivation inverts. The KL direction flips from
+forward (SFT, mode-covering) to reverse (\glsterm{rlhf}{RLHF} / \glsterm{dpo}{DPO}, mode-seeking) at
 the boundary; the mixed-precision recipe and most of the optimization
 machinery (\cref{sec:mixed-precision,sec:optimization}) carry forward
 unchanged. The reasoning-RL pipeline of \cref{sec:rlvr-grpo} departs
-further: the learned reward model is replaced by a programmatic
+further: the learned \glsterm{reward-model}{reward model} is replaced by a programmatic
 verifier, and the cold-start SFT is sometimes elided entirely
-(R1-Zero), at the cost of the readability artifacts noted in
+(\glsterm{r1-zero}{R1-Zero}), at the cost of the readability artifacts noted in
 \cref{sec:sft-before-rl}.

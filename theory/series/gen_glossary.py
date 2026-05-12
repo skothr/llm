@@ -10,6 +10,7 @@ Re-run after glossary.md changes; idempotent.
 from __future__ import annotations
 import json
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 THEORY = Path(__file__).resolve().parents[1]
@@ -41,7 +42,7 @@ def _split_def_and_cite(defn: str) -> tuple[str, str | None]:
     return defn[: m.start()].rstrip(), m.group(1).strip()
 
 
-def parse_entries(lines: list[str]) -> list[dict]:
+def parse_entries(lines: Sequence[str]) -> list[dict]:
     """Parse the bullet entries from a glossary.md line iterable.
 
     Returns one record per entry: {primary_form, aliases, full_def, kb_cite}.
@@ -85,7 +86,7 @@ def is_case_strict(primary_form: str) -> bool:
     return any(c.isupper() for c in primary_form[1:])
 
 
-def derive_key(primary_form: str, aliases: list[str], used: set[str] | None = None) -> str:
+def derive_key(primary_form: str, used: set[str] | None = None) -> str:
     """Lowercase + slugify the primary form. Append -2/-3 on collision."""
     base = re.sub(r"[^a-z0-9]+", "-", primary_form.lower()).strip("-")
     if used is None or base not in used:
@@ -110,7 +111,7 @@ def build_records(entries: list[dict]) -> list[dict]:
     used: set[str] = set()
     records: list[dict] = []
     for e in entries:
-        key = derive_key(e["primary_form"], e["aliases"], used=used)
+        key = derive_key(e["primary_form"], used=used)
         used.add(key)
         records.append({
             "key": key,

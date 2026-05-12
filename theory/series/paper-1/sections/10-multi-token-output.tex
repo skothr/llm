@@ -9,7 +9,7 @@
 
 The architectural axes catalogued in
 \cref{sec:tokenization-embedding,sec:positional-encoding,sec:kv-sharing,sec:hardware-attention,sec:ffn,sec:normalization-axis,sec:state-space}
-all assume the canonical autoregressive decoding loop: one forward pass
+all assume the canonical \glsterm{autoregressive}{autoregressive} decoding loop: one forward pass
 produces one token. That assumption is load-bearing for both training
 mathematics (the next-token cross-entropy of
 \cref{sec:tokenization-embedding}) and serving cost (the per-step KV /
@@ -19,23 +19,23 @@ sometimes conflates. \emph{Speculative decoding}
 \citep{leviathan2023,chen2023-speculative} is a serving-side algorithm
 that produces multiple tokens per target-model forward pass while
 preserving the target's output distribution exactly. \emph{Multi-token
-prediction} (MTP) \citep{gloeckle2024-mtp} is an architectural and
+prediction} (\glsterm{multi-token-prediction}{MTP}) \citep{gloeckle2024-mtp} is an architectural and
 training-objective choice that adds heads predicting tokens at offsets
 $t+1, \ldots, t+n$, reporting both quality lift on code-heavy
 benchmarks and (when the heads are reused at inference) a built-in
 self-speculative drafter. The thesis of this section is the distinction:
 speculative decoding is \emph{inference-only} and never touches the
-training loss; MTP is \emph{architectural} and changes both the loss
+training loss; \glsterm{multi-token-prediction}{MTP} is \emph{architectural} and changes both the loss
 landscape and what the deployable system can do. They compose --- a
-DeepSeek-V3-style MTP-trained model \citep[\S 2.3.1]{deepseek-v3} is
-its own draft model in a Leviathan-style verification loop --- but
+\glsterm{precision-pinning}{DeepSeek-V3}-style \glsterm{multi-token-prediction}{MTP}-trained model \citep[\S 2.3.1]{deepseek-v3} is
+its own draft model in a \glsterm{speedup-theorem}{Leviathan}-style verification loop --- but
 they are not interchangeable.
 
 \subsection{Speculative decoding: the rejection rule}
 \label{sec:mt-leviathan}
 
-Let $M_p$ be a target LLM with conditional distribution $p(x_t \mid
-x_{<t})$ over a vocabulary of size $V$, and $M_q$ a smaller draft
+Let $M_p$ be a target \glsterm{llm}{LLM} with conditional distribution $p(x_t \mid
+x_{<t})$ over a \glsterm{vocabulary}{vocabulary} of size $V$, and $M_q$ a smaller draft
 model with $q(x_t \mid x_{<t})$. \citet{leviathan2023} sample $\gamma$
 draft tokens $x_1, \ldots, x_\gamma$ from $M_q$ autoregressively, run
 $M_p$ in a single parallel forward over the $\gamma + 1$ extended
@@ -70,11 +70,11 @@ to the ratio of $M_q$'s per-step cost to $M_p$'s, is
 \text{walltime gain} = \frac{1 - \alpha^{\gamma+1}}{(1-\alpha)(\gamma c + 1)}.
 \label{eq:spec-walltime}
 \end{equation}
-A key analytic result is \citet[Thm.~3.5, Cor.~3.6]{leviathan2023}:
+A \glsterm{key}{key} analytic result is \citet[Thm.~3.5, Cor.~3.6]{leviathan2023}:
 $\alpha = \E[\min(p, q)] = 1 - \E[D_{LK}(p, q)]$, where $D_{LK}$ is
 total-variation distance. The speedup curve is therefore a function of
-how close $q$ is to $p$ in TV. Reported $\alpha$ on T5-XXL with a
-T5-Small drafter is $\sim 0.75$, yielding $2$--$3\times$ wallclock
+how close $q$ is to $p$ in TV. Reported $\alpha$ on \glsterm{t5}{T5}-XXL with a
+\glsterm{t5}{T5}-Small drafter is $\sim 0.75$, yielding $2$--$3\times$ wallclock
 speedup at $\gamma = 7$ \citep[\S 3.6, Tab.~3]{leviathan2023}.
 Concurrent work \citep{chen2023-speculative} derives the same rule
 and is treated as joint prior in the field.
@@ -103,7 +103,7 @@ its top-$s_k$ tokens, and candidates are formed by Cartesian product
 over heads \citep[\S 2.1.2]{cai2024-medusa}\footnote{KB excerpt:
 \texttt{kb/excerpts/cai2024-medusa.md\#sec-2-1-2}.}, evaluating
 $\sum_k \prod_i s_i$ continuations in one parallel target forward.
-\emph{Tree attention} is the mechanism that makes this a single pass:
+\emph{\glsterm{tree-attention}{Tree attention}} is the mechanism that makes this a single pass:
 the attention mask is constructed so each candidate token attends only
 to its unique ancestor chain in the tree, not to its siblings, which
 shares the prefix's KV state across all branches.
@@ -130,13 +130,13 @@ distribution-preserving for temperature $\neq 0$ --- a tradeoff
 sometimes elided in deployment notes.
 
 \begin{contradiction}
-Medusa with rejection sampling (\cref{eq:spec-reject} applied to
+Medusa with \glsterm{rejection-sampling}{rejection sampling} (\cref{eq:spec-reject} applied to
 heads-as-drafter) is mathematically distribution-preserving; Medusa
-with typical acceptance is not. Vendor blogs and benchmark tables
+with \glsterm{typical-acceptance}{typical acceptance} is not. Vendor blogs and benchmark tables
 sometimes report ``Medusa speedup'' without specifying which
 verification rule was used, conflating the two regimes. Any deployment
 that requires reproducible sampling (eval harnesses, structured-output
-RAG, RLHF rollouts) must verify the verification rule, not just the
+RAG, \glsterm{rlhf}{RLHF} rollouts) must verify the verification rule, not just the
 draft mechanism.
 \end{contradiction}
 
@@ -144,20 +144,20 @@ draft mechanism.
 \label{sec:mt-eagle}
 
 EAGLE \citep{li2024-eagle} reframes the drafter as predicting
-\emph{features} --- the second-to-top-layer hidden state $f$, the
+\emph{features} --- the second-to-top-layer \glsterm{hidden-state}{hidden state} $f$, the
 input to the LM head --- rather than tokens directly. The motivating
 observation \citep[abstract]{li2024-eagle}: token sequences have high
 local entropy because many tokens are sampled from a flat tail, but
-feature sequences are smoother and more predictable, since the LM head
+\glsterm{feature}{feature} sequences are smoother and more predictable, since the LM head
 absorbs the entropy. The drafter is a single decoder layer (an FC
-projection plus one transformer block) taking a fused input of past
+projection plus one \glsterm{transformer}{transformer} block) taking a fused input of past
 features $F_{1:i}$ and the \emph{shifted} token sequence $T_{2:i+1}$,
 and predicting $\hat f_{i+1}$ \citep[\S 3.1]{li2024-eagle}\footnote{KB
 excerpt: \texttt{kb/excerpts/li2024-eagle.md\#sec-3-1}.}. The shift by
 one is the load-bearing trick: at the time of predicting $f_{i+1}$,
 the token $t_{i+1}$ that branched the actual generation has already
 been sampled and is conditioned on, which resolves the multi-mode
-uncertainty that pure feature autoregression cannot commit to.
+uncertainty that pure \glsterm{feature}{feature} autoregression cannot commit to.
 
 The drafter is trained with a combined objective \citep[\S 3.2]{li2024-eagle}:
 \begin{equation}
@@ -167,13 +167,13 @@ L = \operatorname{SmoothL1}(f_{i+1}, \hat f_{i+1}) + w_{\text{cls}} \cdot \opera
 with $w_{\text{cls}} = 0.1$. The classification term routes the
 target's frozen LM head over both true and predicted features, so the
 drafter optimizes \emph{token agreement} via the LM head's projection,
-not raw feature L2 distance. EAGLE inherits Leviathan-style rejection
+not raw \glsterm{feature}{feature} L2 distance. EAGLE inherits \glsterm{speedup-theorem}{Leviathan}-style rejection
 sampling at the verification step \citep[\S 3.3]{li2024-eagle}, so
 distribution preservation is by construction. Reported speedups on
 LLaMA2-Chat 70B at MT-bench: $3.01\times$ at temperature $0$,
 $2.67\times$ at temperature $1$ \citep[Fig.~1]{li2024-eagle}. EAGLE-3
-\citep{eagle3-2025} (NeurIPS 2025) abandons feature prediction in
-favor of direct token prediction with multi-layer feature fusion,
+\citep{eagle3-2025} (NeurIPS 2025) abandons \glsterm{feature}{feature} prediction in
+favor of direct token prediction with multi-layer \glsterm{feature}{feature} fusion,
 claiming up to $6.5\times$; the lineage is open at frontier scale.
 
 \subsection{Multi-Token Prediction (MTP) as architectural choice}
@@ -184,7 +184,7 @@ drafter on at inference, modify the \emph{training} objective so the
 trunk produces hidden states predictive of multiple future tokens
 simultaneously. The standard next-token loss is generalized to
 \citep[\S 2, Eq.~1]{gloeckle2024-mtp}\footnote{KB excerpt:
-\texttt{kb/excerpts/gloeckle2024-mtp.md\#sec-2}.}
+\texttt{kb/excerpts/gloeckle2024-\glsterm{multi-token-prediction}{mtp}.md\#sec-2}.}
 \begin{equation}
 \mathcal{L}_n = -\sum_t \log P_\theta(x_{t+n:t+1} \mid x_{1:t}) = -\sum_t \sum_{i=1}^{n} \log P_\theta(x_{t+i} \mid x_{1:t}),
 \label{eq:mtp-loss}
@@ -195,16 +195,16 @@ $P_\theta(x_{t+i} \mid x_{1:t}) = \softmax(f_i(z_t))$
 \citep[\S 3]{gloeckle2024-mtp}. The training-time overhead is under
 $5\%$ for $n \in \{2, 4\}$ \citep[\S 3]{gloeckle2024-mtp}.
 Crucially, the next-token head $f_1$ is unchanged at inference --- so
-a model can be MTP-trained and served as if it were a vanilla
+a model can be \glsterm{multi-token-prediction}{MTP}-trained and served as if it were a vanilla
 next-token model, with the auxiliary heads either discarded or reused
-as drafters. Headline quality results: 13B-parameter MTP models solve
+as drafters. Headline quality results: 13B-parameter \glsterm{multi-token-prediction}{MTP} models solve
 $12\%$ more HumanEval and $17\%$ more MBPP problems than matched
 next-token baselines \citep[abstract]{gloeckle2024-mtp}; the method is
 \emph{increasingly} useful at larger scale.
 
-DeepSeek-V3 \citep[\S 2.3.1]{deepseek-v3} productionizes a chained
+\glsterm{precision-pinning}{DeepSeek-V3} \citep[\S 2.3.1]{deepseek-v3} productionizes a chained
 variant: instead of $n$ independent heads each conditioned on $z_t$
-alone, a sequence of $k$ small Transformer blocks $M_i$ refine a
+alone, a sequence of $k$ small \glsterm{transformer}{Transformer} blocks $M_i$ refine a
 chain of hidden states using the previous predicted token's embedding,
 \begin{equation}
 \mathbf{h}_t^{i} = M_i\!\left(\operatorname{Norm}(\mathbf{h}_t^{i-1}) ;\, \operatorname{Norm}(E_{\text{in}}[x_{t+i}])\right), \quad
@@ -217,17 +217,17 @@ with the LM head $E_{\text{out}}$ \emph{shared} across all heads
 auxiliary term per chained head with weight $\lambda$ that decays
 during training:
 $\mathcal{L} = \mathcal{L}_{\text{NTP}} + \frac{\lambda}{D} \sum_{i=1}^{k} \mathcal{L}_{\text{MTP},i}$
-\citep[\S 2.3.1]{deepseek-v3}. DeepSeek-V3 ships $k = 1$ (one MTP
+\citep[\S 2.3.1]{deepseek-v3}. \glsterm{precision-pinning}{DeepSeek-V3} ships $k = 1$ (one \glsterm{multi-token-prediction}{MTP}
 module beyond the main head) and reports $\sim 85\%$ acceptance for
 self-speculation and $\sim 1.8\times$ wall-clock speedup
 \citep[\S 2.3.1]{deepseek-v3}. The parallel-vs-chained distinction
 matters because chained heads condition each future-token prediction
-on the previous prediction --- the natural autoregressive structure
+on the previous prediction --- the natural \glsterm{autoregressive}{autoregressive} structure
 \cref{eq:spec-reject} exploits at inference.
 
 \begin{intuition}
-MTP is one model, many heads, one objective. The shared trunk produces
-a single hidden state $z_t = f_s(x_{1:t})$; the heads $f_1, \ldots,
+\glsterm{multi-token-prediction}{MTP} is one model, many heads, one objective. The shared trunk produces
+a single \glsterm{hidden-state}{hidden state} $z_t = f_s(x_{1:t})$; the heads $f_1, \ldots,
 f_n$ each project it to a different future-position vocab
 distribution. The objective in \cref{eq:mtp-loss} is the sum of cross-
 entropies of those projections against the corresponding ground-truth
@@ -261,52 +261,52 @@ trained. Distribution-preserving under \cref{eq:spec-reject}. Cost:
 one fine-tuning stage; no drafter; no backbone change.
 
 \item \textbf{Medusa-2 / EAGLE}: post-hoc with backbone unfrozen
-(Medusa-2) or with a feature-level drafter trained on the target's
+(Medusa-2) or with a \glsterm{feature}{feature}-level drafter trained on the target's
 features (EAGLE). Distribution-preserving under inherited rejection
-sampling. Cost: backbone fine-tune (Medusa-2) or drafter parameters
+sampling. Cost: backbone fine-tune (Medusa-2) or drafter \glsterm{parameters}{parameters}
 $\sim 1\text{--}3\%$ of target (EAGLE).
 
-\item \textbf{MTP} \citep{gloeckle2024-mtp,deepseek-v3}: pretraining-
+\item \textbf{\glsterm{multi-token-prediction}{MTP}} \citep{gloeckle2024-mtp,deepseek-v3}: pretraining-
 time architectural choice. The training objective is
 \cref{eq:mtp-loss} (parallel) or \cref{eq:mtp-deepseek} (chained).
 The trunk's hidden states are shaped by the multi-token signal during
 pretraining; the heads are integrated into the architecture, not
 bolted on. Distribution-preserving when reused as drafter under
 \cref{eq:spec-reject}. Cost: $\sim 5\%$ training-time overhead and
-$\sim 1$ Transformer block of parameters (DeepSeek-V3).
+$\sim 1$ \glsterm{transformer}{Transformer} block of \glsterm{parameters}{parameters} (\glsterm{precision-pinning}{DeepSeek-V3}).
 \end{itemize}
 
-The key invariant: every mechanism above commutes with
-\cref{eq:spec-reject}, so they can be \emph{composed}. An MTP-trained
+The \glsterm{key}{key} invariant: every mechanism above commutes with
+\cref{eq:spec-reject}, so they can be \emph{composed}. An \glsterm{multi-token-prediction}{MTP}-trained
 model can use its built-in heads as the drafter, dropping the cost
 coefficient $c$ in \cref{eq:spec-walltime} to nearly zero (no separate
 forward pass) and pushing $\alpha$ high (the drafter's distribution
 \emph{is} the target's marginal distribution at offset $i$, so
 $D_{LK}(p, q)$ is small by construction). The compositionality is why
-MTP is increasingly the convergent choice at frontier 2026: it
+\glsterm{multi-token-prediction}{MTP} is increasingly the convergent choice at frontier 2026: it
 collapses two engineering investments (drafter training; drafter
 maintenance) into one (a slightly modified pretraining objective)
 while leaving \cref{sec:kv-sharing,sec:hardware-attention,sec:ffn,sec:state-space}
 untouched. Whether the quality lift Gloeckle reports survives at
-non-DeepSeek frontier scale, and how MTP interacts with the long
-chain-of-thought generation patterns of reasoning models like
+non-DeepSeek frontier scale, and how \glsterm{multi-token-prediction}{MTP} interacts with the long
+\glsterm{chain-of-thought}{chain-of-thought} generation patterns of reasoning models like
 DeepSeek-R1, are open --- and the subject of the contradiction
 \citet{gloeckle2024-mtp} surface vs.\ \citet{deepseek-v3} surface
-about \emph{whether MTP is mainly a speedup or also a quality lift},
+about \emph{whether \glsterm{multi-token-prediction}{MTP} is mainly a speedup or also a quality lift},
 addressed in \cref{sec:contradictions}.
 
 \subsection{Forward link}
 \label{sec:mt-forward}
 
 The mechanisms in this section assume a token-stream output: the
-target distribution is over a single discrete vocabulary $\{1, \ldots,
+target distribution is over a single discrete \glsterm{vocabulary}{vocabulary} $\{1, \ldots,
 V\}$, and ``multi-token output'' means more positions in that same
 stream. \cref{sec:multimodal} relaxes this assumption in a different
 direction: the input and output streams may include image patches,
 audio frames, or video tokens that are not natively part of $V$. The
-three-piece pattern there --- vision encoder, projector, LLM body ---
+three-piece pattern there --- vision encoder, projector, \glsterm{llm}{LLM} body ---
 turns out to be largely orthogonal to the choices in this section: a
-multimodal LLM with MTP heads is a thing one can build (and DeepSeek-V3
+multimodal \glsterm{llm}{LLM} with \glsterm{multi-token-prediction}{MTP} heads is a thing one can build (and \glsterm{precision-pinning}{DeepSeek-V3}
 implicitly is, in its multimodal-extended variants), and a
 speculatively-decoded multimodal model is also a thing. The two axes
 multiply rather than interact.

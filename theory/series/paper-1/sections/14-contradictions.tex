@@ -34,27 +34,27 @@ can trace the lineage.
 \subsection{C1 --- MLA vs.\ MHA at frontier scale}
 \label{sec:c-mla}
 
-\textbf{Pro-MLA (DeepSeek):} Multi-head Latent Attention with the
-joint-low-rank decomposition $W^{DKV}, W^{UK}, W^{UV}$ matches MHA
-quality at $\sim 4\times$ smaller KV cache; the cache absorption
-identity (\S\ref{sec:attention-mechanism-axis}, eq.\ MLA-absorb) means
+\textbf{Pro-\glsterm{multi-head-latent-attention}{MLA} (DeepSeek):} \glsterm{multi-head-latent-attention}{Multi-head Latent Attention} with the
+joint-low-rank decomposition $W^{DKV}, W^{UK}, W^{UV}$ matches \glsterm{mha}{MHA}
+quality at $\sim 4\times$ smaller \glsterm{kv-cache}{KV cache}; the cache absorption
+identity (\S\ref{sec:attention-mechanism-axis}, eq.\ \glsterm{multi-head-latent-attention}{MLA}-absorb) means
 no quality penalty at decode \citep[\S 2.1.4]{deepseek-v2}.
-\textbf{Pro-GQA (default):} GQA with $G \in \{4, 8\}$ groups recovers
-MHA quality at matched cache budget on every published independent
+\textbf{Pro-\glsterm{gqa}{GQA} (default):} \glsterm{gqa}{GQA} with $G \in \{4, 8\}$ groups recovers
+\glsterm{mha}{MHA} quality at matched cache budget on every published independent
 ablation \citep[\S 3.1]{ainslie2023}, and Western frontier labs that do
 disclose attention details (\citealp{meta-llama3, meta-llama4,
-gemma3, qwen3}) all stay on GQA.
+gemma3, qwen3}) all stay on \glsterm{gqa}{GQA}.
 
-\textbf{Evidence on the table.} The MLA-MHA matched-cache comparison is
+\textbf{Evidence on the table.} The \glsterm{multi-head-latent-attention}{MLA}-\glsterm{mha}{MHA} matched-cache comparison is
 single-source \citep[\S 2.1.4]{deepseek-v2}: a 16B-active prototype on
-DeepSeek's training corpus. \citet{deepseek-v3} extends MLA to 671B
+DeepSeek's training corpus. \citet{deepseek-v3} extends \glsterm{multi-head-latent-attention}{MLA} to 671B
 total / 37B active with strong downstream benchmarks but does not
-publish a head-to-head MLA-vs-MHA at matched compute at that scale.
-GQA's matched-cache neutrality result \citep{ainslie2023} has been
+publish a head-to-head \glsterm{multi-head-latent-attention}{MLA}-vs-\glsterm{mha}{MHA} at matched compute at that scale.
+\glsterm{gqa}{GQA}'s matched-cache neutrality result \citep{ainslie2023} has been
 replicated by multiple labs.
 
 \textbf{Experiment that closes it.} A $\geq 70\mathrm{B}$-active
-controlled three-way ablation --- MHA / GQA-8 / MLA at matched compute,
+controlled three-way ablation --- \glsterm{mha}{MHA} / \glsterm{gqa}{GQA}-8 / \glsterm{multi-head-latent-attention}{MLA} at matched compute,
 matched data, matched optimizer --- run by an independent laboratory on
 non-DeepSeek pre-training data. As of 2026-Q2 no such run is published.
 \deepencite{independent MLA-vs-GQA-vs-MHA at $\geq 70$B-active scale}.
@@ -62,28 +62,28 @@ non-DeepSeek pre-training data. As of 2026-Q2 no such run is published.
 \subsection{C2 --- NSA vs.\ FA3 head-to-head}
 \label{sec:c-nsa}
 
-\textbf{Pro-NSA:} Native Sparse Attention with the three-branch
+\textbf{Pro-\glsterm{nsa}{NSA}:} \glsterm{native-sparse-attention}{Native Sparse Attention} with the three-branch
 (compressed / fine / sliding) selection scheme delivers $11.6\times$
 decode at 64K and improves long-context reasoning quality over the
 dense baseline, because pre-training with sparse attention teaches the
-model to use it \citep{yuan2025}. \textbf{Pro-FA3:} FlashAttention-3
+model to use it \citep{yuan2025}. \textbf{Pro-FA3:} \glsterm{flashattention}{FlashAttention}-3
 with H100 asynchronous warp-specialization reaches $\sim 75\%$ of
 H100's theoretical peak FP16 throughput on dense attention
-\citep{shah2024}\deepencite{shah2024 §3 (excerpt not yet in KB; first-use anchor in \S\ref{sec:hardware-attention})}; community indications are that NSA's $11.6\times$
+\citep{shah2024}\deepencite{shah2024 §3 (excerpt not yet in KB; first-use anchor in \S\ref{sec:hardware-attention})}; community indications are that \glsterm{nsa}{NSA}'s $11.6\times$
 margin shrinks substantially when the dense baseline is FA3 rather than
 FA2 and the context length is closer to 32K than 64K.
 
 \textbf{Evidence on the table.} \citet{yuan2025} compare against
-FA2-on-GQA, not FA3, leaving the FA3 baseline unexamined. NSA's
+FA2-on-\glsterm{gqa}{GQA}, not FA3, leaving the FA3 baseline unexamined. \glsterm{nsa}{NSA}'s
 training-time recipe is also tied to the DeepSeek pre-training stack;
 no third-party laboratory has published a Hopper reproduction at
 matched precision and matched task suite as of 2026-05.
 
-\textbf{Experiment that closes it.} A controlled NSA-vs-FA3 benchmark
-suite on H100 / H200 with matched precision (BF16 or FP8), matched
+\textbf{Experiment that closes it.} A controlled \glsterm{nsa}{NSA}-vs-FA3 benchmark
+suite on H100 / H200 with matched precision (BF16 or \glsterm{fp8}{FP8}), matched
 sequence lengths $\{8K, 16K, 32K, 64K\}$, and matched downstream
 evaluation (RULER, HELMET, not just NIAH). The decode-throughput claim
-is the easy half; the harder claim is whether NSA's quality lift
+is the easy half; the harder claim is whether \glsterm{nsa}{NSA}'s quality lift
 survives when the baseline is FA3 rather than FA2 and when the
 pre-training data is not DeepSeek's.
 \deepencite{NSA-vs-FA3 third-party head-to-head on Hopper}.
@@ -92,14 +92,14 @@ pre-training data is not DeepSeek's.
 \label{sec:c-ssm}
 
 \textbf{Pro-hybrid:} A small attention budget interleaved with
-selective SSM blocks (\citealp{lieber2024-jamba} 1:7,
+selective \glsterm{state-space-model}{SSM} blocks (\citealp{lieber2024-jamba} 1:7,
 Samba\,$\sim$1:1) gives Pareto-better long-context FLOP cost than
-attention-only, because Mamba-2's state-space-duality theorem
+attention-only, because \glsterm{selective-ssm}{Mamba}-2's state-space-duality theorem
 \citep[\S 3]{mamba2} bounds the loss at small $r$. \textbf{Pro-attention-only:}
-The publicly deployed top-quality 2026 lineup (DeepSeek-V3, Llama-4,
-Qwen3, Mistral Large) is uniformly attention-based; no SSM-hybrid
+The publicly deployed top-quality 2026 lineup (\glsterm{precision-pinning}{DeepSeek-V3}, Llama-4,
+Qwen3, \glsterm{mistral}{Mistral} Large) is uniformly attention-based; no \glsterm{state-space-model}{SSM}-hybrid
 appears in the top quality tier \citep{deepseek-v3, meta-llama4, qwen3,
-jiang2023}, suggesting that whatever advantage the SSD theorem predicts
+jiang2023}, suggesting that whatever advantage the \glsterm{state-space-duality}{SSD} theorem predicts
 is not yet operationalized at the 100B-active scale.
 
 \textbf{Evidence on the table.} Vendor demos at sub-frontier scale
@@ -107,7 +107,7 @@ is not yet operationalized at the 100B-active scale.
 within-tier quality, but neither the optimal interleaving ratio nor the
 attention-block count is settled by theory or by a controlled ablation.
 The negative evidence is the absence of frontier deployment, which is
-informative but not dispositive --- the SSM line has had less
+informative but not dispositive --- the \glsterm{state-space-model}{SSM} line has had less
 engineering investment than attention, and that confound is not
 controlled.
 
@@ -126,7 +126,7 @@ benchmark suites \citep[abstract]{deepseek-v3}, with the shared-expert
 absorbing always-on capability and the fine-grained routing supplying
 specialization \citep{deepseekmoe2024}. \textbf{Pro-dense (or
 shared-free MoE):} \citet{qwen3} reach comparable quality with $E_s =
-0$ and global-batch load balancing, contradicting the shared-expert
+0$ and \glsterm{global-batch-load-balancing}{global-batch load balancing}, contradicting the shared-expert
 claim. The absence of independent third-party reproductions at
 frontier scale leaves the matched-active gap empirically open;
 secondary aggregations (largo.dev 2026) treat the gap as closed but
@@ -136,16 +136,16 @@ the supporting controlled ablations are scarce.
 matched-active parity come from DeepSeek and Qwen labs; the labs
 disagree among themselves on shared-expert necessity. No published
 non-Chinese-lab frontier MoE training run reports its dense-MoE gap.
-Anthropic's Claude family architecture is undisclosed and may not be
+Anthropic's \glsterm{claude}{Claude} family architecture is undisclosed and may not be
 MoE at all
-(see \texttt{kb/index/contradictions.md\#architecture/transformer-overview}).
+(see \texttt{kb/index/contradictions.md\#architecture/\glsterm{transformer}{transformer}-overview}).
 
 \textbf{Experiment that closes it.} A non-DeepSeek, non-Qwen lab
 publishes a $\geq 100$B-total / $\geq 30$B-active fine-grained MoE
 trained with documented $E$, $k$, $E_s$, with a matched-active dense
 baseline at the same compute budget on the same pre-training data, and
 reports the gap on standard benchmarks. We expect this in 2027 from
-either Mistral, Meta (Llama-5 generation), or an Allen-AI / OLMo
+either \glsterm{mistral}{Mistral}, Meta (Llama-5 generation), or an Allen-AI / OLMo
 follow-up.
 \deepencite{matched-active MoE-vs-dense gap, independent-lab
 reproduction}.
@@ -165,18 +165,18 @@ varies $(E, k, E_s)$ on a matched-compute grid would settle it.
 \subsection{C5 --- Long-context extrapolation method}
 \label{sec:c-longctx}
 
-\textbf{Pro-RoPE-with-NTK-scaling:} For the $\le 4\times$ extension
+\textbf{Pro-\glsterm{rope}{RoPE}-with-NTK-scaling:} For the $\le 4\times$ extension
 regime (e.g.\ LLaMA-3's bump from 8K to 128K), NTK-aware base rescaling
-on RoPE \citep{su2021} is sufficient and is what most disclosed
-2026 models actually do. \textbf{Pro-YaRN:} For the $\sim 10\times$
-regime, per-frequency schedule (YaRN) is required to avoid
+on \glsterm{rope}{RoPE} \citep{su2021} is sufficient and is what most disclosed
+2026 models actually do. \textbf{Pro-\glsterm{yarn}{YaRN}:} For the $\sim 10\times$
+regime, per-frequency schedule (\glsterm{yarn}{YaRN}) is required to avoid
 out-of-distribution rotational frequencies; the original
 \citet{su2021} embedding under naive scaling collapses on
 needle-in-haystack at 32K-trained-256K-evaluated.
-\deepencite{peng2023-yarn primary-source numbers}. \textbf{Pro-iRoPE
+\deepencite{peng2023-yarn primary-source numbers}. \textbf{Pro-\glsterm{irope}{iRoPE}
 / LongRoPE2:} For the $\ge 40\times$ regime (Llama-4's 10M, LongRoPE2's
-2M), full retraining with mixed RoPE/NoPE layers and per-position
-search beats both NTK-aware and YaRN
+2M), full retraining with mixed \glsterm{rope}{RoPE}/\glsterm{nope}{NoPE} layers and per-position
+search beats both NTK-aware and \glsterm{yarn}{YaRN}
 \citep{longrope2-2025, meta-llama4}.
 
 \textbf{Evidence on the table.} Each camp's benchmarks are largely
@@ -197,44 +197,44 @@ the field has not yet built.
 The three positions are not actually competing for the same regime.
 Read horizontally on the extension factor: NTK-scaling owns the
 short-extension regime where the unmodified rotational frequencies are
-still mostly in-distribution; YaRN owns the medium-extension regime
+still mostly in-distribution; \glsterm{yarn}{YaRN} owns the medium-extension regime
 where per-frequency correction is needed but a single base-rate
-adjustment still works; iRoPE / LongRoPE2 own the long-extension regime
+adjustment still works; \glsterm{irope}{iRoPE} / LongRoPE2 own the long-extension regime
 where the rotational backbone alone is insufficient and content-derived
-position channels (NoPE layers) must absorb the residual.
+position channels (\glsterm{nope}{NoPE} layers) must absorb the residual.
 Returning to the canonical math: the inner-product invariance
 $\langle R_m q, R_n k \rangle = \langle q, R_{n-m} k \rangle$ from
 \citet[\S 3.4]{su2021} only protects relative position when $|n-m|$
-stays in the trained distribution of phases. NTK-scaling, YaRN, and
-iRoPE are three points on a hierarchy of how much of the rotational
+stays in the trained distribution of phases. NTK-scaling, \glsterm{yarn}{YaRN}, and
+\glsterm{irope}{iRoPE} are three points on a hierarchy of how much of the rotational
 identity each method preserves.
 \end{intuition}
 
 \subsection{C6 --- MTP at non-DeepSeek scale}
 \label{sec:c-mtp}
 
-\textbf{Pro-MTP-as-quality:} \citet{deepseek-v3} report a quality lift
-from the multi-token prediction auxiliary objective itself, not just
+\textbf{Pro-\glsterm{multi-token-prediction}{MTP}-as-quality:} \citet{deepseek-v3} report a quality lift
+from the \glsterm{multi-token-prediction}{multi-token prediction} auxiliary objective itself, not just
 from inference-time draft-token use; the auxiliary gradient pressure
 makes hidden states more predictive of the next several tokens jointly
-\citep[\S 2.2]{deepseek-v3}. \textbf{Pro-MTP-as-speedup-only:}
-\citet{gloeckle2024-mtp} present MTP primarily as a speedup mechanism,
-with a smaller per-task quality lift than DeepSeek-V3 reports; the gap
+\citep[\S 2.2]{deepseek-v3}. \textbf{Pro-\glsterm{multi-token-prediction}{MTP}-as-speedup-only:}
+\citet{gloeckle2024-mtp} present \glsterm{multi-token-prediction}{MTP} primarily as a speedup mechanism,
+with a smaller per-task quality lift than \glsterm{precision-pinning}{DeepSeek-V3} reports; the gap
 between the two papers is not yet ablated.
 
-\textbf{Evidence on the table.} The two primary sources frame MTP
+\textbf{Evidence on the table.} The two primary sources frame \glsterm{multi-token-prediction}{MTP}
 differently and report quality lifts of different magnitudes on
 different benchmark suites. No $\geq 70\mathrm{B}$-active non-DeepSeek
-training run has published an MTP ablation at frontier scale; the
+training run has published an \glsterm{multi-token-prediction}{MTP} ablation at frontier scale; the
 question of whether the quality lift survives outside DeepSeek's
 training recipe is open.
 
 \textbf{Experiment that closes it.} A non-DeepSeek lab trains two
-matched-compute runs at $\geq 70\mathrm{B}$-active --- with-MTP and
-without-MTP --- on the same data and reports the quality gap on a
+matched-compute runs at $\geq 70\mathrm{B}$-active --- with-\glsterm{multi-token-prediction}{MTP} and
+without-\glsterm{multi-token-prediction}{MTP} --- on the same data and reports the quality gap on a
 standardized benchmark suite. The cost is small relative to a frontier
-training run (MTP adds $\sim$1\%--3\% training compute) and the
-information value is high, so we expect this within 12 months.
+training run (\glsterm{multi-token-prediction}{MTP} adds $\sim$1\%--3\% training compute) and the
+information \glsterm{value}{value} is high, so we expect this within 12 months.
 \deepencite{MTP at non-DeepSeek frontier scale}.
 
 \subsection{Subsidiary open questions raised in passing}
@@ -248,18 +248,18 @@ historical \citet{press2017-tied-embed} result favored tying;
 disclosed frontier-2026 models all untie
 \citep{meta-llama3, olmo2, deepseek-v3, qwen3}; the reconciling
 \texttt{[INTUITION]} (gradient-imbalance dominates only when $|V| d$ is
-no longer a large fraction of total parameters) is not a derivation. A
+no longer a large fraction of total \glsterm{parameters}{parameters}) is not a derivation. A
 controlled ablation across two or three model sizes spanning the
 crossover would settle it. \textbf{C8 --- Medusa verification rule.}
-Medusa with rejection sampling is distribution-preserving; Medusa with
-typical acceptance is not (\S\ref{sec:multi-token-output},
+Medusa with \glsterm{rejection-sampling}{rejection sampling} is distribution-preserving; Medusa with
+\glsterm{typical-acceptance}{typical acceptance} is not (\S\ref{sec:multi-token-output},
 \cref{eq:spec-reject}). Vendor reports of ``Medusa speedup''
 sometimes elide which rule was used; a single deployment audit would
 close the reporting gap, though the underlying mathematics is settled.
-\textbf{C9 --- NVFP4 production quality.} Vendor materials report
-NVFP4 as production-ready with quality matching FP8; third-party
+\textbf{C9 --- \glsterm{nvfp4}{NVFP4} production quality.} Vendor materials report
+\glsterm{nvfp4}{NVFP4} as production-ready with quality matching \glsterm{fp8}{FP8}; third-party
 reproduction at frontier scale is sparse. Independent reproductions
-through 2026-Q4 should settle whether NVFP4 inference is a tier-A
+through 2026-Q4 should settle whether \glsterm{nvfp4}{NVFP4} inference is a tier-A
 production claim or a tier-B vendor claim.
 
 \subsection{What the catalogue says about the field}
@@ -269,12 +269,12 @@ Six load-bearing contradictions and three subsidiary ones is a small
 number for a field this active. Two structural facts emerge.
 \textbf{First}, the live disputes are localized to specific axes ---
 KV-sharing (\S\ref{sec:c-mla}), hardware implementation
-(\S\ref{sec:c-nsa}), the dense--SSM frontier
+(\S\ref{sec:c-nsa}), the dense--\glsterm{state-space-model}{SSM} frontier
 (\S\ref{sec:c-ssm}, \S\ref{sec:c-moe}), long-context method
 (\S\ref{sec:c-longctx}), and multi-token output
 (\S\ref{sec:c-mtp}) --- not distributed across the entire architecture.
-The normalization, positional-encoding-base, FFN-activation, and
-tokenization axes are quietly settled within $\pm 1$ design choice.
+The normalization, positional-encoding-base, \glsterm{ffn}{FFN}-activation, and
+\glsterm{tokenization}{tokenization} axes are quietly settled within $\pm 1$ design choice.
 \textbf{Second}, the closing experiment for almost every contradiction
 is the same: an independent laboratory at $\geq 70\mathrm{B}$-active
 runs a controlled head-to-head on a non-DeepSeek pre-training stack.

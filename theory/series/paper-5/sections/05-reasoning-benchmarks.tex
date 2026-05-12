@@ -13,14 +13,14 @@ This section measures something distinct: \emph{multi-step reasoning}
 on items where the answer is not directly recoverable from a single
 fact or a single web hit. The 2024--2026 reasoning-benchmark surface
 splits cleanly into two regimes. \emph{Contest-style} math
-(AIME~2024, MATH-500) and \emph{graduate-question Q\&A} (GPQA Diamond)
+(AIME~2024, MATH-500) and \emph{graduate-question Q\&A} (\glsterm{gpqa-diamond-2}{GPQA Diamond})
 have saturated at the frontier --- the very regime that Paper~3's
-RLVR/GRPO reasoning-RL lineage was trained against, where the
+\glsterm{rlvr-3}{RLVR}/\glsterm{grpo-2}{GRPO} reasoning-RL lineage was trained against, where the
 verifiable-reward signal is dense and the problem distribution has
 been seen by every lab's training pipeline. \emph{Research-style}
-math (FrontierMath \citep{glazer2024-frontiermath}) and
+math (\glsterm{frontiermath}{FrontierMath} \citep{glazer2024-frontiermath}) and
 \emph{broad-coverage frontier-difficulty exams} (Humanity's Last
-Exam, HLE \citep{phan2025-hle}) have not. The thesis of this section
+Exam, \glsterm{hle}{HLE} \citep{phan2025-hle}) have not. The thesis of this section
 is that the gap between these two regimes is the gap between
 in-distribution gains from reasoning-RL and out-of-distribution
 generalization, and the field's 2026 picture is that the latter is
@@ -35,9 +35,9 @@ a verifier $V(\hat{a}, a^\star) \in \{0, 1\}$ on the model's chosen
 answer. There is no environment, no trajectory, no end-state ---
 $V$ is exact-match or a domain-specific parser, by construction tight
 enough to resist lucky guesses and automated enough to run at scale
-without LLM-as-judge. What separates the four reasoning benchmarks
+without \glsterm{llm-as-judge}{LLM-as-judge}. What separates the four reasoning benchmarks
 below is the difficulty distribution of $\rho$ and the human-effort
-calibration that fixes the saturation timeline.
+calibration that fixes the \glsterm{saturation}{saturation} timeline.
 
 \subsection{The contest-math regime: AIME and MATH-500}
 \label{sec:reasoning-aime}
@@ -61,19 +61,19 @@ documented in Paper~3's reasoning-RL section,
 DeepSeek-R1's RL-only training
 pipeline reports an AIME~2024 jump from a base-model $\sim 16\%$ to
 a final $\sim 80\%$ pass$@1$
-\deepencite{deepseek-r1 §3}, with self-consistency over $64$ samples
+\deepencite{deepseek-r1 §3}, with \glsterm{self-consistency-2}{self-consistency} over $64$ samples
 pushing the number above $90\%$. By 2026-Q1 frontier reasoning models
 report AIME~2024 in the $83$--$100\%$ band%
-\footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#3-1-the-post-2024-reasoning-benchmark-map}, \emph{Saturation status} column.},
+\footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#3-1-the-post-2024-reasoning-benchmark-map}, \emph{\glsterm{saturation}{Saturation} status} column.},
 with the upper end pinned to perfect on the $30$-problem set --- the
 benchmark has effectively been saturated. MATH-500 follows the same
 arc; published reasoning-model numbers above $95\%$ are common.
 
-Two factors compose the AIME-2024 saturation signal.
+Two factors compose the AIME-2024 \glsterm{saturation}{saturation} signal.
 \textbf{Reasoning-RL on verifiable rewards.} AIME's integer-answer
-verifier is the canonical RLVR target: the reward is $\{0, 1\}$ on
+verifier is the canonical \glsterm{rlvr-3}{RLVR} target: the reward is $\{0, 1\}$ on
 exact-match against the gold integer, no judge model, no
-preference labels, no value head. Paper~3's GRPO/RLVR lineage
+preference labels, no \glsterm{value}{value} head. Paper~3's \glsterm{grpo-2}{GRPO}/\glsterm{rlvr-3}{RLVR} lineage
 (\deepencite{shao2024 §3}, \deepencite{dapo2025 §2}) is built around
 exactly this signal. In-distribution gains on the trained problem
 distribution are large.
@@ -89,13 +89,13 @@ RL-induced reasoning generalization versus exposure during training.
 \subsection{The graduate-Q\&A regime: GPQA Diamond saturates}
 \label{sec:reasoning-gpqa}
 
-GPQA Diamond \citep{rein2023-gpqa} sits in a different point of the
+\glsterm{gpqa-diamond-2}{GPQA Diamond} \citep{rein2023-gpqa} sits in a different point of the
 reasoning surface than AIME --- $198$ four-way multiple-choice
 questions in graduate-level biology, physics, and chemistry, where
 the difficulty comes from domain depth rather than from a tower of
 algebraic manipulation. \cref{sec:knowledge-gpqa} treats the
 benchmark's launch construction; the reasoning-relevant fact is
-the saturation rate%
+the \glsterm{saturation}{saturation} rate%
 \footnote{KB excerpt: \texttt{kb/excerpts/rein2023-gpqa.md\#sec-ai-baseline}.}.
 At launch (November~2023) the strongest GPT-4-based baseline
 reached $39\%$ \citep[\S{}sec-ai-baseline]{rein2023-gpqa}, just above
@@ -109,14 +109,14 @@ benchmark constructed to resist web search at the $34\%$ ceiling. The
 $39\% \to 90\%+$ jump in $\sim 2.5$ years exceeds the AIME
 trajectory in absolute capability gain.
 
-GPQA's own framing places this saturation in tension with its
+GPQA's own framing places this \glsterm{saturation}{saturation} in tension with its
 intended use. The abstract names the design target as scalable
 oversight%
 \footnote{KB excerpt: \texttt{kb/excerpts/rein2023-gpqa.md\#sec-why}.}
 \citep[\S{}sec-why]{rein2023-gpqa}:
 
 \begin{quote}\itshape
-we need to develop scalable oversight methods that enable humans to
+we need to develop \glsterm{scalable-oversight}{scalable oversight} methods that enable humans to
 supervise their outputs, which may be difficult even if the
 supervisors are themselves skilled and knowledgeable.
 \end{quote}
@@ -125,19 +125,19 @@ The reasoning-relevant reading is that GPQA was \emph{built to be
 hard} for skilled humans even with web access, on the assumption
 that the items would remain hard for AI for some years. That
 assumption did not survive 2024--2025: the same RL-on-verifiable-
-rewards lineage that closed AIME also closed GPQA Diamond, despite
-the Google-proof construction.
+rewards lineage that closed AIME also closed \glsterm{gpqa-diamond-2}{GPQA Diamond}, despite
+the \glsterm{google-proof-construction}{Google-proof construction}.
 
 \begin{intuition}
 Contest-style math (AIME, MATH-500) and graduate-Q\&A
-(GPQA Diamond) are different problem distributions but the same
+(\glsterm{gpqa-diamond-2}{GPQA Diamond}) are different problem distributions but the same
 \emph{distributional kind} from the reasoning-RL training pipeline's
 point of view: closed-form items with a single canonical answer, a
 finite gold set that is in-or-near-distribution to the RL training
 mixture, and a verifier $V(\hat{a}, a^\star)$ tight enough to feed a
-binary reward. RLVR on this kind of distribution generalizes
+binary reward. \glsterm{rlvr-3}{RLVR} on this kind of distribution generalizes
 \emph{within} the distribution in the way Paper~3's reasoning-RL
-results document. What the FrontierMath gap below shows is that this
+results document. What the \glsterm{frontiermath}{FrontierMath} gap below shows is that this
 generalization is much weaker out of distribution: the same RL
 pipeline does not transfer to research-mathematician problems that
 demand multi-day proof construction, even though the verifier
@@ -151,13 +151,13 @@ training mixture has covered.)
 \subsection{FrontierMath: research-style math is the OOD bar}
 \label{sec:reasoning-frontiermath}
 
-\citet{glazer2024-frontiermath} construct FrontierMath as the
+\citet{glazer2024-frontiermath} construct \glsterm{frontiermath}{FrontierMath} as the
 deliberate out-of-distribution counterweight%
 \footnote{KB excerpt: \texttt{kb/excerpts/glazer2024-frontiermath.md\#abstract}.}
 \citep[\S{}abstract]{glazer2024-frontiermath}:
 
 \begin{quote}\itshape
-We introduce FrontierMath, a benchmark of hundreds of original,
+We introduce \glsterm{frontiermath}{FrontierMath}, a benchmark of hundreds of original,
 exceptionally challenging mathematics problems crafted and vetted by
 expert mathematicians. The questions cover most major branches of
 modern mathematics --- from computationally intensive problems in
@@ -165,8 +165,8 @@ number theory and real analysis to abstract questions in algebraic
 geometry and category theory.
 \end{quote}
 
-Three construction choices distinguish FrontierMath from the
-contest-math line and bear directly on the saturation question.
+Three construction choices distinguish \glsterm{frontiermath}{FrontierMath} from the
+contest-math line and bear directly on the \glsterm{saturation}{saturation} question.
 \textbf{Unpublished problems.} The problem pool is constructed by
 $60+$ working mathematicians (verified PhD or equivalent), each
 authoring items in their domain; problems are cross-vetted by a
@@ -177,10 +177,10 @@ benchmark release, which closes the dominant contamination channel
 that AIME~2024 left open.
 \textbf{Single-canonical-answer parsing.} Each problem has a
 single integer, polynomial, or closed-form expression as its gold
-answer, parseable by an automated checker without LLM-as-judge%
+answer, parseable by an automated checker without \glsterm{llm-as-judge}{LLM-as-judge}%
 \footnote{KB excerpt: \texttt{kb/excerpts/glazer2024-frontiermath.md\#sec-verification}.}.
 Problems requiring proof or open-ended argument are excluded, which
-is what enables RLVR-style reward computation on a benchmark that
+is what enables \glsterm{rlvr-3}{RLVR}-style reward computation on a benchmark that
 otherwise looks like research math.
 \textbf{Multi-day-effort calibration.} The difficulty discipline is
 explicit \citep[\S{}sec-difficulty]{glazer2024-frontiermath}:
@@ -188,7 +188,7 @@ explicit \citep[\S{}sec-difficulty]{glazer2024-frontiermath}:
 researcher in the relevant branch of mathematics, and for the upper
 end questions, multiple days.'' Where MATH problems take a competent
 undergraduate $\sim 30$~min and AIME problems take a strong
-high-schooler $\sim 10$~min, FrontierMath items are calibrated to
+high-schooler $\sim 10$~min, \glsterm{frontiermath}{FrontierMath} items are calibrated to
 specialist research effort%
 \footnote{KB excerpt: \texttt{kb/excerpts/glazer2024-frontiermath.md\#sec-difficulty}.}.
 
@@ -202,26 +202,26 @@ mathematical community.
 \end{quote}
 
 The under-$2\%$ floor was reported on models that were already at
-$80$--$95\%$ on MMLU and post-saturation on AIME~2024. The gap is
+$80$--$95\%$ on \glsterm{mmlu}{MMLU} and post-\glsterm{saturation}{saturation} on AIME~2024. The gap is
 the OOD bar: the same model class that has saturated the
 contest-style distribution scores in the single digits on the
-research-style one. By the close of 2025, frontier reasoning model
-reports on FrontierMath had moved into the low double digits ---
+research-style one. By the close of 2025, frontier \glsterm{reasoning-model}{reasoning model}
+reports on \glsterm{frontiermath}{FrontierMath} had moved into the low double digits ---
 single-to-low-double-digit accuracy is the 2026-frontier band on the
 benchmark%
 \footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#3-1-the-post-2024-reasoning-benchmark-map}, \emph{actively discriminative} status as of 2026-05.}
---- two orders of magnitude below contest-math saturation. The gap
+--- two orders of magnitude below contest-math \glsterm{saturation}{saturation}. The gap
 is the empirical content of the in-distribution-vs-OOD claim.
 
 \begin{contradiction}
-\textbf{Is FrontierMath saturating too?} The benchmark is held by a
-single group (Epoch AI) and graded against a private answer key with
+\textbf{Is \glsterm{frontiermath}{FrontierMath} saturating too?} The benchmark is held by a
+single group (Epoch AI) and graded against a private answer \glsterm{key}{key} with
 a domain-specific symbolic checker. The construction is
 contamination-resistant by design, but it is also single-source: the
 field cannot independently replicate either the problem set or the
-grading infrastructure, so reported FrontierMath scores cannot be
-audited by a third party in the way GPQA Diamond and AIME~2024 can.
-Reasoning-model FrontierMath numbers reported in late 2025 and early
+grading infrastructure, so reported \glsterm{frontiermath}{FrontierMath} scores cannot be
+audited by a third party in the way \glsterm{gpqa-diamond-2}{GPQA Diamond} and AIME~2024 can.
+Reasoning-model \glsterm{frontiermath}{FrontierMath} numbers reported in late 2025 and early
 2026 vary substantially across vendor announcements, partly because
 the evaluation protocol --- which problem subset, which compute
 budget, which sampling strategy --- is not fixed by a public spec.
@@ -230,30 +230,30 @@ number, which is well-bounded and externally verifiable in the loose
 sense that ``almost everyone scored close to zero'' is hard to fake,
 and (ii) the post-2025 numbers in the low double digits, which are
 single-source claims on a single-source benchmark. The field has not
-shipped a replicate FrontierMath-class benchmark with an open
-problem-construction protocol; until it does, FrontierMath
-saturation rate is what its custodians say it is.
+shipped a replicate \glsterm{frontiermath}{FrontierMath}-class benchmark with an open
+problem-construction protocol; until it does, \glsterm{frontiermath}{FrontierMath}
+\glsterm{saturation}{saturation} rate is what its custodians say it is.
 \end{contradiction}
 
 \subsection{HLE as the broad-coverage OOD frontier}
 \label{sec:reasoning-hle}
 
-\citet{phan2025-hle} extend the FrontierMath move from one
-discipline to many. Humanity's Last Exam ships $2{,}500$ questions
+\citet{phan2025-hle} extend the \glsterm{frontiermath}{FrontierMath} move from one
+discipline to many. \glsterm{hle}{Humanity's Last Exam} ships $2{,}500$ questions
 across mathematics, the humanities, and the natural sciences,
 mixing multiple-choice and short-answer items, with a verifier that
 is choice-equality or string-equality-after-normalization --- not
-LLM-as-judge%
+\glsterm{llm-as-judge}{LLM-as-judge}%
 \footnote{KB excerpt: \texttt{kb/excerpts/phan2025-hle.md\#sec-format}.}.
-The motivation paragraph names the gap that HLE fills
+The motivation paragraph names the gap that \glsterm{hle}{HLE} fills
 \citep[\S{}abstract]{phan2025-hle}:
 
 \begin{quote}\itshape
-LLMs now achieve over 90\% accuracy on popular benchmarks like MMLU,
-limiting informed measurement of state-of-the-art LLM capabilities.
+LLMs now achieve over 90\% accuracy on popular benchmarks like \glsterm{mmlu}{MMLU},
+limiting informed measurement of state-of-the-art \glsterm{llm}{LLM} capabilities.
 \end{quote}
 
-The construction inherits the GPQA / FrontierMath verifier discipline
+The construction inherits the GPQA / \glsterm{frontiermath}{FrontierMath} verifier discipline
 \citep[\S{}sec-format]{phan2025-hle}:
 
 \begin{quote}\itshape
@@ -263,15 +263,15 @@ cannot be quickly answered via internet retrieval.
 
 The capability gap at publication is the property the design was
 reaching for \citep[\S{}sec-capability-gap]{phan2025-hle}: ``State-of-
-the-art LLMs demonstrate low accuracy and calibration on HLE,
-highlighting a significant gap between current LLM capabilities and
+the-art LLMs demonstrate low accuracy and calibration on \glsterm{hle}{HLE},
+highlighting a significant gap between current \glsterm{llm}{LLM} capabilities and
 the expert human frontier on closed-ended academic questions.'' By
 the close of the Phase~1 sweep window in early 2026, top model
-scores on HLE were in the $\sim 65\%$ band on a benchmark designed
+scores on \glsterm{hle}{HLE} were in the $\sim 65\%$ band on a benchmark designed
 to resist web retrieval and frontier reasoning at construction time%
 \footnote{KB note: \texttt{kb/notes/evaluation/reasoning-benchmarks.md\#5-frontier-and-open-questions-as-of-2026-05}.}
---- substantially below MMLU saturation but well above FrontierMath.
-The position of HLE on the saturation curve is what makes it the
+--- substantially below \glsterm{mmlu}{MMLU} \glsterm{saturation}{saturation} but well above \glsterm{frontiermath}{FrontierMath}.
+The position of \glsterm{hle}{HLE} on the \glsterm{saturation}{saturation} curve is what makes it the
 useful broad-coverage OOD instrument in 2026: it is hard enough that
 contest-math RL transfer does not close it, and broad enough that
 single-domain RL transfer would not close it either, but not so far
@@ -282,30 +282,30 @@ out of distribution as to floor at single digits.
 
 The four-benchmark surface produces a single load-bearing claim
 about Paper~3's reasoning-RL lineage. Reasoning-RL on verifiable
-rewards (Paper~3 §RLVR-and-GRPO) delivers large gains on
+rewards (Paper~3 §\glsterm{rlvr-3}{RLVR}-and-\glsterm{grpo-2}{GRPO}) delivers large gains on
 problem distributions covered by the RL training mixture --- the
 $16\% \to 80\%+$ AIME~2024 jump documented in
-\citet[\S{}3]{deepseek-r1}, and the parallel saturation of MATH-500
-and GPQA Diamond, are real and they generalize within the contest /
+\citet[\S{}3]{deepseek-r1}, and the parallel \glsterm{saturation}{saturation} of MATH-500
+and \glsterm{gpqa-diamond-2}{GPQA Diamond}, are real and they generalize within the contest /
 graduate-Q\&A distributional kind. The same lineage delivers
-single-digit-to-low-double-digit accuracy on FrontierMath, where
+single-digit-to-low-double-digit accuracy on \glsterm{frontiermath}{FrontierMath}, where
 the problem distribution sits two human-effort orders of magnitude
 above the RL training distribution and outside the public
 contest-and-PhD-exam corpus that the RL trajectory data is built
 from. The RL-induced gains do not transfer cleanly into this regime.
 
 This is consistent with a moderate version of the
-in-distribution-RL claim: RLVR-on-verifiable-rewards is doing
-real reasoning-circuit work within its training distribution
-(Paper~3 §RLVR-generalization-vs-memorization), but
+in-distribution-RL claim: \glsterm{rlvr-3}{RLVR}-on-verifiable-rewards is doing
+real reasoning-\glsterm{circuit}{circuit} work within its training distribution
+(Paper~3 §\glsterm{rlvr-3}{RLVR}-generalization-vs-memorization), but
 its OOD generalization is much weaker than the AIME-and-GPQA
-trajectories alone would suggest. The $80\%+$ AIME saturation does
-not predict $80\%+$ on FrontierMath; it predicts $1$--$2\%$ on
-FrontierMath, which is what the benchmarks observe. The frontier
+trajectories alone would suggest. The $80\%+$ AIME \glsterm{saturation}{saturation} does
+not predict $80\%+$ on \glsterm{frontiermath}{FrontierMath}; it predicts $1$--$2\%$ on
+\glsterm{frontiermath}{FrontierMath}, which is what the benchmarks observe. The frontier
 field's read of the gap by mid-2026 is that further AIME-style
-saturation is no longer informative for capability measurement,
+\glsterm{saturation}{saturation} is no longer informative for capability measurement,
 and that the next round of measurement infrastructure has to
-target FrontierMath-and-HLE-class items where the OOD gap is the
+target \glsterm{frontiermath}{FrontierMath}-and-\glsterm{hle}{HLE}-class items where the OOD gap is the
 construct \deepencite{glazer2024-frontiermath §sec-saturation}.
 
 The cross-cite to \cref{sec:contamination} is sharper here than
@@ -319,7 +319,7 @@ implication for AIME-jump interpretation is that the reasoning
 community cannot cleanly attribute the $16\% \to 80\%+$ gain to
 RL-induced reasoning generalization versus contamination-aided
 recall, because both are present and the experimental design does
-not separate them. FrontierMath is the contamination defense the
+not separate them. \glsterm{frontiermath}{FrontierMath} is the contamination defense the
 contest line lacks; the empirical OOD gap is the part of the
 reasoning-RL story that the contamination defense leaves open.
 
@@ -331,10 +331,10 @@ response reasoning to multi-step trajectories in an environment ---
 SWE-Bench, OSWorld, GAIA, $\tau$-Bench. The realism-vs-measurability
 tradeoff that organizes that section is the agentic counterpart of
 the in-distribution-vs-OOD tradeoff that organizes this one: each
-agentic benchmark picks a corner of how much of real deployment
+\glsterm{agentic-benchmark}{agentic benchmark} picks a corner of how much of real deployment
 the eval reproduces, and pays the corresponding price in grading
 reliability. \cref{sec:contradictions-live} catalogues the
-\emph{is FrontierMath saturating too?} contradiction surfaced above
+\emph{is \glsterm{frontiermath}{FrontierMath} saturating too?} contradiction surfaced above
 alongside the field's other live disputes; the closing
 question --- \emph{what would close it?} --- is a public,
 replicable research-style math benchmark whose problem-construction

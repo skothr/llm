@@ -8,16 +8,16 @@
 \label{sec:adaptation}
 
 The previous sections (\S7--\S11) drove parameter updates with gradients
-on data: SFT cross-entropy, RLHF/DPO preference signals, RLVR's
+on data: SFT cross-entropy, \glsterm{rlhf}{RLHF}/\glsterm{dpo}{DPO} preference signals, \glsterm{rlvr-3}{RLVR}'s
 verifiable rewards. This section closes the pipeline with a different
 class of operation altogether — \emph{weight-space} updates whose unit
 of action is the parameter vector itself, not a per-token loss.
-Parameter-efficient fine-tuning (PEFT) writes a low-rank patch onto a
-frozen base; model merging averages, signs, and trims weight vectors
+Parameter-efficient fine-tuning (\glsterm{peft}{PEFT}) writes a low-rank patch onto a
+frozen base; \glsterm{model-merging}{model merging} averages, signs, and trims weight vectors
 from fine-tunes that share an ancestor. Both rest on the same
 empirical phenomenon — fine-tunes from a shared base land in a single
 connected loss basin — and both are now production-load-bearing: every
-open-weight LLM since LLaMA-2 ships with a LoRA adapter ecosystem, and
+open-weight \glsterm{llm}{LLM} since LLaMA-2 ships with a \glsterm{lora}{LoRA} adapter ecosystem, and
 the strongest open multi-task models in 2024--2026 are merged from
 specialists rather than jointly trained.
 
@@ -35,7 +35,7 @@ B \in \R^{d \times r},\ A \in \R^{r \times k},\ r \ll \min(d, k)
 \label{eq:lora-decomp}
 \end{equation}
 \citep[\S 3]{hu2021-lora}. $W_0$ is frozen; only $A$ and $B$ are
-trained. The forward pass at a hidden state $x$ is
+trained. The forward pass at a \glsterm{hidden-state}{hidden state} $x$ is
 \begin{equation}
 h = W_0 x + \Delta W x = W_0 x + (\alpha / r)\, B A x,
 \label{eq:lora-fwd}
@@ -55,7 +55,7 @@ that $\Delta W = 0$ at step 0 and the model behaves identically to the
 base \citep[\S 3]{hu2021-lora}.
 
 The trainable-parameter count drops from $\sum_\ell d_\ell k_\ell$ to
-$\sum_\ell r(d_\ell + k_\ell)$. With LoRA applied to all attention
+$\sum_\ell r(d_\ell + k_\ell)$. With \glsterm{lora}{LoRA} applied to all attention
 $Q, K, V, O$ projections and rank $r = 4$, GPT-3 175B's trainable count
 falls roughly $10^{4}\times$ \citep[\S 3]{hu2021-lora}, with GPU memory
 for fine-tuning down $\sim\!3\times$ \citep[abstract]{hu2021-lora}. The
@@ -64,10 +64,10 @@ weight matrices in the GPT-3 175B model} is reported verbatim in
 \citet[\S 4]{hu2021-lora}, alongside the design choice that adapting
 $Q$ and $V$ together gives the strongest task transfer.
 
-The deployment-time mechanic is what separates LoRA from earlier
+The deployment-time mechanic is what separates \glsterm{lora}{LoRA} from earlier
 adapter families \citep{houlsby2019-adapters}\deepencite{houlsby2019-adapters
 §3}. Adapter modules add bottleneck layers that incur inference
-latency at every forward pass; LoRA computes
+latency at every forward pass; \glsterm{lora}{LoRA} computes
 \begin{equation}
 W_{\text{merged}} = W_0 + (\alpha / r)\, B A
 \label{eq:lora-merge}
@@ -75,25 +75,25 @@ W_{\text{merged}} = W_0 + (\alpha / r)\, B A
 \emph{once} at deployment \citep[\S 5]{hu2021-lora}, and the deployed
 model has identical inference cost to the base. Different LoRAs can be
 loaded and unloaded by adding or subtracting $(\alpha/r) B A$ — the
-inference-time mechanic that S-LoRA and Punica multi-tenant systems
+inference-time mechanic that S-\glsterm{lora}{LoRA} and Punica multi-tenant systems
 exploit (cross-ref Paper~1's serving discussion).
 
 \subsection{QLoRA: quantize the base, train the adapter}
 \label{sec:adapt-qlora}
 
-\citet{dettmers2023-qlora} extend LoRA by quantizing the frozen base
-$W_0$ to four bits while keeping the LoRA factors in BF16. The headline
+\citet{dettmers2023-qlora} extend \glsterm{lora}{LoRA} by quantizing the frozen base
+$W_0$ to four bits while keeping the \glsterm{lora}{LoRA} factors in BF16. The headline
 \citep[abstract]{dettmers2023-qlora}\footnote{KB excerpt:
 \texttt{kb/excerpts/dettmers2023-qlora.md\#abstract}.} is a 65B-parameter
 fine-tune fitting on a single 48~GB GPU at full 16-bit task
 performance. Three innovations carry the result:
 
 \paragraph{NF4 — quantile-based 4-bit format.} The
-\emph{NormalFloat-4} (NF4) format stores 16 bin centers chosen as the
+\emph{\glsterm{nf4}{NormalFloat-4}} (\glsterm{nf4}{NF4}) format stores 16 bin centers chosen as the
 quantiles of a standard normal distribution, then assigns each weight
 to its nearest bin. Pretrained weights are empirically near-Gaussian
 per block \citep[\S 3]{dettmers2023-qlora}\footnote{KB excerpt:
-\texttt{kb/excerpts/dettmers2023-qlora.md\#sec-3-nf4}.}, so NF4's bin
+\texttt{kb/excerpts/dettmers2023-qlora.md\#sec-3-nf4}.}, so \glsterm{nf4}{NF4}'s bin
 spacing is information-theoretically near-optimal in this regime.
 Concretely: bin centers are
 \begin{equation}
@@ -119,16 +119,16 @@ themselves quantized to 8-bit with a second-level scale, dropping the
 average overhead from $\sim\!0.5$~bits/parameter to $\sim\!0.37$~bits
 \citep[\S 3]{dettmers2023-qlora}\footnote{KB excerpt:
 \texttt{kb/excerpts/dettmers2023-qlora.md\#sec-3-doublequant}.}. At
-65B parameters the saving is $\sim\!1$~GB.
+65B \glsterm{parameters}{parameters} the saving is $\sim\!1$~GB.
 
-\paragraph{Paged optimizers.} Optimizer state for the LoRA factors is
+\paragraph{Paged optimizers.} Optimizer state for the \glsterm{lora}{LoRA} factors is
 allocated in NVIDIA unified-memory pages that swap to CPU under GPU
 pressure \citep[\S 3]{dettmers2023-qlora}\footnote{KB excerpt:
 \texttt{kb/excerpts/dettmers2023-qlora.md\#sec-3-paged}.}. Long-sequence
 batches that would OOM the 48~GB GPU instead spill to host RAM at a
 small bandwidth cost.
 
-QLoRA-tuned models recover within $\sim\!1\%$ of full BF16 fine-tunes
+\glsterm{qlora}{QLoRA}-tuned models recover within $\sim\!1\%$ of full BF16 fine-tunes
 on 8 instruction datasets and multiple model scales
 \citep[\S 4]{dettmers2023-qlora}, including 33B and 65B scales that
 would otherwise be infeasible on commodity hardware.
@@ -138,7 +138,7 @@ would otherwise be infeasible on commodity hardware.
 
 \citet{ilharco2022-task-vectors} reframe a fine-tune as a vector in
 weight space. Given a pretrained $\theta_0 \in \R^P$ and a fine-tune
-$\theta_T$ on task $T$, the \emph{task vector} is\footnote{KB excerpt:
+$\theta_T$ on task $T$, the \emph{\glsterm{task-vector}{task vector}} is\footnote{KB excerpt:
 \texttt{kb/excerpts/ilharco2022-task-vectors.md\#sec-2}.}
 \begin{equation}
 \tau_T = \theta_T - \theta_0 \in \R^P
@@ -153,7 +153,7 @@ task vectors are well-defined:
 \end{align}
 \citep[\S 2]{ilharco2022-task-vectors}. The empirical claims
 \citep[\S 3]{ilharco2022-task-vectors} are that negating a
-toxicity-task vector reduces toxic generation while preserving general
+toxicity-\glsterm{task-vector}{task vector} reduces toxic generation while preserving general
 benchmarks, that multi-task addition can outperform naive multi-task
 fine-tuning, and that analogy compositions $\tau_A - \tau_B + \tau_C$
 produce the expected behavioral shifts.
@@ -287,19 +287,19 @@ base, and \emph{logit ensembling and weight averaging produce similar
 accuracy when the loss landscape is locally flat}
 \citep[\S 4]{wortsman2022-model-soups} — but they do not prove sufficient
 conditions. The phenomenon is referred to in the broader literature as
-\emph{linear mode connectivity} (LMC), with \citet{frankle2020-lmc}\deepencite{frankle2020-lmc
-§3} the canonical reference\footnote{LMC was introduced for SGD-trained
+\emph{\glsterm{linear-mode-connectivity-2}{linear mode connectivity}} (\glsterm{linear-mode-connectivity-2}{LMC}), with \citet{frankle2020-lmc}\deepencite{frankle2020-lmc
+§3} the canonical reference\footnote{\glsterm{linear-mode-connectivity-2}{LMC} was introduced for SGD-trained
 networks at the same initialization; the fine-tuning case is the
 operationally relevant specialization for adaptation.}; the
 \citet[\S 4]{ilharco2022-task-vectors} \emph{linearity-of-fine-tuning}
 attribution refers to the same phenomenon at the task-vector level.
 
-The condition is empirically tight in a load-bearing way. LMC holds for
-SFT-from-the-same-base; it holds partly for RLHF-from-the-same-base
+The condition is empirically tight in a load-bearing way. \glsterm{linear-mode-connectivity-2}{LMC} holds for
+SFT-from-the-same-base; it holds partly for \glsterm{rlhf}{RLHF}-from-the-same-base
 (see \S8); it breaks for from-scratch models with different
 initializations, where averaging produces a near-random model. This
 explains the \emph{common-ancestor} requirement of every merge method:
-LoRA's adapter is a delta on a fixed $W_0$, soup recipes assume the
+\glsterm{lora}{LoRA}'s adapter is a delta on a fixed $W_0$, soup recipes assume the
 $\theta_k$ share $\theta_0$, task arithmetic encodes the assumption in
 \cref{eq:task-vector}'s subtraction, and TIES requires the ancestor
 explicitly. Merging models with different pretrained bases is not
@@ -311,15 +311,15 @@ The merge literature reports two patterns that do not yet reconcile.
 On controlled multi-task benchmarks, merged models often exceed any
 single ingredient \citep[\S 4]{yadav2023-ties-merging,
 wortsman2022-model-soups}. On real-world deployments — the open-weights
-LLM merging community at frontier scale — merged models routinely
+\glsterm{llm}{LLM} merging community at frontier scale — merged models routinely
 under-perform the strongest specialist on its own task, with merge wins
 concentrated in multi-task generalization rather than peak-task
 performance. The per-paper benchmarks are largely single-source: TIES
 \citep[\S 4]{yadav2023-ties-merging} and Soups
 \citep[\S 4]{wortsman2022-model-soups} sweep their own task suites, with
-no third-party head-to-head at frontier-LLM scale, and no canonical
+no third-party head-to-head at frontier-\glsterm{llm}{LLM} scale, and no canonical
 theory predicts when merging produces interference vs.\ the
-basin-centering effect predicted by LMC. The
+basin-centering effect predicted by \glsterm{linear-mode-connectivity-2}{LMC}. The
 \emph{merged-beats-best-ingredient} claim should be read as
 \emph{task-set-conditional}: it holds on multi-task evaluations of
 specialists, and is not yet established at the single-task ceiling.
@@ -329,21 +329,21 @@ specialists, and is not yet established at the single-task ceiling.
 \subsection{Forward link}
 
 The pipeline closes here. The four sections following SFT (\S7) ---
-RLHF (\S8), DPO (\S9), RLAIF/CAI (\S10), RLVR/GRPO (\S11) --- moved the
+\glsterm{rlhf}{RLHF} (\S8), \glsterm{dpo}{DPO} (\S9), \glsterm{rlaif-3}{RLAIF}/\glsterm{constitutional-ai}{CAI} (\S10), \glsterm{rlvr-3}{RLVR}/\glsterm{grpo-2}{GRPO} (\S11) --- moved the
 policy in data-driven directions; \cref{sec:adaptation-and-merging}
-makes the dual move in weight space, with PEFT
+makes the dual move in weight space, with \glsterm{peft}{PEFT}
 (\cref{sec:adapt-lora,sec:adapt-qlora}) writing low-rank patches onto a
 frozen base and merging
 (\cref{sec:adapt-taskvec,sec:adapt-soups,sec:adapt-ties}) recombining
-fine-tunes that share an ancestor. Both rest on the LMC substrate of
+fine-tunes that share an ancestor. Both rest on the \glsterm{linear-mode-connectivity-2}{LMC} substrate of
 \cref{sec:adapt-lmc}, the speculative theoretical claim that holds the
 empirical ceiling. The next section
 (\cref{sec:frontier-snapshot})\deepencite{paper2-§13-cross-ref} fixes
 the frontier-2026 picture: a single table over disclosed pre-training,
 optimization, distributed, precision, SFT, preference-RL,
 reasoning-RL, and merge choices for the open-weights frontier
-(DeepSeek-V3/R1, Llama-3/4, Qwen-2.5/3, Phi-4, Tülu-3, OLMo-2, Gemma-3,
-Mistral) and the partial disclosures from the closed labs. The
+(\glsterm{precision-pinning}{DeepSeek-V3}/R1, Llama-3/4, Qwen-2.5/3, Phi-4, Tülu-3, OLMo-2, Gemma-3,
+\glsterm{mistral}{Mistral}) and the partial disclosures from the closed labs. The
 question \cref{sec:adaptation-and-merging} leaves open --- whether
 merging will be a load-bearing primitive of the frontier pipeline or
 a community add-on layered on top of single-base specialists --- is one
