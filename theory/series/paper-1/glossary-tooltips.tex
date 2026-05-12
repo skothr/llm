@@ -6,7 +6,7 @@
 \expandafter\def\csname @gls@def@alibi\endcsname{Attention with Linear Biases.}
 \expandafter\def\csname @gls@def@attention-weights\endcsname{The softmax-normalized scores (a j geq 0, sum a j = 1) that determine how much each position contributes to the output.}
 \expandafter\def\csname @gls@def@autoregressive\endcsname{Generating tokens one at a time, left to right, where each prediction depends only on previous tokens.}
-\expandafter\def\csname @gls@def@awq\endcsname{Lin et al.}
+\expandafter\def\csname @gls@def@awq\endcsname{Lin et al. 2023.}
 \expandafter\def\csname @gls@def@bitlinear\endcsname{BitNet's drop-in replacement for `nn.Linear`: weights quantized to -1,0,+1 via absmean, activations to INT8 via absmax, SubLN replaci...}
 \expandafter\def\csname @gls@def@bpe\endcsname{Subword tokenization algorithm that iteratively merges the most frequent adjacent character pairs to build a vocabulary.}
 \expandafter\def\csname @gls@def@chain-of-thought\endcsname{A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps z before emitting a final answer...}
@@ -29,7 +29,7 @@
 \expandafter\def\csname @gls@def@gelu\endcsname{Smooth activation x cdot Phi(x) where Phi is the standard normal CDF.}
 \expandafter\def\csname @gls@def@global-batch-load-balancing\endcsname{Qwen3's strategy: apply load-balancing loss across the entire training mini-batch (cluster-wide), not within microbatches.}
 \expandafter\def\csname @gls@def@glu\endcsname{mathrmGLU(x, W, V) = sigma(xW) otimes (xV), the elementwise product of a sigmoid-gated and an identity-gated linear projection.}
-\expandafter\def\csname @gls@def@gptq\endcsname{Frantar et al.}
+\expandafter\def\csname @gls@def@gptq\endcsname{Frantar et al. 2022.}
 \expandafter\def\csname @gls@def@gqa\endcsname{Interpolation between MHA and MQA: query heads are partitioned into g groups, each group shares one WK, WV.}
 \expandafter\def\csname @gls@def@hbm\endcsname{The large, slow memory tier on a GPU (~40–80 GB on A100, 1.5–2.0 TB/s).}
 \expandafter\def\csname @gls@def@hidden-state\endcsname{The d textmodel-dimensional vector representation at each position, flowing through the residual stream across layers.}
@@ -90,7 +90,7 @@
 \expandafter\def\csname @gls@def@tiling\endcsname{Restructuring a computation to operate on sub-blocks that fit in fast memory.}
 \expandafter\def\csname @gls@def@token-embedding\endcsname{A learned lookup table (W e in mathbbRV times d textmodel) mapping each token index to a dense vector.}
 \expandafter\def\csname @gls@def@tokenization\endcsname{Converting raw text into a sequence of discrete integer token IDs that a model can process.}
-\expandafter\def\csname @gls@def@transformer\endcsname{Neural network architecture introduced by Vaswani et al.}
+\expandafter\def\csname @gls@def@transformer\endcsname{Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing...}
 \expandafter\def\csname @gls@def@tree-attention\endcsname{A draft tree of token candidates verified in one target forward pass via a custom attention mask that lets every node attend only to its an...}
 \expandafter\def\csname @gls@def@typical-acceptance\endcsname{Medusa's quality–throughput knob: accept any draft token whose probability under the target exceeds min(epsilon, delta cdot exp(-H(p)...}
 \expandafter\def\csname @gls@def@uptraining\endcsname{The Ainslie 2023 recipe for converting an existing MHA checkpoint to GQA/MQA: mean-pool the WK, WV matrices within each group, then con...}

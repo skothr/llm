@@ -14,7 +14,7 @@
       "key": "transformer",
       "primary_form": "Transformer",
       "aliases": [],
-      "short_def": "Neural network architecture introduced by Vaswani et al.",
+      "short_def": "Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing…",
       "full_def": "Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing of sequences.",
       "case_strict": false,
       "kb_cite": null
@@ -727,7 +727,7 @@
       "key": "sycophancyeval",
       "primary_form": "SycophancyEval",
       "aliases": [],
-      "short_def": "Sharma et al.",
+      "short_def": "Sharma et al. 2023's four-task free-form",
       "full_def": "Sharma et al. 2023's four-task free-form",
       "case_strict": true,
       "kb_cite": null
@@ -745,7 +745,7 @@
       "key": "deceptive-alignment",
       "primary_form": "Deceptive alignment",
       "aliases": [],
-      "short_def": "Hubinger et al.",
+      "short_def": "Hubinger et al. 2019 theoretical concept:",
       "full_def": "Hubinger et al. 2019 theoretical concept:",
       "case_strict": false,
       "kb_cite": null
@@ -868,7 +868,7 @@
       "key": "weak-to-strong-w2s-generalization",
       "primary_form": "Weak-to-strong (W2S) generalization",
       "aliases": [],
-      "short_def": "Burns et al.",
+      "short_def": "Burns et al. 2023's",
       "full_def": "Burns et al. 2023's",
       "case_strict": true,
       "kb_cite": null
@@ -879,7 +879,7 @@
       "aliases": [
         "PGR"
       ],
-      "short_def": "Burns et al.",
+      "short_def": "Burns et al. 2023's headline",
       "full_def": "Burns et al. 2023's headline",
       "case_strict": true,
       "kb_cite": null
@@ -984,7 +984,7 @@
       "key": "harmbench",
       "primary_form": "HarmBench",
       "aliases": [],
-      "short_def": "Mazeika et al.",
+      "short_def": "Mazeika et al. 2024's standardized red-teaming",
       "full_def": "Mazeika et al. 2024's standardized red-teaming",
       "case_strict": true,
       "kb_cite": null
@@ -993,7 +993,7 @@
       "key": "jailbreakbench",
       "primary_form": "JailbreakBench",
       "aliases": [],
-      "short_def": "Chao et al.",
+      "short_def": "Chao et al. 2024's open robustness benchmark:",
       "full_def": "Chao et al. 2024's open robustness benchmark:",
       "case_strict": true,
       "kb_cite": null
@@ -1002,7 +1002,7 @@
       "key": "crescendo-attack",
       "primary_form": "Crescendo attack",
       "aliases": [],
-      "short_def": "Russinovich et al.",
+      "short_def": "Russinovich et al. 2024 multi-turn",
       "full_def": "Russinovich et al. 2024 multi-turn",
       "case_strict": false,
       "kb_cite": null
@@ -1062,7 +1062,7 @@
       "key": "mesa-optimizer",
       "primary_form": "Mesa-optimizer",
       "aliases": [],
-      "short_def": "Hubinger et al.",
+      "short_def": "Hubinger et al. 2019 concept: a learned",
       "full_def": "Hubinger et al. 2019 concept: a learned",
       "case_strict": false,
       "kb_cite": null
@@ -1839,7 +1839,7 @@
       "key": "mmlu-redux",
       "primary_form": "MMLU-Redux",
       "aliases": [],
-      "short_def": "The Polo et al.",
+      "short_def": "The Polo et al. 2024 audit re-annotating 5,700 MMLU questions and documenting a 6.49% baseline error rate.",
       "full_def": "The Polo et al. 2024 audit re-annotating 5,700 MMLU questions and documenting a 6.49% baseline error rate. Showed leaderboard-rank flips when corrected.",
       "case_strict": true,
       "kb_cite": "mmlu-redux-2024"
@@ -1877,7 +1877,7 @@
       "key": "n-gram-overlap",
       "primary_form": "N-gram overlap",
       "aliases": [],
-      "short_def": "Standard contamination-detection method (Brown et al.",
+      "short_def": "Standard contamination-detection method (Brown et al. 2020 GPT-3 §C): flag training documents containing benchmark n-grams of length ≥13.",
       "full_def": "Standard contamination-detection method (Brown et al. 2020 GPT-3 §C): flag training documents containing benchmark n-grams of length ≥13. Cheap; misses paraphrase contamination.",
       "case_strict": false,
       "kb_cite": null
@@ -1886,7 +1886,7 @@
       "key": "min-k-prob",
       "primary_form": "Min-K% Prob",
       "aliases": [],
-      "short_def": "Contamination-detection method (Shi et al.",
+      "short_def": "Contamination-detection method (Shi et al. 2024) that flags candidate items whose lowest-K%-probability tokens are unusually high — i.e., t…",
       "full_def": "Contamination-detection method (Shi et al. 2024) that flags candidate items whose lowest-K%-probability tokens are unusually high — i.e., the model \"knew\" even the surprising tokens. Model-internal signal; doesn't require training-corpus access.",
       "case_strict": true,
       "kb_cite": null
@@ -2076,7 +2076,7 @@
       "key": "gptq",
       "primary_form": "GPTQ",
       "aliases": [],
-      "short_def": "Frantar et al.",
+      "short_def": "Frantar et al. 2022.",
       "full_def": "Frantar et al. 2022. OBQ-style second-order weight update with three engineering modifications: arbitrary fixed quantization order, lazy batched updates (block size 128), and Cholesky reformulation for Hessian-inverse stability. ~4 GPU-hours for 175B at 3–4 bit.",
       "case_strict": true,
       "kb_cite": "frantar2022 §3; kb/notes/inference/quantization#§3.1"
@@ -2087,7 +2087,7 @@
       "aliases": [
         "Activation-aware Weight Quantization"
       ],
-      "short_def": "Lin et al.",
+      "short_def": "Lin et al. 2023.",
       "full_def": "Lin et al. 2023. Per-channel weight scaling driven by *activation* magnitudes (preserving ~1% salient channels at higher precision); reorder-free, no backward pass. Strong W4A16 baseline alongside GPTQ.",
       "case_strict": true,
       "kb_cite": "kb/notes/inference/quantization#§3.2"
@@ -2362,7 +2362,7 @@
       "aliases": [
         "SGLang"
       ],
-      "short_def": "When a JSON-schema or regex forces a deterministic chain of tokens (e.g.",
+      "short_def": "When a JSON-schema or regex forces a deterministic chain of tokens (e.g. the constant prefix `{\"summary\": \"`), merge those single-edge runs…",
       "full_def": "When a JSON-schema or regex forces a deterministic chain of tokens (e.g. the constant prefix `{\"summary\": \"`), merge those single-edge runs in the FSM so the constrained decoder emits the entire deterministic prefix in one step instead of token-by-token.",
       "case_strict": true,
       "kb_cite": "zheng2024-sglang §4; kb/excerpts/zheng2024-sglang#compressed-fsm"
@@ -2463,7 +2463,7 @@
       "key": "causal-tracing",
       "primary_form": "Causal tracing",
       "aliases": [],
-      "short_def": "Meng et al.",
+      "short_def": "Meng et al. 2022's specific implementation of",
       "full_def": "Meng et al. 2022's specific implementation of",
       "case_strict": false,
       "kb_cite": null
@@ -2637,7 +2637,7 @@
       "key": "auxk-loss",
       "primary_form": "AuxK loss",
       "aliases": [],
-      "short_def": "auxiliary loss added by Gao et al.",
+      "short_def": "auxiliary loss added by Gao et al. 2024 to revive",
       "full_def": "auxiliary loss added by Gao et al. 2024 to revive",
       "case_strict": true,
       "kb_cite": null
@@ -2655,7 +2655,7 @@
       "key": "sae-stitching",
       "primary_form": "SAE stitching",
       "aliases": [],
-      "short_def": "Leask et al.",
+      "short_def": "Leask et al. 2025: insert/swap latents from a",
       "full_def": "Leask et al. 2025: insert/swap latents from a",
       "case_strict": true,
       "kb_cite": null
@@ -2691,7 +2691,7 @@
       "key": "cross-layer-transcoder",
       "primary_form": "Cross-layer transcoder",
       "aliases": [],
-      "short_def": "Lindsey et al.",
+      "short_def": "Lindsey et al. 2025: a transcoder",
       "full_def": "Lindsey et al. 2025: a transcoder",
       "case_strict": false,
       "kb_cite": null
@@ -2736,7 +2736,7 @@
       "key": "tuned-lens",
       "primary_form": "Tuned lens",
       "aliases": [],
-      "short_def": "Belrose et al.",
+      "short_def": "Belrose et al. 2023: per-layer affine",
       "full_def": "Belrose et al. 2023: per-layer affine",
       "case_strict": false,
       "kb_cite": null
@@ -2747,7 +2747,7 @@
       "aliases": [
         "CBE"
       ],
-      "short_def": "Belrose et al.",
+      "short_def": "Belrose et al. 2023's algorithm",
       "full_def": "Belrose et al. 2023's algorithm",
       "case_strict": true,
       "kb_cite": null
@@ -2917,7 +2917,7 @@
       "key": "dpo-reparameterization",
       "primary_form": "DPO reparameterization",
       "aliases": [],
-      "short_def": "The closed-form mapping between optimal policy and reward (Eq.",
+      "short_def": "The closed-form mapping between optimal policy and reward (Eq. 4 of Rafailov 2023): $\\pi^*(y|x) \\propto \\pi_{\\mathrm{ref}}(y|x)\\exp(r(x,y)/…",
       "full_def": "The closed-form mapping between optimal policy and reward (Eq. 4 of Rafailov 2023): $\\pi^*(y|x) \\propto \\pi_{\\mathrm{ref}}(y|x)\\exp(r(x,y)/\\beta)$. Inverting this gives the implicit reward `[rafailov2023-dpo §4 Eq.4-5]`.",
       "case_strict": true,
       "kb_cite": null
@@ -3669,7 +3669,7 @@
       "key": "isoflop-profile",
       "primary_form": "IsoFLOP profile",
       "aliases": [],
-      "short_def": "The plot of training loss vs.",
+      "short_def": "The plot of training loss vs. parameter count $N$ at a fixed training-compute budget $C$.",
       "full_def": "The plot of training loss vs. parameter count $N$ at a fixed training-compute budget $C$. The minimum across $N$ at each $C$ defines the compute-optimal frontier `[hoffmann2022-chinchilla §3.2; kb/excerpts/hoffmann2022-chinchilla#sec-3-2]`.",
       "case_strict": true,
       "kb_cite": null
@@ -3891,7 +3891,7 @@
       "key": "p-1-d-attention",
       "primary_form": "μP $1/d$ attention",
       "aliases": [],
-      "short_def": "Definition 4.1 of Yang et al.",
+      "short_def": "Definition 4.1 of Yang et al. 2022: replace Vaswani's $1/\\sqrt{d_k}$ softmax scaling with $1/d_k$.",
       "full_def": "Definition 4.1 of Yang et al. 2022: replace Vaswani's $1/\\sqrt{d_k}$ softmax scaling with $1/d_k$. Correct training-time rescaling under μP because $q$ and $k$ become correlated after one optimization step, making $\\mathrm{Var}(q^\\top k) = \\Theta(d)$ `[yang2022-mup §4 Definition 4.1; kb/excerpts/yang2022-mup#sec-4-definition-4-1]`.",
       "case_strict": true,
       "kb_cite": null
@@ -4072,7 +4072,7 @@
       "key": "c4-line-level-filters",
       "primary_form": "C4 line-level filters",
       "aliases": [],
-      "short_def": "Per-line heuristics from Raffel et al.",
+      "short_def": "Per-line heuristics from Raffel et al. 2019 (T5/C4): remove lines lacking terminal punctuation, lines with \"javascript\", policy/cookie boil…",
       "full_def": "Per-line heuristics from Raffel et al. 2019 (T5/C4): remove lines lacking terminal punctuation, lines with \"javascript\", policy/cookie boilerplate, etc. FineWeb adopts these *minus* the curly-brace rule (which would strip code).",
       "case_strict": false,
       "kb_cite": "fineweb2024 §3.3"
@@ -4121,7 +4121,7 @@
       "key": "compatibility-symmetry-principles-mixing-law",
       "primary_form": "Compatibility / symmetry principles (mixing law)",
       "aliases": [],
-      "short_def": "The two structural constraints that pin down Eq.",
+      "short_def": "The two structural constraints that pin down Eq. 1 from a candidate-function space: reduces to two-domain log-linear when $M=2$; invariant…",
       "full_def": "The two structural constraints that pin down Eq. 1 from a candidate-function space: reduces to two-domain log-linear when $M=2$; invariant under re-labeling of domains.",
       "case_strict": false,
       "kb_cite": "data-mixing-laws-2024 §3.2"
@@ -4179,7 +4179,7 @@
       "aliases": [
         "Phi-4 intuition"
       ],
-      "short_def": "`[INTUITION]` Synthetic data presents *concept-then-application-then-explanation* as a self-contained unit, vs.",
+      "short_def": "`[INTUITION]` Synthetic data presents *concept-then-application-then-explanation* as a self-contained unit, vs. organic web data which scat…",
       "full_def": "`[INTUITION]` Synthetic data presents *concept-then-application-then-explanation* as a self-contained unit, vs. organic web data which scatters those parts across many documents. Enables high-density learning per token.",
       "case_strict": false,
       "kb_cite": "phi4 §1, §2.1"
@@ -4960,7 +4960,7 @@
       "key": "summarization-behavior",
       "primary_form": "Summarization behavior",
       "aliases": [],
-      "short_def": "The empirical pattern (Tigges et al.",
+      "short_def": "The empirical pattern (Tigges et al. 2023, Marks & Tegmark 2023) that information about a clause is encoded over the clause-ending punctuat…",
       "full_def": "The empirical pattern (Tigges et al. 2023, Marks & Tegmark 2023) that information about a clause is encoded over the clause-ending punctuation token, making period-position activations the canonical probing target for sentence-level properties `[marks-tegmark-2023-truth §3]`.",
       "case_strict": false,
       "kb_cite": null
@@ -4971,7 +4971,7 @@
       "aliases": [
         "Massive Multitask Language Understanding"
       ],
-      "short_def": "57-subject 4-way MCQ benchmark introduced by Hendrycks et al.",
+      "short_def": "57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021.",
       "full_def": "57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021. 15,908 questions sourced from public exam banks (AP, GRE, MCAT, professional licensing). Foundational for the post-2021 LLM eval era; saturated at >90% on frontier models as of 2026 `[hendrycks2021-mmlu §abstract]`.",
       "case_strict": true,
       "kb_cite": null
@@ -4980,7 +4980,7 @@
       "key": "mmlu-redux-2",
       "primary_form": "MMLU-Redux",
       "aliases": [],
-      "short_def": "Polo et al.",
+      "short_def": "Polo et al. 2024 audit of MMLU finding 6.49% baseline error rate, with the Virology subset reaching 57% errors.",
       "full_def": "Polo et al. 2024 audit of MMLU finding 6.49% baseline error rate, with the Virology subset reaching 57% errors. Per-question corrections published; methodology audit, not a new benchmark `[mmlu-redux-2024 §abstract]`.",
       "case_strict": true,
       "kb_cite": null
@@ -4998,7 +4998,7 @@
       "key": "gpqa-diamond-2",
       "primary_form": "GPQA Diamond",
       "aliases": [],
-      "short_def": "198-question subset of GPQA (Rein et al.",
+      "short_def": "198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web acc…",
       "full_def": "198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web access got it wrong. The \"Google-proof\" property is operationalized via the 34% non-expert-with-web baseline. Saturated at frontier as of 2026 (>90%) `[rein2023-gpqa §abstract]`.",
       "case_strict": true,
       "kb_cite": null
@@ -5045,7 +5045,7 @@
       "key": "harmbench-2",
       "primary_form": "HarmBench",
       "aliases": [],
-      "short_def": "Mazeika et al.",
+      "short_def": "Mazeika et al. 2024 standardized red-team evaluation framework: 510 behaviors in four functional categories, 18 attack methods, 33 target L…",
       "full_def": "Mazeika et al. 2024 standardized red-team evaluation framework: 510 behaviors in four functional categories, 18 attack methods, 33 target LLMs/defenses. Used by AISI for pre-deployment evals `[harmbench2024 §abstract]`.",
       "case_strict": true,
       "kb_cite": null
@@ -5054,7 +5054,7 @@
       "key": "jailbreakbench-2",
       "primary_form": "JailbreakBench",
       "aliases": [],
-      "short_def": "Chao et al.",
+      "short_def": "Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifac…",
       "full_def": "Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifacts (the actual successful prompts), standardized LLM-as-judge, public leaderboard. NeurIPS 2024 D&B `[chao2024-jailbreakbench §abstract]`.",
       "case_strict": true,
       "kb_cite": null
@@ -5063,7 +5063,7 @@
       "key": "crescendo-multi-turn-jailbreak",
       "primary_form": "Crescendo (multi-turn jailbreak)",
       "aliases": [],
-      "short_def": "Russinovich et al.",
+      "short_def": "Russinovich et al. 2024 attack: gradually escalate over multiple benign-seeming turns, exploiting the LM's tendency to over-weight its own…",
       "full_def": "Russinovich et al. 2024 attack: gradually escalate over multiple benign-seeming turns, exploiting the LM's tendency to over-weight its own prior committed responses. Achieves 29-71% ASR uplift over single-turn baselines on AdvBench against GPT-4 / Gemini-Pro. Documents that single-turn evals systematically underestimate the attack surface `[russinovich2024-crescendo §abstract]`.",
       "case_strict": false,
       "kb_cite": null
@@ -5090,7 +5090,7 @@
       "key": "mismatched-generalization-jailbreak-failure-mode",
       "primary_form": "Mismatched generalization (jailbreak failure mode)",
       "aliases": [],
-      "short_def": "Wei et al.",
+      "short_def": "Wei et al. 2023: safety training fails to generalize to a domain (Base64, low-resource language, role-play) where the model has capabilitie…",
       "full_def": "Wei et al. 2023: safety training fails to generalize to a domain (Base64, low-resource language, role-play) where the model has capabilities. The other named failure mode `[wei2023-jailbroken §abstract]`.",
       "case_strict": false,
       "kb_cite": null
@@ -5099,7 +5099,7 @@
       "key": "safety-capability-parity",
       "primary_form": "Safety-capability parity",
       "aliases": [],
-      "short_def": "Wei et al.",
+      "short_def": "Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range.",
       "full_def": "Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range. Partial-domain safety training will be defeated by attacks that target the capability/safety gap `[wei2023-jailbroken §abstract]`.",
       "case_strict": false,
       "kb_cite": null

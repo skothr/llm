@@ -22,7 +22,7 @@
 \expandafter\def\csname @gls@def@flashattention\endcsname{Exact attention computed with re-organized memory access: tile K, V into SRAM-resident blocks and use **online softmax** to combine block...}
 \expandafter\def\csname @gls@def@format-reward\endcsname{In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a `<think>...</think>` block).}
 \expandafter\def\csname @gls@def@generative-prm\endcsname{A small reasoning-LLM verifier that emits its own short CoT evaluating each step before producing a verdict.}
-\expandafter\def\csname @gls@def@gpqa-diamond-2\endcsname{198-question subset of GPQA (Rein et al.}
+\expandafter\def\csname @gls@def@gpqa-diamond-2\endcsname{198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web acc...}
 \expandafter\def\csname @gls@def@gqa\endcsname{Interpolation between MHA and MQA: query heads are partitioned into g groups, each group shares one WK, WV.}
 \expandafter\def\csname @gls@def@greedy-decoding\endcsname{Selecting the highest-probability token at each step.}
 \expandafter\def\csname @gls@def@group-normalized-advantage\endcsname{In GRPO, tildeA i = (R i - mathrmmean(R j))/mathrmstd(R j), broadcast to every token of trajectory o i.}
@@ -34,7 +34,7 @@
 \expandafter\def\csname @gls@def@llm-as-judge\endcsname{Evaluation pattern where a strong LLM scores another model's responses (e.g., AlpacaEval, MT-Bench, Arena-Hard).}
 \expandafter\def\csname @gls@def@mcts-rag\endcsname{MCTS extended over retrieval decisions in addition to reasoning steps.}
 \expandafter\def\csname @gls@def@multi-head-latent-attention\endcsname{DeepSeek's architectural compression: project to a low-rank latent C in mathbbRd c shared across heads, expand back to per-head (...}
-\expandafter\def\csname @gls@def@n-gram-overlap\endcsname{Standard contamination-detection method (Brown et al.}
+\expandafter\def\csname @gls@def@n-gram-overlap\endcsname{Standard contamination-detection method (Brown et al. 2020 GPT-3 §C): flag training documents containing benchmark n-grams of length ≥13.}
 \expandafter\def\csname @gls@def@outcome-reward-model\endcsname{A scoring function RO phi: (x, z, y) to [0, 1] trained on (prompt, complete solution, outcome correctness) triples.}
 \expandafter\def\csname @gls@def@palm\endcsname{Google's 540B-parameter decoder-only LLM (Chowdhery et al., 2022).}
 \expandafter\def\csname @gls@def@parameters\endcsname{The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).}
@@ -67,7 +67,7 @@
 \expandafter\def\csname @gls@def@test-time-compute\endcsname{The inference-side compute spent on a single problem instance to improve answer quality, beyond a single greedy forward pass.}
 \expandafter\def\csname @gls@def@test-time-compute-optimal-scaling-strategy\endcsname{The argmax over test-time hyperparameters theta of expected output correctness, at a fixed test-time compute budget N, conditioned on...}
 \expandafter\def\csname @gls@def@thinking-budget-2\endcsname{Productised TTC control: API-level integer (Gemini 2.5 `thinkingBudget`), effort level (OpenAI o-series), or token cap (Anthropic thinking...}
-\expandafter\def\csname @gls@def@transformer\endcsname{Neural network architecture introduced by Vaswani et al.}
+\expandafter\def\csname @gls@def@transformer\endcsname{Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing...}
 \expandafter\def\csname @gls@def@value\endcsname{Projected representation of the content to be aggregated.}
 \expandafter\def\csname @gls@def@vapo\endcsname{RL variant that re-introduces a learned value function on top of GRPO's design, with shared backbone and value-loss-clipping.}
 \expandafter\def\csname @gls@def@verifiable-reward\endcsname{A 0/1 reward computed by a programmatic check: R(x,y) = mathbb1[mathrmverify(x,y)].}
