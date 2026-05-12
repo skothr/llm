@@ -118,8 +118,9 @@ is order-$10^4$ at head granularity and $10^5$ at single-(head,
 position); on a frontier-2026 model with $\sim 80$ layers, $\sim 64$
 heads per layer, and $\sim 8\text{K}$ context, full-coverage patching
 is on the order of $10^7$ forward passes per task. \glsterm{attribution-patching}{Attribution patching}
-\citep[forum signal, \deepencite{nanda2023-attribution-patching
-blog post; not in papers.json}] linearizes the \glsterm{indirect-effect}{indirect effect} via the
+\deepencite{nanda2023-attribution-patching blog post; not in
+papers.json --- this is a tier-B forum signal that needs deepening}
+linearizes the \glsterm{indirect-effect}{indirect effect} via the
 first-order Taylor approximation
 $\mathrm{IE}_C \approx \langle \nabla_{\mathbf{h}} m,
 \Delta \mathbf{h} \rangle$

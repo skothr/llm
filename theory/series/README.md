@@ -53,15 +53,25 @@ emits per-paper `glossary-section.tex` (the rendered glossary) and
 files are committed — drift between source and artifact would be a
 real bug.
 
-Then build any paper:
+Then build any paper. **Important: chain steps with `;` not `&&`** —
+pdflatex exits non-zero on any source-level LaTeX error (even when
+`-interaction=nonstopmode` recovers and produces a PDF), so `&&`
+would short-circuit before bibtex runs, leaving citations
+unresolved as `(?, ...)` in the rendered PDF. Four pdflatex passes
+are needed for full natbib convergence:
 
 ```bash
 cd theory/series/paper-1
-pdflatex -interaction=nonstopmode main.tex
-bibtex main
-pdflatex -interaction=nonstopmode main.tex
+pdflatex -interaction=nonstopmode main.tex; \
+bibtex main; \
+pdflatex -interaction=nonstopmode main.tex; \
+pdflatex -interaction=nonstopmode main.tex; \
 pdflatex -interaction=nonstopmode main.tex
 ```
+
+Quick sanity check after build: `pdftotext main.pdf - | grep -c '(?,'`
+should return 0. Any unresolved citation will leave a literal
+`(?, year, optarg)` in the PDF text.
 
 PDFs ship in-repo under each paper directory; intermediate
 `*.aux/.log/.bbl/.blg/.out/.toc/.upa/.upb` files are git-ignored.
@@ -115,23 +125,29 @@ terms that over-match (likely too-generic regex).
 | Paper | Title | PDF | Pages |
 |------:|-------|-----|------:|
 | 1 | The modern Transformer is a small set of choices | [`paper-1/main.pdf`](paper-1/main.pdf) | 79 |
-| 2 | Training is a multi-stage pipeline | [`paper-2/main.pdf`](paper-2/main.pdf) | 96 |
-| 3 | Reasoning is compute, search, and verification | [`paper-3/main.pdf`](paper-3/main.pdf) | 74 |
-| 4 | The internal computation can be partially read | [`paper-4/main.pdf`](paper-4/main.pdf) | 69 |
+| 2 | Training is a multi-stage pipeline | [`paper-2/main.pdf`](paper-2/main.pdf) | 107 |
+| 3 | Reasoning is compute, search, and verification | [`paper-3/main.pdf`](paper-3/main.pdf) | 82 |
+| 4 | The internal computation can be partially read | [`paper-4/main.pdf`](paper-4/main.pdf) | 76 |
 | 5 | What we measure and what slips through | [`paper-5/main.pdf`](paper-5/main.pdf) | 83 |
-|   | **Total** |   | **401** |
+|   | **Total** |   | **427** |
 
-Build state as of 2026-05-11 (post glossary-feature build): every
-paper produces a clean PDF; per-paper glossary sections are present.
-Pre-existing source bugs in papers 2/3/4 emit non-fatal LaTeX errors
-during build (`\footnotemark` inside `\caption{}`,
-`\textit{``\$42$.$00$\$''}` mixed-mode dollar, `\to` inside
-`\texttt{}`) — LaTeX recovers and produces a PDF, but these warrant
-a separate cleanup pass. paper-4 also carries the known
-`Citation 'l' undefined` warning (a stray-key artifact whose source
-defies grep — renders as a single `[?]` in the bibliography). Cross-
-paper references are inline-text rather than `\cref` since each
-paper builds independently; xr-hyper would lift this if ever desired.
+Build state as of 2026-05-12: every paper produces a clean PDF with
+all citations resolved. Use the 5-step canonical sequence
+(`pdflatex; bibtex; pdflatex; pdflatex; pdflatex` — note `;` not `&&`,
+since pdflatex exits non-zero on any LaTeX-source error and `&&`
+would short-circuit before bibtex). Pre-existing source bugs in
+papers 2/3/4 emit non-fatal LaTeX errors during build
+(`\footnotemark` inside `\caption{}`, `\textit{``\$42$.$00$\$''}`
+mixed-mode dollar, `\to` inside `\texttt{}`) — LaTeX recovers,
+emits the PDF, but writes exit code 1. The long-running
+`Citation 'l' undefined` warning in paper-4 was resolved on
+2026-05-12: it traced to a malformed `\citep[forum signal,
+\deepencite{...}]` (missing mandatory `{key}` arg) in §13's
+"Full activation patching" paragraph; natbib was consuming the
+next character as a single-letter cite key. Replaced with bare
+`\deepencite{}` annotation. Cross-paper references are inline-text
+rather than `\cref` since each paper builds independently; xr-hyper
+would lift this if ever desired.
 
 ## Status (2026-05-05)
 
