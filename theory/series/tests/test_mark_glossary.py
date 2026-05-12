@@ -98,6 +98,29 @@ def test_skip_lstlisting_environment():
     assert (s, e) in regions
 
 
+def test_skip_verb_inline():
+    """Regression: \\verb|...| inline-verbatim must be skipped. Wrapping
+    inside \\verb produces invalid LaTeX (the wrap macro can't appear in
+    verbatim context) and breaks pdfLaTeX. The delimiter is arbitrary —
+    test pipe, bang, and plus variants."""
+    for delim in ("|", "!", "+"):
+        text = f"before \\verb{delim}key=RoPE{delim} after"
+        regions = find_skip_regions(text)
+        s = text.index(r"\verb")
+        e = text.rindex(delim) + 1
+        assert (s, e) in regions, f"delim={delim!r}: missing skip span"
+
+
+def test_skip_lstinline_inline():
+    """\\lstinline|...| (listings package) is analogous to \\verb. Must
+    also be skipped to avoid wrapping inside an inline verbatim."""
+    text = r"call \lstinline|model.forward(RoPE)| here"
+    regions = find_skip_regions(text)
+    s = text.index(r"\lstinline")
+    e = text.rindex("|") + 1
+    assert (s, e) in regions
+
+
 def test_skip_section_title_arg():
     text = r"\section{Attention is all you need}"
     regions = find_skip_regions(text)
