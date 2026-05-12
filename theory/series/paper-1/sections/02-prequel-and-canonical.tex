@@ -8,18 +8,18 @@
 \label{sec:prequel-and-canonical}
 \label{sec:transformer-overview}
 
-The modern Transformer is a small set of choices made on top of a
+The modern \glsterm{transformer}{Transformer} is a small set of choices made on top of a
 2017 canonical that was itself a tightly-engineered response to the
 known pathologies of the recurrent and convolutional sequence-to-sequence
 architectures it replaced. \textbf{The thesis of this section: every
 axis of variation walked in the rest of this paper (KV-sharing,
-attention-implementation, FFN, normalization, positional encoding,
+attention-implementation, \glsterm{ffn}{FFN}, normalization, positional encoding,
 multi-token output, multimodality) is a localized perturbation of the
-six-block encoder-decoder of \citet{vaswani2017}.} Establishing what
+six-block \glsterm{encoder-decoder}{encoder-decoder} of \citet{vaswani2017}.} Establishing what
 that 2017 baseline actually computes -- with every variable defined,
 every shape labeled, and the four equations on which $\S 3$--$\S 12$
 will pivot transcribed verbatim -- is the load-bearing job of this
-section. We start with what the Transformer replaced, why it
+section. We start with what the \glsterm{transformer}{Transformer} replaced, why it
 replaced them, then state the 2017 architecture in the notation we
 will carry through the paper.
 
@@ -27,7 +27,7 @@ will carry through the paper.
 \label{sec:prequel}
 
 By the end of 2016 the dominant family for sequence transduction was
-the recurrent encoder-decoder with attention. Three pathologies were
+the recurrent \glsterm{encoder-decoder}{encoder-decoder} with attention. Three pathologies were
 known well enough to be the abstract of \citet{vaswani2017} itself
 (``dispensing with recurrence and convolutions
 entirely'')%
@@ -41,7 +41,7 @@ which makes the per-step depth equal to the sequence length and
 forecloses parallelism along $S$. Long-range gradient flow through
 this recurrence vanishes (or, less commonly, explodes) at a rate set
 by the operator norm of the Jacobian
-$\partial \mathbf{h}_t / \partial \mathbf{h}_{t-1}$; the LSTM cell
+$\partial \mathbf{h}_t / \partial \mathbf{h}_{t-1}$; the \glsterm{lstm}{LSTM} cell
 \deepencite{hochreiter1997-lstm §3 (gating equations: input, forget,
 output gates plus cell-state recurrence)} replaces a saturating
 non-linearity with a gated linear cell-state pathway
@@ -75,12 +75,12 @@ favor of a scaled dot-product (\S\ref{sec:canonical-attention} below).
 to recurrence is convolution. \deepencite{gehring2017-convseq2seq §2
 (GLU-gated 1D convolutions over source and target with multi-step
 attention)} replaces both encoder and decoder recurrences with stacks
-of GLU-gated 1D convolutions, gaining within-example parallelism
+of \glsterm{glu}{GLU}-gated 1D convolutions, gaining within-example parallelism
 along $S$ at the price of a $O(\log_k S)$-deep receptive field for
 kernel size $k$: long-range dependencies require either deep stacks
 or attention bolted on top. This was the strongest direct rival to
-the Transformer at the moment of submission and forms the headline
-comparison in \citet[Table~2]{vaswani2017}, where the Transformer
+the \glsterm{transformer}{Transformer} at the moment of submission and forms the headline
+comparison in \citet[Table~2]{vaswani2017}, where the \glsterm{transformer}{Transformer}
 matches or exceeds ConvS2S on WMT'14 EN--DE BLEU at a fraction of the
 training FLOPs.
 
@@ -101,7 +101,7 @@ quadratic price and built the engineering apparatus to absorb it.
 \subsection{The 2017 canonical: encoder-decoder structure}
 \label{sec:canonical-structure}
 
-The Transformer of \citet{vaswani2017} is a stack of $L$ identical
+The \glsterm{transformer}{Transformer} of \citet{vaswani2017} is a stack of $L$ identical
 blocks operating on sequences of $D$-dimensional vectors, with no
 recurrence and no convolution. We carry the tensor-shape conventions
 of \cref{tab:tensor-shapes} through this section and the rest of the
@@ -112,15 +112,15 @@ paper.
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lll}
 \toprule
-\textbf{Symbol} & \textbf{Meaning} & \textbf{Vaswani-base value} \\
+\textbf{Symbol} & \textbf{Meaning} & \textbf{Vaswani-base \glsterm{value}{value}} \\
 \midrule
 $\mathsf{B}$        & batch size                                  & --- (training-dependent) \\
 $\mathsf{S}$        & sequence length (tokens)                    & up to 512 (training); -- at inference \\
 $\mathsf{D}$        & residual-stream / model dimension           & $512$ \\
 $\mathsf{H}$        & number of attention heads                   & $8$ \\
 $d_h$               & per-head dimension, $d_h = \mathsf{D}/\mathsf{H}$ & $64$ \\
-$d_{\text{ff}}$     & FFN inner dimension                         & $2048$ ($= 4\mathsf{D}$) \\
-$\mathsf{V}$        & tokenizer vocabulary size $|V|$             & $\sim$37k (BPE, EN--DE)~\citep[\S 5.1]{vaswani2017} \\
+$d_{\text{ff}}$     & \glsterm{ffn}{FFN} inner dimension                         & $2048$ ($= 4\mathsf{D}$) \\
+$\mathsf{V}$        & tokenizer \glsterm{vocabulary}{vocabulary} size $|V|$             & $\sim$37k (\glsterm{bpe}{BPE}, EN--DE)~\citep[\S 5.1]{vaswani2017} \\
 $L$                 & blocks per stack (encoder; decoder)         & $6$ each \\
 \bottomrule
 \end{tabular}
@@ -134,13 +134,13 @@ onward) hold this notation fixed and label any divergence
 \end{table}
 
 The encoder is a stack of $L = 6$ identical layers; each has two
-sublayers, a multi-head self-attention block and a position-wise
-feed-forward block, with a residual connection and layer
+sublayers, a multi-head \glsterm{self-attention}{self-attention} block and a position-wise
+feed-forward block, with a \glsterm{residual-connection}{residual connection} and layer
 normalization wrapping each sublayer%
 \footnote{KB excerpt: \texttt{kb/excerpts/vaswani2017.md\#sec-3-1}.}.
 The decoder also has $L = 6$ layers but inserts a third sublayer --
-encoder-decoder cross-attention -- between the self-attention and
-the FFN, and masks the self-attention so that position $i$ can attend
+\glsterm{encoder-decoder}{encoder-decoder} \glsterm{cross-attention}{cross-attention} -- between the \glsterm{self-attention}{self-attention} and
+the \glsterm{ffn}{FFN}, and masks the \glsterm{self-attention}{self-attention} so that position $i$ can attend
 only to positions $\leq i$ \citep[\S 3.1]{vaswani2017}. Writing the
 sublayer abstractly as $F$ and its input as $\mathbf{x}$, the
 canonical placement is what \citet{vaswani2017} state verbatim%
@@ -150,9 +150,9 @@ canonical placement is what \citet{vaswani2017} state verbatim%
   \tag{Vaswani--\S 3.1}
   \label{eq:post-ln-original}
 \end{equation}
-\citep[\S 3.1]{vaswani2017}. This is the \emph{Post-LN} placement
+\citep[\S 3.1]{vaswani2017}. This is the \emph{\glsterm{post-ln}{Post-LN}} placement
 (norm \emph{after} the residual add), and it is the placement
-\citet{radford2019-gpt2} will discard in GPT-2 in favor of Pre-LN
+\citet{radford2019-gpt2} will discard in GPT-2 in favor of \glsterm{pre-ln}{Pre-LN}
 (\S\ref{sec:normalization-axis}); the choice has nontrivial
 consequences for training stability at depth \citep{xiong2020}, but
 in the 2017 canonical we keep Eq.~\eqref{eq:post-ln-original}
@@ -165,7 +165,7 @@ connections''~\citep[\S 3.1]{vaswani2017}.
 
 The attention sublayer is the load-bearing departure from the
 recurrent and convolutional baselines. \citet{vaswani2017} define
-scaled dot-product attention on per-head matrices
+\glsterm{scaled-dot-product-attention}{scaled dot-product attention} on per-head matrices
 $Q, K \in \R^{\mathsf{S} \times d_k}$, $V \in \R^{\mathsf{S} \times d_v}$
 as%
 \footnote{KB excerpt: \texttt{kb/excerpts/vaswani2017.md\#sec-3-2-1}.}
@@ -176,21 +176,21 @@ as%
   \label{eq:vaswani-attn}
 \end{equation}
 \citep[\S 3.2.1, Eq.~1]{vaswani2017}. The inner $Q K^\top$ is the
-$\mathsf{S} \times \mathsf{S}$ score matrix; row $i$ of the post-softmax
+$\mathsf{S} \times \mathsf{S}$ score matrix; row $i$ of the post-\glsterm{softmax}{softmax}
 result is a probability distribution over keys, and the multiplication
-by $V$ on the right reads out a convex combination of value rows --
-\emph{content-based retrieval} from a set of key-value pairs. The
-$\sqrt{d_k}$ scaling keeps the pre-softmax logit variance independent
+by $V$ on the right reads out a convex combination of \glsterm{value}{value} rows --
+\emph{content-based retrieval} from a set of \glsterm{key}{key}-\glsterm{value}{value} pairs. The
+$\sqrt{d_k}$ scaling keeps the pre-\glsterm{softmax}{softmax} logit variance independent
 of $d_k$ at initialization: for $q, k$ with i.i.d.\ unit-variance
 components, $\mathrm{Var}(q \cdot k) = d_k$~\citep[\S 3.2.1, fn.~4]{vaswani2017}, and
-unscaled dot products grow with $d_k$ ``pushing the softmax function
+unscaled dot products grow with $d_k$ ``pushing the \glsterm{softmax}{softmax} function
 into regions where it has extremely small gradients''~\citep[\S
 3.2.1]{vaswani2017}.
 
 \begin{analogy}
 Eq.~\eqref{eq:vaswani-attn} is a soft, learnable, parallel
 associative-memory lookup. The keys are addresses; the values are
-contents; the query is what we are asking. The softmax over
+contents; the \glsterm{query}{query} is what we are asking. The \glsterm{softmax}{softmax} over
 $Q K^\top / \sqrt{d_k}$ is the soft index that, were it a
 one-hot vector, would pick a single $(K_j, V_j)$ pair; in the
 soft case it is a content-weighted average. Returning to canonical
@@ -223,7 +223,7 @@ chooses $\mathsf{H} = 8$ heads and
 $d_k = d_v = d_h = \mathsf{D}/\mathsf{H} = 64$, so the per-head
 projections \emph{partition} the model dimension across heads and
 the total compute matches a single-head full-width attention
-\citep[\S 3.2.2]{vaswani2017}. ``Multi-head attention allows the
+\citep[\S 3.2.2]{vaswani2017}. ``\glsterm{multi-head-attention}{Multi-head attention} allows the
 model to jointly attend to information from different
 representation subspaces at different positions; with a single
 attention head, averaging inhibits this''~\citep[\S
@@ -231,20 +231,20 @@ attention head, averaging inhibits this''~\citep[\S
 After projection the attention tensors carry shape $\BHSdh$; the
 score matrix has shape
 $\mathsf{B}\!\times\!\mathsf{H}\!\times\!\mathsf{S}\!\times\!\mathsf{S}$;
-the post-softmax-times-$V$ output returns to $\BHSdh$ and the
+the post-\glsterm{softmax}{softmax}-times-$V$ output returns to $\BHSdh$ and the
 $W^O$ projection collapses heads back to $\BSH$. The shape
 $\BHSdh$ is the lens the rest of this paper is read through.
 
 \paragraph{Three uses of attention.} The 2017 model uses
-multi-head attention in three places~\citep[\S
+\glsterm{multi-head-attention}{multi-head attention} in three places~\citep[\S
 3.2.3]{vaswani2017}\footnote{KB excerpt: \texttt{kb/excerpts/vaswani2017.md\#sec-3-2-3}.}:
-encoder self-attention (queries, keys, and values all from the
-previous encoder layer), decoder \emph{masked} self-attention (same
+encoder \glsterm{self-attention}{self-attention} (queries, keys, and values all from the
+previous encoder layer), decoder \emph{masked} \glsterm{self-attention}{self-attention} (same
 sources, but with positions $> i$ masked to $-\infty$ inside the
-softmax to preserve autoregression), and encoder-decoder
-cross-attention (queries from the previous decoder layer; keys and
-values from the encoder output). The decoder-only LLMs of $\S 3$
-onward keep only the second of these three -- masked self-attention
+\glsterm{softmax}{softmax} to preserve autoregression), and \glsterm{encoder-decoder}{encoder-decoder}
+\glsterm{cross-attention}{cross-attention} (queries from the previous decoder layer; keys and
+values from the encoder output). The \glsterm{decoder-only}{decoder-only} LLMs of $\S 3$
+onward keep only the second of these three -- masked \glsterm{self-attention}{self-attention}
 -- and the resulting single causal stack is what survives into
 2026.
 
@@ -265,15 +265,15 @@ $W_2 \in \R^{d_{\text{ff}} \times \mathsf{D}}$, and the canonical
 choice $d_{\text{ff}} = 4 \mathsf{D}$ (so $d_{\text{ff}} = 2048$ in
 the base configuration). \citet{vaswani2017} note this is also
 ``two convolutions with kernel size 1''~\citep[\S 3.3]{vaswani2017}
--- the FFN does not mix across positions, only across channels at
+-- the \glsterm{ffn}{FFN} does not mix across positions, only across channels at
 each position. The same $(W_1, b_1, W_2, b_2)$ is shared across all
 $\mathsf{S}$ positions but \emph{not} across the $L$ layers; each
-layer learns its own pair. The activation is ReLU
+layer learns its own pair. The activation is \glsterm{relu}{ReLU}
 ($\max(0, \cdot)$). The factorization of every block into ``mix
 across positions, then mix across channels'' is the structural
 property the rest of the paper preserves: $\S 5$ replaces the
-attention sublayer's KV-sharing pattern, $\S 7$ replaces the FFN's
-ReLU-2-matrix form (with SwiGLU and then MoE), and the strict
+attention sublayer's KV-sharing pattern, $\S 7$ replaces the \glsterm{ffn}{FFN}'s
+\glsterm{relu}{ReLU}-2-matrix form (with \glsterm{swiglu}{SwiGLU} and then MoE), and the strict
 position/channel split survives every variant.
 
 \subsection{Sinusoidal positional encoding}
@@ -301,9 +301,9 @@ can be represented as a linear function of $PE_{pos}$''~\citep[\S
 3.5]{vaswani2017}. They also report that learned absolute embeddings
 match in quality, and pick the sinusoidal version for the
 extrapolation-to-longer-sequences argument it appears (in 2017) to
-license. The lineage that follows -- learned absolute, T5 relative
-bias, ALiBi, RoPE -- is the subject of \S\ref{sec:positional-encoding};
-RoPE in particular makes a different bet on \emph{multiplicative}
+license. The lineage that follows -- learned absolute, \glsterm{t5}{T5} relative
+bias, \glsterm{alibi}{ALiBi}, \glsterm{rope}{RoPE} -- is the subject of \S\ref{sec:positional-encoding};
+\glsterm{rope}{RoPE} in particular makes a different bet on \emph{multiplicative}
 position injection inside the attention dot product, and is the
 2026 default.
 
@@ -316,7 +316,7 @@ specified in the paper%
 The input embedding $E_{\text{in}} \in \R^{\mathsf{V} \times \mathsf{D}}$
 maps token IDs to $\mathsf{D}$-vectors; the LM head
 $E_{\text{out}} \in \R^{\mathsf{D} \times \mathsf{V}}$ projects the
-final residual stream to vocabulary logits; a softmax produces
+final \glsterm{residual-stream}{residual stream} to \glsterm{vocabulary}{vocabulary} \glsterm{logits}{logits}; a \glsterm{softmax}{softmax} produces
 next-token probabilities. \citet{vaswani2017} adopt the
 \emph{weight-tying} scheme of \citet{press2017-tied-embed}: the
 matrix used as $E_{\text{in}}$ is also used (transposed) as
@@ -330,21 +330,21 @@ the notation of $\S 3$ this is
   \label{eq:weight-tying}
 \end{equation}
 \citep{press2017-tied-embed}. Tying saves $\mathsf{V} \times \mathsf{D}$
-parameters -- a substantial fraction of the 2017 base model's $\sim 65$M
-parameters when $\mathsf{V} \approx 37\text{k}$ and $\mathsf{D} = 512$.
+\glsterm{parameters}{parameters} -- a substantial fraction of the 2017 base model's $\sim 65$M
+\glsterm{parameters}{parameters} when $\mathsf{V} \approx 37\text{k}$ and $\mathsf{D} = 512$.
 \S\ref{sec:tokenization-embedding} discusses why frontier-2026
 \emph{untied} the I/O embeddings as $\mathsf{V}$ and $\mathsf{D}$ both
 grew (the relative parameter share of the embedding table fell, and
 the inductive bias that input and output token spaces should share
 geometry weakened); GPT-2 \citep[\S 2.3]{radford2019-gpt2} kept
-tying, but LLaMA-3 and DeepSeek-V3 do not.
+tying, but LLaMA-3 and \glsterm{precision-pinning}{DeepSeek-V3} do not.
 
 \subsection{The block in one picture, and what comes next}
 \label{sec:canonical-block-picture}
 
 Combining Eqs.~\eqref{eq:post-ln-original}, \eqref{eq:vaswani-multihead},
 and \eqref{eq:vaswani-ffn}, one decoder block in the 2017 canonical
-takes residual stream $X^\ell \in \R^{\mathsf{B} \times \mathsf{S} \times \mathsf{D}}$
+takes \glsterm{residual-stream}{residual stream} $X^\ell \in \R^{\mathsf{B} \times \mathsf{S} \times \mathsf{D}}$
 to $X^{\ell+1}$ via
 \begin{align}
   X^{\ell + 1/2} &= \mathrm{LayerNorm}\!\bigl(X^\ell + \mathrm{MaskedMHA}(X^\ell)\bigr),
@@ -362,33 +362,33 @@ $d_h = 64$, $d_{\text{ff}} = 2048$, $\mathsf{V} \approx 37\text{k}$
 \paragraph{What changes after 2017, by axis.} Every subsequent
 section of this paper changes \emph{exactly one} of the components
 just defined, holding the others fixed. \S\ref{sec:tokenization-embedding}
-takes the tokenization, the input embedding, and the unembedding,
+takes the \glsterm{tokenization}{tokenization}, the input embedding, and the unembedding,
 and walks subword $\to$ byte-level $\to$ tokenizer-free, plus the
 tied-vs-untied decision of Eq.~\eqref{eq:weight-tying}.
 \S\ref{sec:positional-encoding} takes the sinusoidal
-Eq.~\eqref{eq:vaswani-pe} and walks learned $\to$ T5 relative bias
-$\to$ ALiBi $\to$ RoPE $\to$ NoPE.
+Eq.~\eqref{eq:vaswani-pe} and walks learned $\to$ \glsterm{t5}{T5} relative bias
+$\to$ \glsterm{alibi}{ALiBi} $\to$ \glsterm{rope}{RoPE} $\to$ \glsterm{nope}{NoPE}.
 \S\ref{sec:attention-kv-sharing} keeps Eq.~\eqref{eq:vaswani-attn}
 unchanged but varies how the $\mathsf{H}$ heads in
 Eq.~\eqref{eq:vaswani-multihead} share their $K$ and $V$
-projections (MHA $\to$ MQA $\to$ GQA $\to$ MLA).
+projections (\glsterm{mha}{MHA} $\to$ \glsterm{mqa}{MQA} $\to$ \glsterm{gqa}{GQA} $\to$ \glsterm{multi-head-latent-attention}{MLA}).
 \S\ref{sec:attention-mechanism-axis} keeps both Eqs.~\eqref{eq:vaswani-attn}
 and \eqref{eq:vaswani-multihead} mathematically unchanged but
 schedules the same computation differently onto GPU memory hierarchy
-(FA1 $\to$ FA2 $\to$ FA3 $\to$ NSA).
-\S\ref{sec:feedforward-axis} replaces the ReLU-2-matrix
-Eq.~\eqref{eq:vaswani-ffn} with SwiGLU and then with MoE.
-\S\ref{sec:normalization-axis} replaces LayerNorm in
-Eq.~\eqref{eq:post-ln-original} with RMSNorm and moves it to
-Pre-LN.
+(FA1 $\to$ FA2 $\to$ FA3 $\to$ \glsterm{nsa}{NSA}).
+\S\ref{sec:feedforward-axis} replaces the \glsterm{relu}{ReLU}-2-matrix
+Eq.~\eqref{eq:vaswani-ffn} with \glsterm{swiglu}{SwiGLU} and then with MoE.
+\S\ref{sec:normalization-axis} replaces \glsterm{layer-normalization}{LayerNorm} in
+Eq.~\eqref{eq:post-ln-original} with \glsterm{rmsnorm}{RMSNorm} and moves it to
+\glsterm{pre-ln}{Pre-LN}.
 \S\ref{sec:multi-token-output} adds heads to the LM head of
 \S\ref{sec:canonical-embed}.
 \S\ref{sec:multimodal-extensions} extends the embedding interface
 of \S\ref{sec:canonical-embed} to non-text inputs.
 
 That \emph{everything else} -- the residual structure, the
-position/channel factorization, the softmax-over-keys, the head
+position/channel factorization, the \glsterm{softmax}{softmax}-over-keys, the head
 partition, the $\mathsf{B}\!\times\!\mathsf{S}\!\times\!\mathsf{D}$
-residual stream as the workspace -- survives across all eight axes
+\glsterm{residual-stream}{residual stream} as the workspace -- survives across all eight axes
 is the empirical fact this paper is built around. We turn first to
 the discrete-token interface of \S\ref{sec:tokenization-embedding}.

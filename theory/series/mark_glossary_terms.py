@@ -16,11 +16,9 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 THEORY = Path(__file__).resolve().parents[1]
 SERIES = THEORY / "series"
@@ -57,9 +55,23 @@ _VERBATIM_ENV = re.compile(
 _SKIP_COMMANDS_SINGLE_ARG = {
     "label", "ref", "cref", "Cref", "eqref", "pageref",
     "cite", "citep", "citet", "citealp", "citeauthor", "citeyear",
+    "Citet", "Citep",  # natbib sentence-start capitalized forms
+    "kbcite", "kbciteex",
     "input", "include", "bibliography", "bibitem",
     "section", "subsection", "subsubsection", "paragraph", "subparagraph",
     "section*", "subsection*", "subsubsection*", "paragraph*",
+    # Hyperref anchor name (first arg): must be plain text, no PDF widgets.
+    "hypertarget", "hyperref",
+    # Float captions: \pdftooltip cannot appear in moving arguments.
+    "caption",
+    # Author annotation macros that expand into \todo[...]{arg}:
+    # \pdftooltip inside \todo breaks pdfLaTeX.
+    "deepencite",
+    # Description/enumerate item labels: \item[label] is a moving argument.
+    # \pdftooltip (used in \glsterm) cannot appear in \item[...] label args.
+    # The bracket content is recorded as a skip region; \item has no mandatory
+    # brace arg so the skip loop terminates normally after the bracket.
+    "item",
 }
 
 # Commands where the FULL span (\command{arg}) is skipped (to prevent re-wrapping).
@@ -141,6 +153,7 @@ def _find_command_skip_regions(text: str) -> list[tuple[int, int]]:
             close = _find_bracket_arg(text, i)
             if close == -1:
                 break
+            regions.append((i, close))  # also skip the bracket arg content
             i = close
             while i < len(text) and text[i].isspace():
                 i += 1
@@ -321,8 +334,92 @@ def _format_kb_cite(kb_cite: str | None) -> str:
     m = re.match(r"^([A-Za-z][A-Za-z0-9-]*)\s*§\s*(.+)$", kb_cite.strip())
     if m:
         key, sec = m.group(1), m.group(2).strip()
+        # Escape # (TeX macro parameter marker) inside optional arg text.
+        sec = sec.replace("#", r"\#")
         return rf" \citep[\S {sec}]{{{key}}}"
-    return f" [{kb_cite}]"
+    # Fallback: bracket-only form; also escape # for safety.
+    sec = kb_cite.replace("#", r"\#")
+    return f" [{sec}]"
+
+
+def _sanitize_full_def(text: str) -> str:
+    """Escape LaTeX special chars in full_def body text.
+
+    The full_def field is written in a lightly-marked-up plain-text style;
+    it needs escaping before being dropped into a LaTeX description-list item.
+    We target chars that break pdfLaTeX compilation: & (tabular separator),
+    # (macro parameter), _ and ^ (sub/superscript outside math), Unicode math
+    symbols (pdfLaTeX rejects bare U+2248, U+2265, etc. without inputenc setup).
+    We intentionally do NOT escape $ (inline math), { / } (intentional math),
+    or \\.
+    """
+    # Unicode math/punctuation → LaTeX equivalents or ASCII replacements.
+    _UNICODE_MAP = {
+        "≈": r"$\approx$",
+        "≥": r"$\geq$",
+        "≤": r"$\leq$",
+        "≠": r"$\neq$",
+        "→": r"$\to$",
+        "←": r"$\leftarrow$",
+        "↔": r"$\leftrightarrow$",
+        "∈": r"$\in$",
+        "∉": r"$\notin$",
+        "⊂": r"$\subset$",
+        "⊃": r"$\supset$",
+        "∪": r"$\cup$",
+        "∩": r"$\cap$",
+        "∝": r"$\propto$",
+        "∞": r"$\infty$",
+        "×": r"$\times$",
+        "·": r"$\cdot$",
+        "μ": r"$\mu$",
+        "σ": r"$\sigma$",
+        "α": r"$\alpha$",
+        "β": r"$\beta$",
+        "γ": r"$\gamma$",
+        "δ": r"$\delta$",
+        "ε": r"$\epsilon$",
+        "η": r"$\eta$",
+        "θ": r"$\theta$",
+        "λ": r"$\lambda$",
+        "π": r"$\pi$",
+        "ρ": r"$\rho$",
+        "τ": r"$\tau$",
+        "φ": r"$\phi$",
+        "ψ": r"$\psi$",
+        "ω": r"$\omega$",
+        "Σ": r"$\Sigma$",
+        "Π": r"$\Pi$",
+        "Δ": r"$\Delta$",
+        "Γ": r"$\Gamma$",
+        "…": "...",       # Unicode ellipsis
+    }
+    for uni, latex in _UNICODE_MAP.items():
+        text = text.replace(uni, latex)
+
+    # Order matters: do & before others since & is most disruptive.
+    text = text.replace("&", r"\&")
+    text = text.replace("#", r"\#")
+    # _ and ^ must only be escaped when NOT already inside $...$
+    # Simple approach: escape outside math; inside math they're valid.
+    parts: list[str] = []
+    in_math = False
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if c == "$":
+            in_math = not in_math
+            parts.append(c)
+        elif c == "\\" and i + 1 < len(text):
+            parts.append(text[i:i+2])
+            i += 2
+            continue
+        elif not in_math and c in ("_", "^"):
+            parts.append("\\" + c)
+        else:
+            parts.append(c)
+        i += 1
+    return "".join(parts)
 
 
 def render_glossary_section(records: list[dict], used_keys: set[str]) -> str:
@@ -335,7 +432,7 @@ def render_glossary_section(records: list[dict], used_keys: set[str]) -> str:
             continue
         primary = r["primary_form"]
         aliases = r.get("aliases", [])
-        full_def = r["full_def"]
+        full_def = _sanitize_full_def(r["full_def"])
         cite = _format_kb_cite(r.get("kb_cite"))
         alias_part = f" ({', '.join(aliases)})" if aliases else ""
         items.append(
@@ -369,10 +466,29 @@ def render_tooltip_table(records: list[dict], used_keys: set[str]) -> str:
         if r is None:
             continue
         sd = r["short_def"]
+        # Strip LaTeX markup to produce plain text for \pdftooltip.
+        # 1. Remove matched $...$ (inline math) replacing with inner text.
         sd = re.sub(r"\$([^$]+)\$", r"\1", sd)
+        # 2. Strip remaining $ (from truncated math that has no closing $).
+        sd = sd.replace("$", "")
+        # 3. Strip all backslashes (LaTeX commands → bare word).
         sd = sd.replace("\\", "")
-        sd = sd.replace("%", "\\%")
-        lines.append(rf"\def\@gls@def@{key}{{{sd}}}")
+        # 4. Strip all braces — after backslash removal, `\hat{d}` becomes
+        #    `hat{d}` then `hatd`. This avoids unbalanced brace groups that
+        #    would confuse TeX's \def argument parser.
+        sd = sd.replace("{", "").replace("}", "")
+        # 5. Strip superscript ^ and subscript _ markers that remain after
+        #    $...$ removal. In \pdftooltip text (plain text PDF annotation),
+        #    ^ is treated as a superscript in text mode and must not appear.
+        sd = sd.replace("^", "").replace("_", " ")
+        # 6. Escape TeX special chars that remain in plain text context.
+        sd = sd.replace("&", "\\&")   # tabular alignment char
+        sd = sd.replace("%", "\\%")   # TeX comment char
+        # 7. Unicode ellipsis → ASCII (TeX may not handle multi-byte chars).
+        sd = sd.replace("…", "...")
+        # Use \expandafter\def\csname...\endcsname so keys containing
+        # hyphens (e.g. 'dpo-length-bias') form valid TeX CS names.
+        lines.append(rf"\expandafter\def\csname @gls@def@{key}\endcsname{{{sd}}}")
     lines.append(r"\makeatother")
     return "\n".join(lines) + "\n"
 
@@ -420,15 +536,20 @@ def process_paper(paper_dir: Path, records: list[dict], dry_run: bool = False) -
     section_path = paper_dir / "glossary-section.tex"
     tooltips_path = paper_dir / "glossary-tooltips.tex"
     section_content = render_glossary_section(records, keys_used)
-    transitive = wrap_body(section_content, records)
-    tooltips_content = render_tooltip_table(records, keys_used | transitive.keys_used)
+    # Note: transitive wrapping (wrapping terms inside glossary entry
+    # definitions) is intentionally NOT applied here. The glossary-section
+    # LaTeX structure uses \item[\hypertarget{...}{...}] and \begin{description}
+    # where \pdftooltip (used in \glsterm) cannot appear in \item[...] label
+    # args. Body-text wrapping in the section definitions is deferred until a
+    # safe sub-environment approach can be implemented.
+    tooltips_content = render_tooltip_table(records, keys_used)
     if not dry_run:
-        _atomic_write(section_path, transitive.text)
+        _atomic_write(section_path, section_content)
         _atomic_write(tooltips_path, tooltips_content)
     return {
         "paper": paper_dir.name,
         "sections_modified": sections_modified,
-        "keys_used": sorted(keys_used | transitive.keys_used),
+        "keys_used": sorted(keys_used),
         "per_section_keys": per_section_keys,
     }
 

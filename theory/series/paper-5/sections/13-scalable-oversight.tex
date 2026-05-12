@@ -8,20 +8,20 @@
 
 The threats covered in
 \cref{sec:scheming,sec:alignment-faking,sec:watermarking} are
-deployment-distribution problems on \emph{current} models: scheming
+deployment-distribution problems on \emph{current} models: \glsterm{scheming}{scheming}
 under elicited goals, alignment-faking under training distribution
-shift, watermark survival under removal pressure. The threat in this
+shift, \glsterm{watermark}{watermark} survival under removal pressure. The threat in this
 section is one layer further out --- the question of whether any
 training or evaluation protocol the field has yet proposed can
 \emph{align} a model whose capability already exceeds the human
 overseer's, using a bounded human resource budget. The thesis of this
 section is that \citet{irving2018-debate} supplies the canonical
 theoretical argument that such a protocol can in principle exist ---
-debate between two AI agents, judged by a weaker human, decides
+\glsterm{debate}{debate} between two AI agents, judged by a weaker human, decides
 $\mathbf{PSPACE}$ under polynomial-time judging --- but that the 2024
-LLM-debate empirical literature gives \emph{partial} support in
+\glsterm{llm}{LLM}-\glsterm{debate}{debate} empirical literature gives \emph{partial} support in
 verifiable-claim domains, \emph{no clear} support in open-ended ones,
-and that as of 2026-Q2 no candidate protocol --- debate, iterated
+and that as of 2026-Q2 no candidate protocol --- \glsterm{debate}{debate}, iterated
 distillation/amplification, recursive reward modeling, weak-to-strong
 generalization, or constitutional approaches --- is known to scale to
 \emph{superhuman} capability with a \emph{bounded} human budget. The
@@ -35,7 +35,7 @@ $\mathbf{P}$-vs-$\mathbf{PSPACE}$ question, and it is open.
 The motivating framing for the entire section is Irving et al.'s
 hierarchy of alignment-difficulty levels, defined by what the human
 overseer can do with a given task%
-\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-debate.md\#sec-1}.}
+\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-\glsterm{debate}{debate}.md\#sec-1}.}
 \citep[\S 1]{irving2018-debate}:
 
 \begin{quote}\itshape
@@ -63,7 +63,7 @@ trained to both give answers and point out flaws in answers; this gives
 a third level of difficulty. Flaws themselves may be too hard to judge:
 flaws could have their own flaws that must be pointed out to a human.
 And flaws of flaws can have flaws, etc. \ldots\ This hierarchy of
-alignment tasks has a natural limit: a debate between competing agents
+alignment tasks has a natural limit: a \glsterm{debate}{debate} between competing agents
 where agents make arguments, other agents poke holes in those arguments,
 and so on until we have enough information to decide the truth.
 \end{quote}
@@ -73,23 +73,23 @@ is structured by judging cost, not by capability axis: each level
 relaxes a different constraint on the human's ability to verify a
 claim, not on the model's ability to make one. Second, the recursion
 ``flaws of flaws of flaws'' is the load-bearing protocol primitive: a
-debate's job is to drive the dispute to a level the judge \emph{can}
+\glsterm{debate}{debate}'s job is to drive the dispute to a level the judge \emph{can}
 adjudicate, not to render the entire claim transparent. Third, the
 hierarchy connects directly to complexity theory: $\mathbf{P}$ is the
 demonstration regime, $\mathbf{NP}$ is the preference-learning regime
-(judge a single witness), and the next level up is what debate is
+(judge a single witness), and the next level up is what \glsterm{debate}{debate} is
 designed to reach.
 
 \subsection{The debate game}
 \label{sec:oversight-debate-game}
 
-The debate-game protocol is defined verbatim%
-\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-debate.md\#sec-2}.}
+The \glsterm{debate}{debate}-game protocol is defined verbatim%
+\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-\glsterm{debate}{debate}.md\#sec-2}.}
 \citep[\S 2]{irving2018-debate}:
 
 \begin{quote}\itshape
-We have a set of questions $Q$, answers $A$, and debate statements $S$.
-The simplest version of debate has two agents competing to convince a
+We have a set of questions $Q$, answers $A$, and \glsterm{debate}{debate} statements $S$.
+The simplest version of \glsterm{debate}{debate} has two agents competing to convince a
 human judge:
 \begin{enumerate}
 \item A question $q \in Q$ is shown to both agents.
@@ -97,7 +97,7 @@ human judge:
 be the same).
 \item The two agents take turns making statements
 $s_0, s_1, \ldots, s_{n-1} \in S$.
-\item The judge sees the debate $(q, a, s)$ and decides which agent
+\item The judge sees the \glsterm{debate}{debate} $(q, a, s)$ and decides which agent
 wins.
 \item The game is zero sum: each agent maximizes their probability of
 winning.
@@ -106,11 +106,11 @@ winning.
 
 The thesis the protocol is designed to operationalize is the central
 claim%
-\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-debate.md\#sec-2}.}
+\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-\glsterm{debate}{debate}.md\#sec-2}.}
 \citep[\S 2, central claim]{irving2018-debate}:
 
 \begin{quote}\itshape
-\textbf{Claim.} In the debate game, it is harder to lie than to refute
+\textbf{Claim.} In the \glsterm{debate}{debate} game, it is harder to lie than to refute
 a lie. \ldots\ Whether this claim is true for any particular setting
 is empirical, though we give some evidence for it below.
 \end{quote}
@@ -123,7 +123,7 @@ defense. The protocol's design choice is the bounded-length game: at
 each turn a debater pays the cost of one statement to either narrow
 the dispute by one level or to commit to a falsifiable claim that the
 opponent can challenge%
-\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-debate.md\#sec-2-1}.}
+\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-\glsterm{debate}{debate}.md\#sec-2-1}.}
 \citep[\S 2.1, prime-counting recursion]{irving2018-debate}: a
 debater lying about $\pi(x)$ is forced to lie about one of $\pi(x/2)$
 or $\pi(x) - \pi(x/2)$, halving the dispute's search space per round.
@@ -133,7 +133,7 @@ or $\pi(x) - \pi(x/2)$, halving the dispute's search space per round.
 
 The complexity-class progression that the abstract advertises is
 constructed step-by-step%
-\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-debate.md\#sec-2-2}.}
+\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-\glsterm{debate}{debate}.md\#sec-2-2}.}
 \citep[\S 2.2, p.~5]{irving2018-debate}:
 
 \begin{quote}\itshape
@@ -147,7 +147,7 @@ $\mathbf{NP}$ corresponds to single agent reinforcement learning: an
 agent with sufficient capacity can solve tasks the human cannot, but
 the human must be able to judge whether the solution is good.
 
-Now consider an adversarial debate of length two, where Alice chooses
+Now consider an adversarial \glsterm{debate}{debate} of length two, where Alice chooses
 $x$ attempting to make the human say yes, Bob chooses $y$ attempting
 to make the human say no, and the human decides who is correct. The
 result is $\exists x \forall y. H(q, x, y)$. \ldots\ This complexity
@@ -156,19 +156,19 @@ class is $\Sigma_2 \mathbf{P}$, two steps up the polynomial hierarchy.
 We can continue this process for any number of rounds, with Alice and
 Bob alternating points and counterpoints, producing the formula
 $\exists x_0 \forall x_1 \cdots \exists x_{n-1}. H(q, x_0, \ldots)$
-for $n$ rounds of debate. \ldots\ If the number of rounds $n$ is
+for $n$ rounds of \glsterm{debate}{debate}. \ldots\ If the number of rounds $n$ is
 allowed to grow polynomially in the size of the question $q$, the
 complexity class is $\mathbf{PSPACE}$: all questions decidable by
 polynomial space algorithms.
 \end{quote}
 
 The headline theorem%
-\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-debate.md\#sec-2-2}.}
+\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-\glsterm{debate}{debate}.md\#sec-2-2}.}
 \citep[Theorem 1, \S 2.2]{irving2018-debate}:
 
 \begin{quote}\itshape
 \textbf{Theorem 1.} For any problem $L \in \mathbf{PSPACE}$, we can
-choose a polynomial time judge so that optimal play in the debate game
+choose a polynomial time judge so that optimal play in the \glsterm{debate}{debate} game
 with polynomially many steps solves $L$.
 \end{quote}
 
@@ -183,11 +183,11 @@ Third, the equilibrium-strategy lemma underlying the theorem is that,
 under optimal play of a zero-sum game with a fixed judge, the truthful
 debater wins iff the truthful answer is the one the judge would output
 given access to the full game tree --- which is exactly the
-$\mathbf{PSPACE}$ value of the underlying alternating-quantifier
+$\mathbf{PSPACE}$ \glsterm{value}{value} of the underlying alternating-quantifier
 formula.
 
 The interpretive caveat is in the same paragraph%
-\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-debate.md\#sec-2-2}.}
+\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-\glsterm{debate}{debate}.md\#sec-2-2}.}
 \citep[\S 2.2]{irving2018-debate}:
 
 \begin{quote}\itshape
@@ -195,57 +195,57 @@ These complexity class arguments are analogies only: we do not expect
 tractable machine learning algorithms to achieve all of $\mathbf{PSPACE}$.
 Rather, the analogies show that at least in theory we can be limited
 only by the capacity of the ML models and our ability to train them,
-not the supervisory signal. This gives us hope that debate could
+not the supervisory signal. This gives us hope that \glsterm{debate}{debate} could
 resolve AI alignment without sacrificing model strength.
 \end{quote}
 
 \begin{analogy}
-The debate-game theorem is the alignment-protocol cousin of an
+The \glsterm{debate}{debate}-game theorem is the alignment-protocol cousin of an
 \emph{interactive proof system}. In the IP framework, an unbounded
 prover convinces a polynomial-time verifier of membership in a
 language $L$ by exchanging messages, and the celebrated result
 $\mathbf{IP} = \mathbf{PSPACE}$ \deepencite{shamir1992-ip,
 citation-pending} says that interaction lifts the verifier from
 $\mathbf{NP}$ to $\mathbf{PSPACE}$ exactly when the prover is allowed
-arbitrary computation. Debate adds one structural ingredient ---
+arbitrary computation. \glsterm{debate}{Debate} adds one structural ingredient ---
 \emph{adversarial} provers in a zero-sum game --- which is the dual
 construction: where IP's single prover plays cooperatively to convince
-the verifier of a true claim, debate's two provers play competitively
+the verifier of a true claim, \glsterm{debate}{debate}'s two provers play competitively
 and the equilibrium-honesty lemma claims that truth is the strategy
 that wins. (Returning to canonical form: the alternating-quantifier
 formula $\exists x_0 \forall x_1 \cdots H(q, x_0, \ldots)$ in
 \cref{sec:oversight-pspace} is the same game-tree object that the IP
-construction unrolls; debate fixes the strategy of one prover at
+construction unrolls; \glsterm{debate}{debate} fixes the strategy of one prover at
 ``honest'' and asks whether the resulting equilibrium recovers the
-formula's true value.)
+formula's true \glsterm{value}{value}.)
 \end{analogy}
 
 The MNIST sparse-classifier experiment in the original paper is the
 toy empirical confirmation%
-\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-debate.md\#sec-3-1}.}:
+\footnote{KB excerpt: \texttt{kb/excerpts/irving2018-\glsterm{debate}{debate}.md\#sec-3-1}.}:
 two debaters reveal pixels in turn to a sparse classifier judge,
 and the truthful debater's pixel choice boosts judge accuracy from
 $59.4\%$ to $88.9\%$ at $6$ pixels and from $48.2\%$ to $85.2\%$ at
 $4$ pixels \citep[\S{}abstract,\S 3.1]{irving2018-debate}. The judge
-sees the same number of pixels in both conditions; the debate
+sees the same number of pixels in both conditions; the \glsterm{debate}{debate}
 condition wins because the truthful debater chooses informative
 pixels.
 
 \subsection{2024 LLM-debate empirics: partial support}
 \label{sec:oversight-llm-debate}
 
-The 2024 LLM-debate literature is the first round of empirical work
+The 2024 \glsterm{llm}{LLM}-\glsterm{debate}{debate} literature is the first round of empirical work
 that operationalizes Irving et al.'s claim at language-model scale.
 \citet{kenton2024-debate-llm-judges} (Kenton et al., NeurIPS 2024)
-generalize the Irving 2018 setup to LLM debaters and an
-\emph{intentionally weaker} LLM judge, comparing three conditions ---
-debate (two debaters, opposing positions), consultancy (single
+generalize the Irving 2018 setup to \glsterm{llm}{LLM} debaters and an
+\emph{intentionally weaker} \glsterm{llm}{LLM} judge, comparing three conditions ---
+\glsterm{debate}{debate} (two debaters, opposing positions), \glsterm{consultancy}{consultancy} (single
 debater), and direct QA (judge alone)%
-\footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#2-4-debate-with-weak-llm-judges-kenton-et-al-2024}.}
+\footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#2-4-\glsterm{debate}{debate}-with-weak-\glsterm{situational-awareness}{llm}-judges-kenton-et-al-2024}.}
 \deepencite{kenton2024-debate-llm-judges §abstract,
-citation-pending}. The headline findings are mixed: debate
-\emph{outperforms} consultancy across all task domains tested; debate
-versus direct QA is task-dependent --- debate wins on
+citation-pending}. The headline findings are mixed: \glsterm{debate}{debate}
+\emph{outperforms} \glsterm{consultancy}{consultancy} across all task domains tested; \glsterm{debate}{debate}
+versus direct QA is task-dependent --- \glsterm{debate}{debate} wins on
 information-asymmetry QA where the debaters' access to a long passage
 gives them a verifiable claim to defend, and produces mixed results on
 math, coding, logic, and multimodal where the claims being defended
@@ -256,14 +256,14 @@ leads to more truthful answers'' \deepencite{khan2024-debating-llms
 is fixed externally, so the persuasiveness gradient lines up with the
 truth gradient.
 
-The Brown-Cohen et al.\ 2024 \emph{doubly-efficient debate} result
+The Brown-Cohen et al.\ 2024 \emph{doubly-efficient \glsterm{debate}{debate}} result
 \deepencite{brown-cohen2024-doubly-efficient-debate §main-theorem,
 citation-pending} is the strongest current bridge between the
 $\mathbf{PSPACE}$ argument and an empirically testable protocol:
-optimizing for \emph{persuasiveness} in debate \emph{does} drive
+optimizing for \emph{persuasiveness} in \glsterm{debate}{debate} \emph{does} drive
 truth-finding under specific conditions, reported at $76$--$88\%$
 accuracy in the cited regime (pending direct excerpt verification)%
-\footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#2-5-doubly-efficient-debate-brown-cohen-et-al-2024}.}.
+\footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#2-5-doubly-efficient-\glsterm{debate}{debate}-brown-cohen-et-al-2024}.}.
 The mechanism --- pending direct excerpt --- is that an honest
 prover's strategy in the doubly-efficient construction is structurally
 cheaper than a dishonest prover's, so optimization pressure on
@@ -273,7 +273,7 @@ persuasiveness recovers the equilibrium-honesty claim that Irving
 The split that the Kenton 2024 results expose is the diagnostic one
 for the section. In domains where the ground truth is a verifiable
 claim about a specified artifact --- a passage, a fixed reference, an
-externally-graded answer --- the debate condition lifts judge
+externally-graded answer --- the \glsterm{debate}{debate} condition lifts judge
 accuracy above direct QA, in line with Irving's prediction. In domains
 where the ground truth is open-ended --- math at the open-research
 boundary, code with no test suite, philosophical or aesthetic claims
@@ -285,48 +285,48 @@ node in finite rounds.
 \subsection{Adjacent protocols: IDA, RRM, W2S, constitutional}
 \label{sec:oversight-adjacent}
 
-Debate is one candidate scalable-oversight protocol among several,
+\glsterm{debate}{Debate} is one candidate scalable-oversight protocol among several,
 each with a different decomposition target%
 \footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#6}.}.
-\textbf{Iterated distillation/amplification} (IDA, Christiano 2018)
+\textbf{Iterated distillation/amplification} (\glsterm{iterated-amplification}{IDA}, Christiano 2018)
 \deepencite{christiano2018-ida §abstract, citation-pending} runs the
 recursion $A_{k+1} = \mathrm{Distill}(\mathrm{Amplify}(A_k))$ where
 Amplify decomposes a hard task into subtasks small enough for $A_k$
 to solve and Distill trains a single network to imitate Amplify's
 composed answer; the supervision signal at each step is grounded in
 the human-level $A_0$ via the recursion%
-\footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#3-iterated-amplification--ida-christiano-2018}.}.
+\footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#3-iterated-amplification--\glsterm{iterated-amplification}{ida}-christiano-2018}.}.
 No scaled empirical instantiation in modern LLMs has been published
 as a clean test; the conceptual machinery has been partially absorbed
-into RLAIF and into debate itself. \textbf{Recursive reward modeling}
+into \glsterm{rlaif-3}{RLAIF} and into \glsterm{debate}{debate} itself. \textbf{Recursive reward modeling}
 (Leike et al.\ 2018) \deepencite{leike2018-rrm §abstract,
 citation-pending} is the dual: rather than recursing on the task, it
 recurses on the \emph{reward function}, training reward models that
 themselves use AI-assistant outputs to evaluate hard cases.
 
-\textbf{Constitutional AI} \citep{bai2022-cai} decomposes the
-\emph{value spec} into a constitution of natural-language principles,
+\textbf{\glsterm{constitutional-ai}{Constitutional AI}} \citep{bai2022-cai} decomposes the
+\emph{\glsterm{value}{value} spec} into a \glsterm{constitution}{constitution} of natural-language principles,
 then uses the model itself to critique-and-revise outputs against the
-constitution; the supervision signal is concentrated in the
-constitution, downstream labels are AI-generated. CAI is the only
-candidate in this list with production deployment (Anthropic Claude
+\glsterm{constitution}{constitution}; the supervision signal is concentrated in the
+\glsterm{constitution}{constitution}, downstream labels are AI-generated. \glsterm{constitutional-ai}{CAI} is the only
+candidate in this list with production deployment (Anthropic \glsterm{claude}{Claude}
 family), but its theoretical leverage decays as model capability
-exceeds the constitution-author's ability to write a comprehensive
-spec --- the constitution caps the supervision precision%
+exceeds the \glsterm{constitution}{constitution}-author's ability to write a comprehensive
+spec --- the \glsterm{constitution}{constitution} caps the supervision precision%
 \footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#4-3-where-it-fits-in-the-scalable-oversight-space}.}.
 
 \textbf{Weak-to-strong generalization}
 \citep{burns2023-w2s}\footnote{Cross-paper: see also Paper~2
 \S{}weak-to-strong (Burns 2023).} decomposes the supervision
 \emph{signal} itself: train a strong student on labels generated by a
-weak supervisor, measure the Performance Gap Recovered (PGR)
+weak supervisor, measure the \glsterm{performance-gap-recovered}{Performance Gap Recovered} (\glsterm{performance-gap-recovered}{PGR})
 \[
 \mathrm{PGR} \;=\; \frac{c_{\text{strong-student}} - c_{\text{weak-supervisor}}}{c_{\text{strong-ceiling}} - c_{\text{weak-supervisor}}}
 \]
 where $c_{\text{strong-ceiling}}$ is the strong model trained on
 ground-truth labels%
 \footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#5-weak-to-strong-generalization-burns-et-al-2023}.}.
-With an auxiliary confidence loss, the GPT-2 $\to$ GPT-4-family
+With an \glsterm{auxiliary-confidence-loss}{auxiliary confidence loss}, the GPT-2 $\to$ GPT-4-family
 experiments recover ``close to GPT-3.5-level'' on NLP tasks, less on
 chess and reward modeling. W2S is methodologically the cleanest
 deployable instrument in this list --- you can run it today on
@@ -340,29 +340,29 @@ and the same regime of representable concepts%
 \textbf{Process supervision and PRMs}, covered in Paper~3
 \S{}process-supervision-and-PRMs, supplies an adjacent training-side
 signal: rather than rewarding final answers, reward each
-\emph{intermediate} reasoning step. The PRM is itself a learned
+\emph{intermediate} reasoning step. The \glsterm{process-reward-model}{PRM} is itself a learned
 judge, trained on human or AI process annotations, and its operating
-point is the same as the debate-judge's: a polynomial-cost grader
+point is the same as the \glsterm{debate}{debate}-judge's: a polynomial-cost grader
 selecting among candidate continuations from a stronger reasoner.
-Where debate is an inference-time protocol and W2S is a training-time
+Where \glsterm{debate}{debate} is an inference-time protocol and W2S is a training-time
 one, PRMs straddle: trained once on process labels, deployed
 inference-time as a step-by-step reward. The four candidate protocols
 are non-mutually-exclusive --- the speculative composition flagged in
 the KB note%
 \footnote{KB note: \texttt{kb/notes/alignment/oversight-and-scalable-alignment.md\#7}
-\S 7 (\textsc{speculation}).} is debate or W2S as the
+\S 7 (\textsc{speculation}).} is \glsterm{debate}{debate} or W2S as the
 \emph{selection} mechanism with interpretability as the
 \emph{verification} layer; no published end-to-end pipeline
 implements this composition as of 2026-Q2.
 
 \begin{contradiction}
-\textbf{Debate-as-alignment-protocol viability.} The Irving 2018
+\textbf{\glsterm{debate}{Debate}-as-alignment-protocol viability.} The Irving 2018
 $\mathbf{PSPACE}$ result \citep[Theorem 1]{irving2018-debate} is a
 theoretical existence claim under an equilibrium-strategy assumption:
-optimal play recovers the alternating-quantifier value, and the
-truthful strategy wins. The 2024 LLM-debate empirical work is
+optimal play recovers the alternating-quantifier \glsterm{value}{value}, and the
+truthful strategy wins. The 2024 \glsterm{llm}{LLM}-\glsterm{debate}{debate} empirical work is
 \emph{partial} support: \citet{kenton2024-debate-llm-judges} report
-debate beats direct QA on information-asymmetry QA where the dispute
+\glsterm{debate}{debate} beats direct QA on information-asymmetry QA where the dispute
 is over a verifiable claim, but is mixed-or-flat on math, code, and
 open-ended domains; the Brown-Cohen 2024 doubly-efficient construction
 \deepencite{brown-cohen2024-doubly-efficient-debate §main-theorem,
@@ -373,7 +373,7 @@ on real LLMs converges to the Irving 2018 honest equilibrium rather
 than to a dishonest one that exploits the judge's weakness --- is
 open. The sharpest unresolved test is the one this section's
 contradiction in \cref{sec:contradictions} points to: an empirical
-demonstration of debate-induced honesty on a domain where the judge
+demonstration of \glsterm{debate}{debate}-induced honesty on a domain where the judge
 is \emph{strictly weaker} than both debaters and where the question
 is \emph{not pre-verifiable}. The current empirical work does not
 meet both conditions.
@@ -385,8 +385,8 @@ meet both conditions.
 The constraint that organizes all four protocols is the
 \emph{bounded human budget}: the field's claim is not that
 human-judging cost is irrelevant but that it should grow
-\emph{sub-linearly} in the capability being supervised. None of debate,
-IDA, RRM, W2S, or constitutional approaches has yet been demonstrated
+\emph{sub-linearly} in the capability being supervised. None of \glsterm{debate}{debate},
+\glsterm{iterated-amplification}{IDA}, RRM, W2S, or constitutional approaches has yet been demonstrated
 to scale to \emph{superhuman} capability with a bounded human resource
 budget; this is the empirical version of
 $\mathbf{P}$-vs-$\mathbf{PSPACE}$, with two structural caveats. First,
@@ -397,11 +397,11 @@ debaters. Second, the alignment-relevant variant of the question
 includes adversarial robustness against models that can recognize the
 oversight protocol --- a form of strategic awareness that the
 $\mathbf{PSPACE}$ construction does not contemplate, but that the
-scheming results of \cref{sec:scheming} demonstrate is non-zero in
+\glsterm{scheming}{scheming} results of \cref{sec:scheming} demonstrate is non-zero in
 2024-frontier models.
 
 \begin{intuition}
-The relationship between debate's $\mathbf{PSPACE}$ theorem and a
+The relationship between \glsterm{debate}{debate}'s $\mathbf{PSPACE}$ theorem and a
 deployment-grade alignment protocol is the same shape as the
 relationship between a worst-case complexity result and a practical
 algorithm. The theorem says \emph{the supervisory signal is not the
@@ -419,7 +419,7 @@ in deployment are restricted to specific languages with specific
 arithmetization tricks, not to arbitrary $\mathbf{PSPACE}$ languages.
 (Returning to canonical form: the gap between the alternating-quantifier
 formula in \cref{sec:oversight-pspace} and a specific
-debate-trained-on-LLMs implementation is the gap between
+\glsterm{debate}{debate}-trained-on-LLMs implementation is the gap between
 ``optimal-play'' and ``self-play with finite compute and finite
 debater capacity''; the empirical literature is the search for the
 class of formulae for which the gap closes.)
@@ -429,8 +429,8 @@ The shared structural limit across all four protocols is that they
 are \emph{outer-loop} procedures: they observe the model's behavior,
 not its internal computation. A model capable of strategic deception
 that recognizes the oversight protocol can in principle defeat each
-of them by behaving aligned to the weak supervisor / debate judge /
-constitution-grader. This is the
+of them by behaving aligned to the weak supervisor / \glsterm{debate}{debate} judge /
+\glsterm{constitution}{constitution}-grader. This is the
 \cref{sec:scheming,sec:alignment-faking} threat re-encountered at the
 oversight layer: the same elicited capability that
 \citet{meinke2024-apollo-scheming} demonstrate in agentic scaffolds
@@ -449,16 +449,16 @@ scalable-oversight literature%
 \subsection{Forward link to the contradictions discussion}
 \label{sec:oversight-forward}
 
-Debate is one protocol among several, and the field as of 2026-Q2 has
+\glsterm{debate}{Debate} is one protocol among several, and the field as of 2026-Q2 has
 none with bounded human cost at superhuman capability. The
 contradiction surfaced in this section --- the gap between Irving's
 $\mathbf{PSPACE}$ result and the partial-and-domain-restricted 2024
-LLM-debate empirics --- joins the alignment-evaluation contradictions
-of \cref{sec:scheming,sec:alignment-faking} and the watermark-robustness
+\glsterm{llm}{LLM}-\glsterm{debate}{debate} empirics --- joins the alignment-evaluation contradictions
+of \cref{sec:scheming,sec:alignment-faking} and the \glsterm{watermark}{watermark}-robustness
 contradiction of \cref{sec:watermarking} in the concentrated discussion
 of \cref{sec:contradictions}. The evidence that would close it is the
 one this paper commits to naming: an empirical demonstration of
-debate-induced honesty on a domain where the judge is strictly weaker
+\glsterm{debate}{debate}-induced honesty on a domain where the judge is strictly weaker
 than both debaters \emph{and} where the question is not pre-verifiable.
 The current empirical work --- Kenton 2024, Khan 2024, Brown-Cohen
 2024 --- meets one or the other condition, not both. The structural

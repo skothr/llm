@@ -7,8 +7,6 @@ from mark_glossary_terms import find_skip_regions
 def test_skip_inline_math():
     text = r"The shape is $B \times S \times D$ and matters."
     regions = find_skip_regions(text)
-    starts = [r[0] for r in regions]
-    ends = [r[1] for r in regions]
     assert any(text[s:e].startswith("$") for s, e in regions)
     math_start = text.index("$")
     math_end = text.index("$", math_start + 1) + 1
@@ -60,14 +58,33 @@ def test_skip_citep_with_optional_arg():
     assert (s, e) in regions
 
 
+def test_skip_citep_bracket_content_is_also_skipped():
+    """Regression: content inside the bracket arg of \\citep[content]{key}
+    must itself be a skip region so glossary terms inside the bracket are
+    NOT wrapped (e.g. \\citep[Leviathan et al.]{key} must not wrap 'Leviathan'
+    even if 'Leviathan' is a glossary term alias)."""
+    text = r"see \citep[Leviathan et al. 2023; EAGLE]{deepseek-v3} done"
+    regions = find_skip_regions(text)
+    bracket_start = text.index("[")
+    bracket_end = text.index("]") + 1
+    assert (bracket_start, bracket_end) in regions
+
+
 def test_skip_citep_two_optional_args():
     """natbib supports \\citep[pre][post]{key} — both optargs must be passed
-    through before the brace skip."""
+    through before the brace skip, and both bracket regions must be skipped."""
     text = r"see \citep[e.g.,][\S 4]{vaswani2017} and"
     regions = find_skip_regions(text)
     s = text.index("{vaswani")
     e = text.index("}", s) + 1
     assert (s, e) in regions
+    # Both bracket regions must also be skipped
+    b1_start = text.index("[")
+    b1_end = text.index("]") + 1
+    assert (b1_start, b1_end) in regions
+    b2_start = text.index("[", b1_end)
+    b2_end = text.index("]", b2_start) + 1
+    assert (b2_start, b2_end) in regions
 
 
 def test_skip_lstlisting_environment():
@@ -89,13 +106,16 @@ def test_skip_section_title_arg():
     assert (s, e) in regions
 
 
-def test_skip_caption_NOT_skipped():
-    """Captions are wrapped (per design: random-access > caption cleanliness)."""
+def test_skip_caption_is_skipped():
+    """Captions must be skipped: \\pdftooltip (used in \\glsterm) cannot appear
+    in LaTeX moving arguments like \\caption{}. The earlier design said
+    'captions are wrapped' but pdfLaTeX rejects \\pdftooltip inside \\caption.
+    The skip ensures the body text of captions is never wrapped."""
     text = r"\caption{The RoPE rotation diagram.}"
     regions = find_skip_regions(text)
     s = text.index("{")
     e = text.index("}") + 1
-    assert (s, e) not in regions
+    assert (s, e) in regions
 
 
 def test_skip_already_glsterm_wrapped():
@@ -149,7 +169,9 @@ def _records(*specs):
 def test_regex_word_boundaries_skip_substring():
     rx = build_term_regex(_records(("rope", "RoPE", [], True)))
     assert rx.search("iRoPE") is None
-    assert rx.search("uses RoPE encoding").group(0) == "RoPE"
+    m = rx.search("uses RoPE encoding")
+    assert m is not None
+    assert m.group(0) == "RoPE"
 
 
 def test_regex_longest_first_for_hyphen_overlap():
@@ -158,6 +180,7 @@ def test_regex_longest_first_for_hyphen_overlap():
         ("fa-3", "FA-3", [], True),
     ))
     m = rx.search("we use FA-3 here")
+    assert m is not None
     assert m.group(0) == "FA-3"
 
 
@@ -178,8 +201,10 @@ def test_regex_alias_matches():
         ("t5", "T5", ["Text-to-Text Transfer Transformer"], True),
     ))
     m1 = rx.search("Google's T5 model")
+    assert m1 is not None
     assert m1.group(0) == "T5"
     m2 = rx.search("the Text-to-Text Transfer Transformer paper")
+    assert m2 is not None
     assert m2.group(0) == "Text-to-Text Transfer Transformer"
 
 
@@ -193,7 +218,7 @@ def test_regex_skips_terms_under_2_chars():
 # Body wrapper tests
 # ---------------------------------------------------------------------------
 
-from mark_glossary_terms import wrap_body, ApplyResult
+from mark_glossary_terms import wrap_body
 
 
 def test_wrap_simple_body():
@@ -277,4 +302,4 @@ def test_render_tooltip_table():
         "case_strict": True, "kb_cite": None,
     })
     out = render_tooltip_table(records, used_keys={"rope"})
-    assert r"\def\@gls@def@rope{Rotary positional encoding.}" in out
+    assert r"\expandafter\def\csname @gls@def@rope\endcsname{Rotary positional encoding.}" in out

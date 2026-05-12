@@ -8,20 +8,20 @@
 \section{Circuits}
 \label{sec:circuits}
 
-A \emph{circuit} is the strongest unit of mechanistic explanation the
+A \emph{\glsterm{circuit}{circuit}} is the strongest unit of mechanistic explanation the
 field has committed to: a sparse subgraph of the model's computational
-graph whose nodes (attention heads, MLPs, transcoder features) and edges
+graph whose nodes (attention heads, MLPs, \glsterm{transcoder}{transcoder} features) and edges
 (residual / attention / projection links) jointly implement an
 identifiable capability. Three reference points anchor the literature.
 \citet{wang2022-ioi} reverse-engineer indirect-object identification in
 GPT-2 small to a 26-head subgraph in seven functional classes
 \citep[\S 3]{wang2022-ioi}\footnote{KB excerpt:
-\texttt{kb/excerpts/wang2022-ioi.md\#sec-3-circuit}.};
+\texttt{kb/excerpts/wang2022-ioi.md\#sec-3-\glsterm{circuit}{circuit}}.};
 \citet{conmy2023-acdc} systematize the discovery as iterative
 edge-pruning under a KL-divergence criterion\footnote{KB excerpt:
 \texttt{kb/excerpts/conmy2023-acdc.md\#sec-3}.};
 \citet{lindsey2025-circuit-tracing} extend the program to production
-Claude 3.5 Haiku via cross-layer transcoders and Jacobian attribution.
+\glsterm{claude}{Claude} 3.5 Haiku via cross-layer transcoders and Jacobian attribution.
 The thesis of this section is that these are not three separate
 methodologies but one: a commitment to \emph{sparse, causal, localizable
 explanation}, refined and scaled across three computational regimes.
@@ -31,14 +31,14 @@ explanation}, refined and scaled across three computational regimes.
 
 The operational definition is due to \citet{wang2022-ioi}. Let $M$ be
 the model's full computational graph and $C \subseteq M$ a candidate
-circuit. The function $C(x)$ is defined by \emph{knockout}: every node
+\glsterm{circuit}{circuit}. The function $C(x)$ is defined by \emph{\glsterm{knockout}{knockout}}: every node
 in $M \setminus C$ is replaced by its mean activation on a reference
 distribution $p_{\text{ABC}}$, leaving $C$'s computations
 intact~\citep[\S 2]{wang2022-ioi}\footnote{KB excerpt:
 \texttt{kb/excerpts/wang2022-ioi.md\#sec-2-definition}. Wang et al.\
-explicitly prefer mean ablation over zero ablation: ``zero ablation
+explicitly prefer \glsterm{mean-ablation}{mean ablation} over zero ablation: ``zero ablation
 [\ldots] lead[s] to noisy results in practice'' because forced-zero
-activations are off-distribution.}. A circuit claim then commits to
+activations are off-distribution.}. A \glsterm{circuit}{circuit} claim then commits to
 three quantitative criteria, also from
 \citet[\S 4]{wang2022-ioi}\footnote{KB excerpt:
 \texttt{kb/excerpts/wang2022-ioi.md\#sec-4-criteria}.}:
@@ -52,9 +52,9 @@ three quantitative criteria, also from
     Tested by ablating each node in $C$ individually and verifying the
     behavior degrades.
 \end{itemize}
-The substantive content of a circuit claim, then, is threefold: that
+The substantive content of a \glsterm{circuit}{circuit} claim, then, is threefold: that
 the relevant features are \emph{localized} (a small fraction of the
-graph), that the explanatory edges are \emph{causal} (knockout matters),
+graph), that the explanatory edges are \emph{causal} (\glsterm{knockout}{knockout} matters),
 and that the subgraph is \emph{sparse} (most of $M$ is irrelevant on
 the task distribution). \citet{wang2022-ioi} note that real circuits
 typically pass faithfulness and minimality but fail the strongest
@@ -62,11 +62,11 @@ completeness tests~\citep[\S 4]{wang2022-ioi}; this is the crack the
 \emph{backup head} phenomenon (\S\ref{sec:circuit-ioi}) widens.
 
 \begin{intuition}
-A circuit is a wiring diagram of which components matter, not a content
+A \glsterm{circuit}{circuit} is a wiring diagram of which components matter, not a content
 description of what they encode. A diagram saying ``Name Mover heads at
 layer 9 attend to previous-name positions and copy them to the
 unembed'' fixes the topology of the computation but leaves the question
-of \emph{which direction in the residual stream} encodes ``name'' to
+of \emph{which direction in the \glsterm{residual-stream}{residual stream}} encodes ``name'' to
 SAEs and probes (\S\ref{sec:sparse-autoencoders}, \S\ref{sec:probing}).
 The canonical math: $C(x) = M(x)$ on a task distribution after knocking
 out $M \setminus C$, with $C$ minimal under ablation.
@@ -80,7 +80,7 @@ analyze indirect-object identification on prompts of the form ``When
 \textit{Mary} and \textit{John} went to the store, \textit{John} gave a
 drink to'' \(\to\) ``\textit{Mary}''. The reverse-engineered algorithm
 is human-interpretable~\citep[\S 1]{wang2022-ioi}: identify all
-previous names; remove duplicates; output the remainder. The circuit
+previous names; remove duplicates; output the remainder. The \glsterm{circuit}{circuit}
 that implements it consists of \textbf{26 attention heads grouped into
 seven functional classes}, comprising 1.1\% of the
 $(\text{head}, \text{token-position})$ pairs in GPT-2
@@ -92,7 +92,7 @@ the algorithm's three steps~\citep[\S 3]{wang2022-ioi}:
     \texttt{S1}, and write the position of the duplicate to the residual
     stream. They detect that ``John'' has been seen.
   \item \textbf{S-Inhibition Heads.} Active at the \texttt{END} token,
-    attend to \texttt{S2}, and write into the \emph{query} of the Name
+    attend to \texttt{S2}, and write into the \emph{\glsterm{query}{query}} of the Name
     Mover Heads, suppressing their attention to \texttt{S1} and
     \texttt{S2} positions.
   \item \textbf{Name Mover Heads.} Active at \texttt{END}, attend to
@@ -114,19 +114,19 @@ Heads, thus decreasing the confidence of the
 predictions''~\citep[\S 3]{wang2022-ioi}, which the authors speculate
 is loss-hedging behavior.
 
-The discovery method is \emph{path patching}~\citep[\S 3.1]{wang2022-ioi}.
+The discovery method is \emph{\glsterm{path-patching}{path patching}}~\citep[\S 3.1]{wang2022-ioi}.
 For inputs $x_{\text{orig}}$ and $x_{\text{new}}$ and a candidate head
-$h$, path patching ``runs a forward pass on $x_{\text{orig}}$, but for
+$h$, \glsterm{path-patching}{path patching} ``runs a forward pass on $x_{\text{orig}}$, but for
 the paths in $\mathcal{P}$ it replaces the activations for $h$ with
 those from $x_{\text{new}}$''~\citep[\S 3.1]{wang2022-ioi}, where
 $\mathcal{P}$ is the set of direct paths from $h$ to the unembedding
 through residual connections and MLPs but \emph{not} through other
-attention heads. This isolates the direct effect of $h$ on the logits
+attention heads. This isolates the direct effect of $h$ on the \glsterm{logits}{logits}
 from indirect routing through other heads --- the partial-derivative
-analogue of full activation patching, and the methodological refinement
+analogue of full \glsterm{activation-patching}{activation patching}, and the methodological refinement
 that makes the seven-class decomposition legible.
 
-The IOI circuit complicated three field expectations
+The IOI \glsterm{circuit}{circuit} complicated three field expectations
 simultaneously~\citep[\S 3]{wang2022-ioi}:
 (i) \emph{redundancy} --- ablating Name Movers does not kill the
 behavior, because Backup Name Movers latently reactivate; circuits are
@@ -135,24 +135,24 @@ not rigid pipelines.
 identified for in-context learning, are reused here for duplicate
 detection; mechanism does not equal function.
 (iii) \emph{negative components} --- a head that consistently writes
-\emph{against} the correct answer is a structural feature of the
+\emph{against} the correct answer is a structural \glsterm{feature}{feature} of the
 trained model, not a bug. Each finding shows up again at scale in the
 attribution-graph era (\S\ref{sec:circuit-attribution}).
 
 \subsection{Algorithmic circuit discovery (Conmy et al.\ 2023)}
 \label{sec:circuit-acdc}
 
-Hand-discovering the IOI circuit took multiple researcher-months.
+Hand-discovering the IOI \glsterm{circuit}{circuit} took multiple researcher-months.
 \citet{conmy2023-acdc} systematize this work as an algorithm
-(\textbf{ACDC}, Automatic Circuit DisCovery) over an explicitly
+(\textbf{ACDC}, Automatic \glsterm{circuit}{Circuit} DisCovery) over an explicitly
 constructed computational DAG. The graph $G$ represents ``interactions
 between attention heads and MLPs''~\citep[\S 2.2]{conmy2023-acdc} ---
-or, at finer granularity, between separate query/key/value activations,
+or, at finer granularity, between separate \glsterm{query}{query}/\glsterm{key}{key}/\glsterm{value}{value} activations,
 individual neurons, or per-token-position
 nodes\footnote{KB excerpt:
 \texttt{kb/excerpts/conmy2023-acdc.md\#sec-2-2}.}. The
 \emph{interchange-intervention} corruption convention --- preferred by
-\citet{conmy2023-acdc} over zero or mean ablation because both ``take
+\citet{conmy2023-acdc} over zero or \glsterm{mean-ablation}{mean ablation} because both ``take
 the model too far away from actually possible activation
 distributions''~\citep[\S 2.3]{conmy2023-acdc} --- fixes the corrupted
 input $x'_i$ as a same-distribution counterfactual drawn from a
@@ -191,23 +191,23 @@ Result: Subgraph H subset of G.
 The algorithm's output is a sparse subgraph $H \subseteq G$ that
 preserves the KL-divergence to the full model up to $\tau$ summed over
 prunings. On GPT-2 small Greater-Than, ACDC ``rediscovered 5/5 of the
-component types in [the manually-found] circuit'' and ``selected 68 of
+component types in [the manually-found] \glsterm{circuit}{circuit}'' and ``selected 68 of
 the 32{,}000 edges in GPT-2 Small, all of which were manually found by
 previous work''~\citep[Abstract]{conmy2023-acdc}\footnote{KB excerpt:
 \texttt{kb/excerpts/conmy2023-acdc.md\#abstract}.}. ACDC is evaluated
 against two baselines: \emph{Subnetwork Probing} (a learned mask over
-components, with the linear probe removed and KL substituted for the
+components, with the \glsterm{linear-probe}{linear probe} removed and KL substituted for the
 training metric) and \emph{Head Importance Score for Pruning} (a
 top-$k$ ranking by head importance score). Both are generalized in
-\citet{conmy2023-acdc} to use corrupted-activation patching rather
+\citet{conmy2023-acdc} to use corrupted-\glsterm{activation-patching}{activation patching} rather
 than zero patching, for fair comparison. ROC-curve analysis against
 canonical circuits answers the two evaluation questions
 \citep[\S 4]{conmy2023-acdc}: does the method find the right edges
 (true-positive rate) and does it avoid spurious ones (false-positive
 rate)?
 
-ACDC is the algorithmic spine of automated circuit discovery, but it
-inherits the cost of activation patching: each candidate edge requires
+ACDC is the algorithmic spine of automated \glsterm{circuit}{circuit} discovery, but it
+inherits the cost of \glsterm{activation-patching}{activation patching}: each candidate edge requires
 a forward pass with one substituted activation, so the per-task cost
 scales with the size of the computational graph. On GPT-2-small that
 is feasible; on production models it is not.
@@ -218,19 +218,19 @@ is feasible; on production models it is not.
 \citet{lindsey2025-circuit-tracing} synthesize the program for
 production-scale models. The construction has three pieces. First,
 \emph{cross-layer transcoders} replace each MLP sublayer with a sparse
-factorization whose decoder writes into the residual stream of every
+factorization whose decoder writes into the \glsterm{residual-stream}{residual stream} of every
 \emph{subsequent} layer, not just the immediate next layer; this makes
-skip-layer feature flow explicit in the
+skip-layer \glsterm{feature}{feature} flow explicit in the
 graph~\citep{dunefsky2024-transcoders}. Second, a single forward pass
-on the replaced model records the activations of all transcoder
-features $\{f_i^{(\ell, t)}\}$. Third, an \emph{attribution graph} is
+on the replaced model records the activations of all \glsterm{transcoder}{transcoder}
+features $\{f_i^{(\ell, t)}\}$. Third, an \emph{\glsterm{attribution-graph}{attribution graph}} is
 constructed by computing the linear contribution of every active
-feature to a target node (typically the unembedding direction for
-the target token), via the Jacobian of the cross-layer transcoder
+\glsterm{feature}{feature} to a target node (typically the unembedding direction for
+the target token), via the Jacobian of the \glsterm{cross-layer-transcoder}{cross-layer transcoder}
 system.
 
-Concretely, the attribution edge from feature $i$ at layer $\ell_1$,
-position $t_1$ to feature $j$ at layer $\ell_2$, position $t_2$ is
+Concretely, the attribution edge from \glsterm{feature}{feature} $i$ at layer $\ell_1$,
+position $t_1$ to \glsterm{feature}{feature} $j$ at layer $\ell_2$, position $t_2$ is
 \begin{equation}
   a\!\left(f_i^{(\ell_1, t_1)} \to f_j^{(\ell_2, t_2)}\right)
   \;=\;
@@ -242,52 +242,52 @@ position $t_1$ to feature $j$ at layer $\ell_2$, position $t_2$ is
               \mathbf{d}_i^{(\ell_1)} \big\rangle,
   \label{eq:attribution-edge}
 \end{equation}
-where $\mathbf{d}_i^{(\ell_1)}$ is the decoder column of feature $i$
-in the layer-$\ell_1$ transcoder, $\mathbf{e}_j^{(\ell_2)}$ is the
-encoder row of feature $j$ in the layer-$\ell_2$ transcoder, and
+where $\mathbf{d}_i^{(\ell_1)}$ is the decoder column of \glsterm{feature}{feature} $i$
+in the layer-$\ell_1$ \glsterm{transcoder}{transcoder}, $\mathbf{e}_j^{(\ell_2)}$ is the
+encoder row of \glsterm{feature}{feature} $j$ in the layer-$\ell_2$ \glsterm{transcoder}{transcoder}, and
 $\mathbf{A}_{\ell_1 \to \ell_2}$ accumulates the linearized residual /
 attention transport between the two layers (identity through the
-residual stream; attention-weight-modulated through any intervening
+\glsterm{residual-stream}{residual stream}; attention-weight-modulated through any intervening
 attention layers). The bilinear factorization is what makes
 Eq.~\eqref{eq:attribution-edge} input-invariant in its endpoints and
-input-dependent only through the attention weights and the active set
+input-dependent only through the \glsterm{attention-weights}{attention weights} and the active set
 $\{f_i^{(\ell, t)} > 0\}$. Edges are pruned below threshold; the
 resulting graph is iterated backward from the target node to the
 embedding layer; the surviving subgraph is the attribution
 graph~\citep{lindsey2025-circuit-tracing}.
 
 \begin{forumsignal}
-\textbf{Single-source methodology (2026-Q2).} The cross-layer-transcoder
+\textbf{Single-source methodology (2026-Q2).} The cross-layer-\glsterm{transcoder}{transcoder}
 + Jacobian-attribution pipeline above rests on
 \citet{lindsey2025-circuit-tracing} as its sole canonical reference; no
 external lab has published an independent reproduction at frontier
 scale at this writing. Treat the productionised-methodology framing as
 Anthropic-internal evidence pending external replication. The closing
 contradiction of this section develops the attendant
-transcoder-seed-stability and external-reproduction concerns.
+\glsterm{transcoder}{transcoder}-seed-stability and external-reproduction concerns.
 \end{forumsignal}
 
 The compute regime shifts from manual to automated. Per-task cost on
 the replaced model is one forward pass plus one backward pass; the
-amortized cost is the cross-layer transcoder training, which Anthropic
-estimates at roughly comparable order to SAE training (Gemma Scope
-reports SAE training at $\sim$20\% of the underlying model's
+amortized cost is the \glsterm{cross-layer-transcoder}{cross-layer transcoder} training, which Anthropic
+estimates at roughly comparable order to \glsterm{sparse-autoencoder}{SAE} training (Gemma Scope
+reports \glsterm{sparse-autoencoder}{SAE} training at $\sim$20\% of the underlying model's
 pretraining compute~\citep{gemma-scope-2024}). Reported findings on
-Claude 3.5 Haiku, transferred from
+\glsterm{claude}{Claude} 3.5 Haiku, transferred from
 \citet{lindsey2025-biology}\deepencite{lindsey2025-biology HTML-only;
 verbatim quotes pending Phase 2 transcription}: forward-planning
 features that activate many tokens before a poetic rhyme is produced;
-multi-step factual chains in which a ``Texas'' feature in middle layers
-licenses an ``Austin'' feature in later layers for the prompt ``the
-capital of the state Dallas is in''; refusal-circuit features on
-harmful-request prompt classes; and partial cross-lingual feature
+multi-step factual chains in which a ``Texas'' \glsterm{feature}{feature} in middle layers
+licenses an ``Austin'' \glsterm{feature}{feature} in later layers for the prompt ``the
+capital of the state Dallas is in''; refusal-\glsterm{circuit}{circuit} features on
+harmful-request prompt classes; and partial cross-lingual \glsterm{feature}{feature}
 overlap with language-routing through a partly language-agnostic middle.
 
 \begin{intuition}
 ACDC and attribution graphs answer the same question --- which edges of
 the computational graph causally implement a behavior --- in two
 compute regimes. ACDC pays $O(|E|)$ forward passes per task and
-returns components; attribution graphs amortize transcoder training
+returns components; attribution graphs amortize \glsterm{transcoder}{transcoder} training
 once and pay one forward+backward per task, returning features. The
 canonical math: ACDC prunes by
 $D_{\mathrm{KL}}(G \| H_{\text{new}}) - D_{\mathrm{KL}}(G \| H) < \tau$
@@ -298,27 +298,27 @@ Jacobian in Eq.~\eqref{eq:attribution-edge}.
 \subsection{When circuits agree across methods}
 \label{sec:circuit-agreement}
 
-The IOI circuit is the canonical convergence story.
+The IOI \glsterm{circuit}{circuit} is the canonical convergence story.
 \citet{wang2022-ioi}'s manual path-patching reverse-engineering and
 \citet{conmy2023-acdc}'s ACDC recover overlapping subgraphs --- ACDC
 ``rediscovered 5/5 of the component types''~\citep[Abstract]{conmy2023-acdc}
 on related GPT-2-small tasks, and on IOI itself recovers the seven
-functional classes Wang et al.\ describe. SAE-feature analysis on the
+functional classes Wang et al.\ describe. \glsterm{sparse-autoencoder}{SAE}-\glsterm{feature}{feature} analysis on the
 same prompts identifies features playing the QK and OV roles of the
 discovered heads (\S\ref{sec:sparse-autoencoders}). Tuned-lens
 prediction trajectories on IOI prompts are consistent with the
-circuit's mid-late-layer commit to the IO token
+\glsterm{circuit}{circuit}'s mid-late-layer commit to the IO token
 (\S\ref{sec:logit-lens-family}). Three independent methodologies
 converge on one picture.
 
 Factual recall is the second convergence. \citet{meng2022-rome}'s
-causal tracing on GPT-2 XL localizes factual recall to mid-layer MLPs
-at the last subject token (AIE peaks at layer 15;
+\glsterm{causal-tracing}{causal tracing} on GPT-2 XL localizes factual recall to mid-layer MLPs
+at the last subject token (\glsterm{average-indirect-effect}{AIE} peaks at layer 15;
 $\mathrm{AIE}_{\mathrm{MLP}} = 6.6\%$ vs.\
 $\mathrm{AIE}_{\mathrm{attn}} = 1.6\%$
 \citep[\S 2.2]{meng2022-rome}, with rank-one weight edits at exactly
 that locus achieving 99.8\% efficacy on
-zsRE~\citep[\S 3.2]{meng2022-rome}). SAE features on those layers
+zsRE~\citep[\S 3.2]{meng2022-rome}). \glsterm{sparse-autoencoder}{SAE} features on those layers
 include subject-entity features
 \citep{templeton2024-scaling-monosemanticity}\deepencite{templeton2024-scaling-monosemanticity
 §3 Haiku features --- HTML-only, awaiting transcription}; the tuned
@@ -330,9 +330,9 @@ The induction-head story (\citet{olsson2022-induction-heads}) is a
 third. The same two-attention-head pattern is identified by ablation
 (removing the heads abolishes in-context learning), by phase-change
 correlation (induction-head formation aligns with the in-context
-learning loss-curve discontinuity), by direct circuit
+learning loss-curve discontinuity), by direct \glsterm{circuit}{circuit}
 reverse-engineering, and is then \emph{reused} as a substructure of
-the IOI circuit~\citep[\S 3]{wang2022-ioi}\deepencite{olsson2022-induction-heads
+the IOI \glsterm{circuit}{circuit}~\citep[\S 3]{wang2022-ioi}\deepencite{olsson2022-induction-heads
 HTML-only at transformer-circuits.pub --- six lines of evidence
 narrative pending Phase 2 transcription}. The cross-method evidence is
 strong enough that ``induction head'' is now a load-bearing primitive
@@ -341,7 +341,7 @@ across the rest of the literature.
 \subsection{When circuits disagree}
 \label{sec:circuit-disagreement}
 
-Convergence is not universal. The truth-direction circuit
+Convergence is not universal. The truth-direction \glsterm{circuit}{circuit}
 (\S\ref{sec:truth-directions}) is the cleanest divergence case. The
 mass-mean direction $\mathbf{d}_{\mathrm{MM}} = \boldsymbol{\mu}_+ -
 \boldsymbol{\mu}_-$ found by \citet{marks-tegmark-2023-truth} is
@@ -350,37 +350,37 @@ dataset-dependent in early-to-mid layers --- antipodal between
 across formats in late layers~\citep[\S 4]{marks-tegmark-2023-truth}%
 \footnote{KB excerpt:
 \texttt{kb/excerpts/marks-tegmark-2023-truth.md\#sec-4-misalignment}.}.
-There is no single ``truth circuit'' in this picture: there is a
+There is no single ``truth \glsterm{circuit}{circuit}'' in this picture: there is a
 \emph{family} of dataset-conditional truth representations, partially
 aligned across formats and partially not, with the alignment depth
 itself varying across model layers.
 
-Sycophancy is a parallel non-convergence. Probing-derived steering
-directions for sycophancy are reported across multiple labs, but no
-two reports agree on a single ``sycophancy circuit'': the proposed
-mechanisms span steering-vector additions to refusal-feature
+\glsterm{sycophancy}{Sycophancy} is a parallel non-convergence. Probing-derived steering
+directions for \glsterm{sycophancy}{sycophancy} are reported across multiple labs, but no
+two reports agree on a single ``\glsterm{sycophancy}{sycophancy} \glsterm{circuit}{circuit}'': the proposed
+mechanisms span steering-vector additions to refusal-\glsterm{feature}{feature}
 ablations to fine-tuning interventions, and the published evidence
 does not yet localize a stable subgraph. The 2025 finding that
-sycophancy decomposes into agreement, praise, and genuine-agreement
+\glsterm{sycophancy}{sycophancy} decomposes into agreement, praise, and genuine-agreement
 components individually suggests \emph{behaviorally singular,
 representationally plural} --- if confirmed, the question ``what is
-the sycophancy circuit?'' is malformed: there are several.
+the \glsterm{sycophancy}{sycophancy} \glsterm{circuit}{circuit}?'' is malformed: there are several.
 
 \begin{contradiction}
-\textbf{Circuit-tracing scalability past Anthropic-2025.} The
+\textbf{\glsterm{circuit}{Circuit}-tracing scalability past Anthropic-2025.} The
 attribution-graph methodology of \citet{lindsey2025-circuit-tracing}
 and the Haiku findings of \citet{lindsey2025-biology} have not been
 independently reproduced as of 2026. The compute cost
-($\sim\!20\%$ of pretraining for transcoder training) is a real
+($\sim\!20\%$ of pretraining for \glsterm{transcoder}{transcoder} training) is a real
 adoption barrier outside frontier labs. The substantive claims
 --- forward planning, multi-step factual chains, refusal circuits ---
 rest on internal Anthropic evidence and on transcoders whose
 canonicality inherits the \citet{leask2025-sae-not-canonical}
-critique: a different transcoder training run may factor the same MLP
+critique: a different \glsterm{transcoder}{transcoder} training run may factor the same MLP
 into a different sparse basis, and the stability of attribution-graph
-conclusions across transcoder seeds is open empirical. The strongest
-form of the claim --- that automated circuit discovery scales to
-Claude-class models with results that converge across replications
+conclusions across \glsterm{transcoder}{transcoder} seeds is open empirical. The strongest
+form of the claim --- that automated \glsterm{circuit}{circuit} discovery scales to
+\glsterm{claude}{Claude}-class models with results that converge across replications
 --- is asserted but not yet externally validated.
 \end{contradiction}
 
@@ -392,9 +392,9 @@ convergence/divergence pattern the object of analysis: when methods
 should agree (because they answer the same question about the same
 mechanism), divergence falsifies at least one method's assumptions;
 when methods answer different questions (correlational vs.\ causal,
-component-level vs.\ feature-level), apparent divergence may be
-principled. The IOI circuit and factual-recall localization are the
-positive cases; the truth-direction geometry and SAE canonicality are
+component-level vs.\ \glsterm{feature}{feature}-level), apparent divergence may be
+principled. The IOI \glsterm{circuit}{circuit} and factual-recall localization are the
+positive cases; the truth-direction geometry and \glsterm{sparse-autoencoder}{SAE} canonicality are
 the negative cases; and the open question --- whether attribution-graph
 findings on Haiku will reproduce outside Anthropic --- is the load-bearing
-test for whether circuit-tracing extends from a method to a paradigm.
+test for whether \glsterm{circuit}{circuit}-tracing extends from a method to a paradigm.

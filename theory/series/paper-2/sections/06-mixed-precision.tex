@@ -9,14 +9,14 @@
 
 The numerical-precision axis is independent of the parameter axis,
 scales the same way the parameter axis does, and is now production-
-stable through FP8 at frontier scale \citep[\S 3.3]{deepseek-v3}.
-The lineage runs FP32 baseline $\to$ FP16 with FP32 master weights and
-dynamic loss scaling \citep{micikevicius2017-mixed-precision}
-$\to$ BF16 as a drop-in replacement that abolishes loss scaling on
+stable through \glsterm{fp8}{FP8} at frontier scale \citep[\S 3.3]{deepseek-v3}.
+The lineage runs FP32 baseline $\to$ FP16 with FP32 \glsterm{master-weights}{master weights} and
+dynamic \glsterm{loss-scaling}{loss scaling} \citep{micikevicius2017-mixed-precision}
+$\to$ BF16 as a drop-in replacement that abolishes \glsterm{loss-scaling}{loss scaling} on
 hardware with native BF16 Tensor Cores \citep{kalamkar2019-bfloat16}
-$\to$ FP8 fine-grained quantization with promotion-to-CUDA-cores
+$\to$ \glsterm{fp8}{FP8} fine-grained quantization with promotion-to-CUDA-cores
 accumulation \citep[\S 3.3]{deepseek-v3} $\to$ FP4-class formats
-(Blackwell-era NVFP4, BitNet 1.58 ternary)\footnote{KB note:
+(Blackwell-era \glsterm{nvfp4}{NVFP4}, BitNet 1.58 ternary)\footnote{KB note:
 \texttt{kb/notes/training/mixed-precision-and-stability.md\#3-1}.} that
 cut storage and compute another factor of two but whose frontier-scale
 production status is contested. Each step halves storage and roughly
@@ -24,22 +24,22 @@ doubles per-Tensor-Core throughput on supporting hardware
 \citep[\S 3.3]{deepseek-v3}. The thesis of this section is that the
 recipe is a small set of independently-tunable choices — storage
 precision, compute precision, communication precision, accumulator
-precision — and the headline 2026 fact is that DeepSeek-V3's full
+precision — and the headline 2026 fact is that \glsterm{precision-pinning}{DeepSeek-V3}'s full
 14.8T-token, 2-month, 2048-H800 pre-training reported zero
-irrecoverable loss spikes in FP8
+irrecoverable loss spikes in \glsterm{fp8}{FP8}
 \citep[abstract]{deepseek-v3}.\footnote{KB excerpt:
-\texttt{kb/excerpts/deepseek-v3-training.md\#abstract}.}
+\texttt{kb/excerpts/\glsterm{precision-pinning}{deepseek-v3}-training.md\#abstract}.}
 
 \subsection{The FP32 baseline and why we leave it}
 \label{sec:mp-fp32}
 
-A pure-FP32 training step stores parameters $\theta \in \R^P$,
+A pure-FP32 training step stores \glsterm{parameters}{parameters} $\theta \in \R^P$,
 gradients $g \in \R^P$, and Adam moments $(m, v) \in \R^P \times \R^P$
 all in 32-bit floats. The total optimizer-state footprint is $4P$ FP32
-words: $P$ for parameters, $P$ for gradients, $2P$ for Adam's first and
+words: $P$ for \glsterm{parameters}{parameters}, $P$ for gradients, $2P$ for Adam's first and
 second moments. For a $70$B parameter model the optimizer state alone is
 $4 \cdot 70 \cdot 10^{9} \cdot 4 \approx 1.1\,\text{TB}$ before
-activations, KV cache, or DP / TP / PP duplication
+activations, \glsterm{kv-cache}{KV cache}, or \glsterm{data-parallel}{DP} / \glsterm{tensor-parallel}{TP} / \glsterm{pipeline-parallel}{PP} duplication
 \citep[\S 2]{kalamkar2019-bfloat16}. The activation footprint is
 similarly painful: a single forward pass at batch $\mathsf{B}$ and
 sequence length $\mathsf{S}$ stores $L \cdot \mathsf{B} \cdot
@@ -48,15 +48,15 @@ stream, scaled by a few-times-$\mathsf{D}$ activation-checkpointing
 multiplier.
 
 The compute side compounds the storage problem. NVIDIA Tensor Cores
-deliver substantially higher throughput at FP16 / BF16 / FP8 than at
-FP32: a single FP8 GEMM on H100 runs at $\sim 4\times$ the rate of an
+deliver substantially higher throughput at FP16 / BF16 / \glsterm{fp8}{FP8} than at
+FP32: a single \glsterm{fp8}{FP8} GEMM on H100 runs at $\sim 4\times$ the rate of an
 FP16 GEMM on the same silicon \citep[\S 3.3]{deepseek-v3}. Distributed
 all-reduce traffic also halves with each precision step, since
-gradient bandwidth is the dominant inter-node cost in DP / FSDP runs
+gradient bandwidth is the dominant inter-node cost in \glsterm{data-parallel}{DP} / \glsterm{fsdp}{FSDP} runs
 \citep[\S 2.2.4]{torchtitan2024}.\footnote{KB excerpt:
 \texttt{kb/excerpts/torchtitan2024.md\#sec-2-2-4}.} The mixed-precision
 question is therefore not whether to leave FP32 — every frontier-scale
-LLM does — but how far down the precision stack we can go before
+\glsterm{llm}{LLM} does — but how far down the precision stack we can go before
 training diverges or downstream quality degrades.
 
 \subsection{FP16 with master weights and dynamic loss scaling}
@@ -94,14 +94,14 @@ g^*_{\text{FP32}} &= \mathrm{cast}(\tilde g_{\text{FP16}}) / S, \\
 verbatim from \citet[\S 2]{micikevicius2017-mixed-precision}. The
 \emph{master copy} prevents the cumulative error of many small updates
 from drowning under FP16 quantization: each $\eta \cdot
-\mathrm{Optim}(g^*)$ may be far below FP16's smallest normal value, but
+\mathrm{Optim}(g^*)$ may be far below FP16's smallest normal \glsterm{value}{value}, but
 because it lands in the FP32 master, it accumulates exactly until the
 running sum crosses an FP16-representable threshold and is reflected
 back to $\theta_{\text{FP16}}$ on the next downcast.
 
-Loss scaling addresses the orthogonal underflow problem in the
-gradients themselves. FP16's smallest normal value is
-$\sim\!\!6\times 10^{-5}$, and gradient distributions during LLM
+\glsterm{loss-scaling}{Loss scaling} addresses the orthogonal underflow problem in the
+gradients themselves. FP16's smallest normal \glsterm{value}{value} is
+$\sim\!\!6\times 10^{-5}$, and gradient distributions during \glsterm{llm}{LLM}
 training have a long tail well below this; in plain FP16 those
 gradients underflow to zero
 \citep[\S 3]{micikevicius2017-mixed-precision}. Multiplying the loss by
@@ -112,8 +112,8 @@ without changing the chain rule:
 g^*_{\text{FP32}} \;=\; \mathrm{cast}(\tilde g_{\text{FP16}}) / S.
 \label{eq:loss-scale}
 \end{equation}
-Static loss scaling picks a single $S \in [2^{10}, 2^{15}]$. Dynamic
-loss scaling probes the largest $S$ that does not overflow:
+Static \glsterm{loss-scaling}{loss scaling} picks a single $S \in [2^{10}, 2^{15}]$. Dynamic
+\glsterm{loss-scaling}{loss scaling} probes the largest $S$ that does not overflow:
 
 \begin{lstlisting}[caption={Dynamic loss scaling (Micikevicius et al.\ 2017, \S 3).}, label=lst:dynamic-ls]
 S = 2**15
@@ -142,7 +142,7 @@ Volta and later architectures implement this as a single Tensor Core
 instruction. The combined recipe achieves FP32-equivalent accuracy
 across vision and NLP tasks at the time
 \citep[\S 5]{micikevicius2017-mixed-precision}, and remained the
-default for $\sim$3 years until BF16 made loss scaling unnecessary.
+default for $\sim$3 years until BF16 made \glsterm{loss-scaling}{loss scaling} unnecessary.
 
 \subsection{BF16: trading precision for range}
 \label{sec:mp-bf16}
@@ -173,10 +173,10 @@ the cost of 3 bits of mantissa relative to FP16. After
 
 The empirical claim is sharp: ``models trained with BFLOAT16 weights,
 activations, gradients, and updates match those trained with FP32 in
-terms of accuracy without any change in hyper-parameters''
+terms of accuracy without any change in hyper-\glsterm{parameters}{parameters}''
 \citep[\S 4]{kalamkar2019-bfloat16}. BF16 is therefore a
 \emph{drop-in} replacement for FP32 — no recipe changes, no loss
-scaling, optionally no FP32 master weights. The 7-mantissa precision
+scaling, optionally no FP32 \glsterm{master-weights}{master weights}. The 7-mantissa precision
 loss is absorbed because each weight is updated thousands of times
 during training and accumulated low-precision noise averages out
 \citep[\S 3]{kalamkar2019-bfloat16}.
@@ -186,7 +186,7 @@ BF16's ``free lunch'' relative to FP16 is range, not precision. Range
 dominates for gradients, whose magnitudes vary by many orders across
 the network and across coordinates; FP16's narrow range causes the
 small-gradient tail to underflow before any per-tensor recipe sees it,
-necessitating loss scaling. BF16 captures the FP32-range tail directly,
+necessitating \glsterm{loss-scaling}{loss scaling}. BF16 captures the FP32-range tail directly,
 trading mantissa precision (which averages out across many updates) for
 exponent range (which does not). Returning to math: the master-weights
 pattern in \cref{eq:amp} is required when the working precision's
@@ -195,35 +195,35 @@ BF16's 8-bit exponent, it does, and the FP32 master becomes optional.
 \end{intuition}
 
 By 2023 BF16 had become the universal pre-training default for LLaMA
-2 and 3, Mistral, Qwen, Gemma, and OLMo, on the strength of the
+2 and 3, \glsterm{mistral}{Mistral}, Qwen, Gemma, and OLMo, on the strength of the
 drop-in property and Ampere+ native BF16 Tensor Core support
 \citep[\S 2.2.4]{torchtitan2024}.
 
 \subsection{FP8 in production training}
 \label{sec:mp-fp8}
 
-The H100 and successor architectures provide native FP8 Tensor Cores
+The H100 and successor architectures provide native \glsterm{fp8}{FP8} Tensor Cores
 in two formats: \emph{E4M3} (4 exponent bits, 3 mantissa, range
 $\pm 448$) and \emph{E5M2} (5 exponent, 2 mantissa, range $\pm
 5.7\times 10^{4}$) \citep[\S 3.3]{deepseek-v3}. NVIDIA's recommended
 \emph{hybrid} recipe uses E4M3 for forward activations and weights
 and E5M2 for gradients, on the principle that gradients need more
-dynamic range. DeepSeek-V3's recipe \citep[\S 3.3.1, \S
+dynamic range. \glsterm{precision-pinning}{DeepSeek-V3}'s recipe \citep[\S 3.3.1, \S
 3.3.2]{deepseek-v3}\footnote{KB excerpts:
-\texttt{kb/excerpts/deepseek-v3-training.md\#sec-3-3-fp8} and
+\texttt{kb/excerpts/\glsterm{precision-pinning}{deepseek-v3}-training.md\#sec-3-3-fp8} and
 \texttt{\#sec-3-3-2-finegrained}.} is the most aggressive published
-production FP8 training to date, and its decisions disagree with
+production \glsterm{fp8}{FP8} training to date, and its decisions disagree with
 NVIDIA's hybrid in three structural ways.
 
 \paragraph{Fine-grained quantization granularity.} For sub-FP16
 formats the per-tensor or per-block scale $Z$ becomes a first-class
-object. The FP8 GEMM $Y = X W$ is implemented as
+object. The \glsterm{fp8}{FP8} GEMM $Y = X W$ is implemented as
 \begin{equation}
 Y = (Z_X \cdot X_{\text{FP8}}) (Z_W \cdot W_{\text{FP8}})
   = Z_X Z_W \, (X_{\text{FP8}} \, W_{\text{FP8}})_{\text{FP8 accum}},
 \label{eq:fp8-gemm}
 \end{equation}
-with the inner GEMM on FP8 Tensor Cores and the scalar product
+with the inner GEMM on \glsterm{fp8}{FP8} Tensor Cores and the scalar product
 $Z_X Z_W$ folded in afterward \citep[\S 3.3.2, eq.\ 2]{deepseek-v3}.
 The granularity at which $(Z_X, Z_W)$ are chosen is the load-bearing
 choice. Three operating points, increasing in cost-per-element of
@@ -235,18 +235,18 @@ static scaling modes) applies this scheme selectively on
 \texttt{Linear} layers \citep[\S 2.2.4]{torchtitan2024}.
 \item \emph{Per-row / per-token}: one scale per row of the activation
 matrix (i.e., per-token); used for GEMM input activations.
-\item \emph{Per-block / per-tile}: DeepSeek-V3's choice, with $1
+\item \emph{Per-block / per-tile}: \glsterm{precision-pinning}{DeepSeek-V3}'s choice, with $1
 \times 128$ tiles for activations (per-token-per-128-channel) and $128
 \times 128$ blocks for weights, with per-group scales along the inner
 GEMM dimension \citep[\S 3.3.2]{deepseek-v3}.
 \end{itemize}
 
-\paragraph{All-E4M3 instead of E4M3/E5M2 hybrid.} DeepSeek-V3 uses
+\paragraph{All-E4M3 instead of E4M3/E5M2 hybrid.} \glsterm{precision-pinning}{DeepSeek-V3} uses
 E4M3 \emph{everywhere} (forward, activation backward, weight backward)
 and recovers the dynamic range that hybrid would have provided through
 fine-grained scaling \citep[\S 3.3.2]{deepseek-v3}.
 
-\paragraph{Promotion to CUDA cores at $N_C = 128$.} H100's FP8 Tensor
+\paragraph{Promotion to CUDA cores at $N_C = 128$.} H100's \glsterm{fp8}{FP8} Tensor
 Core accumulates internally in ``around 14 bits'' rather than full
 FP32, giving up to $\sim$2\% relative error on $K = 4096$ dot products
 \citep[\S 3.3.2]{deepseek-v3}. The fix is to copy partial sums to
@@ -254,24 +254,24 @@ FP32 registers and accumulate in CUDA cores every $N_C = 128$
 elements of the inner reduction, recovering FP32 accumulator semantics
 at a small bandwidth cost \citep[\S 3.3.2]{deepseek-v3}.
 
-The remaining DeepSeek-V3 choices follow from the same logic: master
+The remaining \glsterm{precision-pinning}{DeepSeek-V3} choices follow from the same logic: master
 weights and weight-gradient buffers stay in FP32; Adam first and
 second moments are kept in BF16; the embedding matrix, output head,
 MoE gating, normalization layers, and attention all stay in BF16 or
 FP32 because their numeric properties (small dynamic range, sensitive
-softmax, rare-token underflow risk) do not match what FP8's per-tile
+\glsterm{softmax}{softmax}, rare-token underflow risk) do not match what \glsterm{fp8}{FP8}'s per-tile
 scaling is designed to absorb \citep[\S 3.3.1]{deepseek-v3}. The
 empirical envelope: relative loss error against a BF16 baseline stays
 $\leq 0.25\%$ at scale \citep[\S 3.3]{deepseek-v3}, and the full
 14.8T-token pre-training reported zero irrecoverable spikes
 \citep[abstract]{deepseek-v3}. TorchTitan's per-tensor Float8 path is
 considerably less aggressive but generic: the documented combined
-speedup on Llama-3.1 with FP8 + FSDP2 + TP is reported in the
+speedup on Llama-3.1 with \glsterm{fp8}{FP8} + \glsterm{fsdp2}{FSDP2} + \glsterm{tensor-parallel}{TP} is reported in the
 30--65\% range over BF16 \citep[\S 2.2.4]{torchtitan2024}, depending
 on scale and which Linear layers are covered.
 
 \begin{intuition}
-Fine-grained scaling is what makes FP8 viable for full pre-training.
+Fine-grained scaling is what makes \glsterm{fp8}{FP8} viable for full pre-training.
 A single per-tensor scale must compromise between outliers (which need
 a large $Z$) and bulk values (which need a small $Z$ for precision).
 Per-tile scaling lets each $128$-element tile choose its own $Z$, so
@@ -288,7 +288,7 @@ mantissa bit becomes pure precision gain.
 \subsection{Sub-FP8: NVFP4 and BitNet 1.58-bit}
 \label{sec:mp-sub-fp8}
 
-Below FP8 the field splits into two distinct programs.
+Below \glsterm{fp8}{FP8} the field splits into two distinct programs.
 
 \paragraph{NVFP4 (FP4 E2M1).} Blackwell-class GPUs (B100, B200) ship
 native FP4 Tensor Cores with hardware MXScale: a per-block scaling
@@ -298,8 +298,8 @@ mantissa, dynamic range $\pm 6$ before the per-block scale)
 \citep[\S 3.3, format zoo]{deepseek-v3}.\footnote{KB note:
 \texttt{kb/notes/training/mixed-precision-and-stability.md\#1-3} and
 \texttt{\#3-1}; format-zoo entry derived there from Blackwell white-
-paper material.} The compute-throughput gain over FP8 is roughly
-$2\times$ by spec, mirroring the FP16-to-FP8 step. The fine-grained-
+paper material.} The compute-throughput gain over \glsterm{fp8}{FP8} is roughly
+$2\times$ by spec, mirroring the FP16-to-\glsterm{fp8}{FP8} step. The fine-grained-
 plus-promotion recipe of \cref{sec:mp-fp8} extends naturally — replace
 the $128$-element tile with the $32$-element MXScale block and lift
 the same accumulator-promotion machinery — but whether it transfers
@@ -309,7 +309,7 @@ without quality loss is open.
 axis to its extreme: every weight is ternary in $\{-1, 0, +1\}$
 (hence $\log_2 3 \approx 1.585$ bits per weight), and activations are
 INT8. The construction replaces \texttt{nn.Linear} with
-\texttt{BitLinear}, trained from scratch, using an \emph{absmean}
+\texttt{\glsterm{bitlinear}{BitLinear}}, trained from scratch, using an \emph{absmean}
 quantization function:
 \begin{align}
 \widetilde{W} &= \mathrm{RoundClip}\!\left(\tfrac{W}{\gamma + \epsilon}, -1, 1\right),
@@ -328,27 +328,27 @@ point multiply) because the weight set is $\{-1, 0, +1\}$, saving
 $\sim$71$\times$ arithmetic energy on 7nm chips by the
 \citet{ma2024-bitnet} energy model \citep[\S 3]{ma2024-bitnet}.
 
-The headline empirical claim is matched-perplexity at 3B
-parameters: BitNet b1.58 at 3B reaches $9.91$ PPL versus LLaMA-LLM
+The headline empirical claim is matched-\glsterm{perplexity}{perplexity} at 3B
+\glsterm{parameters}{parameters}: BitNet b1.58 at 3B reaches $9.91$ PPL versus LLaMA-\glsterm{llm}{LLM}
 3B at $10.04$, while running $2.71\times$ faster and using
 $3.55\times$ less GPU memory \citep[\S 3, Table 1]{ma2024-bitnet}.
 At $70$B the throughput claim is starker: $176$ vs.\ $16$ max batch
 size, $2977$ vs.\ $333$ tokens/s \citep[\S 3, Table 3]{ma2024-bitnet}.
-The architecture imports the LLaMA-alike stack — RMSNorm, SwiGLU,
-RoPE, no biases — to enable drop-in inference under llama.cpp / vLLM
+The architecture imports the LLaMA-alike stack — \glsterm{rmsnorm}{RMSNorm}, \glsterm{swiglu}{SwiGLU},
+\glsterm{rope}{RoPE}, no biases — to enable drop-in inference under llama.cpp / vLLM
 \citep[\S 2]{ma2024-bitnet}.
 
 \subsection{Stability mitigations}
 \label{sec:mp-stability}
 
 Pre-training loss spikes — sudden, sometimes-irrecoverable jumps in
-$\mathcal{L}$ — are observed across all frontier-scale runs (PaLM
+$\mathcal{L}$ — are observed across all frontier-scale runs (\glsterm{palm}{PaLM}
 \citep{chowdhery2022}, OPT, GLM-130B). The mitigations stack
 across precision regimes:
 
 \paragraph{Loss scaling.} Eq.~(\ref{eq:loss-scale}) for FP16; not
 required for BF16; replaced by per-tile / per-block dynamic scales
-for FP8 (Eq.~\ref{eq:fp8-gemm}).
+for \glsterm{fp8}{FP8} (Eq.~\ref{eq:fp8-gemm}).
 
 \paragraph{Gradient clipping.} Clip $\|g\|_2 \leq c$ before the
 optimizer step. The standard fix for gradient-norm explosion under LR
@@ -357,45 +357,45 @@ overshoot or batch-size transitions; orthogonal to precision.
 \paragraph{Embedding LR scaling and rare-token handling.} Token
 embeddings can grow unboundedly under weight decay if the optimizer's
 preconditioning interacts poorly with embedding sparsity, and rare-
-vocabulary entries' embedding columns receive small gradient
-magnitudes that underflow in FP8. DeepSeek-V3's mitigation is direct:
-keep embeddings in BF16/FP32 even when surrounding GEMMs are FP8
+\glsterm{vocabulary}{vocabulary} entries' embedding columns receive small gradient
+magnitudes that underflow in \glsterm{fp8}{FP8}. \glsterm{precision-pinning}{DeepSeek-V3}'s mitigation is direct:
+keep embeddings in BF16/FP32 even when surrounding GEMMs are \glsterm{fp8}{FP8}
 \citep[\S 3.3.1]{deepseek-v3}.
 
-\paragraph{Attention-softmax kept higher-precision.} Softmax inputs
+\paragraph{Attention-softmax kept higher-precision.} \glsterm{softmax}{Softmax} inputs
 $QK^\top$ grow in magnitude as training proceeds, creating numeric
-overflow when $|QK^\top|$ exceeds E4M3's $\pm 448$ bound. DeepSeek-V3
+overflow when $|QK^\top|$ exceeds E4M3's $\pm 448$ bound. \glsterm{precision-pinning}{DeepSeek-V3}
 keeps the attention operator in BF16 for this reason \citep[\S
 3.3.1]{deepseek-v3}; complementary fixes are \emph{QK-clip} (clamping
-$QK^\top$ pre-softmax) and \emph{QK-LayerNorm} (normalizing $Q$ and
+$QK^\top$ pre-\glsterm{softmax}{softmax}) and \emph{QK-\glsterm{layer-normalization}{LayerNorm}} (normalizing $Q$ and
 $K$ before the dot product, as adopted in LLaMA-2 and successors).
 
-\paragraph{Optimizer-precision coupling.} Muon's update RMS,
+\paragraph{Optimizer-precision coupling.} \glsterm{per-shape-rms-scaling}{Muon}'s update RMS,
 $\sqrt{1/\max(A, B)}$ for an $A\times B$ matrix parameter, combined
 with growing weight RMS, ``exceeds the high-precision range of
 bf16'' without weight decay \citep[\S 2.2]{muon-moonlight2025}.\footnote{KB
-excerpt: \texttt{kb/excerpts/muon-moonlight2025.md\#sec-2-2-rms} and
-\texttt{\#sec-2-2-wd}.} The Muon-Moonlight fix is mandatory weight
+excerpt: \texttt{kb/excerpts/\glsterm{muon}{muon}-moonlight2025.md\#sec-2-2-rms} and
+\texttt{\#sec-2-2-wd}.} The \glsterm{per-shape-rms-scaling}{Muon}-Moonlight fix is mandatory weight
 decay plus per-shape $\sqrt{\max(A, B)} \cdot 0.2$ scaling that pulls
 the update + weight back into BF16's representable range. Optimizer
 choice and precision choice are not orthogonal; each new optimizer
 needs a precision-pairing study.
 
 \paragraph{MoE expert collapse.} The auxiliary load-balancing loss can
-fail under FP8, especially for the expert-routing softmax. DeepSeek-
-V3's auxiliary-loss-free load balancing addresses this in tandem with
-the FP8 recipe \citep[abstract]{deepseek-v3}.
+fail under \glsterm{fp8}{FP8}, especially for the expert-routing \glsterm{softmax}{softmax}. DeepSeek-
+V3's \glsterm{auxiliary-loss-free-load-balancing}{auxiliary-loss-free load balancing} addresses this in tandem with
+the \glsterm{fp8}{FP8} recipe \citep[abstract]{deepseek-v3}.
 
 \paragraph{Communication precision.} The all-reduce of gradients in
 distributed training is a separate precision choice.
 \citet{shoeybi2019-megatron} showed that FP16 all-reduce with FP32
 reduction on a master node maintains stability for tensor-parallel
-runs. DeepSeek-V3's cross-node all-to-all kernels use FP8 dispatch and
+runs. \glsterm{precision-pinning}{DeepSeek-V3}'s cross-node all-to-all kernels use \glsterm{fp8}{FP8} dispatch and
 BF16 combine \citep[\S 3.2.2]{deepseek-v3}, with the bandwidth budget
 split between InfiniBand and NVLink.
 
 \begin{contradiction}
-NVFP4 / FP4 production status is not settled. Blackwell-class
+\glsterm{nvfp4}{NVFP4} / FP4 production status is not settled. Blackwell-class
 hardware ships native FP4 Tensor Cores and several Blackwell-deploying
 vendors are running FP4 pilots, but as of 2026-Q2 no major lab has
 publicly confirmed FP4 \emph{pre-training} of a frontier model. The
@@ -403,20 +403,20 @@ publicly confirmed FP4 \emph{pre-training} of a frontier model. The
 suggests substantial loss below $\sim$7 bits, but the prediction is
 fitted on small models. BitNet 1.58-bit's matched-FP16 quality
 \citep{ma2024-bitnet} is replicated independently only thinly past
-$\sim$7B parameters, and the published BitNet b1.58 2B4T tech report
+$\sim$7B \glsterm{parameters}{parameters}, and the published BitNet b1.58 2B4T tech report
 \citep{bitnet-2b4t-2025} does not yet have a frontier-scale companion.
-DeepSeek-V3's FP8 result is the strongest production data point we
+\glsterm{precision-pinning}{DeepSeek-V3}'s \glsterm{fp8}{FP8} result is the strongest production data point we
 have at this precision level, and it is single-source: no other
-publicly disclosed lab has matched the 14.8T-token zero-spike FP8
-envelope \citep[abstract]{deepseek-v3}. Treat the entire sub-FP8
-regime as open, and treat FP8 production stability as resolved
-\emph{contingent on} the DeepSeek-V3 recipe carrying over to other
+publicly disclosed lab has matched the 14.8T-token zero-spike \glsterm{fp8}{FP8}
+envelope \citep[abstract]{deepseek-v3}. Treat the entire sub-\glsterm{fp8}{FP8}
+regime as open, and treat \glsterm{fp8}{FP8} production stability as resolved
+\emph{contingent on} the \glsterm{precision-pinning}{DeepSeek-V3} recipe carrying over to other
 architectures.
 \end{contradiction}
 
 \begin{intuition}
 Precision as compression. Each precision step (FP32 $\to$ BF16 $\to$
-FP8 $\to$ FP4) halves storage and roughly doubles compute throughput
+\glsterm{fp8}{FP8} $\to$ FP4) halves storage and roughly doubles compute throughput
 on supporting hardware. Training in lower precision is lossy
 compression of the gradient computation, recovering quality through
 (a) keeping a high-precision master copy that aggregates many small
@@ -438,11 +438,11 @@ The mixed-precision and stability machinery of \cref{sec:mp-fp8} and
 that determine \emph{what base model} the post-training pipeline
 inherits. From here we cross into post-training. The next section
 (\cref{sec:sft}) walks supervised fine-tuning: the cross-entropy
-objective with prompt-masking, the data-curation lineage from FLAN
-through InstructGPT, Llama-3 rejection-sampling SFT, T\"ulu-3, and
+objective with prompt-masking, the data-curation lineage from \glsterm{flan}{FLAN}
+through InstructGPT, Llama-3 \glsterm{rejection-sampling-sft}{rejection-sampling SFT}, T\"ulu-3, and
 the 2025 R1-Distill / s1 results that show reasoning capability
 transfers through pure SFT. SFT inherits the mixed-precision recipe
 of this section unchanged — typically BF16 working precision, FP32
-master weights, and a learning rate roughly $10\times$ smaller than
+\glsterm{master-weights}{master weights}, and a learning rate roughly $10\times$ smaller than
 pre-training peak — and the stability concerns shift from gradient-
 underflow to data-mixture and prompt-mask convention.

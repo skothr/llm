@@ -13,14 +13,14 @@
 If \S\ref{sec:probing} sets up the probing methodology and
 \S\ref{sec:correlation-causation} closes the correlation--causation gap
 with activation interventions, this section is the worked case study
-that exercises both. ``Truth'' --- whether the model's residual stream
-encodes the truth value of a factual statement as a linearly decodable
+that exercises both. ``Truth'' --- whether the model's \glsterm{residual-stream}{residual stream}
+encodes the truth \glsterm{value}{value} of a factual statement as a linearly decodable
 direction --- is the most-studied probing target since 2022, and the
 empirical record is rich enough to separate what the field has actually
 converged on from what remains open. The convergence claim is narrow:
 on the LLaMA-family on simple factual true/false statements, a linear
-direction in the residual stream at late-mid layers carries the truth
-value with high probe accuracy and is causally implicated in the
+direction in the \glsterm{residual-stream}{residual stream} at late-mid layers carries the truth
+\glsterm{value}{value} with high \glsterm{probe-2}{probe} accuracy and is causally implicated in the
 model's TRUE/FALSE prediction \citep{marks-tegmark-2023-truth}. The
 open claims are the load-bearing ones: whether the \emph{same}
 direction is recovered across prompt formats, whether the
@@ -42,11 +42,11 @@ datasets of \S\ref{sec:probe-protocol}\footnote{KB excerpt:
 linear true/false separation in the top two PCs); \emph{transfer}
 (probes trained on one dataset classify a structurally distinct
 dataset above chance and ablation-flip its predictions); and
-\emph{causal intervention} (ablating the probe-derived direction in
-the residual stream during the forward pass causes the model to
+\emph{causal intervention} (ablating the \glsterm{probe-2}{probe}-derived direction in
+the \glsterm{residual-stream}{residual stream} during the forward pass causes the model to
 ``treat false statements as true and vice versa''
 \citep[abstract]{marks-tegmark-2023-truth}). The headline
-methodological recommendation is that, among the four probe families
+methodological recommendation is that, among the four \glsterm{probe-2}{probe} families
 of \S\ref{sec:probing}, the parameter-free \emph{mass-mean} direction
 $\mathbf{d}_\mathrm{MM} = \boldsymbol{\mu}_+ - \boldsymbol{\mu}_-$ of
 Eq.~\eqref{eq:mass-mean} is the one ``most causally implicated in
@@ -66,7 +66,7 @@ later for datasets of more structurally complex statements (e.g.\
 conjunctive statements)''~\citep[\S 4]{marks-tegmark-2023-truth}. The
 pattern --- linear separation, localized to a layer band, summarized
 at the period-token --- is the picture the field now defaults to when
-saying ``the LLM has a truth direction.''
+saying ``the \glsterm{llm}{LLM} has a \glsterm{truth-direction-2}{truth direction}.''
 
 \begin{intuition}
 Mass-mean turns a probing claim into a claim about the data's class
@@ -96,9 +96,9 @@ Contrast-Consistent Search (CCS)
 \deepencite{burns2022-ccs §3, citation-pending} attacks the same
 question from the unsupervised side. Given an unlabeled set of
 contrast pairs $(\mathbf{x}^+, \mathbf{x}^-)$ --- e.g., a statement
-appended with ``yes'' versus ``no'' --- CCS fits a linear probe
+appended with ``yes'' versus ``no'' --- CCS fits a \glsterm{linear-probe}{linear probe}
 $p_\theta(\mathbf{h}) = \sigma(\mathbf{w}^\top \mathbf{h} + b)$ by
-minimizing a self-consistency loss
+minimizing a \glsterm{self-consistency-2}{self-consistency} loss
 \begin{equation}
   \mathcal{L}_\mathrm{CCS}(\theta)
   \;=\;
@@ -109,12 +109,12 @@ minimizing a self-consistency loss
   \right],
   \label{eq:ccs-loss}
 \end{equation}
-which jointly enforces (i) that the probe assigns complementary
+which jointly enforces (i) that the \glsterm{probe-2}{probe} assigns complementary
 probabilities to the two halves of the pair --- a constraint any
-\emph{truth} feature must satisfy, since a statement and its negation
-have opposite truth values --- and (ii) that the probe is confident
+\emph{truth} \glsterm{feature}{feature} must satisfy, since a statement and its negation
+have opposite truth values --- and (ii) that the \glsterm{probe-2}{probe} is confident
 on at least one side. The discovered $\mathbf{w}$ is reported to be
-``truth-like'': probe accuracy on held-out labeled true/false data is
+``truth-like'': \glsterm{probe-2}{probe} accuracy on held-out labeled true/false data is
 competitive with supervised logistic regression on in-distribution
 splits \deepencite{burns2022-ccs §4, citation-pending}. The
 contribution is conceptual: CCS removes the curated-label confound
@@ -179,9 +179,9 @@ antipodally, before rotating to lie orthogonally\dots, and finally
 aligning in later layers.~\citep[\S 4 / App.~C]{marks-tegmark-2023-truth}
 \end{quote}
 
-The implication for the ``does the model have a truth direction''
-question is direct. The probe direction recovered from
-\texttt{cities} alone is \emph{not} the probe direction recovered from
+The implication for the ``does the model have a \glsterm{truth-direction-2}{truth direction}''
+question is direct. The \glsterm{probe-2}{probe} direction recovered from
+\texttt{cities} alone is \emph{not} the \glsterm{probe-2}{probe} direction recovered from
 \texttt{neg\_cities}, in early or middle layers; it would be a mistake
 to treat either single-dataset-derived $\hat{\mathbf{d}}_y$ as a
 canonical truth axis at those depths. Only at late layers do the
@@ -199,7 +199,7 @@ axes into a single more-abstract axis.
 \citet{vennemeyer2025-sycophancy-not-one-thing}
 \deepencite{vennemeyer2025-sycophancy-not-one-thing §3, citation-pending}
 extend the multi-component finding from truth to behavioral
-phenomena. Applying difference-in-means probing to sycophancy on
+phenomena. Applying difference-in-means probing to \glsterm{sycophancy}{sycophancy} on
 LLaMA-family models, they report that the behavior decomposes into
 \emph{three independently-steerable directions}: agreement (do I
 match the user's stated position?), praise (do I compliment the
@@ -219,8 +219,8 @@ representationally-plural}, and a single direction is a
 representation.
 
 \begin{contradiction}
-\textbf{Is there a canonical truth direction?} Three observations
-strain the strong-form claim that ``the LLM linearly represents
+\textbf{Is there a canonical \glsterm{truth-direction-2}{truth direction}?} Three observations
+strain the strong-form claim that ``the \glsterm{llm}{LLM} linearly represents
 truth'' as a single axis $\mathbf{d}_\mathrm{truth} \in \mathbb{R}^D$.
 \textsf{(1)} Within a model,
 \citet[\S 4]{marks-tegmark-2023-truth} document early-/mid-layer
@@ -234,7 +234,7 @@ failures under negation \citep[\S 1.1]{marks-tegmark-2023-truth}
 direction that fails the most basic logical operation on truth is
 better understood as a near-truth confound than as truth.
 \textsf{(3)} The
-\citet{vennemeyer2025-sycophancy-not-one-thing} sycophancy
+\citet{vennemeyer2025-sycophancy-not-one-thing} \glsterm{sycophancy}{sycophancy}
 decomposition shows that an alignment-relevant phenomenon thought to
 be representationally-singular admits a multi-axis decomposition; the
 generalization to truth is direct (and tested informally in their
@@ -244,7 +244,7 @@ basis recovery procedure that, applied independently to
 \texttt{cities\_conj} at matched layers, returns a low-dimensional
 subspace whose per-dataset projections recover the
 single-dataset directions modulo a known equivalence (rotation,
-sign, scale). Until then, ``the truth direction'' is a useful
+sign, scale). Until then, ``the \glsterm{truth-direction-2}{truth direction}'' is a useful
 abstraction at late layers in fixed model + dataset family --- a
 \emph{representational subspace} treated as a one-dimensional
 projection --- not a basis-free property of the model.
@@ -258,18 +258,18 @@ multiple labs and probing methodologies have triangulated:
 
 \begin{itemize}
   \item \textbf{Late-mid layer linear decodability.} On the LLaMA-2
-    family, simple factual true/false statements admit a linear probe
+    family, simple factual true/false statements admit a \glsterm{linear-probe}{linear probe}
     with high held-out accuracy in residual-stream activations at
     layers $\ell \approx 12\!-\!15$ (LLaMA-2-13B) and equivalent
     relative depths on 7B/70B; the direction remains salient through
     the rest of the stack \citep[\S 3, \S 4]{marks-tegmark-2023-truth}.
-  \item \textbf{Period-token summarization.} The most-informative probe
+  \item \textbf{Period-token summarization.} The most-informative \glsterm{probe-2}{probe}
     position is the end-of-statement punctuation token; this
-    summarization behavior was observed prior on sentiment
+    \glsterm{summarization-behavior}{summarization behavior} was observed prior on sentiment
     \citep[\S 3, citing Tigges et al.\ 2023]{marks-tegmark-2023-truth}
     and the truth result reproduces the geometric pattern.
   \item \textbf{Mass-mean as the direction with strongest causal
-    mediation.} Among the probe families of \S\ref{sec:probing},
+    mediation.} Among the \glsterm{probe-2}{probe} families of \S\ref{sec:probing},
     $\mathbf{d}_\mathrm{MM}$ flips TRUE/FALSE under direction-ablation
     more strongly than logistic-regression directions on matched
     datasets \citep[\S 1, \S abstract]{marks-tegmark-2023-truth}.
@@ -283,7 +283,7 @@ The open claims, in falsification-priority order:
 \begin{itemize}
   \item \textbf{Cross-prompt-format alignment.} Whether the
     early-/mid-layer per-dataset misalignment is a deficiency of the
-    \emph{probe} (single-direction summary of a multi-axis subspace)
+    \emph{\glsterm{probe-2}{probe}} (single-direction summary of a multi-axis subspace)
     or a property of the \emph{model} (no shared early-layer truth
     representation across prompt formats) is unresolved
     \citep[\S 4]{marks-tegmark-2023-truth}.
@@ -299,10 +299,10 @@ The open claims, in falsification-priority order:
   \item \textbf{Cross-model-family transfer.} Truth directions in
     LLaMA-2-13B and Qwen-2.5-14B almost certainly do not have the
     same coordinates (the bases differ); whether there is a
-    canonical truth direction up to model-specific basis or whether
+    canonical \glsterm{truth-direction-2}{truth direction} up to model-specific basis or whether
     truth is fundamentally model-dependent is the question that
     Paper~5 needs answered to sharpen behavioral probes for
-    deception, sycophancy, scheming, and alignment-faking into
+    deception, \glsterm{sycophancy}{sycophancy}, \glsterm{scheming}{scheming}, and alignment-faking into
     cross-model evaluation tools.
 \end{itemize}
 
@@ -310,11 +310,11 @@ The open claims, in falsification-priority order:
 \label{sec:truth-forward}
 
 Behavioral probes for alignment-relevant phenomena ride on the
-methodology this section assembles. Paper~5 §9 (sycophancy, written;
-Paper~5 \S sycophancy when linked at compile) consumes the
+methodology this section assembles. Paper~5 §9 (\glsterm{sycophancy}{sycophancy}, written;
+Paper~5 \S \glsterm{sycophancy}{sycophancy} when linked at compile) consumes the
 \citeauthor{vennemeyer2025-sycophancy-not-one-thing} multi-component
-result directly; Paper~5 §10 (scheming) and §11 (alignment-faking) use
-the same probe-then-causally-validate pipeline of
+result directly; Paper~5 §10 (\glsterm{scheming}{scheming}) and §11 (alignment-faking) use
+the same \glsterm{probe-2}{probe}-then-causally-validate pipeline of
 \S\ref{sec:correlation-causation} with behavioral targets in place of
 factual ones. The single methodological lesson the truth case study
 exports is the contradiction box of \S\ref{sec:truth-misalignment}:
@@ -325,16 +325,16 @@ subspace recovery over single-axis fits when the underlying behavior
 admits a multi-component decomposition.
 
 The same canonicality question generalizes one floor down, to the
-\emph{unsupervised} feature framing. Sparse autoencoders
+\emph{unsupervised} \glsterm{feature}{feature} framing. Sparse autoencoders
 (\S\ref{sec:sparse-autoencoders}, written) decompose residual-stream
 activations into a learned dictionary of $M \gg D$ directions, each
-plausibly a ``feature'' candidate; whether two SAE training runs at
-different sparsity targets recover the \emph{same} feature inventory
+plausibly a ``\glsterm{feature}{feature}'' candidate; whether two \glsterm{sparse-autoencoder}{SAE} training runs at
+different sparsity targets recover the \emph{same} \glsterm{feature}{feature} inventory
 is the structural cousin of ``do two probes on different truth datasets
 recover the same direction.''
-\S\ref{sec:sae-canonicality} takes that question up at the SAE level,
+\S\ref{sec:sae-canonicality} takes that question up at the \glsterm{sparse-autoencoder}{SAE} level,
 and the cross-method synthesis of \S\ref{sec:cross-method} returns to
-both: probe-derived truth directions and SAE-derived truth-related
+both: \glsterm{probe-2}{probe}-derived truth directions and \glsterm{sparse-autoencoder}{SAE}-derived truth-related
 features partially overlap, partially do not, and the cases of
 disagreement are exactly the cases where a single-method claim should
 not be taken as canonical.

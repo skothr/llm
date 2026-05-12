@@ -9,13 +9,13 @@
 The previous ten sections walked the architectural axes one at a
 time. This section composes them. We tabulate the per-axis choices
 made by the 2026 frontier model lineup --- DeepSeek V3 and R1, Llama
-4, Mistral Large 2, Gemma 3, Qwen 2.5 / Qwen 3, plus the partially
-disclosed Claude 3.7-class, GPT-class, and Gemini 2.5 systems --- on
+4, \glsterm{mistral}{Mistral} Large 2, Gemma 3, Qwen 2.5 / Qwen 3, plus the partially
+disclosed \glsterm{claude}{Claude} 3.7-class, GPT-class, and Gemini 2.5 systems --- on
 the same eight axes used throughout this paper, and call out where
 the published architectures agree and where they diverge.
 \textbf{The thesis of this section: the convergence is real, narrow,
 and concentrated in five of the eight axes; the remaining three
-(KV-sharing strategy, dense-vs-MoE on the FFN, and the multimodal
+(KV-sharing strategy, dense-vs-MoE on the \glsterm{ffn}{FFN}, and the multimodal
 integration pattern) are the live splits, and only one of them
 (KV-sharing) cleanly partitions the disclosed lineup.}
 
@@ -45,38 +45,38 @@ Sources are cited inline in
 \footnotesize
 \begin{tabularx}{\textwidth}{@{}lXXXXXXXX@{}}
 \toprule
-\textbf{Model} & \textbf{KV} & \textbf{Attn impl} & \textbf{FFN} &
+\textbf{Model} & \textbf{KV} & \textbf{Attn impl} & \textbf{\glsterm{ffn}{FFN}} &
 \textbf{Norm} & \textbf{Pos} & \textbf{Tok} & \textbf{Multi-tok} &
 \textbf{MM} \\
 \midrule
-DeepSeek V3 & MLA, $d_c{=}512$ & FA + custom MLA kernel & MoE
-$E{=}256$, $k{=}8$, $E_s{=}1$ & RMSNorm + Pre-LN & decoupled-RoPE &
-BPE 129K & MTP, 1 head & text-only \\
-DeepSeek R1 & MLA (V3 base) & FA + custom MLA kernel & MoE (V3 base) &
-RMSNorm + Pre-LN & decoupled-RoPE & BPE 129K & MTP, 1 head &
+DeepSeek V3 & \glsterm{multi-head-latent-attention}{MLA}, $d_c{=}512$ & FA + custom \glsterm{multi-head-latent-attention}{MLA} kernel & MoE
+$E{=}256$, $k{=}8$, $E_s{=}1$ & \glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN} & decoupled-\glsterm{rope}{RoPE} &
+\glsterm{bpe}{BPE} 129K & \glsterm{multi-token-prediction}{MTP}, 1 head & text-only \\
+DeepSeek R1 & \glsterm{multi-head-latent-attention}{MLA} (V3 base) & FA + custom \glsterm{multi-head-latent-attention}{MLA} kernel & MoE (V3 base) &
+\glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN} & decoupled-\glsterm{rope}{RoPE} & \glsterm{bpe}{BPE} 129K & \glsterm{multi-token-prediction}{MTP}, 1 head &
 text-only \\
-Llama 4 (Scout / Maverick) & GQA-8 & FA3 & dense$\!+\!$MoE
-alternating; $E{\in}\{16,128\}$, $E_s{=}1$, $k{=}1$ & RMSNorm + Pre-LN &
-iRoPE (3 RoPE : 1 NoPE) + temperature & SentencePiece BPE & none
+Llama 4 (Scout / Maverick) & \glsterm{gqa}{GQA}-8 & FA3 & dense$\!+\!$MoE
+alternating; $E{\in}\{16,128\}$, $E_s{=}1$, $k{=}1$ & \glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN} &
+\glsterm{irope}{iRoPE} (3 \glsterm{rope}{RoPE} : 1 \glsterm{nope}{NoPE}) + temperature & \glsterm{sentencepiece}{SentencePiece} \glsterm{bpe}{BPE} & none
 disclosed & native multimodal \\
-Mistral Large 2 & GQA-8 & FA2 / FA3 & dense SwiGLU & RMSNorm +
-Pre-LN & RoPE + position-IDs ext.\ & tekken (BPE) & none disclosed &
+\glsterm{mistral}{Mistral} Large 2 & \glsterm{gqa}{GQA}-8 & FA2 / FA3 & dense \glsterm{swiglu}{SwiGLU} & \glsterm{rmsnorm}{RMSNorm} +
+\glsterm{pre-ln}{Pre-LN} & \glsterm{rope}{RoPE} + position-IDs ext.\ & tekken (\glsterm{bpe}{BPE}) & none disclosed &
 text-only (Pixtral variant: native MM) \\
-Gemma 3 27B & GQA + 5 local : 1 global (window 1024) & FA2 & dense SwiGLU &
-RMSNorm + Peri-LN + QK-Norm & RoPE + interleaved windows & SentencePiece
-BPE & none disclosed & native MM (4B$+$ Vision) \\
-Qwen 2.5 / Qwen 2.5-VL & GQA & FA2 / FA3 & dense SwiGLU &
-RMSNorm + Pre-LN & RoPE + YaRN & BPE 152K & none disclosed &
-projector + LLM (VL) \\
-Qwen 3 235B-A22B & GQA & FA3 & MoE $E{=}128$, $k{=}8$, $E_s{=}0$,
-global-batch balancing & RMSNorm + Pre-LN & RoPE & BPE 152K &
+Gemma 3 27B & \glsterm{gqa}{GQA} + 5 local : 1 global (window 1024) & FA2 & dense \glsterm{swiglu}{SwiGLU} &
+\glsterm{rmsnorm}{RMSNorm} + Peri-LN + QK-Norm & \glsterm{rope}{RoPE} + interleaved windows & \glsterm{sentencepiece}{SentencePiece}
+\glsterm{bpe}{BPE} & none disclosed & native MM (4B$+$ Vision) \\
+Qwen 2.5 / Qwen 2.5-VL & \glsterm{gqa}{GQA} & FA2 / FA3 & dense \glsterm{swiglu}{SwiGLU} &
+\glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN} & \glsterm{rope}{RoPE} + \glsterm{yarn}{YaRN} & \glsterm{bpe}{BPE} 152K & none disclosed &
+projector + \glsterm{llm}{LLM} (VL) \\
+Qwen 3 235B-A22B & \glsterm{gqa}{GQA} & FA3 & MoE $E{=}128$, $k{=}8$, $E_s{=}0$,
+global-batch balancing & \glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN} & \glsterm{rope}{RoPE} & \glsterm{bpe}{BPE} 152K &
 none disclosed & text-only (separate MM line) \\
 \midrule
-Claude 3.7-class & ND & ND & ND & ND & ND & proprietary BPE & ND &
+\glsterm{claude}{Claude} 3.7-class & ND & ND & ND & ND & ND & proprietary \glsterm{bpe}{BPE} & ND &
 native MM \\
 GPT-class (o-/$\!4o$/5) & ND & ND & ND & ND & ND & tiktoken-family &
 ND & native MM (4o, 5) \\
-Gemini 2.5 & ND & ND & ND & ND & ND & SentencePiece & ND &
+Gemini 2.5 & ND & ND & ND & ND & ND & \glsterm{sentencepiece}{SentencePiece} & ND &
 native MM \\
 \bottomrule
 \end{tabularx}
@@ -100,12 +100,12 @@ briefly to anchor each cell.
 DeepSeek V3 is a 671B-total / 37B-active MoE with
 $E = 256$, $E_s = 1$, $k = 8$, auxiliary-loss-free
 balancing~\citep[\S 2.2]{deepseek-v3}.\footnote{KB excerpt:
-\texttt{kb/excerpts/deepseek-v3.md\#sec-2}.} The attention sublayer
-uses MLA with joint-compression rank $d_c = 512$ and the
-decoupled-RoPE construction of \citet[\S 2.1.2 Eq.~9]{deepseek-v2}.
-Multi-Token Prediction with one auxiliary head is part of the
+\texttt{kb/excerpts/\glsterm{precision-pinning}{deepseek-v3}.md\#sec-2}.} The attention sublayer
+uses \glsterm{multi-head-latent-attention}{MLA} with joint-compression rank $d_c = 512$ and the
+decoupled-\glsterm{rope}{RoPE} construction of \citet[\S 2.1.2 Eq.~9]{deepseek-v2}.
+\glsterm{multi-token-prediction}{Multi-Token Prediction} with one auxiliary head is part of the
 pretraining objective~\citep[\S 2.3.1]{deepseek-v3}.
-RMSNorm in Pre-LN placement is inherited from the LLaMA
+\glsterm{rmsnorm}{RMSNorm} in \glsterm{pre-ln}{Pre-LN} placement is inherited from the LLaMA
 template~\citep{touvron2023}. DeepSeek-R1 is a continued-RL fine-tune
 of V3-base with no architectural changes other than a training-stage
 thinking-mode toggle~\citep[\S 2]{deepseek-r1}; its row repeats V3's
@@ -113,60 +113,60 @@ choices.
 
 \paragraph{Llama 4 (Scout, Maverick).}
 LLaMA 4 ships two MoE configurations: Scout with $E = 16$ and
-Maverick with $E = 128$, both with $E_s = 1$, $k = 1$, and the FFN
-sublayer alternated between dense SwiGLU and MoE per
+Maverick with $E = 128$, both with $E_s = 1$, $k = 1$, and the \glsterm{ffn}{FFN}
+sublayer alternated between dense \glsterm{swiglu}{SwiGLU} and MoE per
 layer~\citep[\S 2.1]{meta-llama4}.\deepencite{meta-llama4 §2.1 ---
 Llama 4 release card / Meta release blog, citation-pending: the
 \texttt{meta-llama4} cite-key currently maps only the long-context /
 iRoPE detail; the MoE and native-multimodal architectural detail
 needs consolidation into a separate \texttt{meta-llama4-release}
-entry.} Position encoding is iRoPE (3:1
-RoPE-to-NoPE) with temperature scaling on the NoPE
+entry.} Position encoding is \glsterm{irope}{iRoPE} (3:1
+\glsterm{rope}{RoPE}-to-\glsterm{nope}{NoPE}) with temperature scaling on the \glsterm{nope}{NoPE}
 layers~\citep[\S 2.1, \S 2.4]{meta-llama4}, trained natively at
-$256\text{K}$. KV-sharing is GQA-8, inherited from
+$256\text{K}$. KV-sharing is \glsterm{gqa}{GQA}-8, inherited from
 LLaMA-3~\citep[\S 3.1]{meta-llama3}. Multimodality is native: image
 and text are jointly pretrained from scratch~\citep[\S 2]{meta-llama4}.
 
 \paragraph{Mistral Large 2.}
-Mistral Large 2 is dense SwiGLU throughout, with GQA-8 attention and
-RMSNorm + Pre-LN inherited from the Mistral 7B
+\glsterm{mistral}{Mistral} Large 2 is dense \glsterm{swiglu}{SwiGLU} throughout, with \glsterm{gqa}{GQA}-8 attention and
+\glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN} inherited from the \glsterm{mistral}{Mistral} 7B
 template~\citep[\S 2]{jiang2023}.\deepencite{citation-pending: Mistral
 Large 2 release notes / Hugging Face model card, July 2024;
 \texttt{mistral-large-2} is not yet a references.bib entry.}
-Position encoding is RoPE; multi-token output is not disclosed beyond
+Position encoding is \glsterm{rope}{RoPE}; multi-token output is not disclosed beyond
 single-head autoregression. The Pixtral variant adds a projector +
-vision encoder (\cref{sec:multimodal}); the text-only Mistral Large
+vision encoder (\cref{sec:multimodal}); the text-only \glsterm{mistral}{Mistral} Large
 2 is not multimodal.\footnote{\textbf{Superseded 2025-12-02.}
-Mistral Large 3 \citep{mistral-large3-2025} crosses the
-Mistral flagship line over to MoE: 675B-total / 41B-active sparse
+\glsterm{mistral}{Mistral} Large 3 \citep{mistral-large3-2025} crosses the
+\glsterm{mistral}{Mistral} flagship line over to MoE: 675B-total / 41B-active sparse
 MoE under Apache 2.0, 256K context, native multimodal. The
-\texttt{Mistral Large 2} row is retained here because its detail is
+\texttt{\glsterm{mistral}{Mistral} Large 2} row is retained here because its detail is
 the publicly-documented dense reference point Paper 1 \S\ref{sec:ffn}
 uses as a counter-example; on the dense-vs-MoE roster of
-\S\ref{sec:snapshot-divergence}, the Mistral row should now be read
+\S\ref{sec:snapshot-divergence}, the \glsterm{mistral}{Mistral} row should now be read
 as MoE going forward, and the dense-vs-MoE split tilts further
 toward MoE than the row alone shows.}
 
 \paragraph{Gemma 3.}
-Gemma 3 27B uses GQA with a $5{:}1$ local-to-global interleave (sliding
+Gemma 3 27B uses \glsterm{gqa}{GQA} with a $5{:}1$ local-to-global interleave (sliding
 window $1024$ tokens) of Gemma 2's pattern~\citep[\S 2.1]{gemma3} --- five
 sliding-window local-attention layers per one full global-attention layer. Normalization
 is the Peri-LN placement of \citet{peri-ln2025} combined with QK-Norm
 on the attention path~\citep[\S 2.1]{gemma3,olmo2}. Position encoding
-is RoPE; the FFN is dense SwiGLU; multimodality is native via a
+is \glsterm{rope}{RoPE}; the \glsterm{ffn}{FFN} is dense \glsterm{swiglu}{SwiGLU}; multimodality is native via a
 SigLIP-class vision
 encoder.\deepencite{gemma3 §3: multimodal pipeline detail;
 verify SigLIP variant against the Gemma 3 release card.}
 
 \paragraph{Qwen 2.5 and Qwen 3.}
-Qwen 2.5 is dense SwiGLU with GQA, RMSNorm + Pre-LN, RoPE + YaRN, and
-a $152$K-vocab BPE tokenizer.\deepencite{citation-pending: Qwen 2.5
+Qwen 2.5 is dense \glsterm{swiglu}{SwiGLU} with \glsterm{gqa}{GQA}, \glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN}, \glsterm{rope}{RoPE} + \glsterm{yarn}{YaRN}, and
+a $152$K-vocab \glsterm{bpe}{BPE} tokenizer.\deepencite{citation-pending: Qwen 2.5
 release card; \texttt{qwen3} maps the Qwen 3 paper, not Qwen 2.5
-architectural detail.} Qwen 3 (235B-A22B) replaces the dense FFN with
+architectural detail.} Qwen 3 (235B-A22B) replaces the dense \glsterm{ffn}{FFN} with
 a fine-grained MoE at $E = 128$, $E_s = 0$, $k = 8$, with
-global-batch load balancing in place of auxiliary-loss
-balancing~\citep[\S 2.1]{qwen3}. Crucially Qwen 3 keeps GQA rather
-than MLA, despite training in the same year as DeepSeek V3 --- the
+\glsterm{global-batch-load-balancing}{global-batch load balancing} in place of auxiliary-loss
+balancing~\citep[\S 2.1]{qwen3}. Crucially Qwen 3 keeps \glsterm{gqa}{GQA} rather
+than \glsterm{multi-head-latent-attention}{MLA}, despite training in the same year as DeepSeek V3 --- the
 lab-level KV-sharing split flagged in
 \cref{sec:attention-kv-sharing}. The multimodal line (Qwen 2.5-VL)
 uses a projector, not native multimodal.
@@ -175,12 +175,12 @@ uses a projector, not native multimodal.
 \label{sec:snapshot-undisclosed}
 
 The lower block of \cref{tab:frontier-snapshot} is the closed-source
-frontier. None of Anthropic (Claude 3.5 / 3.7 / 4-class), OpenAI
+frontier. None of Anthropic (\glsterm{claude}{Claude} 3.5 / 3.7 / 4-class), OpenAI
 (GPT-4o, o1 / o3, GPT-5), or Google DeepMind (Gemini 2.5) has
 published per-axis architectural detail at the level of the open
 labs. The model cards report capabilities, training data scale,
 context length, and multimodal coverage; they do not report
-KV-sharing strategy, attention-implementation kernel, FFN family, or
+KV-sharing strategy, attention-implementation kernel, \glsterm{ffn}{FFN} family, or
 normalization placement.\deepencite{Anthropic Claude 3.7 system card
 / OpenAI GPT-4o and GPT-5 system cards / Google Gemini 2.5
 technical report --- citation-pending: vendor system cards are
@@ -190,18 +190,18 @@ architectural claims; consolidate into separate cite-keys once
 formal venues catch up.} What is publicly known is restricted to:
 
 \begin{itemize}
-\item \emph{Tokenization family.} OpenAI's tiktoken family is
-publicly documented; Anthropic's BPE-class tokenizer is documented
+\item \emph{\glsterm{tokenization}{Tokenization} family.} OpenAI's tiktoken family is
+publicly documented; Anthropic's \glsterm{bpe}{BPE}-class tokenizer is documented
 in the API reference but not in a primary technical report; Gemini
-uses a SentencePiece-class tokenizer disclosed in the Gemma 3 paper
+uses a \glsterm{sentencepiece}{SentencePiece}-class tokenizer disclosed in the Gemma 3 paper
 \citep[\S 2.3]{gemma3} as a sibling to Gemini's own.
-\item \emph{Multimodal pattern.} GPT-4o, Claude 3.5 Sonnet onward,
+\item \emph{Multimodal pattern.} GPT-4o, \glsterm{claude}{Claude} 3.5 Sonnet onward,
 and Gemini 2.5 are native-multimodal (image + audio + text in a
 single pretraining); this is disclosed at capability level in each
 vendor's system card and is the third integration pattern of
 \cref{sec:multimodal}.
 \item \emph{Reasoning-mode toggle.} OpenAI o1 / o3 and (since 3.7)
-Claude expose a thinking-mode generation phase, mirroring the
+\glsterm{claude}{Claude} expose a thinking-mode generation phase, mirroring the
 DeepSeek-R1 / Qwen 3 toggle~\citep[\S 2]{deepseek-r1, qwen3}.
 Whether this requires architectural support beyond training-stage
 changes is contested
@@ -224,10 +224,10 @@ of \cref{sec:contradictions}, not a claim of this section.
 
 \paragraph{Caveat: closed-vendor row labels age faster than the
 architectural picture.} The closed-row labels in
-\cref{tab:frontier-snapshot} (``Claude 3.7-class,'' ``GPT-class
+\cref{tab:frontier-snapshot} (``\glsterm{claude}{Claude} 3.7-class,'' ``GPT-class
 (o-/$\!4o$/5),'' ``Gemini 2.5'') are accurate as a 2025-Q1 vintage of
 the closed lineup. By 2026-Q2 each lab has shipped multiple point
-releases beyond those labels --- Anthropic's Claude 4-family
+releases beyond those labels --- Anthropic's \glsterm{claude}{Claude} 4-family
 (May 2025) plus subsequent Opus 4.x and Sonnet 4.x updates; OpenAI's
 GPT-5 (August 2025) folding the o-series into a unified
 fast-vs-thinking tier, with subsequent GPT-5.x point releases; and
@@ -259,42 +259,42 @@ Five of the eight axes show near-universal agreement across the
 seven disclosed rows of \cref{tab:frontier-snapshot}.
 
 \begin{enumerate}
-\item \textbf{Normalization: RMSNorm + Pre-LN-class placement.} All
-seven disclosed models use RMSNorm with the norm placed before each
+\item \textbf{Normalization: \glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN}-class placement.} All
+seven disclosed models use \glsterm{rmsnorm}{RMSNorm} with the norm placed before each
 sublayer rather than after the residual add. Gemma 3 and OLMo 2
 extend this to Peri-LN with QK-Norm~\citep{gemma3,olmo2}; the base
-choice (RMSNorm + Pre-LN + $1/\sqrt{N}$ residual init) is universal
+choice (\glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN} + $1/\sqrt{N}$ residual init) is universal
 (\cref{sec:normalization-axis}).
 
-\item \textbf{Positional encoding: RoPE plus a long-context
-extension.} All seven disclosed rows apply RoPE to $Q, K$ at every
+\item \textbf{Positional encoding: \glsterm{rope}{RoPE} plus a long-context
+extension.} All seven disclosed rows apply \glsterm{rope}{RoPE} to $Q, K$ at every
 attention layer (\cref{sec:positional-encoding}). The extension varies ---
-vanilla, YaRN, iRoPE, decoupled-RoPE for MLA, interleaved
+vanilla, \glsterm{yarn}{YaRN}, \glsterm{irope}{iRoPE}, decoupled-\glsterm{rope}{RoPE} for \glsterm{multi-head-latent-attention}{MLA}, interleaved
 local / global --- but the base mechanism (multiplicative rotation
 of $Q, K$ parameterised by $\theta_i = \theta^{-2(i-1)/d_h}$) is
 shared.
 
-\item \textbf{FFN gating: SwiGLU.} Every disclosed model uses
-SwiGLU as the per-position FFN nonlinearity, whether the sublayer
+\item \textbf{\glsterm{ffn}{FFN} gating: \glsterm{swiglu}{SwiGLU}.} Every disclosed model uses
+\glsterm{swiglu}{SwiGLU} as the per-position \glsterm{ffn}{FFN} nonlinearity, whether the sublayer
 is dense or MoE. The 3-matrix
 $\mathrm{FFN}(x) = (W_3 (\mathrm{Swish}(W_1 x) \odot W_2 x))$
 form of \citet[Eq.~6]{shazeer2020} is universal; the dense-vs-MoE
 split is on the multiplicity around it, not on the activation.
 
 \item \textbf{KV-sharing: head-count reduction.} No disclosed
-2026-frontier model uses full MHA. Every row sits at GQA-8,
-GQA-with-windowing, or MLA --- all reducing $H_{\mathrm{kv}}$ below
-$H_q$. The lab-aligned split between GQA and MLA persists, but
+2026-frontier model uses full \glsterm{mha}{MHA}. Every row sits at \glsterm{gqa}{GQA}-8,
+\glsterm{gqa}{GQA}-with-windowing, or \glsterm{multi-head-latent-attention}{MLA} --- all reducing $H_{\mathrm{kv}}$ below
+$H_q$. The lab-aligned split between \glsterm{gqa}{GQA} and \glsterm{multi-head-latent-attention}{MLA} persists, but
 \emph{some} form of head-count reduction is universal, and every
-major inference framework (FlashAttention, vLLM, SGLang) now ships
-first-class GQA and increasingly first-class
-MLA~\citep{kwon2023,dao2023}.
+major inference framework (\glsterm{flashattention}{FlashAttention}, vLLM, \glsterm{compressed-fsm-2}{SGLang}) now ships
+first-class \glsterm{gqa}{GQA} and increasingly first-class
+\glsterm{multi-head-latent-attention}{MLA}~\citep{kwon2023,dao2023}.
 
-\item \textbf{Attention implementation: FlashAttention-family exact
-attention.} Every disclosed model uses a FlashAttention-class
+\item \textbf{Attention implementation: \glsterm{flashattention}{FlashAttention}-family exact
+attention.} Every disclosed model uses a \glsterm{flashattention}{FlashAttention}-class
 exact-attention kernel: FA2 on Ampere, FA3 on Hopper, with
-MLA-aware variants for the DeepSeek
-stack~\citep{dao2023,shah2024,deepseek-v3}. NSA's three-branch
+\glsterm{multi-head-latent-attention}{MLA}-aware variants for the DeepSeek
+stack~\citep{dao2023,shah2024,deepseek-v3}. \glsterm{nsa}{NSA}'s three-branch
 sparse attention~\citep{yuan2025} has not yet shipped at production
 scale at any disclosed lab; the formula
 $\softmax(QK^\top/\sqrt{d_h})V$ is unchanged across implementations.
@@ -305,15 +305,15 @@ Five-of-eight convergence is striking but consistent with the rest
 of the paper: the axes that have converged are the ones where the
 \emph{primary citation set} of \cref{sec:positional-encoding} through
 \cref{sec:normalization-axis} contains a single dominant lineage
-(RoPE, SwiGLU, RMSNorm + Pre-LN, head-count-reduced KV-sharing,
-FlashAttention-class implementation). The axes that remain split
+(\glsterm{rope}{RoPE}, \glsterm{swiglu}{SwiGLU}, \glsterm{rmsnorm}{RMSNorm} + \glsterm{pre-ln}{Pre-LN}, head-count-reduced KV-sharing,
+\glsterm{flashattention}{FlashAttention}-class implementation). The axes that remain split
 are the ones where the primary set still contains parallel
-lineages (MoE-vs-dense; cross-attention-vs-projector-vs-native
-multimodal; GQA-vs-MLA at the lab level). Returning to canonical
+lineages (MoE-vs-dense; \glsterm{cross-attention}{cross-attention}-vs-projector-vs-native
+multimodal; \glsterm{gqa}{GQA}-vs-\glsterm{multi-head-latent-attention}{MLA} at the lab level). Returning to canonical
 math: the residual-stream forward pass on a 2026 frontier model
-collapses to the same five-line equation (RMSNorm $\to$ rotated-$Q,K$
+collapses to the same five-line equation (\glsterm{rmsnorm}{RMSNorm} $\to$ rotated-$Q,K$
 attention with reduced $H_{\mathrm{kv}}$ $\to$ residual-add $\to$
-RMSNorm $\to$ SwiGLU FFN or routed SwiGLU MoE $\to$ residual-add)
+\glsterm{rmsnorm}{RMSNorm} $\to$ \glsterm{swiglu}{SwiGLU} \glsterm{ffn}{FFN} or routed \glsterm{swiglu}{SwiGLU} MoE $\to$ residual-add)
 across every disclosed row. The convergence is not a stylistic
 preference; it is a fixed point of the per-axis arguments in
 \cref{sec:tokenization-embedding,sec:positional-encoding,sec:attention-kv-sharing,sec:attention-hardware-axis,sec:ffn,sec:normalization-axis}.
@@ -326,23 +326,23 @@ Three axes carry live splits in \cref{tab:frontier-snapshot}.
 
 \paragraph{KV-sharing strategy: GQA versus MLA.}
 The split is lab-aligned, not capability-aligned. DeepSeek V2 / V3 /
-R1 use MLA throughout~\citep{deepseek-v2,deepseek-v3,deepseek-r1};
-every other disclosed lab (Meta, Mistral, Google, Alibaba) uses GQA.
-The contradiction in \cref{sec:attention-kv-sharing} is that MLA's
-quality story --- matched MHA quality at $4\times$ smaller KV-cache
+R1 use \glsterm{multi-head-latent-attention}{MLA} throughout~\citep{deepseek-v2,deepseek-v3,deepseek-r1};
+every other disclosed lab (Meta, \glsterm{mistral}{Mistral}, Google, Alibaba) uses \glsterm{gqa}{GQA}.
+The contradiction in \cref{sec:attention-kv-sharing} is that \glsterm{multi-head-latent-attention}{MLA}'s
+quality story --- matched \glsterm{mha}{MHA} quality at $4\times$ smaller KV-cache
 --- is a single-source primary claim
 (\citealp{deepseek-v2}) and has not been independently reproduced
 at frontier scale by a non-DeepSeek lab. The serving-stack maturity
-gap (FlashAttention's GQA path being older than its MLA path) and
-the recipe risk of MLA's decoupled-RoPE construction
+gap (\glsterm{flashattention}{FlashAttention}'s \glsterm{gqa}{GQA} path being older than its \glsterm{multi-head-latent-attention}{MLA} path) and
+the recipe risk of \glsterm{multi-head-latent-attention}{MLA}'s decoupled-\glsterm{rope}{RoPE} construction
 (\cref{sec:attention-kv-sharing}) are plausible explanations for the
 non-crossover. \cref{sec:contradictions} returns to this.
 
 \paragraph{Dense versus MoE on the FFN.}
 The dense-versus-MoE split is genuine but tilting further toward MoE
 through 2025--26. LLaMA-3 8B and 70B are dense~\citep{meta-llama3};
-Qwen 2.5 base is dense; Mistral Large 2 was dense, but the lab's
-flagship line crossed to MoE with Mistral Large 3 (Dec 2025;
+Qwen 2.5 base is dense; \glsterm{mistral}{Mistral} Large 2 was dense, but the lab's
+flagship line crossed to MoE with \glsterm{mistral}{Mistral} Large 3 (Dec 2025;
 \citealp{mistral-large3-2025}: 675B-total / 41B-active sparse MoE).
 DeepSeek V3 is MoE with $E = 256$, $E_s = 1$, $k = 8$; Qwen 3 is MoE
 with $E = 128$, $E_s = 0$, $k = 8$; Llama 4 is hybrid (alternating
@@ -354,7 +354,7 @@ this list --- but of which MoE design point: $E$, $E_s$, $k$, and
 load-balancing discipline. The contradiction in
 \cref{sec:ffn} is the matched-active-parameter quality
 claim~\citep{deepseek-v3,deepseekmoe2024}: that fine-grained MoE
-matches dense quality at matched active parameters. Cross-lab
+matches dense quality at matched active \glsterm{parameters}{parameters}. Cross-lab
 reproduction at frontier scale is sparse, and Qwen 3's
 shared-expert-free choice~\citep{qwen3} explicitly disagrees with
 DeepSeek V3 on whether $E_s > 0$ helps.
@@ -362,10 +362,10 @@ DeepSeek V3 on whether $E_s > 0$ helps.
 \paragraph{Multimodal integration pattern.}
 Three patterns coexist in \cref{tab:frontier-snapshot}: native
 multimodal pretraining (LLaMA 4, Gemma 3 multimodal variant,
-Claude 3.5+, GPT-4o / 5, Gemini 2.5), projector + LLM
-(Qwen 2.5-VL, Pixtral / Mistral Pixtral), and the
-cross-attention-bridge variant (no current frontier model; Flamingo
-descendants are off-frontier). The cross-attention bridge of
+\glsterm{claude}{Claude} 3.5+, GPT-4o / 5, Gemini 2.5), projector + \glsterm{llm}{LLM}
+(Qwen 2.5-VL, Pixtral / \glsterm{mistral}{Mistral} Pixtral), and the
+\glsterm{cross-attention}{cross-attention}-bridge variant (no current frontier model; Flamingo
+descendants are off-frontier). The \glsterm{cross-attention}{cross-attention} bridge of
 \citet{alayrac2022-flamingo} has effectively been replaced by the
 two simpler patterns; the live split is between projector and
 native multimodal. The vendor claim that native multimodal produces
@@ -379,24 +379,24 @@ here is uniform but undisclosed at architectural detail.
 
 The empirical state of the disclosed 2026 frontier is summarized in
 two sentences. \textbf{The convergence is a five-axis fixed point
-across all disclosed labs}: RoPE-with-extension, RMSNorm in a
-Pre-LN-class placement, SwiGLU per-position FFN, head-count-reduced
-KV-sharing (some form of GQA or MLA), FlashAttention-class exact
+across all disclosed labs}: \glsterm{rope}{RoPE}-with-extension, \glsterm{rmsnorm}{RMSNorm} in a
+\glsterm{pre-ln}{Pre-LN}-class placement, \glsterm{swiglu}{SwiGLU} per-position \glsterm{ffn}{FFN}, head-count-reduced
+KV-sharing (some form of \glsterm{gqa}{GQA} or \glsterm{multi-head-latent-attention}{MLA}), \glsterm{flashattention}{FlashAttention}-class exact
 attention; \textbf{the residual splits are concentrated in three
-axes}: KV-sharing strategy (GQA vs MLA, lab-aligned, single-source
-quality claim), dense-vs-MoE on the FFN multiplicity (genuine
+axes}: KV-sharing strategy (\glsterm{gqa}{GQA} vs \glsterm{multi-head-latent-attention}{MLA}, lab-aligned, single-source
+quality claim), dense-vs-MoE on the \glsterm{ffn}{FFN} multiplicity (genuine
 quality / serving-cost trade with cross-lab disagreement on
 $E_s > 0$), and multimodal integration pattern (projector vs native,
-no controlled cross-lab study). The undisclosed cluster (Claude,
+no controlled cross-lab study). The undisclosed cluster (\glsterm{claude}{Claude},
 GPT, Gemini) is silent on all eight axes at architectural detail
 and provides no signal on whether it sits inside or outside the
 disclosed convergence neighbourhood.
 
 The remaining contradictions surfaced through
 \cref{sec:positional-encoding,sec:attention-kv-sharing,sec:attention-hardware-axis,sec:ffn,sec:state-space-and-hybrids,sec:multi-token-output,sec:multimodal,sec:inference-adjuncts}
---- MLA-vs-MHA at frontier scale, NSA-vs-FA3 head-to-head,
-SSM-hybrid quality at frontier, the matched-active MoE quality gap,
-long-context extrapolation method comparison, MTP at non-DeepSeek
+--- \glsterm{multi-head-latent-attention}{MLA}-vs-\glsterm{mha}{MHA} at frontier scale, \glsterm{nsa}{NSA}-vs-FA3 head-to-head,
+\glsterm{state-space-model}{SSM}-hybrid quality at frontier, the matched-active MoE quality gap,
+long-context extrapolation method comparison, \glsterm{multi-token-prediction}{MTP} at non-DeepSeek
 scale, native-multimodal quality lift --- are now visible as a
 single concentrated set. \Cref{sec:contradictions} treats them as
 the open frontier of the architecture story, and asks for each what

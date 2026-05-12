@@ -12,7 +12,7 @@ do not by themselves determine what the deployed system can serve at
 matched cost. Three categories of \emph{inference-time} concern --- the
 KV-cache lifecycle and its memory-allocation discipline, weight /
 activation / KV quantization regimes, and structured-output enforcement
-through constrained decoding --- are the load-bearing reason a 2026
+through \glsterm{constrained-decoding-2}{constrained decoding} --- are the load-bearing reason a 2026
 frontier model is feasible to ship. Each constrains which choices in
 \cref{sec:kv-sharing,sec:hardware-attention,sec:ffn,sec:state-space}
 can be taken: paged allocation requires a block-friendly attention
@@ -24,9 +24,9 @@ tokenizer-aligned. The thesis of this section is that these are
 \subsection{KV-cache lifecycle and PagedAttention}
 \label{sec:kv-paged}
 
-The autoregressive decode loop reads, at every step, the cached K/V
+The \glsterm{autoregressive}{autoregressive} decode loop reads, at every step, the cached K/V
 projection of every prior token at every layer. For an OPT-13B request
-of 2048 tokens the KV cache is $\approx 1.6$~GB, with the per-token
+of 2048 tokens the \glsterm{kv-cache}{KV cache} is $\approx 1.6$~GB, with the per-token
 cost $2 \cdot L \cdot n_h \cdot d_h \cdot b$ bytes where $b$ is the
 element width \citep[\S 3]{kwon2023}.\footnote{KB excerpt:
 \texttt{kb/excerpts/kwon2023.md\#sec-3}.} Pre-2023 serving stacks
@@ -41,7 +41,7 @@ $20.4$--$38.2$\% of allocated KV memory onto actual token state
 \citep[\S 3, Fig.~2]{kwon2023}.
 
 \citet{kwon2023} resolves the waste taxonomy by partitioning each
-sequence's KV cache into fixed-size \emph{KV blocks} of $B$ tokens
+sequence's \glsterm{kv-cache}{KV cache} into fixed-size \emph{KV blocks} of $B$ tokens
 (typical $B = 16$) and decomposing the attention sum block-wise
 \citep[\S 4.1, Eq.~4]{kwon2023}\footnote{KB excerpt:
 \texttt{kb/excerpts/kwon2023.md\#sec-4-1}.}:
@@ -69,7 +69,7 @@ OPT-13B/66B/175B \citep[abstract, \S 6.1]{kwon2023}; the cache-utilization
 number rises from $\sim 30$\% to $96.3$\% \citep[\S 3, Fig.~2]{kwon2023}.
 
 \begin{analogy}
-PagedAttention is virtual memory for the KV cache. The block table is
+\glsterm{pagedattention}{PagedAttention} is virtual memory for the \glsterm{kv-cache}{KV cache}. The block table is
 a page table; allocate-on-demand is demand paging; copy-on-write across
 sampled continuations is the same pattern as \texttt{fork()}'s
 COW pages; swap evicts blocks to CPU RAM as a swap device. Returning
@@ -80,11 +80,11 @@ from a non-contiguous address is what frees the allocator from the
 maximum-length reservation that produced the $\sim 70$\% waste.
 \end{analogy}
 
-The architectural pressure runs the other way too: PagedAttention's
+The architectural pressure runs the other way too: \glsterm{pagedattention}{PagedAttention}'s
 block-decomposed kernel is what enables the cross-request prefix sharing
-of RadixAttention \citep[\S 3]{zheng2024-sglang}\footnote{KB excerpt:
+of \glsterm{radixattention}{RadixAttention} \citep[\S 3]{zheng2024-sglang}\footnote{KB excerpt:
 \texttt{kb/excerpts/zheng2024-sglang.md\#sec-3}.}, the
-training-time KV compression of MQA / GQA / MLA in
+training-time KV compression of \glsterm{mqa}{MQA} / \glsterm{gqa}{GQA} / \glsterm{multi-head-latent-attention}{MLA} in
 \cref{sec:kv-sharing} (which act on the per-token block size), and the
 KV-quantization regimes below (which change the element width $b$ but
 not the layout).
@@ -92,8 +92,8 @@ not the layout).
 \subsection{Quantization regimes}
 \label{sec:quantization}
 
-LLM quantization is a family of decisions indexed by \emph{what} is
-quantized (weights, activations, KV cache), \emph{when} (post-training
+\glsterm{llm}{LLM} quantization is a family of decisions indexed by \emph{what} is
+quantized (weights, activations, \glsterm{kv-cache}{KV cache}), \emph{when} (post-training
 vs.\ training-aware vs.\ native low-bit pretraining), and \emph{to what
 precision} (8-bit, 4-bit, 2-bit, ternary). The uniform integer map
 underlying every method below is
@@ -114,7 +114,7 @@ infeasible without re-engineering the kernel. This single constraint
 generates the lineage of methods.
 
 \paragraph{INT8 (W8A8) --- SmoothQuant.}
-Past $\sim 6.7$B parameters, LLM activations develop systematic
+Past $\sim 6.7$B \glsterm{parameters}{parameters}, \glsterm{llm}{LLM} activations develop systematic
 outliers $\sim 100\times$ larger than typical values, persistent in
 fixed channels across tokens \citep[\S 3]{xiao2023-smoothquant}. Naive
 per-tensor INT8 catastrophically degrades quality (OPT-175B accuracy
@@ -153,41 +153,41 @@ excerpt: \texttt{kb/excerpts/frantar2022.md\#sec-3-layerwise}.}
 \operatorname*{argmin}_{\widehat{W}} \, \|W X - \widehat{W} X\|_2^2
 \label{eq:gptq-objective}
 \end{equation}
-to LLM scale by accelerating the Optimal Brain Quantization baseline
+to \glsterm{llm}{LLM} scale by accelerating the Optimal Brain Quantization baseline
 along three axes: arbitrary fixed column order rather than per-row
 greedy ordering, lazy batched updates over $B = 128$ columns, and a
 Cholesky reformulation of the inverse-Hessian update with damping
 $\lambda \approx 1\%$ of the diagonal \citep[\S 4]{frantar2022}.\footnote{KB
 excerpt: \texttt{kb/excerpts/frantar2022.md\#sec-4-algorithm}.} The
 joint effect: OPT-175B and BLOOM-176B at 3--4 bits/weight track FP16
-perplexity, where round-to-nearest at the same precision diverges
+\glsterm{perplexity}{perplexity}, where round-to-nearest at the same precision diverges
 ($110$ and $571$ respectively
 \citep[\S 1, Fig.~1]{frantar2022}).\footnote{KB excerpt:
-\texttt{kb/excerpts/frantar2022.md\#sec-1-figure-1}.} GPTQ is the
+\texttt{kb/excerpts/frantar2022.md\#sec-1-figure-1}.} \glsterm{gptq}{GPTQ} is the
 canonical accurate one-shot weight-only PTQ method at the 100B+ scale
-and is the reference against which AWQ and the GGUF Q$k$\_$\!$M family
+and is the reference against which \glsterm{awq}{AWQ} and the GGUF Q$k$\_$\!$M family
 are still benchmarked.
 
 \paragraph{FP8 (training).}
-Training in FP8 with tile-based scales (128$\times$128 weight blocks,
+Training in \glsterm{fp8}{FP8} with tile-based scales (128$\times$128 weight blocks,
 1$\times$128 activation vectors) was first validated at trillion-token
-scale by DeepSeek-V3 \citep[\S 2.5]{deepseek-v3}, with H100/H200/Blackwell
-hardware FP8 paths. We treat FP8 in
+scale by \glsterm{precision-pinning}{DeepSeek-V3} \citep[\S 2.5]{deepseek-v3}, with H100/H200/Blackwell
+hardware \glsterm{fp8}{FP8} paths. We treat \glsterm{fp8}{FP8} in
 \cref{sec:training-mixed-precision-paper-2}; the relevance to this
-section is that an FP8-trained checkpoint can be served \emph{without}
+section is that an \glsterm{fp8}{FP8}-trained checkpoint can be served \emph{without}
 PTQ, collapsing two stages into one.
 
 \paragraph{NVFP4 (frontier 2026).}
 Microscaling formats from the OCP standard pair small blocks with a
-shared exponent. NVFP4 is NVIDIA's Blackwell-generation 4-bit
+shared exponent. \glsterm{nvfp4}{NVFP4} is NVIDIA's Blackwell-generation 4-bit
 floating-point with per-microblock scales and is the first 4-bit format
 shipped with native tensor-core acceleration; vendor materials report
 it as production-ready for inference at frontier scale, though
 third-party reproductions outside NVIDIA-published benchmarks are
 sparse as of 2026-Q2 \citep[FORUM-SIGNAL]{deepseek-v3}.\footnote{No
-peer-reviewed primary source for NVFP4 LLM quality at frontier scale
+peer-reviewed primary source for \glsterm{nvfp4}{NVFP4} \glsterm{llm}{LLM} quality at frontier scale
 exists in the KB as of \texttt{2026-05}; the citation here points to
-the closest analogue (FP8 production training) and flags the gap.}
+the closest analogue (\glsterm{fp8}{FP8} production training) and flags the gap.}
 
 \paragraph{1.58-bit --- BitNet.}
 \citet{ma2024-bitnet} take the dual position: rather than quantize a
@@ -203,10 +203,10 @@ excerpt: \texttt{kb/excerpts/ma2024-bitnet.md\#sec-2}.}:
 \end{equation}
 with $\operatorname{RoundClip}(x, a, b) = \max(a, \min(b, \operatorname{round}(x)))$;
 activations remain INT8 (the regime is W1.58A8, not pure 1-bit). The
-architecture is otherwise LLaMA-alike (RMSNorm, SwiGLU, RoPE, no
+architecture is otherwise LLaMA-alike (\glsterm{rmsnorm}{RMSNorm}, \glsterm{swiglu}{SwiGLU}, \glsterm{rope}{RoPE}, no
 biases) so it integrates into the open-source serving stack
-unchanged \citep[\S 2]{ma2024-bitnet}. At 3B parameters,
-BitNet b1.58 matches FP16 LLaMA perplexity ($9.91$ vs.\ $10.04$) at
+unchanged \citep[\S 2]{ma2024-bitnet}. At 3B \glsterm{parameters}{parameters},
+BitNet b1.58 matches FP16 LLaMA \glsterm{perplexity}{perplexity} ($9.91$ vs.\ $10.04$) at
 $2.71\times$ lower latency and $3.55\times$ lower memory
 \citep[\S 3, Table~1]{ma2024-bitnet}.\footnote{KB excerpt:
 \texttt{kb/excerpts/ma2024-bitnet.md\#sec-3-table-1}.}
@@ -215,11 +215,11 @@ $2.71\times$ lower latency and $3.55\times$ lower memory
 Each regime operates on a different part of the inference graph.
 SmoothQuant rescales activations and weights pre-runtime so a
 hardware-friendly per-tensor INT8 GEMM suffices --- the MM kernel is
-unchanged, the inputs are reshaped by \cref{eq:smoothquant-eq}. GPTQ
+unchanged, the inputs are reshaped by \cref{eq:smoothquant-eq}. \glsterm{gptq}{GPTQ}
 adjusts only the weight matrix via second-order layer-wise
 reconstruction in \cref{eq:gptq-objective} --- activations stay FP16,
 the LM-head and attention paths are untouched. BitNet replaces
-multiplications with sign-flip-plus-select inside the BitLinear layer
+multiplications with sign-flip-plus-select inside the \glsterm{bitlinear}{BitLinear} layer
 of \cref{eq:bitnet-quant} --- the architecture changes, the energy
 cost on a 7nm chip drops $71\times$ on the matmul-arithmetic
 component \citep[\S 3]{ma2024-bitnet}. Each regime answers a different
@@ -227,15 +227,15 @@ question about which part of the deployment graph is precious.
 \end{intuition}
 
 \begin{contradiction}
-NVFP4's production status at frontier scale is contested. NVIDIA's
-Blackwell-launch materials and vendor blogs report NVFP4 as
+\glsterm{nvfp4}{NVFP4}'s production status at frontier scale is contested. NVIDIA's
+Blackwell-launch materials and vendor blogs report \glsterm{nvfp4}{NVFP4} as
 production-ready for inference of large models with quality matching
-FP8 / FP16 baselines; third-party reproduction as of 2026-Q2 is sparse,
+\glsterm{fp8}{FP8} / FP16 baselines; third-party reproduction as of 2026-Q2 is sparse,
 with most published benchmarks coming from NVIDIA-collaborator labs.
-By contrast, FP8 production training has independent confirmation
-through DeepSeek-V3's open release \citep[\S 2.5]{deepseek-v3} and
-multiple downstream replications. The KB reflects this asymmetry: FP8
-is a tier-A primary claim, NVFP4 is a tier-B forum-signal claim
+By contrast, \glsterm{fp8}{FP8} production training has independent confirmation
+through \glsterm{precision-pinning}{DeepSeek-V3}'s open release \citep[\S 2.5]{deepseek-v3} and
+multiple downstream replications. The KB reflects this asymmetry: \glsterm{fp8}{FP8}
+is a tier-A primary claim, \glsterm{nvfp4}{NVFP4} is a tier-B forum-signal claim
 pending peer-reviewed third-party benchmarks.
 \deepencite{NVFP4 frontier-scale quality}
 \end{contradiction}
@@ -244,11 +244,11 @@ pending peer-reviewed third-party benchmarks.
 \label{sec:constrained-decoding}
 
 The third inference-time concern is enforcing that generated text
-conforms to a target language $\mathcal{G}$ (regex, JSON schema, GBNF,
+conforms to a target language $\mathcal{G}$ (regex, JSON schema, \glsterm{gbnf}{GBNF},
 arbitrary CFG). The mechanism is \emph{logit masking}: at each step,
 zero out the probability of any token whose acceptance would leave the
 partial output outside $\mathcal{G}$, then sample from the renormalized
-distribution. Formally, if $\ell_t \in \R^V$ are the model logits at
+distribution. Formally, if $\ell_t \in \R^V$ are the model \glsterm{logits}{logits} at
 step $t$ and $s_t$ is the grammar-state (FSM state, parser stack
 summary), the constrained-decoding distribution is
 \begin{equation}
@@ -264,10 +264,10 @@ $100$K-vocab model, costing $\sim 100$ms/step, which dominates the
 forward pass.
 
 \citet{willard2023-outlines} reformulate the problem as
-\emph{transitions in an FSM whose alphabet is the model's vocabulary}.
+\emph{transitions in an FSM whose alphabet is the model's \glsterm{vocabulary}{vocabulary}}.
 The standard FSM operates over bytes; the contribution is a
 precomputed \emph{index} mapping each FSM state $s$ to the set of
-vocabulary tokens whose byte sequence keeps the FSM in a valid path
+\glsterm{vocabulary}{vocabulary} tokens whose byte sequence keeps the FSM in a valid path
 \citep[\S 3]{willard2023-outlines}\footnote{KB excerpt:
 \texttt{kb/excerpts/willard2023-outlines.md\#sec-3}.}:
 \begin{equation}
@@ -276,15 +276,15 @@ vocabulary tokens whose byte sequence keeps the FSM in a valid path
 \end{equation}
 The index is built once per grammar; per-step lookup is $O(1)$
 amortized. Extension to context-free grammars goes via LALR(1) parsers
-where the parser state and a stack-summary jointly key the index
+where the parser state and a stack-summary jointly \glsterm{key}{key} the index
 \citep[\S 4]{willard2023-outlines}; for JSON, Python, and SQL the
 stack-summary stays small enough to keep the index practical.
 
 \citet{xgrammar2024} extend Willard--Louf with a partition that
-exploits a property of typical schemas: most vocabulary tokens'
+exploits a property of typical schemas: most \glsterm{vocabulary}{vocabulary} tokens'
 allowed/disallowed status depends only on the current pushdown-automaton
 state, not on stack contents \citep[\S 3]{xgrammar2024}.\footnote{KB
-excerpt: \texttt{kb/excerpts/xgrammar2024.md\#sec-3}.} XGrammar
+excerpt: \texttt{kb/excerpts/xgrammar2024.md\#sec-3}.} \glsterm{context-independent-context-dependent-vocabulary-split}{XGrammar}
 precomputes a per-state \emph{bitmask} over $\mathcal{V}$ for the
 context-independent fraction (typically $\sim 99\%$ on JSON schemas);
 the small context-dependent set ($\sim 1\%$, e.g.\ closing brackets
@@ -293,15 +293,15 @@ persistent stack \citep[\S 4--5]{xgrammar2024}. The two-class engine
 runs grammar checks on the CPU concurrently with the GPU forward pass
 \citep[\S 6]{xgrammar2024}, achieving up to $100\times$ speedup over
 prior solutions and $\leq 40\,\mu$s per token of grammar overhead on
-$100$K-vocab models \citep[\S 7]{xgrammar2024}. By 2026 XGrammar is
-the default constrained-decoding backend in vLLM, SGLang, and
-TensorRT-LLM \citep[FORUM-SIGNAL]{xgrammar2024}.
+$100$K-vocab models \citep[\S 7]{xgrammar2024}. By 2026 \glsterm{context-independent-context-dependent-vocabulary-split}{XGrammar} is
+the default constrained-decoding backend in vLLM, \glsterm{compressed-fsm-2}{SGLang}, and
+TensorRT-\glsterm{llm}{LLM} \citep[FORUM-SIGNAL]{xgrammar2024}.
 
 \begin{analogy}
-Constrained decoding is the \emph{product} of the FSM (which says
+\glsterm{constrained-decoding-2}{Constrained decoding} is the \emph{product} of the FSM (which says
 which tokens are allowed) with the language model (which says which
 tokens are likely): the masked distribution in
-\cref{eq:constrained-decoding} is the model's softmax times the
+\cref{eq:constrained-decoding} is the model's \glsterm{softmax}{softmax} times the
 indicator function of $\mathcal{V}_{\text{allowed}}(s_t)$,
 renormalized. This is why it is architectural rather than a sampling
 choice: the LM head's columns must align one-to-one with the tokenizer
@@ -319,10 +319,10 @@ The three concerns in this section --- KV-block layout, quantization
 regime, constrained-decoding stack --- jointly with the architectural
 choices of \cref{sec:tokenization-embedding} through
 \cref{sec:multimodal} fix the deployable surface of a 2026 frontier
-LLM. We turn next (\cref{sec:frontier-snapshot}) to a model-by-model
+\glsterm{llm}{LLM}. We turn next (\cref{sec:frontier-snapshot}) to a model-by-model
 table of the architectural choices the leading 2026 systems share, and
-where they diverge. PagedAttention has become universal; GQA-or-MLA is
-near-universal; ternary pretraining at 70B+ remains open; NVFP4
+where they diverge. \glsterm{pagedattention}{PagedAttention} has become universal; \glsterm{gqa}{GQA}-or-\glsterm{multi-head-latent-attention}{MLA} is
+near-universal; ternary pretraining at 70B+ remains open; \glsterm{nvfp4}{NVFP4}
 production at frontier scale remains contested. The localized open
 frontiers we have surfaced through \cref{sec:kv-sharing,sec:hardware-attention,sec:state-space}
 and the ones surfaced here are the ones \cref{sec:contradictions} will

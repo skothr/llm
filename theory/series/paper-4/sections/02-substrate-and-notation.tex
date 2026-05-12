@@ -9,25 +9,25 @@
 \label{sec:substrate}
 
 Every interpretability method in this paper reads, intervenes on, or
-decomposes a transformer's internal computation. Before the methods can
+decomposes a \glsterm{transformer}{transformer}'s internal computation. Before the methods can
 disagree productively, the substrate they share must be pinned down.
-This section codifies four pieces of architectural vocabulary --- the
-residual stream as a linear additive bus, attention as a
+This section codifies four pieces of architectural \glsterm{vocabulary}{vocabulary} --- the
+\glsterm{residual-stream}{residual stream} as a linear additive bus, attention as a
 QK\,$+$\,OV decomposition, the feedforward sublayer as a candidate
-associative memory, and the LayerNorm\,$+$\,unembedding as the canonical
+associative memory, and the \glsterm{layer-normalization}{LayerNorm}\,$+$\,unembedding as the canonical
 readout --- and the load-bearing notation
 $\mathbf{h}^{(\ell,t)}, \mathbf{d}_y, f_i^{(\ell,t)}, C$ that
 \S\S\ref{sec:logit-lens-family}--\ref{sec:circuits} inherit. Where
 Paper~1's architecture chapter establishes the substrate as a design
 object, this section recasts it as a \emph{measurement} object: the
-quantities the lens reads, the directions the probe projects onto, the
-sites the patcher swaps, the subgraphs the circuit picks out.
+quantities the lens reads, the directions the \glsterm{probe-2}{probe} projects onto, the
+sites the patcher swaps, the subgraphs the \glsterm{circuit}{circuit} picks out.
 
 \subsection{The residual stream as an additive bus}
 \label{sec:substrate-residual}
 
-Fix a decoder-only transformer $\mathcal{M}$ with $L$ layers, model
-dimension $D$, vocabulary $\mathcal{V}$ of size $V = |\mathcal{V}|$,
+Fix a \glsterm{decoder-only}{decoder-only} \glsterm{transformer}{transformer} $\mathcal{M}$ with $L$ layers, model
+dimension $D$, \glsterm{vocabulary}{vocabulary} $\mathcal{V}$ of size $V = |\mathcal{V}|$,
 $H$ attention heads of head-dimension $d_h$, and unembedding matrix
 $W_U \in \mathbb{R}^{D \times V}$ (Paper~1 notation). On an input
 sequence $\mathbf{x} \in \mathcal{V}^S$ of length $S$, the model emits
@@ -35,11 +35,11 @@ a length-$S$ sequence of residual-stream activations
 $\{\mathbf{h}^{(\ell, t)}\}_{\ell=0,\dots,L;\, t=1,\dots,S}$ with
 $\mathbf{h}^{(\ell, t)} \in \mathbb{R}^D$. The index $\ell = 0$ denotes
 the post-embedding state; $\ell = L$ denotes the final pre-unembed
-state. Batched, the residual stream is a tensor of shape $\BSH$, with
+state. Batched, the \glsterm{residual-stream}{residual stream} is a tensor of shape $\BSH$, with
 $\mathsf{B}$ the batch axis. A head-split per-layer attention tensor is
-$\BHSdh$. The output logits are shape $\bsv$.
+$\BHSdh$. The output \glsterm{logits}{logits} are shape $\bsv$.
 
-The pre-LayerNorm transformer block updates the residual stream
+The pre-\glsterm{layer-normalization}{LayerNorm} \glsterm{transformer}{transformer} block updates the \glsterm{residual-stream}{residual stream}
 additively\footnote{KB excerpt:
 \texttt{kb/excerpts/belrose2023-tuned-lens.md\#sec-2-decomposition}.}
 \citep[\S 2, Eq.~1]{belrose2023-tuned-lens}:
@@ -51,10 +51,10 @@ additively\footnote{KB excerpt:
 \end{equation}
 where $F_\ell$ is the residual output of layer $\ell$ --- attention
 followed by a feedforward sublayer, each with its own pre-block
-LayerNorm or RMSNorm. Eq.~\eqref{eq:residual-update} is the
+\glsterm{layer-normalization}{LayerNorm} or \glsterm{rmsnorm}{RMSNorm}. Eq.~\eqref{eq:residual-update} is the
 load-bearing equation of this paper: every component reads
 $\mathbf{h}^{(\ell, t)}$, computes some function of it, and writes the
-result back into the same residual stream by addition. There is no
+result back into the same \glsterm{residual-stream}{residual stream} by addition. There is no
 gating, no replacement, no nonlinearity at the bus level. Recursing
 Eq.~\eqref{eq:residual-update} from any intermediate $\ell$ to the
 output gives the residual decomposition\footnote{KB excerpt:
@@ -68,10 +68,10 @@ output gives the residual decomposition\footnote{KB excerpt:
   \label{eq:residual-decomp}
 \end{equation}
 Here $\mathrm{LN}$ is the model's own final pre-unembed normalization
-(LayerNorm or RMSNorm), and $W_U \in \mathbb{R}^{D \times V}$ is the
+(\glsterm{layer-normalization}{LayerNorm} or \glsterm{rmsnorm}{RMSNorm}), and $W_U \in \mathbb{R}^{D \times V}$ is the
 unembedding (often weight-tied with the input embedding). Two
 identifications follow immediately. Setting the residual update to
-zero in Eq.~\eqref{eq:residual-decomp} gives the \emph{logit lens}
+zero in Eq.~\eqref{eq:residual-decomp} gives the \emph{\glsterm{logit-lens}{logit lens}}
 of \S\ref{sec:logit-lens-family} \citep[\S 2,
 Eq.~3]{belrose2023-tuned-lens}; replacing
 $\mathbf{h}^{(\ell, t)}$ with $A_\ell\mathbf{h}^{(\ell, t)} +
@@ -79,7 +79,7 @@ $\mathbf{h}^{(\ell, t)}$ with $A_\ell\mathbf{h}^{(\ell, t)} +
 lens}. Both are read-offs of the same bus.
 
 \begin{intuition}
-The residual stream is a linear additive bus. Attention heads, MLPs,
+The \glsterm{residual-stream}{residual stream} is a linear additive bus. Attention heads, MLPs,
 and LayerNorms are devices wired into that bus, each reading a
 projection of $\mathbf{h}^{(\ell, t)}$ and writing back a vector that
 \emph{adds} to it; nothing replaces or multiplies the running state.
@@ -89,7 +89,7 @@ correction); what makes patching causally clean (substituting a single
 addend leaves all other addends untouched in expectation); and what
 makes the dictionary view of \S\ref{sec:sparse-autoencoders}
 applicable (a sum of sparse contributions decomposes into a sparse
-linear combination of feature directions in $\mathbb{R}^D$). Returning
+linear combination of \glsterm{feature}{feature} directions in $\mathbb{R}^D$). Returning
 to canonical form: Eq.~\eqref{eq:residual-update} says every layer is
 $\mathbf{h}_{\text{new}} = \mathbf{h}_{\text{old}} + \Delta$, and every
 interpretability method is a particular way of reading or perturbing
@@ -100,11 +100,11 @@ the running sum.
 \label{sec:substrate-attention}
 
 A single attention head $h$ at layer $\ell$ contributes to $F_\ell$ a
-term that the \emph{Mathematical Framework for Transformer
+term that the \emph{Mathematical Framework for \glsterm{transformer}{Transformer}
 Circuits}~\deepencite{elhage2021-mathematical-framework HTML at
 transformer-circuits.pub, citation-pending} factors into two
-read--write circuits. The \textbf{QK circuit} computes the
-attention-weight pattern from the residual stream:
+read--write circuits. The \textbf{QK \glsterm{circuit}{circuit}} computes the
+attention-weight pattern from the \glsterm{residual-stream}{residual stream}:
 \begin{equation}
   \alpha^{(\ell, h)}_{t, s}
   \;=\;
@@ -115,7 +115,7 @@ attention-weight pattern from the residual stream:
   \label{eq:qk}
 \end{equation}
 with $W_Q^{(\ell, h)}, W_K^{(\ell, h)} \in \mathbb{R}^{d_h \times D}$.
-The \textbf{OV circuit} determines what is read and written along
+The \textbf{OV \glsterm{circuit}{circuit}} determines what is read and written along
 each attended position:
 \begin{equation}
   \mathrm{Attn}_{\ell, h}\!\left(\mathbf{h}^{(\ell, t)}\right)
@@ -129,13 +129,13 @@ with $W_V^{(\ell, h)} \in \mathbb{R}^{d_h \times D}$ and
 $W_O^{(\ell, h)} \in \mathbb{R}^{D \times d_h}$. The QK pair determines
 \emph{where} a head looks; the OV pair determines \emph{what} it
 copies and \emph{which direction} that copy writes into the residual
-stream. Multi-head attention is a sum over heads of
-Eq.~\eqref{eq:ov}. The decomposition is load-bearing for circuit
+stream. \glsterm{multi-head-attention}{Multi-head attention} is a sum over heads of
+Eq.~\eqref{eq:ov}. The decomposition is load-bearing for \glsterm{circuit}{circuit}
 analysis: when \citet{wang2022-ioi} report (\S\ref{sec:circuits})
 that a Name Mover Head ``copies the attended name'', the
-human-interpretable claim is exactly that its OV circuit acts as a
+human-interpretable claim is exactly that its OV \glsterm{circuit}{circuit} acts as a
 near-identity on the residual-stream subspace encoding ``name'', and
-its QK circuit attends to the IO position; the
+its QK \glsterm{circuit}{circuit} attends to the IO position; the
 attention-pattern--vs--effect split is the QK--vs--OV split.
 
 \subsection{Feedforward sublayers as candidate associative memory}
@@ -150,7 +150,7 @@ The other half of $F_\ell$ is the feedforward (or MLP) sublayer:
 \end{equation}
 with $W_{\text{up}}^{(\ell)} \in \mathbb{R}^{d_{\text{ff}} \times D}$,
 $W_{\text{down}}^{(\ell)} \in \mathbb{R}^{D \times d_{\text{ff}}}$, an
-elementwise nonlinearity $\sigma$ (GELU / SiLU / SwiGLU per the model;
+elementwise nonlinearity $\sigma$ (\glsterm{gelu}{GELU} / SiLU / \glsterm{swiglu}{SwiGLU} per the model;
 biases and gating dropped here for brevity), and intermediate width
 $d_{\text{ff}} \approx 4D$ in dense models. The hypothesis that
 ties this to interpretability is the \emph{Localized Factual
@@ -165,9 +165,9 @@ $\mathrm{AIE}_{\mathrm{MLP}} = 6.6\%$ vs.\
 $\mathrm{AIE}_{\mathrm{attn}} = 1.6\%$ on GPT-2 XL
 \citep[\S 2.2]{meng2022-rome}\footnote{KB excerpt:
 \texttt{kb/excerpts/meng2022-rome.md\#sec-2-2}.}. We adopt the
-key--value framing as the \emph{anchor for §10}, not as a settled
-fact: alternative framings (FFNs as feature-direction \emph{detectors}
-in superposition, the \citet{leask2025-sae-not-canonical} non-atomic
+\glsterm{key}{key}--\glsterm{value}{value} framing as the \emph{anchor for §10}, not as a settled
+fact: alternative framings (FFNs as \glsterm{feature}{feature}-direction \emph{detectors}
+in \glsterm{superposition}{superposition}, the \citet{leask2025-sae-not-canonical} non-atomic
 critique of \S\ref{sec:sae-canonical}) coexist in the 2026 literature
 and are taken up where they bear on the methods.
 
@@ -175,13 +175,13 @@ and are taken up where they bear on the methods.
 \label{sec:substrate-readout}
 
 Two normalization variants appear in the residual-stream literature
-covered here. LayerNorm~\citep{ba2016-layernorm} centers and rescales
+covered here. \glsterm{layer-normalization}{LayerNorm}~\citep{ba2016-layernorm} centers and rescales
 $\mathbf{h}^{(\ell, t)}$ along its $D$-dim axis with a learned affine;
-RMSNorm drops the centering. Either is denoted $\mathrm{LN}[\,\cdot\,]$
+\glsterm{rmsnorm}{RMSNorm} drops the centering. Either is denoted $\mathrm{LN}[\,\cdot\,]$
 when the distinction does not matter for the argument, and pre-block
 or post-block placement is folded into the model's specification.
 The canonical \emph{readout} is the model's own pre-unembed
-$\mathrm{LN}$ followed by $W_U$; the layer-$L$ logits are
+$\mathrm{LN}$ followed by $W_U$; the layer-$L$ \glsterm{logits}{logits} are
 \begin{equation}
   \mathrm{logits}(\mathbf{x})_t \;=\; \mathrm{LN}\!\left[\mathbf{h}^{(L, t)}\right] W_U \;\in\;\mathbb{R}^V.
   \label{eq:readout}
@@ -198,14 +198,14 @@ $\ell$-th-layer information that drives that prediction''.
 \subsection{What we mean by a feature}
 \label{sec:substrate-feature}
 
-Throughout this paper a \textbf{feature} is a direction
+Throughout this paper a \textbf{\glsterm{feature}{feature}} is a direction
 $\mathbf{d} \in \mathbb{R}^D$ in residual-stream space (or in some
 other activation space named explicitly), \emph{not} a neuron and
 \emph{not} necessarily a basis vector. The motivating commitment is
 the \emph{linear representation hypothesis}~\deepencite{elhage2021-mathematical-framework
 §residual-stream linear-representation, citation-pending}: many
 human-interpretable properties of the input are linearly readable
-from the residual stream, so the natural object of interpretability
+from the \glsterm{residual-stream}{residual stream}, so the natural object of interpretability
 is an axis (or a low-dimensional subspace) of $\mathbb{R}^D$ rather
 than an individual coordinate. Every method in this paper picks
 features under a different commitment.
@@ -214,44 +214,44 @@ features under a different commitment.
     features are the columns of $W_U$ themselves: the lens projects
     $\mathbf{h}^{(\ell, t)}$ onto every column simultaneously and
     reads the $\arg\max$.
-  \item \S\ref{sec:probing} (probe). A \textbf{property direction}
-    $\mathbf{d}_y \in \mathbb{R}^D$ is a feature associated with an
+  \item \S\ref{sec:probing} (\glsterm{probe-2}{probe}). A \textbf{property direction}
+    $\mathbf{d}_y \in \mathbb{R}^D$ is a \glsterm{feature}{feature} associated with an
     external label $y$ --- truth, sentiment, syntactic role,
-    sycophancy --- discovered either by supervised fitting
+    \glsterm{sycophancy}{sycophancy} --- discovered either by supervised fitting
     (Eq.~\eqref{eq:linear-probe}-equivalent) or in closed form by the
     mass-mean rule
     $\mathbf{d}_{\mathrm{MM}} = \boldsymbol{\mu}_+ - \boldsymbol{\mu}_-$.
-  \item \S\ref{sec:sparse-autoencoders} (SAE). A \textbf{dictionary
-    feature} $i$ at layer $\ell$, position $t$ is the activation
+  \item \S\ref{sec:sparse-autoencoders} (\glsterm{sparse-autoencoder}{SAE}). A \textbf{dictionary
+    \glsterm{feature}{feature}} $i$ at layer $\ell$, position $t$ is the activation
     $f_i^{(\ell, t)} \in \mathbb{R}_{\geq 0}$ of the $i$-th latent in
-    a sparse autoencoder trained on $\mathbf{h}^{(\ell, t)}$, with
+    a \glsterm{sparse-autoencoder}{sparse autoencoder} trained on $\mathbf{h}^{(\ell, t)}$, with
     associated decoder direction $\mathbf{d}_i$. The dictionary
     $\{\mathbf{d}_i\}_{i=1}^M$ is overcomplete ($M \gg D$); on any
     given input, $\mathbf{f}^{(\ell, t)} \in \mathbb{R}^M$ is sparse.
 \end{itemize}
-A feature is therefore an \emph{axis}, not a \emph{coordinate}: the
-neuron basis is one possible feature basis, and the production
+A \glsterm{feature}{feature} is therefore an \emph{axis}, not a \emph{coordinate}: the
+neuron basis is one possible \glsterm{feature}{feature} basis, and the production
 record~\deepencite{elhage2021-mathematical-framework §superposition,
 citation-pending} suggests it is rarely the right one. The choice of
-basis --- $W_U$'s columns, a learned $\mathbf{d}_y$, an SAE's
+basis --- $W_U$'s columns, a learned $\mathbf{d}_y$, an \glsterm{sparse-autoencoder}{SAE}'s
 $\mathbf{d}_i$, or some other --- is the methodological commitment
 that distinguishes one interpretability technique from the next.
 
 \subsection{What we mean by a circuit}
 \label{sec:substrate-circuit}
 
-A \textbf{circuit} $C \subseteq \mathcal{M}$ is a subgraph of
+A \textbf{\glsterm{circuit}{circuit}} $C \subseteq \mathcal{M}$ is a subgraph of
 $\mathcal{M}$'s computational graph --- nodes are forward-pass
 components (residual-stream sites, attention heads, MLP sublayers,
-SAE/transcoder features) and edges are the residual / attention /
+\glsterm{sparse-autoencoder}{SAE}/\glsterm{transcoder}{transcoder} features) and edges are the residual / attention /
 projection links between them --- whose function $C(\mathbf{x})$
-agrees with $M(\mathbf{x})$ on the task distribution after \emph{knockout}
+agrees with $M(\mathbf{x})$ on the task distribution after \emph{\glsterm{knockout}{knockout}}
 of $\mathcal{M} \setminus C$~\citep[\S 2]{wang2022-ioi}\footnote{KB
 excerpt: \texttt{kb/excerpts/wang2022-ioi.md\#sec-2-definition}. Wang
-et al.\ define knockout via mean ablation on a reference distribution
+et al.\ define \glsterm{knockout}{knockout} via \glsterm{mean-ablation}{mean ablation} on a reference distribution
 $p_{\mathrm{ABC}}$ rather than zero ablation, on the empirical
 grounds that ``zero ablation [\ldots] lead[s] to noisy results''.}.
-A circuit \emph{claim} commits to three quantitative criteria from
+A \glsterm{circuit}{circuit} \emph{claim} commits to three quantitative criteria from
 \citet[\S 4]{wang2022-ioi}\footnote{KB excerpt:
 \texttt{kb/excerpts/wang2022-ioi.md\#sec-4-criteria}.}:
 \begin{description}
@@ -264,9 +264,9 @@ A circuit \emph{claim} commits to three quantitative criteria from
   \item[Minimality.] $C$ contains no task-irrelevant nodes: each
     node in $C$ fails an ``ablate-it-and-see-if-it-matters'' test.
 \end{description}
-The substantive content of a circuit claim is therefore threefold:
+The substantive content of a \glsterm{circuit}{circuit} claim is therefore threefold:
 the relevant components are \emph{localized} (a small fraction of the
-graph), the explanatory edges are \emph{causal} (knockout matters),
+graph), the explanatory edges are \emph{causal} (\glsterm{knockout}{knockout} matters),
 and the subgraph is \emph{sparse} (most of $\mathcal{M}$ is
 irrelevant on the task distribution). \citet{wang2022-ioi} note that
 real circuits routinely pass faithfulness and minimality but fail the
@@ -274,10 +274,10 @@ strongest completeness tests --- the structural fact that
 \S\ref{sec:circuit-ioi} unpacks via the \emph{backup head}
 phenomenon, in which ablating Name Mover heads reactivates latent
 backups that were dormant in the unablated forward pass. The
-features-in-circuits dichotomy is fundamental: a circuit can route a
-feature from one position to another without itself \emph{computing}
-that feature, so the wiring diagram (the circuit) and the encoding
-(the feature) are independent specifications of an
+features-in-circuits dichotomy is fundamental: a \glsterm{circuit}{circuit} can route a
+\glsterm{feature}{feature} from one position to another without itself \emph{computing}
+that \glsterm{feature}{feature}, so the wiring diagram (the \glsterm{circuit}{circuit}) and the encoding
+(the \glsterm{feature}{feature}) are independent specifications of an
 explanation~\citep[\S 2.1]{wang2022-ioi}.
 
 \subsection{The notation table}
@@ -297,15 +297,15 @@ Paper~1.
 \midrule
 $\mathbf{h}^{(\ell, t)}$ & $\mathbb{R}^D$ ($\BSH$ batched) & residual-stream activation at layer $\ell \in \{0,\dots,L\}$, position $t \in \{1,\dots,S\}$ \\
 $F_\ell$ & $\mathbb{R}^D \to \mathbb{R}^D$ & residual contribution of layer $\ell$: $\mathrm{Attn}_\ell + \mathrm{MLP}_\ell$ (Eq.~\eqref{eq:residual-update}) \\
-$\mathrm{LN}[\,\cdot\,]$ & $\mathbb{R}^D \to \mathbb{R}^D$ & LayerNorm or RMSNorm, model-specific \\
+$\mathrm{LN}[\,\cdot\,]$ & $\mathbb{R}^D \to \mathbb{R}^D$ & \glsterm{layer-normalization}{LayerNorm} or \glsterm{rmsnorm}{RMSNorm}, model-specific \\
 $W_U$ & $\mathbb{R}^{D \times V}$ & unembedding matrix; canonical readout is $\mathrm{LN}[\mathbf{h}]\,W_U$ \\
-$\alpha^{(\ell, h)}_{t, s}$ & scalar in $[0,1]$ & attention weight from query $t$ to key $s$, head $h$, layer $\ell$ (Eq.~\eqref{eq:qk}) \\
+$\alpha^{(\ell, h)}_{t, s}$ & scalar in $[0,1]$ & attention weight from \glsterm{query}{query} $t$ to \glsterm{key}{key} $s$, head $h$, layer $\ell$ (Eq.~\eqref{eq:qk}) \\
 $W_Q^{(\ell, h)}, W_K^{(\ell, h)}, W_V^{(\ell, h)}$ & $\mathbb{R}^{d_h \times D}$ & QK and OV input projections \\
 $W_O^{(\ell, h)}$ & $\mathbb{R}^{D \times d_h}$ & OV output projection (writes back into the bus) \\
-$\mathbf{d}_y$ & $\mathbb{R}^D$ (unit-norm) & property direction associated with label $y$ (probe / steering target) \\
-$f_i^{(\ell, t)}$ & $\mathbb{R}_{\geq 0}$ & SAE / transcoder feature $i$'s activation at $(\ell, t)$ \\
-$\mathbf{d}_i$ & $\mathbb{R}^D$ & decoder column for feature $i$ (the feature's direction in residual space) \\
-$C$ & subgraph of $\mathcal{M}$ & circuit, in the Wang-2022 sense \\
+$\mathbf{d}_y$ & $\mathbb{R}^D$ (unit-norm) & property direction associated with label $y$ (\glsterm{probe-2}{probe} / steering target) \\
+$f_i^{(\ell, t)}$ & $\mathbb{R}_{\geq 0}$ & \glsterm{sparse-autoencoder}{SAE} / \glsterm{transcoder}{transcoder} \glsterm{feature}{feature} $i$'s activation at $(\ell, t)$ \\
+$\mathbf{d}_i$ & $\mathbb{R}^D$ & decoder column for \glsterm{feature}{feature} $i$ (the \glsterm{feature}{feature}'s direction in residual space) \\
+$C$ & subgraph of $\mathcal{M}$ & \glsterm{circuit}{circuit}, in the Wang-2022 sense \\
 $B, S, D, H, d_h, V, L$ & --- & batch, sequence, model-dim, heads, head-dim, vocab, layers (Paper~1) \\
 \bottomrule
 \end{tabularx}
@@ -321,15 +321,15 @@ follow Paper~1's architecture chapter.}
 The four objects in the second half of the table fix what each method
 \emph{produces}. A lens (\S\ref{sec:logit-lens-family}) maps
 $\mathbf{h}^{(\ell, t)}$ to a layer-$\ell$ token distribution via
-Eq.~\eqref{eq:residual-decomp}. A probe (\S\ref{sec:probing}) reads
+Eq.~\eqref{eq:residual-decomp}. A \glsterm{probe-2}{probe} (\S\ref{sec:probing}) reads
 $\mathbf{h}^{(\ell, t)} \mapsto \sigma(\mathbf{d}_y^\top
 \mathbf{h}^{(\ell, t)})$ for a learned property direction
-$\mathbf{d}_y$. An SAE (\S\ref{sec:sparse-autoencoders}) decomposes
+$\mathbf{d}_y$. An \glsterm{sparse-autoencoder}{SAE} (\S\ref{sec:sparse-autoencoders}) decomposes
 $\mathbf{h}^{(\ell, t)}$ into a sparse $\mathbf{f}^{(\ell, t)} \in
 \mathbb{R}^M$ with components $f_i^{(\ell, t)}$ along directions
-$\mathbf{d}_i$. Activation patching (\S\ref{sec:patching}) intervenes
+$\mathbf{d}_i$. \glsterm{activation-patching}{Activation patching} (\S\ref{sec:patching}) intervenes
 on $\mathbf{h}^{(\ell, t)}$ (or on a finer-grained component) and
-measures the indirect effect on a downstream metric. Circuit
+measures the \glsterm{indirect-effect}{indirect effect} on a downstream metric. \glsterm{circuit}{Circuit}
 reverse-engineering (\S\ref{sec:circuits}) returns a subgraph $C$
 satisfying the Wang criteria. All four methods read or write the same
 underlying object.
@@ -337,7 +337,7 @@ underlying object.
 \subsection{Forward link: four reads of one bus}
 \label{sec:substrate-forward}
 
-The unifying picture of this section is that the residual stream
+The unifying picture of this section is that the \glsterm{residual-stream}{residual stream}
 defined by Eq.~\eqref{eq:residual-update} is one object, and the five
 interpretability methods this paper covers are five different ways of
 reading or perturbing it.
@@ -355,8 +355,8 @@ forward pass and measuring the downstream metric change.
 \S\ref{sec:circuits} returns a subgraph of $\mathcal{M}$ whose nodes
 are precisely the bus sites and the components writing into them.
 The methods commit to different objects --- the $W_U$ columns, the
-property direction $\mathbf{d}_y$, the SAE direction $\mathbf{d}_i$,
-the component $C$ at a knockout site, the subgraph $C$ as a wiring
+property direction $\mathbf{d}_y$, the \glsterm{sparse-autoencoder}{SAE} direction $\mathbf{d}_i$,
+the component $C$ at a \glsterm{knockout}{knockout} site, the subgraph $C$ as a wiring
 diagram --- but the underlying read site is the same
 $\mathbf{h}^{(\ell, t)}$ throughout. The convergences and divergences
 of \S\ref{sec:cross-method} live exactly at the boundaries between

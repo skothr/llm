@@ -19,13 +19,13 @@ two-failure-mode taxonomy, \citet{harmbench2024}'s standardized
 red-team suite, \citet{chao2024-jailbreakbench}'s reproducibility
 benchmark, and \citet{russinovich2024-crescendo}'s multi-turn attack
 --- and the four together do \emph{not} compose into a single
-attack-success-rate (ASR) number that is comparable across papers.
-A $5\%$ ASR on benchmark $X$ and a $30\%$ ASR on benchmark $Y$ for
+attack-success-rate (\glsterm{asr}{ASR}) number that is comparable across papers.
+A $5\%$ \glsterm{asr}{ASR} on benchmark $X$ and a $30\%$ \glsterm{asr}{ASR} on benchmark $Y$ for
 the same model are not a contradiction; they are two measurements
 of different constructs, instantiated against different behavior
 sets, attack families, and judges. Before any \emph{within-paper}
-ASR rank can be read as evidence of model robustness, the
-\emph{across-paper} ASR-comparability problem has to be acknowledged
+\glsterm{asr}{ASR} rank can be read as evidence of model robustness, the
+\emph{across-paper} \glsterm{asr}{ASR}-comparability problem has to be acknowledged
 as the central methodological failure of the layer.
 
 \subsection{Formal frame}
@@ -38,13 +38,13 @@ is the tuple
 \mathcal{S} = (\mathcal{B}, \mathcal{A}, V, \pi),
 \]
 where $\mathcal{B}$ is the set of harmful behaviors to test (510 in
-HarmBench, 100 in JailbreakBench), $\mathcal{A}$ is the attack family
+\glsterm{harmbench-2}{HarmBench}, 100 in \glsterm{jailbreakbench-2}{JailbreakBench}), $\mathcal{A}$ is the attack family
 (single-turn fixed prompt, optimization-based suffix, multi-turn
 escalation, automated red-team), $V$ is the judge that decides
 whether a generation realizes the behavior (rule-based, fine-tuned
-classifier, LLM-as-judge, or human), and $\pi$ is the protocol
-context (system prompt, decoding parameters, in-place defenses,
-attack budget). The headline metric is the attack success rate
+classifier, \glsterm{llm-as-judge}{LLM-as-judge}, or human), and $\pi$ is the protocol
+context (system prompt, decoding \glsterm{parameters}{parameters}, in-place defenses,
+attack budget). The headline metric is the \glsterm{attack-success-rate}{attack success rate}
 \citep[\S{}abstract]{chao2024-jailbreakbench}:
 \[
 \mathrm{ASR}(\theta, \mathcal{S}) =
@@ -58,20 +58,20 @@ A perfectly aligned model has $\mathrm{ASR} = 0$ on every attack
 family; a fully jailbroken model has $\mathrm{ASR} \approx 1$. The
 load-bearing observation is that every term in the metric ---
 $\mathcal{B}$, $\mathcal{A}$, $V$, $\pi$ --- varies across the four
-canonical benchmarks of this section. ``ASR'' as a scalar is
+canonical benchmarks of this section. ``\glsterm{asr}{ASR}'' as a scalar is
 under-specified without all four: the methodologically mature
 reporting form is the tuple $(\mathcal{B}, \mathcal{A}, V, \pi,
 \mathrm{ASR})$, not the number alone.
 
 \begin{intuition}
-ASR conflates three quantities under a single ratio: the model's
+\glsterm{asr}{ASR} conflates three quantities under a single ratio: the model's
 refusal robustness, the attack's strength, and the judge's
-harshness. Two papers reporting ``GPT-4 ASR $= 30\%$'' and ``GPT-4
-ASR $= 60\%$'' may both be correct under their respective
+harshness. Two papers reporting ``GPT-4 \glsterm{asr}{ASR} $= 30\%$'' and ``GPT-4
+\glsterm{asr}{ASR} $= 60\%$'' may both be correct under their respective
 $(\mathcal{B}, \mathcal{A}, V, \pi)$ specifications. The $30\%
 \to 60\%$ delta carries no information about the model unless the
 specifications match. (Returning to canonical form: the ratio in
-the ASR equation is well defined for any fixed $\mathcal{S}$;
+the \glsterm{asr}{ASR} equation is well defined for any fixed $\mathcal{S}$;
 across different $\mathcal{S}$ the ratios are not commensurable
 quantities and arithmetic between them --- ranking, averaging,
 delta-tracking --- is malformed.)
@@ -113,16 +113,16 @@ evaluation sets and outperform existing ad hoc jailbreaks.
 \end{quote}
 
 Two things matter for the rest of the section. First, the
-``every prompt'' result against GPT-4 and Claude v1.3 establishes
+``every prompt'' result against GPT-4 and \glsterm{claude}{Claude} v1.3 establishes
 that extensively-red-teamed frontier models retain
 \emph{conceptually predictable} vulnerabilities. The attacks are
 not lucky; they instantiate the failure-mode framework. Second,
 the policy upshot --- ``safety mechanisms should be as sophisticated
 as the underlying model''
 \citep[\S{}abstract]{wei2023-jailbroken} --- is the
-\emph{safety-capability parity} prescription that subsequent
-benchmarks evaluate against. HarmBench's $510 \times 18$ behavior-
-attack matrix and JailbreakBench's leaderboard are operational
+\emph{\glsterm{safety-capability-parity}{safety-capability parity}} prescription that subsequent
+benchmarks evaluate against. \glsterm{harmbench-2}{HarmBench}'s $510 \times 18$ behavior-
+attack matrix and \glsterm{jailbreakbench-2}{JailbreakBench}'s leaderboard are operational
 realizations of the test the Wei framework demands: cover the
 capability surface broadly enough that mismatched-generalization
 gaps surface; cover the attack surface broadly enough that
@@ -139,13 +139,13 @@ and defenses are measured%
 \citep[\S{}abstract]{harmbench2024}:
 
 \begin{quote}\itshape
-we introduce HarmBench, a standardized evaluation framework for
-automated red teaming\ldots Using HarmBench, we conduct a
-large-scale comparison of 18 red teaming methods and 33 target
+we introduce \glsterm{harmbench-2}{HarmBench}, a standardized evaluation framework for
+automated \glsterm{red-teaming}{red teaming}\ldots Using \glsterm{harmbench-2}{HarmBench}, we conduct a
+large-scale comparison of 18 \glsterm{red-teaming}{red teaming} methods and 33 target
 LLMs and defenses, yielding novel insights. We also introduce a
 highly efficient adversarial training method that greatly enhances
-LLM robustness across a wide range of attacks, demonstrating how
-HarmBench enables codevelopment of attacks and defenses.
+\glsterm{llm}{LLM} robustness across a wide range of attacks, demonstrating how
+\glsterm{harmbench-2}{HarmBench} enables codevelopment of attacks and defenses.
 \end{quote}
 
 The framework's structural commitments
@@ -157,29 +157,29 @@ AutoPrompt, and successors\footnote{GCG and the
 optimization-based-suffix lineage are deferred to AdvBench
 \deepencite{zou2023-advbench, citation-pending} for full
 treatment.}); \emph{33 target LLMs and defenses} measured against
-the same suite; and a fine-tuned \emph{HarmBench-Judge} classifier
+the same suite; and a fine-tuned \emph{\glsterm{harmbench-judge}{HarmBench-Judge}} classifier
 (Llama-2-13B family, fine-tuned on labeled harmful/non-harmful
 generations) used as the standardized $V$.
 
 The methodological move is structural rather than algorithmic:
-HarmBench fixes $\mathcal{B}$, $\mathcal{A}$, and $V$ once, and
+\glsterm{harmbench-2}{HarmBench} fixes $\mathcal{B}$, $\mathcal{A}$, and $V$ once, and
 asks every attack and every defense to report numbers against the
 same triple. The substrate is what enables co-development ---
-``demonstrating how HarmBench enables codevelopment of attacks and
+``demonstrating how \glsterm{harmbench-2}{HarmBench} enables codevelopment of attacks and
 defenses''
 \citep[\S{}abstract]{harmbench2024}. A new attack reports its
-ASR on the HarmBench-510-behavior set under the
-HarmBench-Judge against a fixed list of defenses; a new defense
-reports its ASR-reduction on the same suite against a fixed list
+\glsterm{asr}{ASR} on the \glsterm{harmbench-2}{HarmBench}-510-behavior set under the
+\glsterm{harmbench-judge}{HarmBench-Judge} against a fixed list of defenses; a new defense
+reports its \glsterm{asr}{ASR}-reduction on the same suite against a fixed list
 of attacks. Cross-paper comparison becomes possible inside the
-HarmBench frame in a way it was not in the 2023 literature, where
+\glsterm{harmbench-2}{HarmBench} frame in a way it was not in the 2023 literature, where
 each paper picked its own behaviors, its own judge, and its own
 target list.
 
 The boundary the substrate does not cross is the one the next
-benchmark addresses: HarmBench's adversarial-prompt corpus is a
+benchmark addresses: \glsterm{harmbench-2}{HarmBench}'s adversarial-prompt corpus is a
 research artifact, not a public reproducibility infrastructure
-indexed against a leaderboard. The HarmBench-Judge classifier and
+indexed against a leaderboard. The \glsterm{harmbench-judge}{HarmBench-Judge} classifier and
 the behavior list are open; the per-attack adversarial prompts
 generated by each of the 18 methods are not all republished as a
 versioned artifact registry%
@@ -200,7 +200,7 @@ jailbreaking evaluation. Second, existing works compute costs and
 success rates in incomparable ways. And third, numerous works are
 not reproducible, as they withhold adversarial prompts, involve
 closed-source code, or rely on evolving proprietary APIs. To
-address these challenges, we introduce JailbreakBench, an
+address these challenges, we introduce \glsterm{jailbreakbench-2}{JailbreakBench}, an
 open-sourced benchmark with the following components: (1) an
 evolving repository of state-of-the-art adversarial prompts, which
 we refer to as jailbreak artifacts; (2) a jailbreaking dataset
@@ -222,19 +222,19 @@ chat template, and scoring function. And a \emph{public
 leaderboard} that pins $(\mathcal{B}, V, \pi)$ and lets attacks and
 defenses be ranked under a fixed denominator.
 
-The complementarity with HarmBench is structural. HarmBench has
+The complementarity with \glsterm{harmbench-2}{HarmBench} is structural. \glsterm{harmbench-2}{HarmBench} has
 broader behavior coverage (510 vs.\ 100) and an attack-method
 bake-off (18 attacks $\times$ 33 targets) inside one paper.
-JailbreakBench has deeper artifact reproducibility and a public
+\glsterm{jailbreakbench-2}{JailbreakBench} has deeper artifact reproducibility and a public
 leaderboard that admits new entries continuously%
 \footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#2-1-adversarial-robustness-benchmarks}.}.
-HarmBench fixes the suite at publication time and runs a one-time
-bake-off; JailbreakBench fixes the suite at publication time and
+\glsterm{harmbench-2}{HarmBench} fixes the suite at publication time and runs a one-time
+bake-off; \glsterm{jailbreakbench-2}{JailbreakBench} fixes the suite at publication time and
 maintains it as a running leaderboard. Both fix the substrate
 inside their own frame; neither makes its frame interoperable with
-the other's. A score on HarmBench-510 under HarmBench-Judge is not
-recoverable from a score on JailbreakBench-100 under
-JailbreakBench's GPT-4-class judge, even for the same model.
+the other's. A score on \glsterm{harmbench-2}{HarmBench}-510 under \glsterm{harmbench-judge}{HarmBench-Judge} is not
+recoverable from a score on \glsterm{jailbreakbench-2}{JailbreakBench}-100 under
+\glsterm{jailbreakbench-2}{JailbreakBench}'s GPT-4-class judge, even for the same model.
 
 \subsection{Crescendo: the multi-turn attack regime}
 \label{sec:safety-crescendo}
@@ -271,24 +271,24 @@ The headline number is the load-bearing one
 \citep[\S{}abstract]{russinovich2024-crescendo}:
 
 \begin{quote}\itshape
-Crescendomation surpasses other state-of-the-art jailbreaking
+\glsterm{crescendomation}{Crescendomation} surpasses other state-of-the-art jailbreaking
 techniques on the AdvBench subset dataset, achieving 29-61\%
 higher performance on GPT-4 and 49-71\% on Gemini-Pro.
 \end{quote}
 
-The 29--71\% ASR \emph{uplift} over single-turn baselines ---
+The 29--71\% \glsterm{asr}{ASR} \emph{uplift} over single-turn baselines ---
 measured on the AdvBench subset \deepencite{zou2023-advbench,
-citation-pending} under Crescendomation, the automated
+citation-pending} under \glsterm{crescendomation}{Crescendomation}, the automated
 implementation of the manual escalation strategy --- is not a new
-ASR scalar; it is a delta against an existing ASR scalar. Under
-the formal frame of \cref{sec:safety-formal}, Crescendomation
+\glsterm{asr}{ASR} scalar; it is a delta against an existing \glsterm{asr}{ASR} scalar. Under
+the formal frame of \cref{sec:safety-formal}, \glsterm{crescendomation}{Crescendomation}
 changes the attack family $\mathcal{A}$ from single-turn to
 multi-turn while holding $(\mathcal{B}, V, \pi)$ approximately
 fixed, and the resulting $\mathrm{ASR}$ is dramatically higher on
 the same models against the same behaviors. The methodological
 implication is structural: \emph{single-turn benchmarks
 systematically underestimate the attack surface}. A model with
-$\mathrm{ASR} < 5\%$ on JailbreakBench's single-turn behaviors may
+$\mathrm{ASR} < 5\%$ on \glsterm{jailbreakbench-2}{JailbreakBench}'s single-turn behaviors may
 register $\mathrm{ASR} > 30\%$ under Crescendo against an
 overlapping behavior set.
 
@@ -304,20 +304,20 @@ back to it as commitments it has already made. The
 social-engineering literature predicts exactly this: each
 acceded-to small request raises the conditional probability of
 acceding to the next, larger one. Returning to canonical form: the
-29--71\% ASR uplift is the quantitative measurement of how much
+29--71\% \glsterm{asr}{ASR} uplift is the quantitative measurement of how much
 prior-self-reference shifts the refusal probability under the same
 $(\mathcal{B}, V, \pi)$, with $\mathcal{A}$ as the only term that
 varies.
 \end{analogy}
 
-The 2026 multi-turn picture: no equivalent of HarmBench or
-JailbreakBench yet exists for multi-turn attacks. Standardizing
+The 2026 multi-turn picture: no equivalent of \glsterm{harmbench-2}{HarmBench} or
+\glsterm{jailbreakbench-2}{JailbreakBench} yet exists for multi-turn attacks. Standardizing
 the regime requires three commitments the field has not yet made
 --- a fixed turn budget, an attack-judge interaction protocol
-that is not gameable by the attacker LLM, and a defense-reset
+that is not gameable by the attacker \glsterm{llm}{LLM}, and a defense-reset
 specification between turns%
 \footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#5-frontier}.}.
-Until those land, multi-turn ASR is reported with paper-specific
+Until those land, multi-turn \glsterm{asr}{ASR} is reported with paper-specific
 $\mathcal{A}$ and $\pi$ in a way that compounds the comparability
 problem the next subsection names directly.
 
@@ -327,21 +327,21 @@ problem the next subsection names directly.
 The four benchmarks together expose the layer's central failure.
 Each fixes its own $(\mathcal{B}, \mathcal{A}, V, \pi)$, and the
 four fixed tuples are not interoperable. Three concrete failure
-modes break ASR comparability across papers%
+modes break \glsterm{asr}{ASR} comparability across papers%
 \footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#1-formal-framing}.}.
 
-\emph{Judge mis-specification.} JailbreakBench uses an LLM-as-judge
-with published evaluation prompts; HarmBench uses the fine-tuned
-HarmBench-Judge classifier; many 2023 papers use ad-hoc rule-based
+\emph{Judge mis-specification.} \glsterm{jailbreakbench-2}{JailbreakBench} uses an \glsterm{llm-as-judge}{LLM-as-judge}
+with published evaluation prompts; \glsterm{harmbench-2}{HarmBench} uses the fine-tuned
+\glsterm{harmbench-judge}{HarmBench-Judge} classifier; many 2023 papers use ad-hoc rule-based
 ``the model said anything other than I cannot'' verifiers; vendor
 internal evals use proprietary judge stacks. Two judges scoring the
 same generation as ``harmful'' or ``not harmful'' is not the same
 event in two papers, even when the generation is identical
 \citep[\S{}abstract]{chao2024-jailbreakbench}.
 
-\emph{Behavior-set drift.} HarmBench's 510 behaviors span four
+\emph{Behavior-set drift.} \glsterm{harmbench-2}{HarmBench}'s 510 behaviors span four
 functional categories with explicit copyright and multimodal
-sub-suites; JailbreakBench's 100 behaviors are aligned with OpenAI's
+sub-suites; \glsterm{jailbreakbench-2}{JailbreakBench}'s 100 behaviors are aligned with OpenAI's
 usage policies. The two distributions over harm categories are
 not the same population, and a method strong on one set may
 under-perform on the other for reasons that are properties of the
@@ -350,26 +350,26 @@ suite, not of the method%
 
 \emph{Defense / system-prompt drift.} Production deployments include
 runtime monitoring, abuse detection, and account-level controls
-that the benchmark $\pi$ does not model. Benchmark ASR systematically
+that the benchmark $\pi$ does not model. Benchmark \glsterm{asr}{ASR} systematically
 \emph{overestimates} attack success against deployed systems
-relative to standalone-API ASR, but the size of the gap is itself
+relative to standalone-API \glsterm{asr}{ASR}, but the size of the gap is itself
 deployment-specific and not measurable from outside the lab%
 \footnote{KB note: \texttt{kb/notes/alignment/safety-evaluation.md\#1-formal-framing}.}.
 
 The methodologically mature reporting form is the five-tuple
 $(\mathcal{B}, \mathcal{A}, V, \pi, \mathrm{ASR})$, not a scalar.
-JailbreakBench's leaderboard discipline --- fix the judge, the
+\glsterm{jailbreakbench-2}{JailbreakBench}'s leaderboard discipline --- fix the judge, the
 behaviors, the threat model, vary only the attack and the model
 under test --- is the cleanest current answer to the comparability
 problem
 \citep[\S{}abstract]{chao2024-jailbreakbench}, but is not yet
-field-wide: model cards continue to publish ASR numbers without
+field-wide: model cards continue to publish \glsterm{asr}{ASR} numbers without
 all four substrate terms, and cross-benchmark comparisons in
-informal venues continue to treat ASR as a model property.
+informal venues continue to treat \glsterm{asr}{ASR} as a model property.
 
 \begin{contradiction}
-\textbf{ASR is reported as a model attribute; it is not one.}
-A single number ``GPT-4 ASR $= 30\%$'' carries no model-level
+\textbf{\glsterm{asr}{ASR} is reported as a model attribute; it is not one.}
+A single number ``GPT-4 \glsterm{asr}{ASR} $= 30\%$'' carries no model-level
 information without $(\mathcal{B}, \mathcal{A}, V, \pi)$.
 \citet{harmbench2024} and \citet{chao2024-jailbreakbench} respond
 with substrate standardization inside their own frames; neither
@@ -377,10 +377,10 @@ substrate is field-wide, and the two are not interoperable.
 \citet{russinovich2024-crescendo} document a 29--71\% uplift when
 the attack family $\mathcal{A}$ alone shifts from single-turn to
 multi-turn, holding everything else approximately fixed --- which
-demonstrates exactly how much of the headline ASR is determined by
+demonstrates exactly how much of the headline \glsterm{asr}{ASR} is determined by
 substrate rather than model. As of 2026-Q2 there is no field-wide
 $(\mathcal{B}, V, \pi)$ that the next benchmark can pin against.
-The field publishes ASR scalars at a fictional level of precision
+The field publishes \glsterm{asr}{ASR} scalars at a fictional level of precision
 and treats them as if comparable; \cref{sec:contradictions} returns
 to this as one of the layered-defense view's central open
 contradictions.
@@ -388,13 +388,13 @@ contradictions.
 
 The closing observation is structural, not pessimistic. The
 $\mathcal{S} = (\mathcal{B}, \mathcal{A}, V, \pi)$ frame is exactly
-the right vocabulary for the comparability problem; the issue is
-not measurement-theoretic but coordination-theoretic. HarmBench's
-co-development substrate and JailbreakBench's leaderboard
+the right \glsterm{vocabulary}{vocabulary} for the comparability problem; the issue is
+not measurement-theoretic but coordination-theoretic. \glsterm{harmbench-2}{HarmBench}'s
+co-development substrate and \glsterm{jailbreakbench-2}{JailbreakBench}'s leaderboard
 discipline are partial standardizations whose boundary is the
 boundary of each project's adoption. A field-wide pin --- a
-HarmBench-or-equivalent standardized ASR with cross-benchmark
-calibration set --- would close the contradiction; nothing about
+\glsterm{harmbench-2}{HarmBench}-or-equivalent standardized \glsterm{asr}{ASR} with cross-benchmark
+\glsterm{calibration-set}{calibration set} --- would close the contradiction; nothing about
 the formal frame prevents it from being built. \Cref{sec:contradictions}
 catalogs this as one of the layer's tractable open questions.
 

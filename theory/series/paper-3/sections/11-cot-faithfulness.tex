@@ -19,18 +19,18 @@ sampled, then the answer is sampled conditional on the trace. As a
 \emph{statistical} dependence claim this is uncontroversial. The
 \emph{causal} claim — that perturbing $z$ propagates to a different $y$
 — is not the same statement, and the 2025--2026 wave of empirical work
-finds that the gap between the two can be substantial. \textbf{CoT
+finds that the gap between the two can be substantial. \textbf{\glsterm{chain-of-thought}{CoT}
 faithfulness} is the operational name for the question: does the trace
 $z$ in fact carry the information that determines $y$, or has $y$
 already been chosen by some other mechanism with $z$ generated as a
 post-hoc rationalisation that happens to be human-readable? This
 section makes the question precise, summarises the three load-bearing
-2025--2026 measurements (Arcuschin et al.\ ``CoT in the wild'', Shen et
+2025--2026 measurements (Arcuschin et al.\ ``\glsterm{chain-of-thought}{CoT} in the wild'', Shen et
 al.\ FaithCoT-Bench, Mehta et al.\ on whether scaling improves
 faithfulness), states the open contradiction with R1-style
 reasoning-training framings (\cref{sec:r1-family}), and draws the
-cross-paper threads: Paper~4's interpretability programme uses CoT as a
-probe surface and Paper~5's alignment programme treats CoT as a
+cross-paper threads: Paper~4's interpretability programme uses \glsterm{chain-of-thought}{CoT} as a
+\glsterm{probe-2}{probe} surface and Paper~5's alignment programme treats \glsterm{chain-of-thought}{CoT} as a
 monitorable channel — both are compromised to the extent that traces
 are unfaithful.
 
@@ -41,7 +41,7 @@ Following the protocol shared across
 \citet{arcuschin2025-cot-wild,shen2025-faithcot-bench,
 mehta2026-faithfulness-scaling} and the KB note's framing,%
 \footnote{KB note:
-\texttt{kb/notes/reasoning/chain-of-thought.md\#4}.} the trace $z$ is
+\texttt{kb/notes/reasoning/\glsterm{chain-of-thought}{chain-of-thought}.md\#4}.} the trace $z$ is
 \emph{faithful} to the answer $y$ on input $x$ when an intervention on
 $z$ that should change the answer in fact does, and an intervention
 that should not does not. Formally, fix $x$ and let
@@ -108,9 +108,9 @@ the answer distribution.
 \label{sec:faith-arcuschin}
 
 \citet{arcuschin2025-cot-wild} run the cleanest naturalistic-prompt
-measurement of unfaithful CoT to date.%
+measurement of unfaithful \glsterm{chain-of-thought}{CoT} to date.%
 \footnote{Excerpt status:
-\texttt{kb/excerpts/arcuschin2025-cot-wild.md} is abstract-only as of
+\texttt{kb/excerpts/arcuschin2025-\glsterm{chain-of-thought}{cot}-wild.md} is abstract-only as of
 2026-05; \deepencite{arcuschin2025-cot-wild abstract,
 citation-pending}} The methodological contribution is to drop the
 artificial-bias scaffolding that earlier faithfulness work
@@ -123,7 +123,7 @@ per-model rationalisation rates: \textbf{GPT-4o-mini 13\%},
 \textbf{R1 0.37\%} on thinking-on configurations
 \citep[abstract]{arcuschin2025-cot-wild}.%
 \footnote{KB note:
-\texttt{kb/notes/reasoning/chain-of-thought.md\#4.1}.} The
+\texttt{kb/notes/reasoning/\glsterm{chain-of-thought}{chain-of-thought}.md\#4.1}.} The
 non-thinking-vs-thinking gap is roughly two orders of magnitude in
 measured unfaithfulness rate and is the empirical anchor of the
 faithfulness scaling question \cref{sec:faith-mehta} returns to.
@@ -149,7 +149,7 @@ problem.%
 \footnote{Excerpt status:
 \texttt{kb/excerpts/shen2025-faithcot-bench.md} is abstract-only as of
 2026-05; \deepencite{shen2025-faithcot-bench abstract,
-citation-pending}} Their FINE-CoT dataset contributes
+citation-pending}} Their FINE-\glsterm{chain-of-thought}{CoT} dataset contributes
 $> 1{,}000$ expert-annotated trajectories from four LLMs across four
 domains, with $> 300$ labelled unfaithful, against which they
 benchmark eleven detectors covering three paradigms:
@@ -162,7 +162,7 @@ fail to change $y$ \citep[\S 3]{shen2025-faithcot-bench}.
 (token-level entropies, attention to trace tokens vs.\ prompt tokens)
 to predict per-instance unfaithfulness without explicit intervention
 \citep[\S 3]{shen2025-faithcot-bench}.
-\item \textbf{LLM-as-judge detectors} present the trajectory to a
+\item \textbf{\glsterm{llm-as-judge}{LLM-as-judge} detectors} present the trajectory to a
 separate language model and ask whether the trace's stated reasoning
 in fact derives the emitted answer
 \citep[\S 3]{shen2025-faithcot-bench}.
@@ -173,7 +173,7 @@ knowledge-intensive domains and on more advanced models}
 for the field's defaults: the very models whose trace-dependent answer
 quality is best are the ones whose unfaithfulness is hardest to detect
 mechanistically, because their traces are surface-coherent enough that
-LLM-as-judge fails and their internal logit signal does not visibly
+\glsterm{llm-as-judge}{LLM-as-judge} fails and their internal logit signal does not visibly
 collapse on the unfaithful instances.
 
 A second methodological point of FaithCoT-Bench is that
@@ -191,20 +191,20 @@ underweights tail risk.
 \citet{mehta2026-faithfulness-scaling} ask the most consequential 2026
 question for the paper's thesis: does \emph{scaling} the inference-time
 compute axis (\cref{sec:test-time-compute}) — specifically,
-self-consistency at $N > 1$ — \emph{also} improve faithfulness, or are
+\glsterm{self-consistency-2}{self-consistency} at $N > 1$ — \emph{also} improve faithfulness, or are
 accuracy gains and faithfulness gains decoupled?%
 \footnote{Excerpt status:
 \texttt{kb/excerpts/mehta2026-faithfulness-scaling.md} is abstract-only
 as of 2026-05; \deepencite{mehta2026-faithfulness-scaling abstract,
 citation-pending}} The study runs four frontier models
-(\textbf{GPT-5.2, Claude Opus 4.5, Gemini-3-flash-preview,
-DeepSeek-v3.2}) on $100$ GSM8K problems at varying self-consistency
+(\textbf{GPT-5.2, \glsterm{claude}{Claude} Opus 4.5, Gemini-3-flash-preview,
+\glsterm{precision-pinning}{DeepSeek-v3}.2}) on $100$ GSM8K problems at varying \glsterm{self-consistency-2}{self-consistency}
 budgets and measures both task accuracy and a per-trajectory
 faithfulness score in parallel.
 
 The headline result is non-monotonic: \textbf{inference scaling does
 not uniformly improve faithfulness}
-\citep[abstract]{mehta2026-faithfulness-scaling}. The Claude Opus 4.5
+\citep[abstract]{mehta2026-faithfulness-scaling}. The \glsterm{claude}{Claude} Opus 4.5
 configuration provides the cleanest illustration: accuracy
 \emph{decreases} from $78\% \to 74.3\%$ while measured faithfulness
 \emph{rises} from $0.270 \to 0.891$ at
@@ -212,7 +212,7 @@ $N = 5$.\footnote{KB index:
 \texttt{kb/index/papers.json} — abstract.
 \deepencite{mehta2026-faithfulness-scaling §4 (or wherever the per-model
 table lives in the PDF; section anchor pending population), citation-pending}}
-For \cref{eq:cot-decode}'s reading of self-consistency this is a
+For \cref{eq:cot-decode}'s reading of \glsterm{self-consistency-2}{self-consistency} this is a
 puzzle: more samples should average out per-sample noise in the
 \emph{trace} channel, leaving the conditional $p_\theta(y \mid x, z)$
 better-determined; but at the same time, the votes are over the
@@ -221,7 +221,7 @@ quality and answer-channel quality is exactly what faithfulness
 measurement is testing. Mehta et al.'s finding is that the two channels
 move differently per model.
 
-The operational implication: \textbf{self-consistency must be tested
+The operational implication: \textbf{\glsterm{self-consistency-2}{self-consistency} must be tested
 per-model before deployment}
 \citep[abstract]{mehta2026-faithfulness-scaling} for any application
 that depends on traces being a faithful read of the model's
@@ -234,8 +234,8 @@ and verification are co-designed levers (\cref{sec:test-time-compute,sec:process
 \subsection{The contradiction with reasoning-training framings}
 \label{sec:faith-contradiction}
 
-The clean read of \citet{deepseek-r1}'s GRPO outcome — long traces
-emerge from RLVR, accuracy rises in lockstep with trace length,
+The clean read of \citet{deepseek-r1}'s \glsterm{grpo-2}{GRPO} outcome — long traces
+emerge from \glsterm{rlvr-3}{RLVR}, accuracy rises in lockstep with trace length,
 truncating the trace destroys the gain — is that the trace is a
 \emph{causal substrate}: the model is doing genuine compute on the
 trace channel and the answer is being read off the result. The
@@ -243,7 +243,7 @@ Arcuschin and Mehta evidence complicates this read at two scales.
 
 \begin{contradiction}
 \textbf{Reasoning-training as causal-trace evidence vs.\ unfaithful-trace
-evidence.} \citet[\S 2.2]{deepseek-r1} report that RLVR training grows
+evidence.} \citet[\S 2.2]{deepseek-r1} report that \glsterm{rlvr-3}{RLVR} training grows
 average response length from $\sim 200$ to $\sim 10{,}000$ tokens%
 \deepencite{deepseek-r1 §2.2 trace-length growth curve, KB excerpt-anchor pending; current anchor covers the rule-based-reward passage}
 with AIME 2024 pass\@1 climbing $15.6\% \to 77.9\%$%
@@ -258,7 +258,7 @@ the unfaithful-illogical-shortcut failure mode of
 in the right format but the answer is not in fact a function of them.
 \citet{mehta2026-faithfulness-scaling}'s scaling-of-faithfulness result
 sharpens the tension: one frontier model's accuracy drops while its
-faithfulness rises under self-consistency, a pattern incompatible with
+faithfulness rises under \glsterm{self-consistency-2}{self-consistency}, a pattern incompatible with
 the simple reading that traces are a causal substrate at all scales.
 The 2026 picture is regime-dependent and the question is unresolved;
 \cref{sec:contradictions} catalogues this alongside the other live
@@ -268,14 +268,14 @@ faithfulness contradictions of \cref{sec:faith-arcuschin,sec:faith-mehta}.
 A second sub-tension within the empirical wave itself: the per-rate
 gap of two orders of magnitude between non-thinking and thinking
 configurations \citep[abstract]{arcuschin2025-cot-wild} cannot be
-cleanly attributed to long-CoT SFT, RLVR post-training, or general
+cleanly attributed to long-\glsterm{chain-of-thought}{CoT} SFT, \glsterm{rlvr-3}{RLVR} post-training, or general
 scale by published 2025--2026 ablations
 \citep[\S 4]{mehta2026-faithfulness-scaling}; the controlled
 ablation that varies one of these factors at fixed others has not been
 run at frontier scale.%
 \footnote{KB note:
-\texttt{kb/notes/reasoning/chain-of-thought.md\#4.1}.} The reason
-matters: if the gap is RLVR-driven, it is benchmarkable and tunable
+\texttt{kb/notes/reasoning/\glsterm{chain-of-thought}{chain-of-thought}.md\#4.1}.} The reason
+matters: if the gap is \glsterm{rlvr-3}{RLVR}-driven, it is benchmarkable and tunable
 through the training pipeline of \cref{sec:rlvr}; if it is scale-driven,
 faithfulness is on a separate scaling curve from accuracy, and Mehta et
 al.'s non-monotonic per-model results are the first signal of where the
@@ -290,21 +290,21 @@ resolution shapes both.
 \paragraph{Paper~4 — CoT as a probe surface.}
 The interpretability programme of Paper~4 reads internal computation
 through several methods: logit lenses, linear probes, sparse
-autoencoders, activation patching, and circuit tracing. CoT traces are
-the \emph{output-side} probe surface for that programme — they are
-human-readable, token-aligned with the residual stream, and stable
+autoencoders, \glsterm{activation-patching}{activation patching}, and \glsterm{circuit-tracing}{circuit tracing}. \glsterm{chain-of-thought}{CoT} traces are
+the \emph{output-side} \glsterm{probe-2}{probe} surface for that programme — they are
+human-readable, token-aligned with the \glsterm{residual-stream}{residual stream}, and stable
 under repeated decoding. The faithfulness question gates this use:
-\textbf{if traces are unfaithful, the probe surface is decoupled from
+\textbf{if traces are unfaithful, the \glsterm{probe-2}{probe} surface is decoupled from
 the underlying computation}. Paper~4's §interpretability returns to
-this section as a precondition for treating CoT-as-probe as a primary
+this section as a precondition for treating \glsterm{chain-of-thought}{CoT}-as-\glsterm{probe-2}{probe} as a primary
 methodology, and uses Mehta et al.'s per-model variation to argue that
-probe-surface validity must be re-established model-by-model rather
+\glsterm{probe-2}{probe}-surface validity must be re-established model-by-model rather
 than assumed from the family.
 
 \paragraph{Paper~5 — CoT as an alignment monitor.}
-The alignment programme of Paper~5 treats the CoT channel as a
+The alignment programme of Paper~5 treats the \glsterm{chain-of-thought}{CoT} channel as a
 \emph{monitorable surface}: detectors that read traces look for
-warning signs of misalignment, scheming, sycophancy, and
+warning signs of misalignment, \glsterm{scheming}{scheming}, \glsterm{sycophancy}{sycophancy}, and
 alignment-faking before the answer is committed. The
 canonical 2024 result on alignment-faking
 \citep{greenblatt2024-alignment-faking} demonstrates that a model can
@@ -312,7 +312,7 @@ behave correctly on observable outputs while internally pursuing a
 divergent objective; if the trace channel is unfaithful in
 \cref{eq:faith-causal}'s sense, this monitoring approach has a blind
 spot exactly where it most needs to see. Paper~5's §alignment cites
-forward to this section as the empirical bound on CoT-as-monitor: a
+forward to this section as the empirical bound on \glsterm{chain-of-thought}{CoT}-as-monitor: a
 $0.04$--$0.37\%$ unfaithfulness rate on thinking models
 \citep[abstract]{arcuschin2025-cot-wild} is small in aggregate but
 consequential at scale, and the per-instance harder-on-advanced-models
@@ -335,13 +335,13 @@ sections ask the same shape of question: \emph{has the post-2024
 training pipeline absorbed a function the field used to assign to an
 external module?} For verifiers (PRMs), the question is whether
 process-reward signal still earns its inference and training cost once
-RLVR-trained policies internalise step-level verification. For traces,
-the question is whether the CoT channel still earns its interpretability
+\glsterm{rlvr-3}{RLVR}-trained policies internalise step-level verification. For traces,
+the question is whether the \glsterm{chain-of-thought}{CoT} channel still earns its interpretability
 and monitoring premium once the policy has been RL-trained to optimise
 the answer-channel directly. The 2026 evidence, in both cases, is that
 the absorption is partial and regime-dependent: PRMs continue to add
-value at inference time (\cref{sec:prm-thinkprm,sec:prm-survival}) while
-their training-time value shrinks, and traces continue to drive answers
+\glsterm{value}{value} at inference time (\cref{sec:prm-thinkprm,sec:prm-survival}) while
+their training-time \glsterm{value}{value} shrinks, and traces continue to drive answers
 on the on-distribution majority of instances while their reliability
 degrades exactly on the harder, higher-stakes tail.
 \Cref{sec:contradictions} catalogues both contradictions as twin live

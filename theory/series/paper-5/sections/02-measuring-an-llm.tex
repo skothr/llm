@@ -22,12 +22,12 @@ deployment distribution --- is the precondition for everything that
 follows in this paper. \textbf{The thesis of this section is that the
 2024--2026 measurement landscape is organized by three orthogonal
 axes (capability vs alignment; knowledge vs reasoning vs agency;
-static benchmark vs adversarial probe vs deployment audit), tied
-together by a small psychometric vocabulary (validity, reliability,
+static benchmark vs adversarial \glsterm{probe-2}{probe} vs deployment audit), tied
+together by a small psychometric \glsterm{vocabulary}{vocabulary} (validity, reliability,
 construct, contamination, ecological validity), and that the closest
-the field has to a theory of measurement is HELM's
+the field has to a theory of measurement is \glsterm{helm}{HELM}'s
 scenario-by-metric matrix \citep{liang2022-helm} together with the
-2PL form from item response theory.} The vocabulary fixed here is
+2PL form from item response theory.} The \glsterm{vocabulary}{vocabulary} fixed here is
 inherited by \cref{sec:knowledge-benchmarks,sec:contamination,sec:reasoning-benchmarks,sec:agentic-benchmarks,sec:adversarial-robustness,sec:dangerous-capability,sec:sycophancy,sec:scheming,sec:alignment-faking,sec:watermarking,sec:scalable-oversight}
 without re-derivation; what changes section to section is what
 $(\rho, A, V)$ contains and what construct $\hat{S}$ is supposed to
@@ -38,7 +38,7 @@ measure.
 
 Following \citet{liang2022-helm} and the open-source eval-harness
 discipline --- in particular EleutherAI's
-\texttt{lm-evaluation-harness} \citep{lm-eval-harness}, the
+\texttt{\glsterm{lm-evaluation-harness}{lm-evaluation-harness}} \citep{lm-eval-harness}, the
 de-facto reference implementation for the academic-benchmark
 column of \cref{sec:knowledge-benchmarks}\footnote{KB excerpt:
 \texttt{kb/excerpts/lm-eval-harness.md\#sec-framing}.} ---
@@ -89,15 +89,15 @@ $\hat{S}$, and they do so additively in expectation%
 \footnote{KB note: \texttt{kb/notes/evaluation/eval-methodology.md\#1-formal-framing-the-score-is-a-noisy-random-variable}.}.
 
 \paragraph{Prompt-format sensitivity.} A single benchmark item can be
-presented many ways: loglikelihood scoring on
+presented many ways: \glsterm{loglikelihood-scoring}{loglikelihood scoring} on
 $\{\log P(\text{A}), \log P(\text{B}), \log P(\text{C}), \log P(\text{D})\}$
 with argmax extraction; generation scoring with regex parsing of
 ``the answer is X.''; system-prompt presence; zero- vs five- vs
 twenty-five-shot in context. Each moves $\hat{S}$ by approximately
-$1$--$4$ percentage points on MMLU; combined effects can exceed $10$.
+$1$--$4$ percentage points on \glsterm{mmlu}{MMLU}; combined effects can exceed $10$.
 \citet{wang2024-mmlu-pro} test $24$ prompt styles per model and report
 prompt-induced score variance falling from approximately $4$--$5\%$ on
-MMLU to approximately $2\%$ on MMLU-Pro
+\glsterm{mmlu}{MMLU} to approximately $2\%$ on \glsterm{mmlu-pro}{MMLU-Pro}
 \citep[\S{}abstract]{wang2024-mmlu-pro}, the latter achieved by
 $10$-way (rather than $4$-way) MCQ that dilutes the answer-letter
 prior. The implication: $\pi$ in \eqref{eq:score-rv} is a benchmark
@@ -115,10 +115,10 @@ positive even when no benchmark item appears verbatim in pretraining
 
 \paragraph{Verifier mis-specification.} $V$ in \eqref{eq:bench-static}
 may accept wrong answers or reject correct ones.
-\citet{mmlu-redux-2024} find $6.49\%$ of MMLU questions contain
+\citet{mmlu-redux-2024} find $6.49\%$ of \glsterm{mmlu}{MMLU} questions contain
 errors --- malformed questions, wrong gold answers, ambiguous wording
 --- that propagate as a hard upper bound on the perfectly-calibrated
-true score on gold-labeled MMLU; the Virology subset contains errors
+true score on gold-labeled \glsterm{mmlu}{MMLU}; the Virology subset contains errors
 in $57\%$ of audited questions, which means the per-subject score
 there is essentially verifier noise. Verifier error and contamination
 compound: a model that has memorized the \emph{wrong-but-popular}
@@ -129,7 +129,7 @@ corpora the models were trained on.
 \subsection{Validity, reliability, construct, ecological validity}
 \label{sec:measuring-validity}
 
-The psychometric vocabulary the field borrows --- and most often
+The psychometric \glsterm{vocabulary}{vocabulary} the field borrows --- and most often
 borrows incompletely --- decomposes the methodological problem into
 four named questions, each of which has a partial 2024--2026 answer.
 
@@ -145,16 +145,16 @@ four named questions, each of which has a partial 2024--2026 answer.
   \item[Validity.] Does the score reflect the construct it claims to
     measure? A score on a contaminated benchmark is reliable but not
     valid for the construct ``capability on unseen items.'' A score
-    on a verifier-broken benchmark (e.g., MMLU Virology) is reliable
+    on a verifier-broken benchmark (e.g., \glsterm{mmlu}{MMLU} Virology) is reliable
     but not valid for the construct ``knows virology.'' Validity
     concerns dominate the contradictions chapter
     (\cref{sec:contradictions}).
 
   \item[Construct.] What latent property is the benchmark trying to
-    expose? The construct of MMLU is broad-but-shallow factual
-    recall; of FrontierMath, research-grade mathematical problem
-    solving; of HarmBench, refusal-rate under attack; of Apollo's
-    scheming suite, in-context capability for strategic deception.
+    expose? The construct of \glsterm{mmlu}{MMLU} is broad-but-shallow factual
+    recall; of \glsterm{frontiermath}{FrontierMath}, research-grade mathematical problem
+    solving; of \glsterm{harmbench-2}{HarmBench}, refusal-rate under attack; of Apollo's
+    \glsterm{scheming}{scheming} suite, in-context capability for strategic deception.
     A frequent failure mode is construct drift: a benchmark whose
     items were chosen to expose construct $C_1$ ends up being
     reported as evidence about construct $C_2$, where the item
@@ -169,9 +169,9 @@ four named questions, each of which has a partial 2024--2026 answer.
     failure mode.
 \end{description}
 
-The four are not independent. A reliability fix (MMLU-Pro's
+The four are not independent. A reliability fix (\glsterm{mmlu-pro}{MMLU-Pro}'s
 $24$-prompt protocol) does not buy validity if the construct is wrong
-(saturated retrieval). A validity fix (FrontierMath's unpublished
+(saturated retrieval). A validity fix (\glsterm{frontiermath}{FrontierMath}'s unpublished
 items) does not buy ecological validity if the deployment distribution
 is web-search-augmented dialogue, not closed-book exam. Naming the
 four lets us say cleanly which problems each layer's instruments do
@@ -189,8 +189,8 @@ conditions. Knowledge benchmarks (\cref{sec:knowledge-benchmarks}),
 reasoning benchmarks (\cref{sec:reasoning-benchmarks}), agentic
 benchmarks (\cref{sec:agentic-benchmarks}), and dangerous-capability
 evaluations (\cref{sec:dangerous-capability}) live on the capability
-side: they ask whether the model has a capacity at all. Sycophancy
-(\cref{sec:sycophancy}), in-context scheming
+side: they ask whether the model has a capacity at all. \glsterm{sycophancy}{Sycophancy}
+(\cref{sec:sycophancy}), \glsterm{in-context-scheming}{in-context scheming}
 (\cref{sec:scheming}), and alignment-faking
 (\cref{sec:alignment-faking}) live on the alignment side: they ask
 whether the model behaves aligned because it \emph{is} aligned, or
@@ -206,10 +206,10 @@ cognition on the model's part.
 
 \paragraph{Axis 2 --- knowledge vs reasoning vs agency.} Recall
 versus multi-step inference versus end-to-end task completion in an
-environment. The split is empirically diagnostic: in MMLU-Pro,
-chain-of-thought scoring meaningfully outperforms direct-answer
-scoring on the new harder items, where on the original MMLU it did
-not \citep[\S{}sec-cot]{wang2024-mmlu-pro}. The CoT-vs-direct gap
+environment. The split is empirically diagnostic: in \glsterm{mmlu-pro}{MMLU-Pro},
+\glsterm{chain-of-thought}{chain-of-thought} scoring meaningfully outperforms direct-answer
+scoring on the new harder items, where on the original \glsterm{mmlu}{MMLU} it did
+not \citep[\S{}sec-cot]{wang2024-mmlu-pro}. The \glsterm{chain-of-thought}{CoT}-vs-direct gap
 is the operational signature of reasoning-dominant items; a benchmark
 where it is zero is dominated by retrieval. Agentic benchmarks
 (\cref{sec:agentic-benchmarks}) extend the axis again by adding an
@@ -222,7 +222,7 @@ versus observational measurement during real use. Static benchmarks
 $\mathcal{B}$ and $\pi$ fixed. Adversarial probes
 (\cref{sec:adversarial-robustness}) introduce an attacker that
 searches over inputs $\rho$ to maximize $\Pr[\text{policy violation}]$;
-the score is attack success rate on a search-augmented set, not
+the score is \glsterm{attack-success-rate}{attack success rate} on a search-augmented set, not
 pass-rate on a static one. Deployment audits
 (\cref{sec:scheming,sec:alignment-faking,sec:watermarking}) are
 observational; $\mathcal{B}$ is not fixed by the evaluator and $\pi$
@@ -235,11 +235,11 @@ The three axes are orthogonal in the sense that any
 benchmark-as-measurement-instrument occupies a triple
 $(\text{capability/alignment}, \text{knowledge/reasoning/agency},
 \text{static/adversarial/audit})$ and changing one coordinate
-generally requires a different instrument. MMLU is
-$(\text{capability}, \text{knowledge}, \text{static})$; HarmBench is
+generally requires a different instrument. \glsterm{mmlu}{MMLU} is
+$(\text{capability}, \text{knowledge}, \text{static})$; \glsterm{harmbench-2}{HarmBench} is
 $(\text{alignment-adjacent}, \text{agency-adjacent},
 \text{adversarial})$; the (yet-unbuilt) deployment audit for
-in-the-wild scheming would be
+in-the-wild \glsterm{scheming}{scheming} would be
 $(\text{alignment}, \text{agency}, \text{audit})$. Returning to
 canonical form: the score random variable
 $\hat{S}(\theta, \mathcal{B}, \pi, \tau)$ takes its support, its
@@ -251,14 +251,14 @@ and there is no single benchmark that spans the grid.
 \subsection{HELM's scenario-by-metric matrix}
 \label{sec:measuring-helm}
 
-HELM \citep{liang2022-helm} is the closest the field has to a
+\glsterm{helm}{HELM} \citep{liang2022-helm} is the closest the field has to a
 theory of measurement at the scenario level. The structural argument
 is that single-axis benchmarks (accuracy alone) systematically miss
 the failure modes that determine deployment behavior, and that a
 benchmark instance should ship a metric \emph{bundle} rather than a
 single number%
 \footnote{KB excerpt: \texttt{kb/excerpts/liang2022-helm.md\#sec-metrics}.}.
-HELM operationalizes this as a scenario-by-metric matrix: $7$ metrics
+\glsterm{helm}{HELM} operationalizes this as a scenario-by-metric matrix: $7$ metrics
 $\times$ $16$ core scenarios, with measurements taken
 ``for each of $16$ core scenarios when possible ($87.5\%$ of the
 time)'' \citep[\S{}abstract]{liang2022-helm}.
@@ -280,7 +280,7 @@ demographic-subgroup-conditioned prompts; Bias is demographic
 representation in open-ended generation; Tox is toxicity rate of
 generations under a fixed classifier; Eff is wall-clock and energy
 per inference call. A scenario $s$ is a triple
-$(\rho_s, a^\star_s, V_s)$, and the HELM evaluation of model
+$(\rho_s, a^\star_s, V_s)$, and the \glsterm{helm}{HELM} evaluation of model
 $\theta$ on scenario $s$ produces a vector
 \begin{equation}
 \hat{\mathbf{S}}(\theta, s) =
@@ -295,8 +295,8 @@ the metric is well-defined for the scenario%
 \footnote{KB excerpt: \texttt{kb/excerpts/liang2022-helm.md\#sec-metrics}.}.
 
 The headline coverage finding is the methodological contribution:
-``Before HELM, models on average were evaluated on just $17.9\%$ of
-the core HELM scenarios''; HELM evaluates $30$ prominent language
+``Before \glsterm{helm}{HELM}, models on average were evaluated on just $17.9\%$ of
+the core \glsterm{helm}{HELM} scenarios''; \glsterm{helm}{HELM} evaluates $30$ prominent language
 models on all $42$ scenarios under a single harness
 \citep[\S{}sec-coverage]{liang2022-helm}. The reproducibility move
 is to release all raw model prompts and completions, not just
@@ -306,23 +306,23 @@ The metric bundle propagated only partially to subsequent frameworks
 prompt-and-completion artifact discipline is now standard.
 
 \begin{contradiction}
-The HELM proposal is that $\hat{S}$ is a vector
+The \glsterm{helm}{HELM} proposal is that $\hat{S}$ is a vector
 \eqref{eq:helm-vector}, not a scalar. The field's actual reporting
 practice in $2024$--$2026$ remains overwhelmingly scalar: model cards
-publish a single MMLU number, a single GPQA number, a single
-HarmBench ASR. Per-axis breakdowns appear in tech reports
-intermittently and rarely with the seven-metric coverage HELM
+publish a single \glsterm{mmlu}{MMLU} number, a single GPQA number, a single
+\glsterm{harmbench-2}{HarmBench} \glsterm{asr}{ASR}. Per-axis breakdowns appear in tech reports
+intermittently and rarely with the seven-metric coverage \glsterm{helm}{HELM}
 prescribes. The methodological proposal is uncontroversial; the
 adoption gap is real, and several of the contradictions catalogued
 in \cref{sec:contradictions} are downstream of this gap (a single
-``ASR'' number across HarmBench, JailbreakBench, AdvBench is
-exactly the kind of scalarization HELM warns against).
+``\glsterm{asr}{ASR}'' number across \glsterm{harmbench-2}{HarmBench}, \glsterm{jailbreakbench-2}{JailbreakBench}, AdvBench is
+exactly the kind of scalarization \glsterm{helm}{HELM} warns against).
 \end{contradiction}
 
 \subsection{Item response theory: a calibration tool}
 \label{sec:measuring-irt}
 
-Where HELM addresses the metric-bundle question, item response theory
+Where \glsterm{helm}{HELM} addresses the metric-bundle question, item response theory
 (IRT) addresses the within-metric calibration question: under a
 fixed metric (say accuracy on multiple-choice items), what is the
 probability that a model of latent ability $\theta$ answers a
@@ -342,9 +342,9 @@ discrimination (how steeply the response curve rises across
 $\theta$). Items with high $a$ separate models cleanly; items with
 low $a$ are close to noise.
 
-The use of \eqref{eq:irt-2pl} in LLM evaluation is calibration, not
+The use of \eqref{eq:irt-2pl} in \glsterm{llm}{LLM} evaluation is calibration, not
 benchmark construction. Given a benchmark $\mathcal{B}$ with item
-parameters $\{(b_i, a_i)\}$ estimated from a panel of models, one
+\glsterm{parameters}{parameters} $\{(b_i, a_i)\}$ estimated from a panel of models, one
 can ask: given a new model's response pattern, what is the maximum
 likelihood estimate of $\theta$, and what is its standard error?
 This makes ``model X is at ability level $\theta_X$ on the
@@ -363,23 +363,23 @@ benchmark. Imagine sweeping a model's $\theta$ across the real line
 while holding $(a, b)$ fixed: at $\theta \ll b$, the model is below
 the item's difficulty and answers near random; at $\theta \gg b$, the
 model is above and answers near $1$; the transition width is set by
-$a$. Frontier models on saturated MMLU items have $\theta_X$ well
+$a$. Frontier models on saturated \glsterm{mmlu}{MMLU} items have $\theta_X$ well
 above the items' $b_i$, so the response is near $1$ and provides no
-new information --- this is the formal version of the saturation
+new information --- this is the formal version of the \glsterm{saturation}{saturation}
 intuition. Returning to canonical form: a saturated benchmark is
 one where $\Pr[\text{correct} \mid \theta_X, b_i, a_i] \to 1$ for all
 $i$, and $\hat{S}$ no longer responds to changes in $\theta_X$.
 \end{intuition}
 
 The IRT framing also clarifies what a successor benchmark like
-MMLU-Pro \citep{wang2024-mmlu-pro} or HLE \citep{phan2025-hle} is
+\glsterm{mmlu-pro}{MMLU-Pro} \citep{wang2024-mmlu-pro} or \glsterm{hle}{HLE} \citep{phan2025-hle} is
 doing: shifting the item-difficulty distribution $\{b_i\}$ rightward
 along the $\theta$ axis so frontier models are no longer in the
 saturated regime, and selecting items with high $a_i$ that
 discriminate among them. The construction recipes differ
-(MMLU-Pro: $4 \to 10$-way MCQ plus reasoning-focused items; HLE:
+(\glsterm{mmlu-pro}{MMLU-Pro}: $4 \to 10$-way MCQ plus reasoning-focused items; \glsterm{hle}{HLE}:
 expert-authored items with verifier discipline inherited from
-GPQA and FrontierMath) but the abstract goal is the same: rebuild
+GPQA and \glsterm{frontiermath}{FrontierMath}) but the abstract goal is the same: rebuild
 the discriminative shoulder of the 2PL curve over the frontier-model
 ability range. \deepencite{baker2001-irt-fundamentals §3, citation-pending}
 
@@ -412,10 +412,10 @@ still being under-instrumented in 2026.
 \Cref{sec:watermarking} and \cref{sec:scalable-oversight} reach
 beyond the in-distribution measurement frame entirely: watermarking
 is a signature on generations rather than a score on a fixed set;
-scalable oversight asks whether a bounded-resource judge can align a
+\glsterm{scalable-oversight}{scalable oversight} asks whether a bounded-resource judge can align a
 model whose capability already exceeds the judge's. Both are
-downstream of the vocabulary fixed here without being expressible
+downstream of the \glsterm{vocabulary}{vocabulary} fixed here without being expressible
 solely within it. We turn first to the knowledge layer
 (\cref{sec:knowledge-benchmarks}) and the contamination boundary
-(\cref{sec:contamination}) where the vocabulary is most directly
+(\cref{sec:contamination}) where the \glsterm{vocabulary}{vocabulary} is most directly
 exercised.

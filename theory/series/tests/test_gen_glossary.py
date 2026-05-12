@@ -63,14 +63,14 @@ def test_case_strict_lowercase_not_strict():
 
 
 def test_derive_key_simple():
-    assert derive_key("RoPE", []) == "rope"
-    assert derive_key("FlashAttention", []) == "flashattention"
-    assert derive_key("Multi-Head Attention", ["mha"]) == "multi-head-attention"
+    assert derive_key("RoPE") == "rope"
+    assert derive_key("FlashAttention") == "flashattention"
+    assert derive_key("Multi-Head Attention") == "multi-head-attention"
 
 
 def test_derive_key_collision_suffix():
     used: set[str] = {"rope"}
-    assert derive_key("Rope", [], used=used) == "rope-2"
+    assert derive_key("Rope", used=used) == "rope-2"
 
 
 def test_short_def_truncates_to_one_sentence():
