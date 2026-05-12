@@ -824,4 +824,11 @@ EngineMetrics MockModel::getEngineMetrics() {
 #endif
 }
 
+std::vector<LogEntry> MockModel::drainEngineLogs() {
+    // No engine bridged.  A real backend implementation pops from its
+    // own ring buffer here; the UI fans the result through Logger so the
+    // entries land in both the in-app console and the on-disk log.
+    return {};
+}
+
 }  // namespace llob
