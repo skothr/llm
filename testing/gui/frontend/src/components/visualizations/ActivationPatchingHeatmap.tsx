@@ -202,7 +202,9 @@ export function ActivationPatchingHeatmap({ result }: Props) {
         .attr("rx", 2)
         .style("cursor", "pointer")
         .on("click", (event) => {
-          setPinned({ cell, x: event.pageX + 10, y: event.pageY + 10 });
+          // clientX/Y because PinnedCell renders with position:fixed
+          // (viewport-relative); pageX/Y would drift by scroll offset.
+          setPinned({ cell, x: event.clientX + 10, y: event.clientY + 10 });
         });
     }
 

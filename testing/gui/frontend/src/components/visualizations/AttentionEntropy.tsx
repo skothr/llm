@@ -124,7 +124,11 @@ export function AttentionEntropy({ result }: Props) {
             lines.push(`min:  ${(d3.min(d.valuesA) ?? 0).toFixed(3)}`);
             lines.push(`max:  ${(d3.max(d.valuesA) ?? 0).toFixed(3)}`);
           }
-          setTooltip({ x: event.pageX + 10, y: event.pageY - 10, content: lines.join("\n") });
+          // clientX/Y (viewport-relative) because the tooltip below renders
+          // with position:fixed — pageX/Y would drift by the window's vertical
+          // scroll offset, which is exactly the "clicking is off after resize"
+          // symptom that appears once content reflows tall enough to scroll.
+          setTooltip({ x: event.clientX + 10, y: event.clientY - 10, content: lines.join("\n") });
         })
         .on("mouseleave", () => setTooltip(null));
 

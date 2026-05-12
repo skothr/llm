@@ -174,12 +174,14 @@ export function DimVsLayerHeatmap({ result }: Props) {
               if (rowIdx < 0 || rowIdx >= rows.length) return;
               const row = rows[rowIdx];
               if (dim < 0 || dim >= row.data.length) return;
+              // clientX/Y because the hover tooltip below renders with
+              // position:fixed; pageX/Y would drift by scroll offset.
               setHover({
                 layer: row.label,
                 dim,
                 value: row.data[dim],
-                x: e.pageX + 10,
-                y: e.pageY + 10,
+                x: e.clientX + 10,
+                y: e.clientY + 10,
               });
             }}
             onMouseLeave={() => setHover(null)}

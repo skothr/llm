@@ -189,7 +189,8 @@ export function PerHeadPatchingHeatmap({ result }: Props) {
             const syntheticCell: PatchingCellData = {
               type: "data", layer: L, unit, position: selectedPos, ap_recovery: v,
             };
-            setPinned({ cell: syntheticCell, x: event.pageX + 10, y: event.pageY + 10 });
+            // clientX/Y because PinnedCell renders with position:fixed.
+            setPinned({ cell: syntheticCell, x: event.clientX + 10, y: event.clientY + 10 });
           });
       });
     });
