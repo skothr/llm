@@ -98,9 +98,11 @@ spending more inference-time tokens on the trace.
 sampling of a group of $G$ trajectories, with the group's empirical
 reward distribution as the variance-reducing
 baseline.\footnote{KB excerpt:
-\texttt{kb/excerpts/shao2024.md\#sec-4-1-motivation}.} The objective,
-restated and verified in \citet[\S 2.1, Eq.\ 1]{deepseek-r1}\footnote{KB
-excerpts: \texttt{kb/excerpts/shao2024.md\#sec-4-1} and
+\texttt{kb/excerpts/shao2024.md\#sec-4-1-motivation}.} The token-level
+objective \citep[\S 4.1, Eq.\ 3]{shao2024}, which DeepSeek-R1 later
+restates in a sequence-level shorthand at \citet[\S 2.1, Eq.\
+1]{deepseek-r1}\footnote{KB excerpts:
+\texttt{kb/excerpts/shao2024.md\#sec-4-1} and
 \texttt{kb/excerpts/deepseek-r1.md\#sec-2-1-grpo}.}:
 \begin{equation}
 \begin{aligned}
