@@ -306,6 +306,43 @@ def test_render_glossary_section_basic():
     assert r"\citep[\S 3.4]{su2021}" in out
 
 
+def test_render_glossary_section_emits_back_link_when_first_mention_known():
+    """Entry whose key is in first_mention_label gets a \\hyperref arrow."""
+    records = _records({
+        "key": "rope", "primary_form": "RoPE", "aliases": [],
+        "short_def": "x", "full_def": "Rotary positional encoding details.",
+        "case_strict": True, "kb_cite": None,
+    })
+    out = render_glossary_section(
+        records,
+        used_keys={"rope"},
+        first_mention_label={"rope": "sec:positional"},
+    )
+    assert r"\hyperref[sec:positional]" in out
+    # The arrow itself must be rendered (rust-tinted to match \glsterm body terms).
+    assert r"\textcolor{glscolor}{$\to$}" in out
+    # The link MUST live in the description-item body, NOT inside \item[...].
+    # \item[...] is a moving argument; math mode there ($\to$) trips
+    # hyperref's babel normalisation and breaks the build. The arrow
+    # should appear after \item[...] but before the definition text.
+    assert (
+        r"\hyperref[sec:positional]{\textcolor{glscolor}{$\to$}} "
+        r"Rotary positional encoding details."
+    ) in out, "back-link must precede full_def in the item body"
+
+
+def test_render_glossary_section_omits_back_link_when_first_mention_unknown():
+    """Entry whose key has no first-mention label renders without an arrow."""
+    records = _records({
+        "key": "rope", "primary_form": "RoPE", "aliases": [],
+        "short_def": "x", "full_def": "x", "case_strict": True, "kb_cite": None,
+    })
+    # first_mention_label not passed → default {} → no link emitted
+    out = render_glossary_section(records, used_keys={"rope"})
+    assert r"\hyperref[" not in out
+    assert r"$\to$" not in out
+
+
 def test_render_glossary_section_scopes_to_used_keys():
     records = _records(
         {"key": "rope", "primary_form": "RoPE", "aliases": [],
