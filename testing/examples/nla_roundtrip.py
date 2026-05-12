@@ -8,6 +8,10 @@ argmax-next-token alongside for context.
 See ``llm_surgeon.probe._nla`` for the AV inference helper.
 """
 
+import os
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TQDM_DISABLE", "1")
+
 import gc
 import time
 from typing import cast

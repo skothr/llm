@@ -8,6 +8,10 @@ the residual stream is genuinely carrying position-specific semantic
 content, and the AV is reading it.
 """
 
+import os
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TQDM_DISABLE", "1")
+
 import gc
 import time
 from typing import cast
