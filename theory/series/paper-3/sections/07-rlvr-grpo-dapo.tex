@@ -2,7 +2,7 @@
 % Anchors: kb/notes/post-training/rlvr-and-grpo.md §1-3
 %          kb/notes/reasoning/reasoning-training.md §1
 %          kb/excerpts/{shao2024,dapo2025,deepseek-r1}.md
-% Cross-paper: complement to Paper~2 §11 (RL on verifiable rewards: GRPO and
+% Cross-paper: complement to \hyperref[P2-sec:rlvr-grpo]{Paper~2 §11} (RL on verifiable rewards: GRPO and
 % DAPO). That section anchors the post-training-pipeline framing; this one
 % anchors the reasoning-triangle role of the same machinery.
 
@@ -31,7 +31,7 @@ single number in the reasoning-\glsterm{llm}{LLM} literature, and the central ev
 that the triangle composes.
 
 This section is deliberately complementary to Paper~2's RL-stage
-treatment (Paper~2 §11, which covers \glsterm{grpo-2}{GRPO}/\glsterm{dapo-2}{DAPO} as one stage of the
+treatment (\hyperref[P2-sec:rlvr-grpo]{Paper~2 §11}, which covers \glsterm{grpo-2}{GRPO}/\glsterm{dapo-2}{DAPO} as one stage of the
 six-stage post-training pipeline). The angle here is different: how
 \glsterm{rlvr-3}{RLVR} \emph{shapes} the \glsterm{test-time-compute}{test-time compute} axis. The training reward is
 terminal and binary, but the policy that emerges is one whose
@@ -83,7 +83,7 @@ susceptible to \glsterm{reward-hacking}{reward hacking} during large-scale reinf
 learning.''\footnote{KB excerpt:
 \texttt{kb/excerpts/deepseek-r1.md\#sec-2-2-reward}.} The
 post-training-pipeline framing of why this matters is
-Paper~2 §11; the reasoning-triangle framing is that
+\hyperref[P2-sec:rlvr-grpo]{Paper~2 §11}; the reasoning-triangle framing is that
 \cref{eq:verifier-reward}'s sparseness is what \emph{forces} the policy
 to discover long-\glsterm{chain-of-thought}{CoT} solutions in the first place --- the only signal
 \glsterm{rlvr-3}{RLVR} provides is whether the final answer is correct, so the policy
@@ -131,7 +131,7 @@ typically $8$--$64$ ($G = 16$ in \glsterm{r1-zero}{R1-Zero} \citep[\S
 \texttt{kb/excerpts/deepseek-r1.md\#sec-2-1-hp}.}); $o_i$ the $i$-th
 sampled trajectory (\glsterm{chain-of-thought}{chain-of-thought} + answer); $R_i \in \{0, 1\}$ the
 verifier reward of \cref{eq:verifier-reward}; $\pi_\mathrm{ref}$ a
-frozen reference (typically the SFT cold-start, see Paper~2 §SFT);
+frozen reference (typically the SFT cold-start, see \hyperref[P2-sec:sft]{Paper~2 §SFT});
 $\beta$ the KL coefficient ($0.001$ for \glsterm{r1-zero}{R1-Zero}
 \citep[\S 2.1]{deepseek-r1}); $\epsilon = 0.2$ the PPO clip range. The
 KL is computed token-wise with Schulman's unbiased estimator,
@@ -190,7 +190,7 @@ succeed --- a claim contested by the R1 narrative \citep[\S
 
 The intuition's last clause foreshadows the
 \citet{rlvr-limits-2025} contradiction (\cref{sec:contradictions}, also
-discussed in Paper~2 §11): if the group-mean baseline is the binding
+discussed in \hyperref[P2-sec:rlvr-grpo]{Paper~2 §11}): if the group-mean baseline is the binding
 mechanism, then \glsterm{rlvr-3}{RLVR}'s reach is bounded by the base policy's pass@$K$
 at any $K$, not by its pass@$1$. The $15.6 \to 77.9$ AIME climb is then
 read as ``the base model could already solve $77.9\%$ of these problems
@@ -384,7 +384,7 @@ of the leg; if it does not, \glsterm{grpo-2}{GRPO}'s critic-free design is part 
 gain over \glsterm{dapo-2}{DAPO} replicates outside the original recipe is open as of
 2026-Q2; only the original paper has reported the comparison, and
 follow-up evidence is limited to a small set of reproductions.
-Cross-paper to Paper~2 §11 (the same contradiction in
+Cross-paper to \hyperref[P2-sec:rlvr-grpo]{Paper~2 §11} (the same contradiction in
 post-training-pipeline framing) and \cref{sec:contradictions} (the
 unified resolution attempt across the three legs).
 \deepencite{vapo2025 — bibkey not yet in references.bib; arXiv:2504.05118 §3 replication evidence}
@@ -416,7 +416,7 @@ advantage \cref{eq:grpo-advantage}, the four \glsterm{dapo-2}{DAPO} modification
 \cref{eq:dapo-clip}--\cref{eq:dapo-overlong}, and the empirical proof
 points: \glsterm{r1-zero}{R1-Zero}'s AIME climb on \glsterm{grpo-2}{GRPO} and \glsterm{dapo-2}{DAPO}'s halved step-count to
 matched score on Qwen2.5-32B-base. The post-training-pipeline framing
-of the same machinery (Paper~2 §11) treats \glsterm{rlvr-3}{RLVR} as the successor to
+of the same machinery (\hyperref[P2-sec:rlvr-grpo]{Paper~2 §11}) treats \glsterm{rlvr-3}{RLVR} as the successor to
 \glsterm{rlhf}{RLHF} in the six-stage training pipeline; this section's framing instead
 treats the RL leg as the upstream cause of the inference-time compute
 axis the previous sections of this paper studied.
