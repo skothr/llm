@@ -50,6 +50,12 @@ _VERBATIM_ENV = re.compile(
     re.DOTALL,
 )
 
+# Inline verbatim: \verb|...|, \verb!...!, \lstinline|...|, etc.
+# The delimiter is any non-letter / non-space char picked by the author; we
+# capture it as group 1 and match up to its next occurrence. \verb cannot
+# span lines, so default (non-DOTALL) `.*?` is correct here.
+_VERB_INLINE = re.compile(r"\\(?:verb|lstinline)\*?(.).*?\1")
+
 # LaTeX commands whose first brace-arg must be skipped (they're not body text).
 # For these, the recorded skip region is just (open_brace, end_brace).
 _SKIP_COMMANDS_SINGLE_ARG = {
@@ -203,18 +209,19 @@ def find_skip_regions(text: str) -> list[tuple[int, int]]:
     Skip set:
       - Math: $...$, \\(...\\), \\[...\\], \\begin{equation|align|...}
       - Verbatim envs: \\begin{lstlisting|verbatim|minted|alltt|Verbatim}
+      - Inline verbatim: \\verb|...|, \\lstinline|...| (arbitrary delim)
       - Reference/cite/anchor command args (\\label, \\citep, etc.)
         — including \\cmd[opt]{arg} forms with optional bracket args.
       - Section-shaped commands' brace args (\\section, \\paragraph, etc.)
+      - Caption / item label args — moving arguments, \\pdftooltip rejected.
       - Comments (% to end of line, ignoring escaped \\%)
       - Already-wrapped: \\glsterm{}{} (entire 2-arg call)
       - Author-disabled: \\nogls{} (entire arg)
-
-    Captions are NOT skipped (per design — captions are reading surfaces).
     """
     regions: list[tuple[int, int]] = []
     for pattern in (_MATH_INLINE_DOLLAR, _MATH_INLINE_PAREN,
-                    _MATH_DISPLAY_BRACKET, _MATH_ENV, _VERBATIM_ENV):
+                    _MATH_DISPLAY_BRACKET, _MATH_ENV,
+                    _VERBATIM_ENV, _VERB_INLINE):
         for m in pattern.finditer(text):
             regions.append((m.start(), m.end()))
     regions.extend(_find_command_skip_regions(text))
@@ -577,12 +584,15 @@ def run_conflicts(records: list[dict], reports: list[dict]) -> int:
             for k in keys:
                 flat[k] = flat.get(k, 0) + 1
         for k, n in flat.items():
-            if n > 100:
+            # n = number of sections in this paper where key k appears.
+            # Papers have up to 14 sections; a term hitting in 10+ sections
+            # (>~70%) is plausibly an over-broad regex.
+            if n >= 10:
                 over.append((rep["paper"], k, n))
     if over:
-        print("\n## Possibly over-broad matches (>100 hits in one paper):")
+        print("\n## Possibly over-broad terms (matched in 10+ sections of one paper):")
         for paper, k, n in sorted(over, key=lambda x: -x[2]):
-            print(f"  - {paper}/{k}: {n} hits")
+            print(f"  - {paper}/{k}: in {n} sections")
     return 0
 
 
