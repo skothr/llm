@@ -149,6 +149,17 @@ def test_skip_already_glsterm_wrapped():
     assert (cmd_start, cmd_end) in regions
 
 
+def test_skip_glsdef_wrapped():
+    """\\glsdef is the formal-introduction marker; treat it as a skip
+    region exactly like \\glsterm so the auto-wrapper never nests one
+    inside the other's surface argument."""
+    text = r"we formally introduce \glsdef{rope}{RoPE} here"
+    regions = find_skip_regions(text)
+    cmd_start = text.index(r"\glsdef")
+    cmd_end = text.index("}", text.index("}") + 1) + 1
+    assert (cmd_start, cmd_end) in regions
+
+
 def test_skip_nogls_wrapped():
     text = r"the bare \nogls{Q} symbol"
     regions = find_skip_regions(text)

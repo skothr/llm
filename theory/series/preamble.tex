@@ -93,6 +93,13 @@
 \newcommand{\glsterm}[2]{%
   \pdftooltip{\hyperlink{glossary:#1}{\textcolor{glscolor}{\dotuline{#2}}}}{\@nameuse{@gls@def@#1}}%
 }
+% \glsdef{key}{surface} renders IDENTICALLY to \glsterm but semantically
+% marks the site where the term is FORMALLY introduced. The glossary
+% back-arrow → in the glossary section will jump to the surrounding
+% \label{sec:...} of the \glsdef site (preferred over the first
+% \glsterm occurrence, which is often a casual §1 name-drop). Use one
+% \glsdef per term, at the formalization point.
+\newcommand{\glsdef}[2]{\glsterm{#1}{#2}}
 \makeatother
 
 % \nogls{...} is an author escape hatch: a no-op renderer whose sole

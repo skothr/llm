@@ -84,8 +84,10 @@ _SKIP_COMMANDS_SINGLE_ARG = {
 # \nogls{Q} and \glsterm{key}{surface} both need the backslash included.
 _SKIP_COMMANDS_FULL_SINGLE_ARG = {"nogls"}
 
-# \glsterm has TWO brace args; the full span from \glsterm to end of second arg is skipped.
-_SKIP_COMMANDS_DOUBLE_ARG = {"glsterm"}
+# \glsterm and \glsdef both take TWO brace args; the full span from the
+# command to the end of the second arg is skipped (prevents the auto-wrapper
+# from inserting a nested \glsterm inside an already-marked site).
+_SKIP_COMMANDS_DOUBLE_ARG = {"glsterm", "glsdef"}
 
 
 def _find_brace_arg(text: str, open_idx: int) -> int:
@@ -337,7 +339,11 @@ def wrap_body(
         last = e
     out.append(text[last:])
     new_text = "".join(out)
-    for m in re.finditer(r"\\glsterm\{([^{}]+)\}\{", text):
+    # Both \glsterm and \glsdef count toward keys_used. \glsdef marks the
+    # formal-introduction site of a key (one per term across all papers
+    # combined); it renders identically to \glsterm but is read by the
+    # back-link emitter to set the glossary entry's → target.
+    for m in re.finditer(r"\\(?:glsterm|glsdef)\{([^{}]+)\}\{", text):
         keys_used.add(m.group(1))
     return ApplyResult(text=new_text, keys_used=keys_used)
 
@@ -581,19 +587,42 @@ def process_paper(paper_dir: Path, records: list[dict], dry_run: bool = False) -
     keys_used: set[str] = set()
     per_section_keys: dict[str, list[str]] = {}
     sections_modified: list[str] = []
-    # first_mention_label[key] = section label of the file where the key
-    # first appears. We assume each section file declares one primary
-    # \label{sec:...} (the file's top-level section anchor); subsection
-    # labels are ignored for the glossary-back-link target.
+    # Two back-link target maps. Authors mark the formal-introduction
+    # site of each term with \glsdef{key}{surface}; the glossary entry's
+    # → arrow points to the section of that \glsdef. For unmarked terms,
+    # fall back to the section of the first \glsterm occurrence.
+    glsdef_label: dict[str, str] = {}
     first_mention_label: dict[str, str] = {}
     # Hoist the records-only state out of the per-section loop.
     surface_map = _build_surface_to_key(records)
     rx = build_term_regex(records)
     for sec in sections:
         original = sec.read_text(encoding="utf-8")
-        # First \label{sec:...} in the file is the section's primary anchor.
+        # First \label{sec:...} in the file is the section's primary anchor;
+        # used as the file-level fallback for \glsterm first-mentions.
         sec_label_match = re.search(r"\\label\{(sec:[^}]+)\}", original)
         sec_label = sec_label_match.group(1) if sec_label_match else None
+        # For \glsdef sites, prefer the most-recent \label{sec:...} BEFORE
+        # the \glsdef position so a subsection-scoped marker links to its
+        # subsection, not the enclosing top-level section.
+        label_positions: list[tuple[int, str]] = [
+            (lm.start(), lm.group(1))
+            for lm in re.finditer(r"\\label\{(sec:[^}]+)\}", original)
+        ]
+        def label_before(pos: int) -> str | None:
+            best: str | None = None
+            for lp, lname in label_positions:
+                if lp < pos:
+                    best = lname
+                else:
+                    break
+            return best
+        # Scan for \glsdef BEFORE wrapping — wrap_body adds \glsterm, never
+        # \glsdef, so any \glsdef present must be author-marked.
+        for m in re.finditer(r"\\glsdef\{([^{}]+)\}\{", original):
+            target = label_before(m.start()) or sec_label
+            if target is not None:
+                glsdef_label.setdefault(m.group(1), target)
         result = wrap_body(original, records, surface_map=surface_map, rx=rx)
         per_section_keys[sec.name] = sorted(result.keys_used)
         keys_used |= result.keys_used
@@ -604,9 +633,12 @@ def process_paper(paper_dir: Path, records: list[dict], dry_run: bool = False) -
             sections_modified.append(sec.name)
             if not dry_run:
                 _atomic_write(sec, result.text)
+    # Resolve per-key back-link: \glsdef wins, \glsterm-first is the fallback.
+    intro_label: dict[str, str] = dict(first_mention_label)
+    intro_label.update(glsdef_label)
     section_path = paper_dir / "glossary-section.tex"
     tooltips_path = paper_dir / "glossary-tooltips.tex"
-    section_content = render_glossary_section(records, keys_used, first_mention_label)
+    section_content = render_glossary_section(records, keys_used, intro_label)
     # Note: transitive wrapping (wrapping terms inside glossary entry
     # definitions) is intentionally NOT applied here. The glossary-section
     # LaTeX structure uses \item[\hypertarget{...}{...}] and \begin{description}

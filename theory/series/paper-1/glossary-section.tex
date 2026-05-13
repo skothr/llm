@@ -22,7 +22,7 @@
 \hyperref[sec:inference-adjuncts]{\textcolor{glscolor}{$\to$}} BitNet's drop-in replacement for `nn.Linear`: weights quantized to $\{-1,0,+1\}$ via absmean, activations to INT8 via absmax, SubLN replacing LayerNorm. Constructs a model whose linear-algebra reduces to integer addition. \citep[\S 2.1; kb/excerpts/ma2024-bitnet\#bitlinear]{ma2024-bitnet}
 
 \item[\hypertarget{glossary:bpe}{BPE} (Byte Pair Encoding)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Subword tokenization algorithm that iteratively merges the most frequent adjacent character pairs to build a vocabulary.
+\hyperref[sec:tok-bpe]{\textcolor{glscolor}{$\to$}} Subword tokenization algorithm that iteratively merges the most frequent adjacent character pairs to build a vocabulary.
 
 \item[\hypertarget{glossary:chain-of-thought}{Chain-of-thought} (CoT)]
 \hyperref[sec:multi-token-output]{\textcolor{glscolor}{$\to$}} A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps $z$ before emitting a final answer $y$. In few-shot CoT (Wei 2022), the prompt contains exemplars with hand-written reasoning traces; in zero-shot CoT (Kojima 2022), the trigger phrase "Let's think step by step" elicits the same behaviour without exemplars. \citep[\S 1; kojima2022 §3]{wei2022-cot}
