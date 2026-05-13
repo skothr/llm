@@ -349,6 +349,24 @@ def test_render_glossary_section_term_is_clickable_link_when_first_mention_known
     assert r"$\to$" not in out
 
 
+def test_render_glossary_section_separates_term_and_def_with_en_dash():
+    """An en dash (LaTeX `--`) precedes the definition body so readers
+    can scan term/definition boundaries; default description-list
+    layout would butt them together with only an interword space.
+    En dash chosen over em (---) — em is visually too heavy at
+    body-text size and dominates the line."""
+    records = _records({
+        "key": "rope", "primary_form": "RoPE", "aliases": [],
+        "short_def": "x", "full_def": "Rotary positional encoding.",
+        "case_strict": True, "kb_cite": None,
+    })
+    out = render_glossary_section(records, used_keys={"rope"})
+    # `\item[...]` then newline then `-- definition`.
+    assert "\n-- Rotary positional encoding." in out
+    # And NOT the heavier em-dash form.
+    assert "\n--- Rotary positional encoding." not in out
+
+
 def test_render_glossary_section_omits_term_link_when_first_mention_unknown():
     """If we don't know where a term is formally introduced, render its
     name plain (no \\hyperref). The reader still sees the entry; just
