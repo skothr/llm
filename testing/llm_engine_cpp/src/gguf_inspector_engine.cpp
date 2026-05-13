@@ -46,6 +46,51 @@ enum class GGUFType : std::uint32_t {
     FLOAT64 = 12,
 };
 
+// GGML tensor element types — separate enum from GGUFType, lives in
+// ggml.h.  Stable since llama.cpp ~2024; new types occasionally added at
+// the high end (IQ-* matrix-quant variants).  We hardcode the common
+// table here and report unknowns as "ggml_t<N>" + size_bytes=kNoSize so
+// the UI can still list them.
+struct GGMLTypeInfo {
+    const char*  name;          // short label rendered in raw_tensors workspace
+    std::int64_t block_size;    // elements per quantisation block
+    std::int64_t bytes_per_block;
+};
+constexpr GGMLTypeInfo kGGMLTypes[] = {
+    /* 0  F32     */ { "f32",     1,   4   },
+    /* 1  F16     */ { "f16",     1,   2   },
+    /* 2  Q4_0    */ { "q4_0",    32,  18  },
+    /* 3  Q4_1    */ { "q4_1",    32,  20  },
+    /* 4  removed */ { "?_4",     0,   0   },
+    /* 5  removed */ { "?_5",     0,   0   },
+    /* 6  Q5_0    */ { "q5_0",    32,  22  },
+    /* 7  Q5_1    */ { "q5_1",    32,  24  },
+    /* 8  Q8_0    */ { "q8_0",    32,  34  },
+    /* 9  Q8_1    */ { "q8_1",    32,  36  },
+    /* 10 Q2_K    */ { "q2_k",    256, 84  },
+    /* 11 Q3_K    */ { "q3_k",    256, 110 },
+    /* 12 Q4_K    */ { "q4_k",    256, 144 },
+    /* 13 Q5_K    */ { "q5_k",    256, 176 },
+    /* 14 Q6_K    */ { "q6_k",    256, 210 },
+    /* 15 Q8_K    */ { "q8_k",    256, 292 },
+    /* 16 IQ2_XXS */ { "iq2_xxs", 256, 66  },
+    /* 17 IQ2_XS  */ { "iq2_xs",  256, 74  },
+    /* 18 IQ3_XXS */ { "iq3_xxs", 256, 98  },
+    /* 19 IQ1_S   */ { "iq1_s",   256, 50  },
+    /* 20 IQ4_NL  */ { "iq4_nl",  32,  18  },
+    /* 21 IQ3_S   */ { "iq3_s",   256, 110 },
+    /* 22 IQ2_S   */ { "iq2_s",   256, 82  },
+    /* 23 IQ4_XS  */ { "iq4_xs",  256, 136 },
+    /* 24 I8      */ { "i8",      1,   1   },
+    /* 25 I16     */ { "i16",     1,   2   },
+    /* 26 I32     */ { "i32",     1,   4   },
+    /* 27 I64     */ { "i64",     1,   8   },
+    /* 28 F64     */ { "f64",     1,   8   },
+    /* 29 IQ1_M   */ { "iq1_m",   256, 56  },
+    /* 30 BF16    */ { "bf16",    1,   2   },
+};
+constexpr std::size_t kGGMLTypeCount = sizeof(kGGMLTypes) / sizeof(kGGMLTypes[0]);
+
 // Tagged value — Phase A stores scalars + strings; arrays are parsed (so
 // the cursor advances correctly) but their elements aren't materialised.
 // Adding array storage is a one-line change in the parser when we want it.
@@ -143,6 +188,49 @@ GGUFValue readValue(Cursor& c, GGUFType type) {
     }
     throw std::runtime_error("gguf: unknown value type tag " +
                              std::to_string(static_cast<std::uint32_t>(type)));
+}
+
+// Phase-B parsed tensor entry.  Backs both Model::getStateDict (full list)
+// and Model::getTensorMeta (single-name lookup).  Stride is C-contiguous
+// row-major — all GGUF tensors are dense + contiguous.
+struct GGUFTensorEntry {
+    std::string      name;          // canonical: "blocks.<L>.<area>.weight"
+    std::uint32_t    ggml_type = 0;
+    std::vector<int> shape;         // outermost dim first (matches HF convention)
+    std::vector<int> stride;        // C-contiguous, derived from shape
+    std::int64_t     offset = 0;    // bytes from tensor_data_start
+    std::int64_t     size_bytes = 0;
+};
+
+// Total element count (product of dims) — used for size_bytes calc + UI.
+std::int64_t elementCount(const std::vector<std::uint64_t>& dims) {
+    std::int64_t n = 1;
+    for (auto d : dims) n *= static_cast<std::int64_t>(d);
+    return n;
+}
+
+// Compute the on-disk byte size of a tensor given its element count + GGML
+// type.  Returns kNoSize for unknown types so the UI renders "—" rather
+// than a wrong number.
+std::int64_t tensorBytes(std::uint32_t type, std::int64_t n_elements) {
+    if (type >= kGGMLTypeCount) return kNoSize;
+    const auto& info = kGGMLTypes[type];
+    if (info.block_size == 0) return kNoSize;
+    return (n_elements / info.block_size) * info.bytes_per_block;
+}
+
+const char* ggmlTypeName(std::uint32_t type) {
+    if (type < kGGMLTypeCount && kGGMLTypes[type].block_size != 0) {
+        return kGGMLTypes[type].name;
+    }
+    return "ggml_unknown";
+}
+
+// Round `pos` up to the next multiple of `align`.  Used to skip the pad
+// region between the tensor_info[] array and the tensor_data section.
+std::size_t alignUp(std::size_t pos, std::size_t align) {
+    if (align == 0) return pos;
+    return ((pos + align - 1) / align) * align;
 }
 
 // Convenience accessors that fall back to a sentinel when a key is absent
@@ -260,7 +348,10 @@ struct GGUFInspectorEngine::Impl {
     Mmap                  mapped;           // empty until loadCheckpoint succeeds
     GGUFMeta              meta;             // parsed metadata kv-store
     ModelInfo             info;             // translated topology cache
-    std::uint64_t         tensor_count = 0; // from header — Phase B fills tensor index
+    std::uint64_t         tensor_count = 0; // from header
+    std::vector<GGUFTensorEntry>           tensors;         // Phase B index
+    std::unordered_map<std::string, std::size_t> by_name;   // name → tensors[] idx
+    std::int64_t          tensor_data_start = 0;            // file offset of tensor_data[]
 
     void log(Severity sev, const char* kind, std::string msg) {
         std::lock_guard<std::mutex> lk(mu);
@@ -321,13 +412,59 @@ Model::CheckpointResult GGUFInspectorEngine::loadCheckpoint(std::string_view pat
             meta.emplace(key, readValue(cur, type));
         }
 
+        // Phase B — tensor_info[] follows immediately after the metadata
+        // kv-store.  Each entry is name-prefixed + dims + ggml_type + offset.
+        std::vector<GGUFTensorEntry> tensors;
+        tensors.reserve(n_tensors);
+        std::unordered_map<std::string, std::size_t> by_name;
+        by_name.reserve(n_tensors);
+        for (std::uint64_t i = 0; i < n_tensors; ++i) {
+            GGUFTensorEntry e;
+            e.name = cur.readString();
+            const auto n_dims = cur.read<std::uint32_t>();
+            std::vector<std::uint64_t> dims_u64(n_dims);
+            for (std::uint32_t d = 0; d < n_dims; ++d) {
+                dims_u64[d] = cur.read<std::uint64_t>();
+            }
+            e.ggml_type = cur.read<std::uint32_t>();
+            e.offset    = static_cast<std::int64_t>(cur.read<std::uint64_t>());
+            e.size_bytes = tensorBytes(e.ggml_type, elementCount(dims_u64));
+            // GGUF stores dims innermost-first (column-major-ish).  Reverse
+            // so the UI sees row-major shape (matches HF / numpy / pytorch).
+            e.shape.reserve(n_dims);
+            for (auto it = dims_u64.rbegin(); it != dims_u64.rend(); ++it) {
+                e.shape.push_back(static_cast<int>(*it));
+            }
+            // C-contiguous strides over the row-major shape.
+            e.stride.assign(n_dims, 0);
+            std::int64_t s = 1;
+            for (std::ptrdiff_t d = static_cast<std::ptrdiff_t>(n_dims) - 1; d >= 0; --d) {
+                e.stride[static_cast<std::size_t>(d)] = static_cast<int>(s);
+                s *= e.shape[static_cast<std::size_t>(d)];
+            }
+            by_name.emplace(e.name, tensors.size());
+            tensors.push_back(std::move(e));
+        }
+
+        // Tensor data section starts at the next aligned offset.  GGUF lets
+        // models override the alignment via the general.alignment metadata
+        // key; default is 32.  Anything past tensor_data_start is raw
+        // weights ready to mmap-read in Phase C.
+        const std::int64_t alignment = lookupI64(meta, "general.alignment", 32);
+        const std::int64_t tensor_data_start =
+            static_cast<std::int64_t>(alignUp(cur.pos,
+                                              static_cast<std::size_t>(alignment)));
+
         ModelInfo info = makeModelInfo(meta, p);
         {
             std::lock_guard<std::mutex> lk(m_impl->mu);
-            m_impl->mapped       = std::move(m);
-            m_impl->meta         = std::move(meta);
-            m_impl->info         = std::move(info);
-            m_impl->tensor_count = n_tensors;
+            m_impl->mapped            = std::move(m);
+            m_impl->meta              = std::move(meta);
+            m_impl->info              = std::move(info);
+            m_impl->tensor_count      = n_tensors;
+            m_impl->tensors           = std::move(tensors);
+            m_impl->by_name           = std::move(by_name);
+            m_impl->tensor_data_start = tensor_data_start;
         }
         m_impl->log(Severity::Info, "gguf",
                     "loaded " + p + " (v" + std::to_string(version) +
@@ -337,6 +474,28 @@ Model::CheckpointResult GGUFInspectorEngine::loadCheckpoint(std::string_view pat
                     "topology: " + std::to_string(m_impl->info.nLayers) +
                     " layers · " + std::to_string(m_impl->info.nHeads) +
                     " heads · d_model=" + std::to_string(m_impl->info.dModel));
+        // First few tensor names — sanity readout for Phase B; raw_tensors
+        // workspace will show all of them via getStateDict().
+        if (!m_impl->tensors.empty()) {
+            std::string sample = "tensors: ";
+            const std::size_t n = std::min<std::size_t>(3, m_impl->tensors.size());
+            for (std::size_t i = 0; i < n; ++i) {
+                if (i) sample += ", ";
+                const auto& e = m_impl->tensors[i];
+                sample += e.name + " [";
+                for (std::size_t d = 0; d < e.shape.size(); ++d) {
+                    if (d) sample += "x";
+                    sample += std::to_string(e.shape[d]);
+                }
+                sample += "] ";
+                sample += ggmlTypeName(e.ggml_type);
+            }
+            if (m_impl->tensors.size() > n) {
+                sample += " (+" + std::to_string(m_impl->tensors.size() - n) +
+                          " more)";
+            }
+            m_impl->log(Severity::Info, "gguf", sample);
+        }
         return {true, ""};
     } catch (const std::exception& e) {
         m_impl->log(Severity::Error, "gguf", std::string("parse failed: ") + e.what());
@@ -346,10 +505,13 @@ Model::CheckpointResult GGUFInspectorEngine::loadCheckpoint(std::string_view pat
 
 void GGUFInspectorEngine::unloadCheckpoint() {
     std::lock_guard<std::mutex> lk(m_impl->mu);
-    m_impl->mapped       = Mmap{};
+    m_impl->mapped            = Mmap{};
     m_impl->meta.clear();
-    m_impl->info         = {};
-    m_impl->tensor_count = 0;
+    m_impl->info              = {};
+    m_impl->tensor_count      = 0;
+    m_impl->tensors.clear();
+    m_impl->by_name.clear();
+    m_impl->tensor_data_start = 0;
 }
 
 std::vector<LogEntry> GGUFInspectorEngine::drainEngineLogs() {
@@ -364,18 +526,44 @@ ModelInfo GGUFInspectorEngine::getModelInfo() {
     return m_impl->info;
 }
 
-// Phase B targets — still stubs.  Will grow to walk the tensor_info[] array
-// (which immediately follows the metadata kv-store) and serve weight slices
-// from m_impl->mapped.addr + tensor_data_start + entry.offset.
+// Phase B — wired.  Walk the parsed tensor index built at loadCheckpoint
+// and translate each entry into engine-side TensorMeta.
 std::vector<TensorMeta> GGUFInspectorEngine::getStateDict() {
-    return {};
+    std::lock_guard<std::mutex> lk(m_impl->mu);
+    std::vector<TensorMeta> out;
+    out.reserve(m_impl->tensors.size());
+    for (const auto& e : m_impl->tensors) {
+        TensorMeta tm;
+        tm.name        = e.name;
+        tm.dtype       = ggmlTypeName(e.ggml_type);
+        tm.shape       = e.shape;
+        tm.stride      = e.stride;
+        tm.contiguous  = true;
+        tm.device      = "cpu";
+        tm.size_bytes  = e.size_bytes;
+        out.push_back(std::move(tm));
+    }
+    return out;
 }
 
 TensorMeta GGUFInspectorEngine::getTensorMeta(std::string_view name) {
-    (void)name;
-    return {};
+    std::lock_guard<std::mutex> lk(m_impl->mu);
+    auto it = m_impl->by_name.find(std::string(name));
+    if (it == m_impl->by_name.end()) return {};
+    const auto& e = m_impl->tensors[it->second];
+    TensorMeta tm;
+    tm.name        = e.name;
+    tm.dtype       = ggmlTypeName(e.ggml_type);
+    tm.shape       = e.shape;
+    tm.stride      = e.stride;
+    tm.contiguous  = true;
+    tm.device      = "cpu";
+    tm.size_bytes  = e.size_bytes;
+    return tm;
 }
 
+// Phase C targets — dispatch on GGML type.  F32/F16/BF16 are direct reads;
+// quantised types need per-block dequantisation kernels.  Stubs for now.
 std::vector<float> GGUFInspectorEngine::getWeightSlice(
     std::string_view name, int offset, int n) {
     (void)name; (void)offset; (void)n;
