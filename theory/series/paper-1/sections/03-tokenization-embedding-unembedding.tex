@@ -63,7 +63,7 @@ for i in range(num_merges):
 The final \glsterm{vocabulary}{vocabulary} size is the size of the initial alphabet plus the
 number of merge operations — \emph{the only hyperparameter of the
 algorithm} \citep[\S 3.2]{sennrich2016}. At inference, the same merge
-list is replayed deterministically over new text. Crucially, \glsterm{bpe}{BPE} is
+list is replayed deterministically over new text. Crucially, \glsdef{bpe}{BPE} is
 \emph{not} a left-to-right segmenter: the same prefix can yield a
 different first token when the suffix changes. We will return to this
 when contrasting with byte-patch models in \cref{sec:tok-blt}.

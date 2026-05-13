@@ -153,6 +153,17 @@ Author surface:
   argument renders verbatim, but the auto-detection script will
   not wrap inside it. Use sparingly when the regex picks up an
   occurrence that shouldn't be linked.
+- **`\glsdef{key}{surface}`** renders identically to `\glsterm` but
+  semantically marks the *formal introduction* site for a term —
+  the glossary entry's `→` back-arrow links here rather than to the
+  first textual mention (which is often a §1 name-drop). Use one
+  `\glsdef` per term per paper, at the section/subsection where the
+  term is formally defined. Unmarked terms fall back to first-mention
+  (the `\glsterm` whose enclosing `\label{sec:...}` is earliest in
+  the paper's section files). The `\glsdef` site's link target is the
+  most-recent `\label{sec:...}` preceding it in the file, so a
+  `\glsdef` inside a subsection will link to that subsection's label,
+  not the enclosing top-level section's.
 
 Skip set (these sites are never auto-wrapped): inline + display
 math, `\begin{lstlisting|verbatim|minted|alltt}` environments,
