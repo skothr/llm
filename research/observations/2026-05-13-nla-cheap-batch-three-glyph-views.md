@@ -50,7 +50,28 @@ The per-step glyph changes visibly between content-decision steps (0, 7) and con
 
 This is the cheapest "interpretability rendered visually" artifact — every signal (token, geometric signature, NL interpretation, fidelity) is in one row per step.
 
-## Finding 3 — fig15 — Counterfactual ||Δh||_feat ranks counterfactual surprise
+## Correction — fig16 supersedes fig15 (position-drift confound exposed)
+
+The first version of this analysis (fig15) picked the LAST forced token per pair as the representative for diff computation. For three of the four pairs that was harmless because natural and forced share `abs_pos` exactly. **For refusal_metaware that choice picked ' refuse' at `abs_pos=51` vs natural '4' at `abs_pos=41` — a 10-token position drift** that inflated ||Δh||_feat above its content-only value.
+
+Position-matched recomputation (fig16, run `nla_counterfactual_position_check.py`):
+
+| pair | forced_token | Δpos | ||Δh||_feat | ||Δh||_full |
+|---|---|---|---|---|
+| negation | 'No' | 0 | 5.72 | 64.99 |
+| factual | ' Berlin' | 0 | 8.70 | 88.75 |
+| math | '5' | 0 | 10.97 | 83.50 |
+| refusal_metaware | ' sensing' | -3 | 29.86 | 110.20 |
+| **refusal_metaware** | **' test'** | **+1** | **28.06** | **114.50** |
+| refusal_metaware | ' refuse' | +10 | 35.55 (fig15 used this) | 118.86 |
+
+**Position-matched ' test' (Δpos=+1) gives ||Δh||_feat = 28.06** — still 2.5× math and 5× negation, but the original 4× gap (35.55 vs 10.97) was inflated to 3.2× by 10 tokens of position drift. The qualitative finding ("refusal counterfactual is a different perturbation class than wrong-but-plausible") **survives the correction**; the numerical gap was overstated.
+
+fig16's right column also shows the three refusal_metaware diff glyphs have visually **similar shape** — same dominant rays — across the three position-drift variants. This is reassuring: position drift inflates magnitude but doesn't fundamentally change the geometric character of the perturbation. The "different class" finding isn't a position artifact.
+
+**Methodological lesson for future viz:** when selecting one representative capture from a multi-position set, default to position-matched and only deviate with a written justification. The original fig15 caption picked "highest abs_pos" as a convenience, which silently introduced a confound.
+
+## Finding 3 — fig15 — Counterfactual ||Δh||_feat ranks counterfactual surprise (see Correction above)
 
 For each of the 4 forced-continuation pairs, computed the glyph difference (forced − natural) in the feature-dim subspace:
 
