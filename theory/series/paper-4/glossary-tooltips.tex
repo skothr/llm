@@ -4,7 +4,9 @@
 %
 \makeatletter
 \expandafter\def\csname @gls@def@activation-patching\endcsname{the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between...}
+\expandafter\def\csname @gls@def@activation-reconstructor\endcsname{The AR mathrmAR(z) takes the verbalized explanation z and produces a reconstructed activation hat h ell in mathbbRd mathrm...}
 \expandafter\def\csname @gls@def@activation-steering\endcsname{Inference-time intervention that adds alpha hatmathbfd to a residual-stream activation to amplify (or, with alpha < 0, suppress...}
+\expandafter\def\csname @gls@def@activation-verbalizer\endcsname{The AV mathrmAV(z mid h ell) takes a residual-stream activation h ell and emits a natural-language explanation token sequence z.}
 \expandafter\def\csname @gls@def@attention-weights\endcsname{The softmax-normalized scores (a j geq 0, sum a j = 1) that determine how much each position contributes to the output.}
 \expandafter\def\csname @gls@def@attribution-graph\endcsname{the output of circuit tracing: a sparse directed graph from input embeddings to output unembedding, with feature activations as nodes and J...}
 \expandafter\def\csname @gls@def@attribution-patching\endcsname{gradient-based first-order approximation of the patching effect: textIE C approx langle nabla h m, Delta h rangle.}
@@ -26,6 +28,7 @@
 \expandafter\def\csname @gls@def@expansion-factor\endcsname{the ratio M / n of dictionary size to activation dimension.}
 \expandafter\def\csname @gls@def@feature\endcsname{a direction mathbfd in mathbbRn in some activation space such that the projection mathbfxtop mathbfd (or equivalently,...}
 \expandafter\def\csname @gls@def@ffn\endcsname{A position-wise two-layer (or three-layer for GLU variants) fully-connected network applied independently at each sequence position.}
+\expandafter\def\csname @gls@def@fraction-of-variance-explained\endcsname{NLA quality metric: mathrmFVE = 1 - mathcalL/mathbbElVert h ell - bar h ellrVert2 where mathcalL is the round-trip MS...}
 \expandafter\def\csname @gls@def@gaussian-noising\endcsname{the two corruption methods for activation patching.}
 \expandafter\def\csname @gls@def@gelu\endcsname{Smooth activation x cdot Phi(x) where Phi is the standard normal CDF.}
 \expandafter\def\csname @gls@def@hidden-state\endcsname{The d textmodel-dimensional vector representation at each position, flowing through the residual stream across layers.}
@@ -48,6 +51,7 @@
 \expandafter\def\csname @gls@def@monosemanticity\endcsname{the property that a feature responds to a single, human-interpretable concept.}
 \expandafter\def\csname @gls@def@multi-head-attention\endcsname{Running h parallel attention operations on different learned projections, then concatenating and projecting the results.}
 \expandafter\def\csname @gls@def@multi-head-latent-attention\endcsname{DeepSeek's architectural compression: project to a low-rank latent C in mathbbRd c shared across heads, expand back to per-head (...}
+\expandafter\def\csname @gls@def@natural-language-autoencoder\endcsname{Anthropic 2026's interpretability method: a pair of LLM modules (AV + AR) jointly trained with reinforcement learning to round-trip a resid...}
 \expandafter\def\csname @gls@def@nsa\endcsname{Yuan et al. 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted).}
 \expandafter\def\csname @gls@def@parameters\endcsname{The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).}
 \expandafter\def\csname @gls@def@path-patching\endcsname{a refinement of activation patching that isolates the direct effect of a component C on a downstream component R, holding fixed the ind...}
@@ -78,6 +82,7 @@
 \expandafter\def\csname @gls@def@transformer\endcsname{Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing...}
 \expandafter\def\csname @gls@def@truth-direction-2\endcsname{A direction in residual-stream space whose projection sign correlates with (and, validated by Marks \& Tegmark 2023, causally controls) the...}
 \expandafter\def\csname @gls@def@tuned-lens\endcsname{Belrose et al. 2023: per-layer affine "translators" mathbfh ell mapsto A ell mathbfh ell + b ell trained with a distillation l...}
+\expandafter\def\csname @gls@def@unverbalized-evaluation-awareness\endcsname{Cases where a model internally suspects it is being tested but does not say so in its visible output.}
 \expandafter\def\csname @gls@def@value\endcsname{Projected representation of the content to be aggregated.}
 \expandafter\def\csname @gls@def@vocabulary\endcsname{The fixed set of all tokens a model can recognize.}
 \makeatother
