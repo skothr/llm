@@ -529,6 +529,26 @@ int main() {
         }
     }
     llob::Model& model = *backend;
+
+    // Auto-load if a path was provided alongside a non-mock backend.  This
+    // is the natural UX for `LLOB_BACKEND=gguf LLOB_BACKEND_PATH=foo.gguf
+    // ./llobotomy` — without it the user would have to File ▸ Open every
+    // launch.  HFProxyEngine treats the path as the model_id; native
+    // backends treat it as a filesystem path.
+    {
+        const char* p = std::getenv("LLOB_BACKEND_PATH");
+        if (p && *p) {
+            const auto res = model.loadCheckpoint(p);
+            if (res.ok) {
+                LLOB_LOG_INFO("ckpt", "auto-loaded %s", p);
+                s.checkpointPath = p;
+            } else {
+                LLOB_LOG_ERROR("ckpt", "auto-load %s failed: %s",
+                               p, res.error.c_str());
+            }
+        }
+    }
+
     s.loadFromModel(model);  // populate AppState.model from a real backend
 
     auto last = std::chrono::steady_clock::now();
