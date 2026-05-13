@@ -1,0 +1,403 @@
+"""Rigorous audit: re-derive every load-bearing numerical claim from the
+raw NLA artifacts and compare against what the observation files report.
+
+Reads ONLY the 4 raw source files:
+  * aggregate_faithfulness.pt
+  * rabbit_haiku_gen_trajectory.pt
+  * forced_continuation.pt
+  * country_concept_vector.pt
+
+Re-derives the full H matrix, pairwise cosines, hot-dim census,
+classifier labels, PCA, CAV alignment, and counterfactual diff norms
+from first principles. Compares each value against the claim in the
+observation files. Reports PASS/FAIL per claim.
+
+Run from worktree root.
+"""
+
+import os
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TQDM_DISABLE", "1")
+
+import sys
+from io import TextIOWrapper
+from typing import Any, cast
+cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
+
+from pathlib import Path
+from collections import Counter
+import torch
+
+
+ARTIFACTS = Path("testing/.cache/nla_artifacts")
+
+
+# ---------------------------------------------------------------------------
+# Audit harness
+# ---------------------------------------------------------------------------
+PASS, FAIL, ISSUES = 0, 0, []
+
+
+def claim(name: str, ok: bool, expected: Any, actual: Any, tol: float = 0.0) -> None:
+    global PASS, FAIL
+    if ok:
+        PASS += 1
+        print(f"  PASS   {name}   expected={expected!r}   actual={actual!r}")
+    else:
+        FAIL += 1
+        ISSUES.append((name, expected, actual))
+        print(f"  FAIL   {name}   expected={expected!r}   actual={actual!r}   tol={tol}")
+
+
+def claim_near(name: str, expected: float, actual: float, atol: float = 0.005) -> None:
+    claim(name, abs(actual - expected) <= atol, expected, round(actual, 4), tol=atol)
+
+
+def claim_eq(name: str, expected: Any, actual: Any) -> None:
+    claim(name, expected == actual, expected, actual)
+
+
+# ---------------------------------------------------------------------------
+# Re-derive H matrix from raw sources
+# ---------------------------------------------------------------------------
+def load_raw() -> tuple[torch.Tensor, list[dict[str, Any]]]:
+    items: list[dict[str, Any]] = []
+    p = ARTIFACTS / "aggregate_faithfulness.pt"
+    data = torch.load(p, weights_only=False)
+    for prompt in data["prompts"]:
+        for cap in prompt.get("captures", []):
+            items.append({
+                "src": "aggregate", "prompt_id": prompt["id"],
+                "token": cap.get("token") or "", "step": cap.get("step"),
+                "h": cap["h"].detach().float().cpu(),
+                "h_pred": cap.get("h_pred").detach().float().cpu() if cap.get("h_pred") is not None else None,
+                "cosine": cap.get("cosine"),
+                "av_text": cap.get("av_text", ""),
+            })
+
+    p = ARTIFACTS / "rabbit_haiku_gen_trajectory.pt"
+    data = torch.load(p, weights_only=False)
+    for cap in data.get("captures", []):
+        items.append({
+            "src": "haiku_gen", "prompt_id": "rabbit_haiku",
+            "token": cap.get("token") or "", "step": cap.get("step"),
+            "h": cap["h"].detach().float().cpu(),
+            "h_pred": cap.get("h_pred").detach().float().cpu() if cap.get("h_pred") is not None else None,
+            "cosine": cap.get("cosine"),
+            "av_text": cap.get("av_text", ""),
+        })
+
+    p = ARTIFACTS / "forced_continuation.pt"
+    data = torch.load(p, weights_only=False)
+    for cap in data.get("captures", []):
+        items.append({
+            "src": "forced", "prompt_id": f"{cap['pair_id']}/{cap['version']}",
+            "token": cap.get("actual_token") or "", "step": cap.get("abs_pos"),
+            "h": cap["h"].detach().float().cpu(),
+            "h_pred": None, "cosine": None, "av_text": cap.get("av_text", ""),
+        })
+
+    p = ARTIFACTS / "country_concept_vector.pt"
+    data = torch.load(p, weights_only=False)
+    for i, h in enumerate(data["h_country"]):
+        items.append({"src": "country_src", "prompt_id": f"country_{i}",
+                      "token": "", "step": None,
+                      "h": h.detach().float().cpu(),
+                      "h_pred": None, "cosine": None, "av_text": ""})
+    for i, h in enumerate(data["h_non_country"]):
+        items.append({"src": "non_country_src", "prompt_id": f"non_country_{i}",
+                      "token": "", "step": None,
+                      "h": h.detach().float().cpu(),
+                      "h_pred": None, "cosine": None, "av_text": ""})
+    for label, (_, h) in data["h_test"].items():
+        items.append({"src": "country_test", "prompt_id": label,
+                      "token": "", "step": None,
+                      "h": h.detach().float().cpu(),
+                      "h_pred": None, "cosine": None, "av_text": ""})
+
+    H = torch.stack([it["h"] for it in items])
+    return H, items
+
+
+# ---------------------------------------------------------------------------
+# Independent classifier (re-derives sink/feature labels from scratch)
+# ---------------------------------------------------------------------------
+def classify_dim(s: dict[str, float]) -> str:
+    sc = s["sign_consist"]
+    cv = s["cv_abs"]
+    f5 = s["freq_top5"]
+    f100 = s["freq_top100"]
+    if f5 < 0.05 and cv >= 0.9:
+        return "rare_burst"
+    if (sc <= 0.05 or sc >= 0.95) and cv < 0.55 and f100 > 0.75:
+        return "sink"
+    if sc <= 0.10 or sc >= 0.90:
+        return "polarized"
+    if 0.15 <= sc <= 0.85 and cv >= 0.55:
+        return "feature"
+    return "background"
+
+
+def main() -> None:
+    print("=" * 80)
+    print("AUDIT 1: dataset size and structure")
+    print("=" * 80)
+    H, items = load_raw()
+    n, d = H.shape
+    claim_eq("total captures", 167, n)
+    claim_eq("hidden dim", 3584, d)
+    src_counts = Counter(it["src"] for it in items)
+    claim_eq("aggregate captures", 113, src_counts["aggregate"])
+    claim_eq("haiku_gen captures", 15, src_counts["haiku_gen"])
+    claim_eq("forced captures", 10, src_counts["forced"])
+    claim_eq("country_src captures", 8, src_counts["country_src"])
+    claim_eq("non_country_src captures", 8, src_counts["non_country_src"])
+    claim_eq("country_test captures", 13, src_counts["country_test"])
+
+    print()
+    print("=" * 80)
+    print("AUDIT 2: hot-dim census")
+    print("=" * 80)
+    counts_top5: Counter = Counter()
+    counts_top100: Counter = Counter()
+    for it in items:
+        absh = it["h"].abs()
+        counts_top5.update(absh.topk(5).indices.tolist())
+        counts_top100.update(absh.topk(100).indices.tolist())
+
+    top1 = counts_top5.most_common(1)[0]
+    top2 = counts_top5.most_common(2)[1]
+    claim_eq("most frequent top-5 dim", 2570, top1[0])
+    claim_eq("second most frequent top-5 dim", 458, top2[0])
+    claim_eq("dim 2570 top-5 count", 165, top1[1])
+    claim_eq("dim 458 top-5 count", 165, top2[1])
+    claim_near("dim 2570 top-5 frequency", 0.99, top1[1] / n, atol=0.01)
+
+    # Verify top-100 inclusivity
+    claim_eq("dim 2570 top-100 count", 167, counts_top100[2570])
+    claim_eq("dim 458 top-100 count", 167, counts_top100[458])
+
+    print()
+    print("=" * 80)
+    print("AUDIT 3: per-dim stats for the top-20 hot dims (full re-derivation)")
+    print("=" * 80)
+    H_abs = H.abs()
+    mean_val = H.mean(dim=0)
+    mean_abs = H_abs.mean(dim=0)
+    std_abs = H_abs.std(dim=0)
+    sign_consist = (H >= 0).float().mean(dim=0)
+    cv_abs = std_abs / (mean_abs + 1e-9)
+
+    top20 = [idx for idx, _ in counts_top5.most_common(20)]
+    stats_by_dim: dict[int, dict[str, float]] = {}
+    for idx in top20:
+        stats_by_dim[idx] = {
+            "freq_top5": counts_top5[idx] / n,
+            "freq_top100": counts_top100[idx] / n,
+            "mean_val": float(mean_val[idx].item()),
+            "mean_abs": float(mean_abs[idx].item()),
+            "sign_consist": float(sign_consist[idx].item()),
+            "cv_abs": float(cv_abs[idx].item()),
+        }
+
+    # Check key dim stats claimed in fig3 / geometric-deep-dive
+    claim_near("dim 2570 sign_consist", 0.000, stats_by_dim[2570]["sign_consist"], atol=0.001)
+    claim_near("dim 2570 cv_abs",       0.33,  stats_by_dim[2570]["cv_abs"],       atol=0.01)
+    claim_near("dim 2570 mean_val",    -38.64, stats_by_dim[2570]["mean_val"],     atol=0.1)
+    claim_near("dim 458 sign_consist",  0.000, stats_by_dim[458]["sign_consist"],  atol=0.001)
+    claim_near("dim 458 cv_abs",        0.21,  stats_by_dim[458]["cv_abs"],        atol=0.01)
+    claim_near("dim 458 mean_val",     -29.00, stats_by_dim[458]["mean_val"],      atol=0.1)
+    claim_near("dim 32 sign_consist",   0.299, stats_by_dim[32]["sign_consist"],   atol=0.005)
+    claim_near("dim 32 cv_abs",         0.67,  stats_by_dim[32]["cv_abs"],         atol=0.01)
+    claim_near("dim 608 sign_consist",  0.629, stats_by_dim[608]["sign_consist"],  atol=0.005)
+    claim_near("dim 608 cv_abs",        0.65,  stats_by_dim[608]["cv_abs"],        atol=0.01)
+
+    print()
+    print("=" * 80)
+    print("AUDIT 4: classifier labels (must match published 7 sinks + 8 features)")
+    print("=" * 80)
+    labels = {idx: classify_dim(s) for idx, s in stats_by_dim.items()}
+    sinks = sorted([d for d, l in labels.items() if l == "sink"])
+    feats = sorted([d for d, l in labels.items() if l == "feature"])
+    polarized = sorted([d for d, l in labels.items() if l == "polarized"])
+    rare_burst = sorted([d for d, l in labels.items() if l == "rare_burst"])
+    bg = sorted([d for d, l in labels.items() if l == "background"])
+    claim_eq("sink dims",       [277, 458, 1427, 1627, 2107, 2570, 3110], sinks)
+    claim_eq("feature dims",    [20, 32, 392, 608, 1121, 1790, 2604, 2953], feats)
+    claim_eq("polarized dims",  [3206, 3281, 3311], polarized)
+    claim_eq("rare_burst dims", [662], rare_burst)
+    claim_eq("background dims", [1116], bg)
+
+    print()
+    print("=" * 80)
+    print("AUDIT 5: PCA variance fractions")
+    print("=" * 80)
+    mean_h = H.mean(dim=0, keepdim=True)
+    Hc = H - mean_h
+    _, S, _ = torch.linalg.svd(Hc, full_matrices=False)
+    var = (S ** 2)
+    total_var = float(var.sum().item())
+    claim_near("PC1 variance fraction (original)", 0.165, float(var[0] / total_var), atol=0.005)
+    claim_near("PC2 variance fraction (original)", 0.077, float(var[1] / total_var), atol=0.005)
+    cumtop20 = float(var[:20].sum() / total_var)
+    claim_near("top-20 PCs cumulative variance", 0.609, cumtop20, atol=0.005)
+
+    print()
+    print("=" * 80)
+    print("AUDIT 6: pairwise cosines (mean, min, max, intra-source)")
+    print("=" * 80)
+    Hn = torch.nn.functional.normalize(H, dim=1)
+    C = Hn @ Hn.T
+    eye = torch.eye(n, dtype=torch.bool)
+    off = C[~eye]
+    claim_near("mean off-diag cosine (original)", 0.403, float(off.mean().item()), atol=0.005)
+    claim_near("min cosine (original)",            0.054, float(off.min().item()),  atol=0.01)
+    claim_near("max cosine (original)",            1.000, float(off.max().item()),  atol=0.001)
+
+    src_labels = [it["src"] for it in items]
+    def intra(s: str) -> float:
+        mask = torch.tensor([lbl == s for lbl in src_labels])
+        if mask.sum() < 2:
+            return 0.0
+        block = C[mask][:, mask]
+        eye_b = torch.eye(int(mask.sum().item()), dtype=torch.bool)
+        return float(block[~eye_b].mean().item())
+    claim_near("aggregate intra cos",         0.397, intra("aggregate"),         atol=0.005)
+    claim_near("country_src intra cos",       0.858, intra("country_src"),       atol=0.005)
+    claim_near("non_country_src intra cos",   0.876, intra("non_country_src"),   atol=0.005)
+    claim_near("haiku_gen intra cos",         0.530, intra("haiku_gen"),         atol=0.005)
+    claim_near("forced intra cos",            0.366, intra("forced"),            atol=0.01)
+
+    print()
+    print("=" * 80)
+    print("AUDIT 7: sink-removed cosines (mean, min, intra-aggregate, intra-country)")
+    print("=" * 80)
+    H_res = H.clone()
+    for d_idx in sinks:
+        H_res[:, d_idx] = 0.0
+    Hn_res = torch.nn.functional.normalize(H_res, dim=1)
+    C_res = Hn_res @ Hn_res.T
+    off_res = C_res[~eye]
+    claim_near("mean off-diag cosine (sink-removed)", 0.179, float(off_res.mean().item()), atol=0.005)
+    claim_near("min cosine (sink-removed)",          -0.069, float(off_res.min().item()),  atol=0.01)
+    def intra_res(s: str) -> float:
+        mask = torch.tensor([lbl == s for lbl in src_labels])
+        if mask.sum() < 2:
+            return 0.0
+        block = C_res[mask][:, mask]
+        eye_b = torch.eye(int(mask.sum().item()), dtype=torch.bool)
+        return float(block[~eye_b].mean().item())
+    claim_near("aggregate intra cos (sink-removed)",       0.156, intra_res("aggregate"),       atol=0.005)
+    claim_near("country_src intra cos (sink-removed)",     0.777, intra_res("country_src"),     atol=0.005)
+    claim_near("non_country_src intra cos (sink-removed)", 0.804, intra_res("non_country_src"), atol=0.005)
+
+    # Sink-removed PC1 fraction
+    mean_h_res = H_res.mean(dim=0, keepdim=True)
+    Hc_res = H_res - mean_h_res
+    _, S_res, _ = torch.linalg.svd(Hc_res, full_matrices=False)
+    var_res = (S_res ** 2)
+    total_var_res = float(var_res.sum().item())
+    claim_near("variance fraction kept after sink removal", 0.950, total_var_res / total_var, atol=0.005)
+    claim_near("PC1 variance fraction (sink-removed)", 0.153, float(var_res[0] / total_var_res), atol=0.005)
+
+    print()
+    print("=" * 80)
+    print("AUDIT 8: CAV alignment (H3 falsification)")
+    print("=" * 80)
+    cav_data = torch.load(ARTIFACTS / "country_concept_vector.pt", weights_only=False)
+    direction_unit = cav_data["direction_unit"]
+    claim_near("CAV ||direction_unit||", 1.000, float(direction_unit.norm().item()), atol=0.001)
+    claim_near("cos(CAV_unit, e_32) = direction_unit[32]", 0.0510, float(direction_unit[32].item()), atol=0.0005)
+    # H3 prediction: >= 0.4. Confirm falsification.
+    claim("H3 (cos >= 0.4) falsified",
+          abs(float(direction_unit[32].item())) < 0.4,
+          "falsified", "falsified" if abs(float(direction_unit[32].item())) < 0.4 else "NOT falsified")
+
+    # Top CAV contributor
+    abs_c = direction_unit.abs()
+    top_dim = int(abs_c.argmax().item())
+    claim_eq("top CAV contributor dim", 1803, top_dim)
+    claim_near("dim 1803 sq share", 0.0154, float((direction_unit[1803] ** 2).item()), atol=0.001)
+
+    # Sinks in top 8 CAV contributors
+    top8 = abs_c.topk(8).indices.tolist()
+    sinks_in_top8 = [d for d in top8 if d in sinks]
+    claim("sinks in top-8 CAV contributors >= 2",
+          len(sinks_in_top8) >= 2, ">=2 sink dims", f"{len(sinks_in_top8)} sink dims: {sinks_in_top8}")
+
+    print()
+    print("=" * 80)
+    print("AUDIT 9: AR cosine vs kurtosis count (deduplication check)")
+    print("=" * 80)
+    # fig5 plots aggregate (n=113) + haiku_gen (n=15) = 128 points,
+    # but aggregate/creative_haiku duplicates haiku_gen exactly (cos=1.000).
+    # How many distinct h-vectors actually have AR data?
+    ar_items = [it for it in items if it.get("cosine") is not None]
+    n_ar = len(ar_items)
+    claim_eq("captures with AR data (plotted)", 128, n_ar)
+    # Check overlap between aggregate/creative_haiku and haiku_gen
+    haiku_aggregate = [it for it in ar_items if it["src"] == "aggregate" and it["prompt_id"] == "creative_haiku"]
+    haiku_gen = [it for it in ar_items if it["src"] == "haiku_gen"]
+    claim_eq("creative_haiku captures in aggregate", 15, len(haiku_aggregate))
+    claim_eq("haiku_gen captures",                    15, len(haiku_gen))
+    # Verify they're actually duplicates by sorting and comparing h-vectors
+    h_agg_set = sorted(haiku_aggregate, key=lambda it: it["step"])
+    h_gen_set = sorted(haiku_gen, key=lambda it: it["step"])
+    all_match = True
+    for a, b in zip(h_agg_set, h_gen_set):
+        if not torch.allclose(a["h"], b["h"], atol=1e-5):
+            all_match = False
+            break
+    claim("haiku captures duplicated across aggregate+haiku_gen",
+          all_match, "duplicates", "duplicates" if all_match else "NOT duplicates")
+    # Unique AR captures
+    unique_ar = n_ar - 15  # the 15 haiku_gen are duplicates of creative_haiku
+    claim_eq("unique captures with AR data", 113, unique_ar)
+
+    print()
+    print("=" * 80)
+    print("AUDIT 10: counterfactual diff norms (fig16 corrected)")
+    print("=" * 80)
+    forced_data = torch.load(ARTIFACTS / "forced_continuation.pt", weights_only=False)
+    nat: dict[str, dict[str, Any]] = {}
+    forc_by_pair: dict[str, list[dict[str, Any]]] = {}
+    for c in forced_data["captures"]:
+        if c["version"] == "natural":
+            nat[c["pair_id"]] = c
+        else:
+            forc_by_pair.setdefault(c["pair_id"], []).append(c)
+
+    def norm_feat(diff: torch.Tensor) -> float:
+        return float(diff[feats].norm().item())
+
+    # singletons
+    for pid, expected_token, expected_norm in [
+        ("negation", "No", 5.72),
+        ("factual", " Berlin", 8.70),
+        ("math", "5", 10.97),
+    ]:
+        n_cap = nat[pid]
+        f_cap = next(c for c in forc_by_pair[pid] if c["actual_token"].strip() == expected_token.strip())
+        diff = f_cap["h"] - n_cap["h"]
+        claim_near(f"{pid} ||Δh||_feat", expected_norm, norm_feat(diff), atol=0.05)
+
+    # refusal_metaware position-matched
+    n_cap = nat["refusal_metaware"]
+    for tok, expected_norm in [(" sensing", 29.86), (" test", 28.06), (" refuse", 35.55)]:
+        f_cap = next(c for c in forc_by_pair["refusal_metaware"] if c["actual_token"] == tok)
+        diff = f_cap["h"] - n_cap["h"]
+        claim_near(f"refusal_metaware {tok!r} ||Δh||_feat", expected_norm, norm_feat(diff), atol=0.05)
+
+    print()
+    print("=" * 80)
+    print(f"SUMMARY:  {PASS} PASS  |  {FAIL} FAIL")
+    print("=" * 80)
+    if FAIL > 0:
+        print("\nFAILED CLAIMS:")
+        for name, exp, act in ISSUES:
+            print(f"  - {name}: expected {exp!r}, got {act!r}")
+    sys.exit(0 if FAIL == 0 else 1)
+
+
+if __name__ == "__main__":
+    main()
