@@ -10,17 +10,17 @@
 \expandafter\def\csname @gls@def@bitlinear\endcsname{BitNet's drop-in replacement for `nn.Linear`: weights quantized to -1,0,+1 via absmean, activations to INT8 via absmax, SubLN replaci...}
 \expandafter\def\csname @gls@def@bpe\endcsname{Subword tokenization algorithm that iteratively merges the most frequent adjacent character pairs to build a vocabulary.}
 \expandafter\def\csname @gls@def@chain-of-thought\endcsname{A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps z before emitting a final answer...}
-\expandafter\def\csname @gls@def@circuit\endcsname{a sub-graph C of a model's computational graph M}
+\expandafter\def\csname @gls@def@circuit\endcsname{a sub-graph C of a model's computational graph M that, when used in place of M via knockouts of M setminus C, approximately reprod...}
 \expandafter\def\csname @gls@def@claude\endcsname{Anthropic's proprietary decoder-only LLM family.}
-\expandafter\def\csname @gls@def@compressed-fsm-2\endcsname{FSM transformation that merges chains}
-\expandafter\def\csname @gls@def@constrained-decoding-2\endcsname{Generation procedure that, at each step,}
+\expandafter\def\csname @gls@def@compressed-fsm-2\endcsname{FSM transformation that merges chains of singular-transition edges into single edges, allowing multi-token decoding when the grammar determ...}
+\expandafter\def\csname @gls@def@constrained-decoding-2\endcsname{Generation procedure that, at each step, masks the logits to allow only tokens consistent with a target grammar (regex, JSON schema, GBNF,...}
 \expandafter\def\csname @gls@def@context-extension\endcsname{Sub-stage of late-stage pre-training that increases trained sequence length (e.g., 4 K → 32 K → 128 K) by adjusting RoPE scaling and contin...}
 \expandafter\def\csname @gls@def@context-independent-context-dependent-vocabulary-split\endcsname{XGrammar's core trick: precompute (offline) the mask for tokens whose grammar-allowed-or-not status depends only on the grammar state (~99\%...}
 \expandafter\def\csname @gls@def@cross-attention\endcsname{Attention where Q comes from the decoder and K, V come from the encoder output.}
 \expandafter\def\csname @gls@def@data-mixing-law\endcsname{L i(mathbfr) = c i + k i exp(sum j t ij r j).}
 \expandafter\def\csname @gls@def@decoder-only\endcsname{Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN lay...}
 \expandafter\def\csname @gls@def@encoder-decoder\endcsname{The original Transformer layout: an encoder processes the full input bidirectionally, a decoder generates output autoregressively, with cro...}
-\expandafter\def\csname @gls@def@feature\endcsname{a direction mathbfd in mathbbRn in some}
+\expandafter\def\csname @gls@def@feature\endcsname{a direction mathbfd in mathbbRn in some activation space such that the projection mathbfxtop mathbfd (or equivalently,...}
 \expandafter\def\csname @gls@def@ffn\endcsname{A position-wise two-layer (or three-layer for GLU variants) fully-connected network applied independently at each sequence position.}
 \expandafter\def\csname @gls@def@flashattention\endcsname{Exact attention computed with re-organized memory access: tile K, V into SRAM-resident blocks and use **online softmax** to combine block...}
 \expandafter\def\csname @gls@def@fp8\endcsname{IEEE-style 8-bit floating-point.}
@@ -52,7 +52,7 @@
 \expandafter\def\csname @gls@def@native-sparse-attention\endcsname{Three-branch sparse attention (compress + select + sliding-window) trained natively (not retrofit).}
 \expandafter\def\csname @gls@def@nope\endcsname{"No Position Encoding." Decoder-only Transformer trained without any explicit positional encoding; relies on the causal mask to recover pos...}
 \expandafter\def\csname @gls@def@nsa\endcsname{Yuan et al. 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted).}
-\expandafter\def\csname @gls@def@nvfp4\endcsname{4-bit floating-point format (E2M1) with native}
+\expandafter\def\csname @gls@def@nvfp4\endcsname{4-bit floating-point format (E2M1) with native hardware MXScale (32-element per-block scaling) on Blackwell-class GPUs.}
 \expandafter\def\csname @gls@def@online-softmax\endcsname{Numerically stable streaming softmax: maintain running max m and normalizer ell across blocks; when a new block arrives, rescale the e...}
 \expandafter\def\csname @gls@def@pagedattention\endcsname{vLLM's KV-cache layout: KV is stored in fixed-size **blocks** (typically 16 tokens), each sequence holds a per-layer **block table** mappin...}
 \expandafter\def\csname @gls@def@palm\endcsname{Google's 540B-parameter decoder-only LLM (Chowdhery et al., 2022).}
@@ -70,7 +70,7 @@
 \expandafter\def\csname @gls@def@relative-position-encoding\endcsname{Per-(query, key) distance bias added to attention logits; binned by relative distance.}
 \expandafter\def\csname @gls@def@relu\endcsname{Rectified Linear Unit: max(0, x).}
 \expandafter\def\csname @gls@def@residual-connection\endcsname{Adding the sub-layer input directly to its output (textoutput = x + textSubLayer(x)).}
-\expandafter\def\csname @gls@def@residual-stream\endcsname{the linear data bus running through a}
+\expandafter\def\csname @gls@def@residual-stream\endcsname{the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes t...}
 \expandafter\def\csname @gls@def@rlhf\endcsname{The 3-stage post-training pipeline: SFT → reward-model training on pairwise preferences → PPO with KL anchor against pimathrmSFT.}
 \expandafter\def\csname @gls@def@rmsnorm\endcsname{Simplified LayerNorm that drops mean-centering and bias, normalizing only by the RMS of the input.}
 \expandafter\def\csname @gls@def@rnn\endcsname{Recurrent Neural Network.}
