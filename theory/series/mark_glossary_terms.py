@@ -509,32 +509,32 @@ def render_glossary_section(
         full_def = _sanitize_full_def(r["full_def"])
         cite = _format_kb_cite(r.get("kb_cite"))
         alias_part = f" ({', '.join(aliases)})" if aliases else ""
-        section_link = ""
         sec_label = first_mention_label.get(key)
         if sec_label:
-            # \hyperref[label]{visible} jumps the reader to the section
-            # where this term is introduced. The arrow is rust-colored to
-            # match the body-text \glsterm tint, so the visual language
-            # is consistent across both link directions.
+            # Make the whole TERM clickable (jumps to its formal-
+            # introduction section), not just a small arrow in the body.
+            # The rust \textcolor matches the body-text \glsterm tint —
+            # the entry name visually signals "clickable" the same way
+            # body occurrences do. Earlier "→ leading the definition"
+            # pattern was too subtle; the user reported it as hidden.
             #
-            # Important: this goes into the description ITEM BODY, not the
-            # \item[label] argument. \item[...] is a moving argument
-            # (LaTeX writes it to PDF bookmarks via hyperref's babel
-            # normalisation pipeline), and math-mode tokens ($\to$) trip
-            # the normaliser. Putting the link in the body avoids that
-            # entirely — the body is regular typeset text where math
-            # works fine. UX-wise the arrow ends up immediately preceding
-            # the definition, reading naturally as "→ definition…".
-            section_link = (
-                rf"\hyperref[{sec_label}]{{\textcolor{{glscolor}}{{$\to$}}}} "
+            # \hyperref CAN go inside \item[...] (a moving argument)
+            # as long as its visible-text payload has no math-mode
+            # tokens: plain text + \textcolor is fine, but a math
+            # \to inside would trip \Hy@babelnormalise. We use plain
+            # text only.
+            primary_rendered = (
+                rf"\hyperref[{sec_label}]{{\textcolor{{glscolor}}{{{primary}}}}}"
             )
+        else:
+            primary_rendered = primary
         # \glsanchor instead of plain \hypertarget so the PDF destination
         # sits a couple of baselines above the visible term. Stops the
         # viewer's link-jump from putting the term flush against the
         # top toolbar; reader lands on the term with context above.
         items.append(
-            rf"\item[\glsanchor{{{key}}}{{{primary}}}{alias_part}]"
-            f"\n{section_link}{full_def}{cite}"
+            rf"\item[\glsanchor{{{key}}}{{{primary_rendered}}}{alias_part}]"
+            f"\n{full_def}{cite}"
         )
     body = "\n\n".join(items)
     header = (
