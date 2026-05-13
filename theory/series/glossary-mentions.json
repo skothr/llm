@@ -314,7 +314,9 @@
   "paper-4": {
     "keys_used": [
       "activation-patching",
+      "activation-reconstructor",
       "activation-steering",
+      "activation-verbalizer",
       "attention-weights",
       "attribution-graph",
       "attribution-patching",
@@ -336,6 +338,7 @@
       "expansion-factor",
       "feature",
       "ffn",
+      "fraction-of-variance-explained",
       "gaussian-noising",
       "gelu",
       "hidden-state",
@@ -358,6 +361,7 @@
       "monosemanticity",
       "multi-head-attention",
       "multi-head-latent-attention",
+      "natural-language-autoencoder",
       "nsa",
       "parameters",
       "path-patching",
@@ -388,10 +392,14 @@
       "transformer",
       "truth-direction-2",
       "tuned-lens",
+      "unverbalized-evaluation-awareness",
       "value",
       "vocabulary"
     ],
-    "sections_modified": []
+    "sections_modified": [
+      "03-lens-techniques.tex",
+      "13-scaling-and-snapshot.tex"
+    ]
   },
   "paper-5": {
     "keys_used": [

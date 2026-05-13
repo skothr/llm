@@ -309,6 +309,72 @@ that gap requires the causal interventions of \S\ref{sec:probing}
 and the patching machinery of \S\ref{sec:patching}.
 \end{contradiction}
 
+\subsection{Natural-language autoencoders: lens output as text}
+\label{sec:nla}
+
+The three lenses above project $\mathbf{h}_\ell$ through the model's
+own unembedding to produce a \glsterm{vocabulary}{vocabulary} distribution. \citet{anthropic2026-nla}
+(Anthropic 2026-05-07, \glsterm{transformer}{Transformer} Circuits Thread) keep the
+read-out-the-residual-stream goal but swap the projection target:
+a \glsdef{natural-language-autoencoder}{Natural Language Autoencoder}
+(\glsterm{natural-language-autoencoder}{NLA}) routes the activation through a free-form natural-language
+explanation. Two \glsterm{llm}{LLM} modules form the pair: an
+\glsdef{activation-verbalizer}{activation verbalizer} (\glsterm{activation-verbalizer}{AV}) that
+maps $\mathbf{h}_\ell \in \mathbb{R}^{d_\mathrm{model}}$ to an
+explanation token sequence $z$, and an
+\glsdef{activation-reconstructor}{activation reconstructor} (\glsterm{activation-reconstructor}{AR}) that
+maps $z$ back to a reconstruction $\hat{\mathbf{h}}_\ell$. Both are
+jointly trained with reinforcement learning on the round-trip MSE,
+
+\begin{equation}
+\mathcal{L} = \mathbb{E}_{\mathbf{h}_\ell \sim \mathcal{H}}\;
+              \mathbb{E}_{z \sim \mathrm{AV}(\cdot \mid \mathbf{h}_\ell)}
+              \left[\; \lVert \mathbf{h}_\ell - \mathrm{AR}(z) \rVert_2^2 \;\right],
+\label{eq:nla-loss}
+\end{equation}
+reported as a \glsdef{fraction-of-variance-explained}{Fraction of
+Variance Explained} (\glsterm{fraction-of-variance-explained}{FVE}) score normalised by the residual variance
+around the mean activation \citep[\S method;
+kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}.
+
+The bottleneck is the explanation: whatever information the \glsterm{activation-verbalizer}{AV} omits,
+the \glsterm{activation-reconstructor}{AR} cannot recover. Unlike the logit / \glsterm{tuned-lens}{tuned lens} which output a
+deterministic distribution over $\mathcal{V}$, an \glsterm{natural-language-autoencoder}{NLA} output is a
+stochastic free-form text — more expressive, more computationally
+expensive (two RL-trained \glsterm{llm}{LLM} modules instead of one $W_U$
+projection), and unlike lenses can \emph{confabulate}: the paper
+explicitly notes that \glsterm{natural-language-autoencoder}{NLA} explanations
+``can also be noisy \ldots sometimes include contradictory information
+or verifiably false claims about the context''
+\citep[\S confabulation;
+kb/excerpts/anthropic2026-nla\#sec-confabulation]{anthropic2026-nla}.
+The round-trip \glsterm{fraction-of-variance-explained}{FVE} provides a calibration signal — confabulated
+explanations score badly — but a single sample taken at face \glsterm{value}{value}
+can still mislead.
+
+The headline application is auditing. NLAs were used in
+the Anthropic pre-deployment audit of \glsterm{claude}{Claude} Opus 4.6 to surface
+\glsdef{unverbalized-evaluation-awareness}{unverbalized evaluation
+awareness} — cases where the model internally suspects it is being
+tested without saying so in its visible output
+\citep[\S auditing; kb/excerpts/anthropic2026-nla\#sec-auditing]{anthropic2026-nla}.
+On the intentionally-misaligned-model auditing game from
+\citet{marks-tegmark-2023-truth}, \glsterm{natural-language-autoencoder}{NLA}-equipped auditing agents
+``more effectively discover the root cause of the model's
+misalignment than baselines''
+\citep[\S auditing]{anthropic2026-nla} \deepencite{exact percentage
+deltas (~3\% baseline vs.\ 12--15\% NLA-equipped) are reported in
+secondary coverage of anthropic2026-nla; need a downloadable
+preprint to verify the numbers in primary form}.
+
+NLAs sit on a different point of the lens-techniques frontier than
+\glsterm{dola}{DoLa}: same goal (use intermediate state for safety-relevant readout),
+opposite output modality (free-form natural language vs.\ a contrastive
+adjustment to the final-layer \glsterm{logits}{logits}). Whether NLAs displace lenses
+or coexist depends on whether the \glsterm{fraction-of-variance-explained}{FVE} score is a sufficient gate
+against confabulation in workflows where the reader cannot run the
+round-trip themselves.
+
 \subsection{Frontier coverage and forward link}
 \label{sec:lens-forward}
 

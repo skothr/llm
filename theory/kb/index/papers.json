@@ -1341,6 +1341,26 @@
       "summary": "Cross-layer transcoders + attribution graphs. Applied to production Claude 3.5 Haiku."
     },
     {
+      "key": "anthropic2026-nla",
+      "title": "Natural Language Autoencoders Produce Unsupervised Explanations of LLM Activations",
+      "authors": "Fraser-Taliente, Kantamneni, Ong, Mossing, Lu, Bogdan et al. (Anthropic)",
+      "year": 2026,
+      "venue": "Transformer Circuits Thread",
+      "url": "https://transformer-circuits.pub/2026/nla/",
+      "local_file": null,
+      "excerpts_file": "kb/excerpts/anthropic2026-nla.md",
+      "notes_referenced_by": [
+        "interpretability/lens-techniques",
+        "interpretability/mechanistic-interpretability"
+      ],
+      "topics": [
+        "lens-techniques",
+        "mechanistic-interpretability"
+      ],
+      "category": "landmark",
+      "summary": "Natural Language Autoencoders: AV+AR pair (activation verbalizer + activation reconstructor) jointly RL-trained to round-trip residual-stream activations through a natural-language code. Used in Claude Opus 4.6 pre-deployment audit; surfaces unverbalized evaluation awareness."
+    },
+    {
       "key": "sae-not-canonical-2025",
       "title": "Sparse Autoencoders Do Not Find Canonical Features",
       "authors": "various",

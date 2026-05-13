@@ -614,6 +614,40 @@ glossary format (cf. "Attention variants and KV-cache compression").
   techniques and SAEs decompose. Vocabulary established in Elhage et
   al. 2021 (Mathematical Framework for Transformer Circuits).
 
+## Natural Language Autoencoder — methodology vocabulary
+
+- **Natural Language Autoencoder (NLA)** — Anthropic 2026's
+  interpretability method: a pair of LLM modules (AV + AR) jointly
+  trained with reinforcement learning to round-trip a residual-stream
+  activation through a natural-language explanation. The text
+  bottleneck makes the explanation testable via reconstruction
+  fidelity (FVE). Used in pre-deployment audits to surface
+  unverbalized model cognition — including evaluation awareness.
+  `[anthropic2026-nla §method; kb/excerpts/anthropic2026-nla#sec-method]`
+- **Activation verbalizer (AV)** — The AV $\mathrm{AV}(z \mid h_\ell)$
+  takes a residual-stream activation $h_\ell$ and emits a
+  natural-language explanation token sequence $z$. One half of the
+  NLA pair. `[anthropic2026-nla §method;
+  kb/excerpts/anthropic2026-nla#sec-method]`
+- **Activation reconstructor (AR)** — The AR $\mathrm{AR}(z)$ takes
+  the verbalized explanation $z$ and produces a reconstructed
+  activation $\hat h_\ell \in \mathbb{R}^{d_\mathrm{model}}$. Trained
+  jointly with the AV to minimise the round-trip MSE on activation
+  reconstruction. `[anthropic2026-nla §method;
+  kb/excerpts/anthropic2026-nla#sec-method]`
+- **Fraction of Variance Explained (FVE)** — NLA quality metric:
+  $\mathrm{FVE} = 1 - \mathcal{L}/\mathbb{E}\lVert h_\ell - \bar h_\ell\rVert^2$
+  where $\mathcal{L}$ is the round-trip MSE. FVE = 1 is a lossless
+  natural-language code; FVE = 0 means the explanation does no better
+  than the mean activation. `[anthropic2026-nla §method;
+  kb/excerpts/anthropic2026-nla#sec-method]`
+- **Unverbalized evaluation awareness** — Cases where a model
+  internally suspects it is being tested but does not say so
+  in its visible output. NLAs were validated as a tool for surfacing
+  this signal during Anthropic's pre-deployment audit of Claude
+  Opus 4.6. `[anthropic2026-nla §auditing;
+  kb/excerpts/anthropic2026-nla#sec-auditing]`
+
 ## Activation patching — methodology vocabulary
 
 - **Activation patching** — the canonical causal-intervention method

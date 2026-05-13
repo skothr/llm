@@ -9,8 +9,14 @@
 \item[\hypertarget{glossary:activation-patching}{Activation patching}]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between forward passes on paired (clean, corrupted) prompts and measuring the effect on the output \texttt{[meng2022-rome §2; kb/excerpts/meng2022-rome\#sec-2; zhang2023-apatching §2.1]}. Also known as causal tracing, interchange intervention, causal mediation analysis, or representation denoising.
 
+\item[\hypertarget{glossary:activation-reconstructor}{Activation reconstructor} (AR)]
+\hyperref[sec:nla]{\textcolor{glscolor}{$\to$}} The AR $\mathrm{AR}(z)$ takes the verbalized explanation $z$ and produces a reconstructed activation $\hat h_\ell \in \mathbb{R}^{d_\mathrm{model}}$. Trained jointly with the AV to minimise the round-trip MSE on activation reconstruction. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
+
 \item[\hypertarget{glossary:activation-steering}{Activation steering}]
 \hyperref[sec:contradictions]{\textcolor{glscolor}{$\to$}} Inference-time intervention that adds $\alpha \hat{\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\alpha < 0$, suppress) a probed direction. The Representation Engineering / Vennemeyer 2025 line [vennemeyer2025-sycophancy-not-one-thing FORUM-SIGNAL]
+
+\item[\hypertarget{glossary:activation-verbalizer}{Activation verbalizer} (AV)]
+\hyperref[sec:nla]{\textcolor{glscolor}{$\to$}} The AV $\mathrm{AV}(z \mid h_\ell)$ takes a residual-stream activation $h_\ell$ and emits a natural-language explanation token sequence $z$. One half of the NLA pair. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
 
 \item[\hypertarget{glossary:attention-weights}{attention weights}]
 \hyperref[sec:circuits]{\textcolor{glscolor}{$\to$}} The softmax-normalized scores ($a_j \geq 0$, $\sum a_j = 1$) that determine how much each position contributes to the output.
@@ -75,6 +81,9 @@
 \item[\hypertarget{glossary:ffn}{FFN} (Feed-Forward Network)]
 \hyperref[sec:logit-lens-family]{\textcolor{glscolor}{$\to$}} A position-wise two-layer (or three-layer for GLU variants) fully-connected network applied independently at each sequence position. Transforms representations within each position, complementing attention which mixes across positions.
 
+\item[\hypertarget{glossary:fraction-of-variance-explained}{Fraction of Variance Explained} (FVE)]
+\hyperref[sec:nla]{\textcolor{glscolor}{$\to$}} NLA quality metric: $\mathrm{FVE} = 1 - \mathcal{L}/\mathbb{E}\lVert h_\ell - \bar h_\ell\rVert^2$ where $\mathcal{L}$ is the round-trip MSE. FVE = 1 is a lossless natural-language code; FVE = 0 means the explanation does no better than the mean activation. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
+
 \item[\hypertarget{glossary:gaussian-noising}{Gaussian Noising} (GN) / Symmetric Token Replacement (STR)]
 \hyperref[sec:patching]{\textcolor{glscolor}{$\to$}} the two corruption methods for activation patching. GN adds $\mathcal{N}(0, 3\sigma_\text{textset})$ to subject-token embeddings \texttt{[meng2022-rome §2]}; STR replaces the subject with a similar token (e.g., "Eiffel Tower" $\to$ "Colosseum") preserving sequence length \texttt{[zhang2023-apatching §2.1; kb/excerpts/zhang2023-apatching\#sec-2-1-corruption]}. STR is the recommended default; GN can drive activations off-distribution \citep[\S 1 findings]{zhang2023-apatching}
 
@@ -106,7 +115,7 @@
 \hyperref[sec:probing]{\textcolor{glscolor}{$\to$}} Probe of the form $g(\mathbf{h}) = \sigma(\mathbf{w}^\top \mathbf{h} + b)$ with $\mathbf{w} \in \mathbb{R}^d$. Distinguished from non-linear / MLP probes that can suffer from "probe leakage" (learning the property from low-information features) [alain-bengio-2017]
 
 \item[\hypertarget{glossary:llm}{LLM}]
-\hyperref[sec:probing]{\textcolor{glscolor}{$\to$}} Large Language Model. A neural network with billions of parameters trained on large text corpora to predict and generate language.
+\hyperref[sec:logit-lens-family]{\textcolor{glscolor}{$\to$}} Large Language Model. A neural network with billions of parameters trained on large text corpora to predict and generate language.
 
 \item[\hypertarget{glossary:logit-difference}{Logit difference} (LD)]
 \hyperref[sec:patching]{\textcolor{glscolor}{$\to$}} an activation-patching metric: $\text{LD}(r, r') = \text{Logit}(r) - \text{Logit}(r')$. The patching effect, normalized to $[0, 1]$, is $[\text{LD}_\text{pt} - \text{LD}_*] / [\text{LD}_\text{cl} - \text{LD}_*]$ \texttt{[zhang2023-apatching §2.1 metrics; kb/excerpts/zhang2023-apatching\#sec-2-1-metrics]}. Recommended over raw probability because it is sensitive to components that *push against* the correct answer.
@@ -140,6 +149,9 @@
 
 \item[\hypertarget{glossary:multi-head-latent-attention}{Multi-head Latent Attention} (MLA)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} DeepSeek's architectural compression: project to a low-rank latent $C \in \mathbb{R}^{d_c}$ shared across heads, expand back to per-head $(K, V)$ at attention time. Achieves ~93% KV-cache reduction vs MHA at deepseek-v2 dimensions. \citep[\S 2.1; kb/notes/inference/kv-cache-management\#§2]{deepseek-v2}
+
+\item[\hypertarget{glossary:natural-language-autoencoder}{Natural Language Autoencoder} (NLA)]
+\hyperref[sec:nla]{\textcolor{glscolor}{$\to$}} Anthropic 2026's interpretability method: a pair of LLM modules (AV + AR) jointly trained with reinforcement learning to round-trip a residual-stream activation through a natural-language explanation. The text bottleneck makes the explanation testable via reconstruction fidelity (FVE). Used in pre-deployment audits to surface unverbalized model cognition — including evaluation awareness. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
 
 \item[\hypertarget{glossary:nsa}{NSA} (Native Sparse Attention)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Yuan et al.\ 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Aimed at long context. Treated in \texttt{kb/notes/architecture/long-context.md} [yuan2025]
@@ -230,6 +242,9 @@
 
 \item[\hypertarget{glossary:tuned-lens}{Tuned lens}]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Belrose et al. 2023: per-layer affine "translators" $\mathbf{h}_\ell \mapsto A_\ell \mathbf{h}_\ell + b_\ell$ trained with a distillation loss against final-layer logits. More reliable than the raw logit lens, especially on BLOOM/GPT-Neo \citep[\S 1; PDF p.1-2]{belrose2023-tuned-lens}
+
+\item[\hypertarget{glossary:unverbalized-evaluation-awareness}{Unverbalized evaluation awareness}]
+\hyperref[sec:nla]{\textcolor{glscolor}{$\to$}} Cases where a model internally suspects it is being tested but does not say so in its visible output. NLAs were validated as a tool for surfacing this signal during Anthropic's pre-deployment audit of Claude Opus 4.6. \citep[\S auditing; kb/excerpts/anthropic2026-nla\#sec-auditing]{anthropic2026-nla}
 
 \item[\hypertarget{glossary:value}{Value} (V)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Projected representation of the content to be aggregated. Weighted by attention scores to produce the output.
