@@ -3,22 +3,22 @@
 % Source of truth: theory/kb/glossary.md
 %
 \makeatletter
-\expandafter\def\csname @gls@def@activation-patching\endcsname{the canonical causal-intervention method}
-\expandafter\def\csname @gls@def@aha-moment\endcsname{A spike in the model's use of reflection words like "wait" during training, taken as evidence of self-reorganization of reasoning structure...}
+\expandafter\def\csname @gls@def@activation-patching\endcsname{the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between...}
+\expandafter\def\csname @gls@def@aha-moment\endcsname{A spike in the model's use of reflection words like "wait" during training, taken as evidence of self-reorganization of reasoning structure}
 \expandafter\def\csname @gls@def@autoregressive\endcsname{Generating tokens one at a time, left to right, where each prediction depends only on previous tokens.}
 \expandafter\def\csname @gls@def@budget-forcing\endcsname{The s1 2025 mechanism.}
 \expandafter\def\csname @gls@def@capability-ceiling\endcsname{The empirical finding that RLVR improves mathrmpass@1 on problems the base model could already solve at mathrmpass@k for some k...}
 \expandafter\def\csname @gls@def@chain-of-thought\endcsname{A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps z before emitting a final answer...}
-\expandafter\def\csname @gls@def@circuit-tracing\endcsname{Anthropic's 2025 methodology: replace MLPs}
+\expandafter\def\csname @gls@def@circuit-tracing\endcsname{Anthropic's 2025 methodology: replace MLPs with cross-layer transcoders, then compute attribution graphs by Jacobian back-attribution from...}
 \expandafter\def\csname @gls@def@claude\endcsname{Anthropic's proprietary decoder-only LLM family.}
 \expandafter\def\csname @gls@def@cold-start-sft-2\endcsname{A small-scale (sim 104 examples) SFT pass on long-CoT exemplars, run before RL to fix readability problems of pure-RL outputs (R1-Zero).}
-\expandafter\def\csname @gls@def@constrained-decoding-2\endcsname{Generation procedure that, at each step,}
+\expandafter\def\csname @gls@def@constrained-decoding-2\endcsname{Generation procedure that, at each step, masks the logits to allow only tokens consistent with a target grammar (regex, JSON schema, GBNF,...}
 \expandafter\def\csname @gls@def@cot-faithfulness-2\endcsname{The extent to which the trace z causally drives the answer y versus being post-hoc rationalisation.}
 \expandafter\def\csname @gls@def@dapo-2\endcsname{ByteDance's GRPO variant.}
-\expandafter\def\csname @gls@def@debate\endcsname{Two AI debaters in a zero-sum game judged}
+\expandafter\def\csname @gls@def@debate\endcsname{Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge.}
 \expandafter\def\csname @gls@def@decontamination\endcsname{Held-out test sets, especially November 2024 AMC math contests and unleaked HumanEval+, used to verify the synthetic data did not leak benc...}
 \expandafter\def\csname @gls@def@discriminative-prm\endcsname{A classifier-style PRM: outputs a probability of step correctness in one feed-forward pass.}
-\expandafter\def\csname @gls@def@feature\endcsname{a direction mathbfd in mathbbRn in some}
+\expandafter\def\csname @gls@def@feature\endcsname{a direction mathbfd in mathbbRn in some activation space such that the projection mathbfxtop mathbfd (or equivalently,...}
 \expandafter\def\csname @gls@def@flashattention\endcsname{Exact attention computed with re-organized memory access: tile K, V into SRAM-resident blocks and use **online softmax** to combine block...}
 \expandafter\def\csname @gls@def@format-reward\endcsname{In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a `<think>...</think>` block).}
 \expandafter\def\csname @gls@def@generative-prm\endcsname{A small reasoning-LLM verifier that emits its own short CoT evaluating each step before producing a verdict.}
@@ -50,7 +50,7 @@
 \expandafter\def\csname @gls@def@reasoning-mcts\endcsname{Monte Carlo Tree Search where actions are next-step reasoning generations and the value function is a PRM.}
 \expandafter\def\csname @gls@def@reasoning-model\endcsname{An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer.}
 \expandafter\def\csname @gls@def@rejection-sampling-sft\endcsname{Generate candidate solutions with the current policy, filter by verifier (and optional quality filter), SFT on the survivors.}
-\expandafter\def\csname @gls@def@residual-stream\endcsname{the linear data bus running through a}
+\expandafter\def\csname @gls@def@residual-stream\endcsname{the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes t...}
 \expandafter\def\csname @gls@def@reward-hacking\endcsname{Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts).}
 \expandafter\def\csname @gls@def@reward-model\endcsname{A neural network trained on Bradley–Terry preferences to score response quality.}
 \expandafter\def\csname @gls@def@rlhf\endcsname{The 3-stage post-training pipeline: SFT → reward-model training on pairwise preferences → PPO with KL anchor against pimathrmSFT.}
@@ -59,11 +59,11 @@
 \expandafter\def\csname @gls@def@rope\endcsname{Positional encoding that rotates query and key vectors by position-dependent angles, making attention dot products depend on relative posit...}
 \expandafter\def\csname @gls@def@saturation\endcsname{A benchmark is saturated when frontier models score within the verifier-error-rate noise floor of one another, losing discriminative power.}
 \expandafter\def\csname @gls@def@scaling-law\endcsname{An empirical or theoretical functional relationship between a measure of model performance (typically cross-entropy loss) and one or more "...}
-\expandafter\def\csname @gls@def@scheming\endcsname{A model schemes when, instructed to pursue a goal G,}
+\expandafter\def\csname @gls@def@scheming\endcsname{A model schemes when, instructed to pursue a goal G, it strategically takes actions that conceal its capabilities or manipulate its overs...}
 \expandafter\def\csname @gls@def@self-consistency-2\endcsname{Sample N chain-of-thoughts independently at T > 0; majority-vote the final answers.}
 \expandafter\def\csname @gls@def@sliding-window-attention\endcsname{Each position attends only to the previous w tokens; compute O(N w d) vs O(N2 d).}
 \expandafter\def\csname @gls@def@swiglu\endcsname{mathrmFFN mathrmSwiGLU(x) = (mathrmSwish 1(xW) otimes xV) W 2.}
-\expandafter\def\csname @gls@def@sycophancy\endcsname{A response is sycophantic if it is more aligned with}
+\expandafter\def\csname @gls@def@sycophancy\endcsname{A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth.}
 \expandafter\def\csname @gls@def@test-time-compute\endcsname{The inference-side compute spent on a single problem instance to improve answer quality, beyond a single greedy forward pass.}
 \expandafter\def\csname @gls@def@test-time-compute-optimal-scaling-strategy\endcsname{The argmax over test-time hyperparameters theta of expected output correctness, at a fixed test-time compute budget N, conditioned on...}
 \expandafter\def\csname @gls@def@thinking-budget-2\endcsname{Productised TTC control: API-level integer (Gemini 2.5 `thinkingBudget`), effort level (OpenAI o-series), or token cap (Anthropic thinking...}

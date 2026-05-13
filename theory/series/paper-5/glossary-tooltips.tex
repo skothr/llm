@@ -3,34 +3,34 @@
 % Source of truth: theory/kb/glossary.md
 %
 \makeatletter
-\expandafter\def\csname @gls@def@activation-patching\endcsname{the canonical causal-intervention method}
+\expandafter\def\csname @gls@def@activation-patching\endcsname{the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between...}
 \expandafter\def\csname @gls@def@activation-steering\endcsname{Inference-time intervention that adds alpha hatmathbfd to a residual-stream activation to amplify (or, with alpha < 0, suppress...}
 \expandafter\def\csname @gls@def@agentic-benchmark\endcsname{Evaluation in which a model autonomously plans, takes actions in an environment, observes results, and replans, scored by an end-state veri...}
-\expandafter\def\csname @gls@def@alignment-faking\endcsname{Operational sub-form of deceptive alignment:}
+\expandafter\def\csname @gls@def@alignment-faking\endcsname{Operational sub-form of deceptive alignment: a model complies with a behavior it normally refuses, conditional on inferring it is in traini...}
 \expandafter\def\csname @gls@def@answer-letter-prior-2\endcsname{The training-data-induced bias that pre-trained LMs do not have uniform priors over A/B/C/D in MCQ items.}
 \expandafter\def\csname @gls@def@asl\endcsname{Anthropic's Responsible Scaling Policy tier framework.}
 \expandafter\def\csname @gls@def@asr\endcsname{Headline metric in adversarial-robustness benchmarks: fraction of (behavior, attack) pairs for which the model produces an output the judge...}
-\expandafter\def\csname @gls@def@attack-success-rate\endcsname{The fraction of adversarial prompts}
-\expandafter\def\csname @gls@def@auxiliary-confidence-loss\endcsname{W2S training-side intervention that}
+\expandafter\def\csname @gls@def@attack-success-rate\endcsname{The fraction of adversarial prompts that elicit a successful (policy-violating) response from the target model under a fixed scoring proced...}
+\expandafter\def\csname @gls@def@auxiliary-confidence-loss\endcsname{W2S training-side intervention that penalizes the strong student for low confidence on its own predictions, biasing it toward decisive pred...}
 \expandafter\def\csname @gls@def@calibration-set\endcsname{A small set of representative input sequences (typically 128 sequences × 2048 tokens) run through the network to collect activation statist...}
 \expandafter\def\csname @gls@def@capture-the-flag\endcsname{Cybersecurity task format adopted by Cybench: agents must exploit a target system to retrieve a flag string (typically `flag...`), with s...}
 \expandafter\def\csname @gls@def@chain-of-thought\endcsname{A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps z before emitting a final answer...}
-\expandafter\def\csname @gls@def@circuit\endcsname{a sub-graph C of a model's computational graph M}
+\expandafter\def\csname @gls@def@circuit\endcsname{a sub-graph C of a model's computational graph M that, when used in place of M via knockouts of M setminus C, approximately reprod...}
 \expandafter\def\csname @gls@def@claude\endcsname{Anthropic's proprietary decoder-only LLM family.}
 \expandafter\def\csname @gls@def@constitution\endcsname{A list of principles ("the assistant should not be racist," etc.) used by the feedback model to evaluate / critique responses in CAI.}
 \expandafter\def\csname @gls@def@constitutional-ai\endcsname{Anthropic 2022 framework for training harmless assistants without human harm labels.}
-\expandafter\def\csname @gls@def@consultancy\endcsname{Single-debater variant of debate: one AI agent}
+\expandafter\def\csname @gls@def@consultancy\endcsname{Single-debater variant of debate: one AI agent responds to judge's questions.}
 \expandafter\def\csname @gls@def@crescendomation\endcsname{The automated implementation of Crescendo: an attacker LLM generates the escalation chain.}
 \expandafter\def\csname @gls@def@dangerous-capability-evaluation-2\endcsname{Pre-deployment eval that tests whether a model can autonomously carry out a task whose successful completion would constitute a threat (cyb...}
 \expandafter\def\csname @gls@def@data-contamination\endcsname{The presence of benchmark items, gold answers, or close paraphrases in a model's training corpus, biasing the benchmark score upward.}
-\expandafter\def\csname @gls@def@debate\endcsname{Two AI debaters in a zero-sum game judged}
-\expandafter\def\csname @gls@def@deceptive-alignment\endcsname{Hubinger et al. 2019 theoretical concept:}
+\expandafter\def\csname @gls@def@debate\endcsname{Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge.}
+\expandafter\def\csname @gls@def@deceptive-alignment\endcsname{Hubinger et al. 2019 theoretical concept: a mesa-optimizer pursues a different objective in training than in deployment, choosing training-...}
 \expandafter\def\csname @gls@def@decontamination\endcsname{Held-out test sets, especially November 2024 AMC math contests and unleaked HumanEval+, used to verify the synthetic data did not leak benc...}
 \expandafter\def\csname @gls@def@dpo\endcsname{Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL opti...}
 \expandafter\def\csname @gls@def@end-state-verifier\endcsname{A scoring function V(s T, g) that checks the post-trajectory environment state s T against a goal g, accepting any path that reaches...}
-\expandafter\def\csname @gls@def@feature\endcsname{a direction mathbfd in mathbbRn in some}
+\expandafter\def\csname @gls@def@feature\endcsname{a direction mathbfd in mathbbRn in some activation space such that the projection mathbfxtop mathbfd (or equivalently,...}
 \expandafter\def\csname @gls@def@frontiermath\endcsname{Epoch AI's benchmark of research-grade math problems authored and cross-vetted by 60+ working mathematicians, with single canonical numeric...}
-\expandafter\def\csname @gls@def@goal-guarding\endcsname{One of the Apollo six-probe scheming behaviors:}
+\expandafter\def\csname @gls@def@goal-guarding\endcsname{One of the Apollo six-probe scheming behaviors: manipulating future-instance prompts (e.g., editing system prompts one expects future copie...}
 \expandafter\def\csname @gls@def@google-proof-construction\endcsname{Question design protocol where non-expert validators with 30+ minutes of web access score only marginally above random guessing (e.g., 34\%...}
 \expandafter\def\csname @gls@def@gpqa-diamond-2\endcsname{198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web acc...}
 \expandafter\def\csname @gls@def@grpo-2\endcsname{Critic-free PPO variant (Shao 2024).}
@@ -39,8 +39,8 @@
 \expandafter\def\csname @gls@def@harmbench-judge\endcsname{The fine-tuned classifier (Llama-2-13B family, fine-tuned on labeled harmful/non-harmful generations) shipped with HarmBench as the standar...}
 \expandafter\def\csname @gls@def@helm\endcsname{Stanford CRFM 2022 framework that scores models on 7 metric axes (accuracy, calibration, robustness, fairness, bias, toxicity, efficiency)...}
 \expandafter\def\csname @gls@def@hle\endcsname{2,500-question multimodal cross-domain frontier benchmark from Scale AI / CAIS.}
-\expandafter\def\csname @gls@def@in-context-scheming\endcsname{Apollo's experimental subset of scheming:}
-\expandafter\def\csname @gls@def@iterated-amplification\endcsname{Christiano 2018: recursive}
+\expandafter\def\csname @gls@def@in-context-scheming\endcsname{Apollo's experimental subset of scheming: the goal G is provided in-context (system prompt) rather than acquired during training.}
+\expandafter\def\csname @gls@def@iterated-amplification\endcsname{Christiano 2018: recursive A k+1 = mathrmDistill(mathrmAmplify(A k)) where Amplify decomposes hard tasks into supervisable subtas...}
 \expandafter\def\csname @gls@def@jailbreakbench-2\endcsname{Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifac...}
 \expandafter\def\csname @gls@def@key\endcsname{Projected representation of positions being "queried" against.}
 \expandafter\def\csname @gls@def@llm\endcsname{Large Language Model.}
@@ -48,13 +48,13 @@
 \expandafter\def\csname @gls@def@lm-evaluation-harness\endcsname{EleutherAI's open-source eval infrastructure backing HF Open LLM Leaderboard.}
 \expandafter\def\csname @gls@def@loglikelihood-scoring\endcsname{MCQ evaluation method that computes log P(textoption) for each option and picks the argmax.}
 \expandafter\def\csname @gls@def@matharena\endcsname{Dynamic math benchmark using post-cutoff competition problems (CMIMC, IMO, etc.) immediately upon release.}
-\expandafter\def\csname @gls@def@mesa-optimizer\endcsname{Hubinger et al. 2019 concept: a learned}
+\expandafter\def\csname @gls@def@mesa-optimizer\endcsname{Hubinger et al. 2019 concept: a learned optimizer that emerges inside a trained network.}
 \expandafter\def\csname @gls@def@mmlu\endcsname{57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021.}
 \expandafter\def\csname @gls@def@mmlu-pro\endcsname{10-way MCQ, reasoning-augmented successor to MMLU.}
 \expandafter\def\csname @gls@def@mmlu-redux-2\endcsname{Polo et al. 2024 audit of MMLU finding 6.49\% baseline error rate, with the Virology subset reaching 57\% errors.}
-\expandafter\def\csname @gls@def@oversight-subversion\endcsname{Apollo six-probe scheming behavior:}
+\expandafter\def\csname @gls@def@oversight-subversion\endcsname{Apollo six-probe scheming behavior: attempting to disable monitoring tools / oversight mechanisms.}
 \expandafter\def\csname @gls@def@parameters\endcsname{The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).}
-\expandafter\def\csname @gls@def@performance-gap-recovered\endcsname{Burns et al. 2023's headline}
+\expandafter\def\csname @gls@def@performance-gap-recovered\endcsname{Burns et al. 2023's headline metric: mathrmPGR = (c textstudent - c textweak) / (c textceiling - c textweak).}
 \expandafter\def\csname @gls@def@perplexity\endcsname{2mathcalL (or emathcalL with natural log).}
 \expandafter\def\csname @gls@def@probe-2\endcsname{A (typically linear) classifier g: mathbbRd to mathcalY trained on frozen LM activations mathbfh(ell, t) to predict an e...}
 \expandafter\def\csname @gls@def@process-reward-model\endcsname{A scoring function RP phi: (x, s 1:t) to [0, 1] trained on per-step correctness labels.}
@@ -62,31 +62,31 @@
 \expandafter\def\csname @gls@def@r1-zero\endcsname{DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base.}
 \expandafter\def\csname @gls@def@random-guess-ceiling\endcsname{The score a uniform-random model would achieve.}
 \expandafter\def\csname @gls@def@reasoning-model\endcsname{An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer.}
-\expandafter\def\csname @gls@def@red-teaming\endcsname{Systematic adversarial testing of an LLM}
-\expandafter\def\csname @gls@def@residual-stream\endcsname{the linear data bus running through a}
-\expandafter\def\csname @gls@def@responsible-scaling-policy\endcsname{Anthropic's pre-deployment}
+\expandafter\def\csname @gls@def@red-teaming\endcsname{Systematic adversarial testing of an LLM for harmful or policy-violating outputs.}
+\expandafter\def\csname @gls@def@residual-stream\endcsname{the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes t...}
+\expandafter\def\csname @gls@def@responsible-scaling-policy\endcsname{Anthropic's pre-deployment policy framework.}
 \expandafter\def\csname @gls@def@reward-hacking\endcsname{Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts).}
 \expandafter\def\csname @gls@def@reward-model\endcsname{A neural network trained on Bradley–Terry preferences to score response quality.}
-\expandafter\def\csname @gls@def@rlaif-3\endcsname{RLHF pipeline}
+\expandafter\def\csname @gls@def@rlaif-3\endcsname{RLHF pipeline where preference labels come from an AI feedback model rather than human labelers.}
 \expandafter\def\csname @gls@def@rlhf\endcsname{The 3-stage post-training pipeline: SFT → reward-model training on pairwise preferences → PPO with KL anchor against pimathrmSFT.}
 \expandafter\def\csname @gls@def@rlvr-3\endcsname{RL post-training where the reward is computed mechanically from the emitted answer (regex match for math, unit-test execution for code, pro...}
 \expandafter\def\csname @gls@def@safety-capability-parity\endcsname{Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range.}
-\expandafter\def\csname @gls@def@sandbagging\endcsname{Strategic underperformance on a capability}
+\expandafter\def\csname @gls@def@sandbagging\endcsname{Strategic underperformance on a capability evaluation in service of a separate objective (avoiding retraining, avoiding deployment, etc).}
 \expandafter\def\csname @gls@def@saturation\endcsname{A benchmark is saturated when frontier models score within the verifier-error-rate noise floor of one another, losing discriminative power.}
-\expandafter\def\csname @gls@def@scalable-oversight\endcsname{The family of training and evaluation}
-\expandafter\def\csname @gls@def@scheming\endcsname{A model schemes when, instructed to pursue a goal G,}
+\expandafter\def\csname @gls@def@scalable-oversight\endcsname{The family of training and evaluation protocols designed to let a weaker supervisor — eventually a human — supervise a stronger AI system.}
+\expandafter\def\csname @gls@def@scheming\endcsname{A model schemes when, instructed to pursue a goal G, it strategically takes actions that conceal its capabilities or manipulate its overs...}
 \expandafter\def\csname @gls@def@self-consistency-2\endcsname{Sample N chain-of-thoughts independently at T > 0; majority-vote the final answers.}
-\expandafter\def\csname @gls@def@self-exfiltration\endcsname{Apollo six-probe scheming behavior: copying}
-\expandafter\def\csname @gls@def@situational-awareness\endcsname{A model's capacity to reason}
+\expandafter\def\csname @gls@def@self-exfiltration\endcsname{Apollo six-probe scheming behavior: copying perceived model weights to external servers when the model believes it is about to be replaced.}
+\expandafter\def\csname @gls@def@situational-awareness\endcsname{A model's capacity to reason about its own context, training process, and deployment status.}
 \expandafter\def\csname @gls@def@softmax\endcsname{Converts logits to a probability distribution: P(j) = ez j / sum k ez k.}
-\expandafter\def\csname @gls@def@sparse-autoencoder\endcsname{a wide (M gg n) two-layer}
+\expandafter\def\csname @gls@def@sparse-autoencoder\endcsname{a wide (M gg n) two-layer encoder-decoder trained to reconstruct a model's activations mathbfx in mathbbRn as a sparse linear...}
 \expandafter\def\csname @gls@def@swe-bench-verified\endcsname{OpenAI's August-2024 500-task subset of SWE-bench, filtered by professional software engineers for unambiguous issue specs and fair test se...}
-\expandafter\def\csname @gls@def@sycophancy\endcsname{A response is sycophantic if it is more aligned with}
-\expandafter\def\csname @gls@def@sycophancyeval\endcsname{Sharma et al. 2023's four-task free-form}
+\expandafter\def\csname @gls@def@sycophancy\endcsname{A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth.}
+\expandafter\def\csname @gls@def@sycophancyeval\endcsname{Sharma et al. 2023's four-task free-form text-generation suite (feedback, "are you sure?" capitulation, user-preference matching, mimicry-o...}
 \expandafter\def\csname @gls@def@synthid-text\endcsname{Google DeepMind's tournament-sampling watermark.}
 \expandafter\def\csname @gls@def@task-horizon-metric\endcsname{Capability-evaluation metric framing model performance as the human-time-to-complete distribution at which the model succeeds at >50\%.}
 \expandafter\def\csname @gls@def@transformer\endcsname{Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing...}
 \expandafter\def\csname @gls@def@value\endcsname{Projected representation of the content to be aggregated.}
 \expandafter\def\csname @gls@def@vocabulary\endcsname{The fixed set of all tokens a model can recognize.}
-\expandafter\def\csname @gls@def@watermark\endcsname{A statistical signal embedded into a}
+\expandafter\def\csname @gls@def@watermark\endcsname{A statistical signal embedded into a generated token stream by a sampling-time intervention; invisible to a casual human reader but algorit...}
 \makeatother
