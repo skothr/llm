@@ -321,8 +321,12 @@ def test_render_glossary_section_basic():
     assert r"\citep[\S 3.4]{su2021}" in out
 
 
-def test_render_glossary_section_emits_back_link_when_first_mention_known():
-    """Entry whose key is in first_mention_label gets a \\hyperref arrow."""
+def test_render_glossary_section_term_is_clickable_link_when_first_mention_known():
+    """When a key has a known first-mention section, the entry's primary
+    term itself is wrapped in \\hyperref so the whole bold term name
+    is the clickable target (jumps to the section that introduces it).
+    Earlier design used a small leading ``→ in the body; user reported
+    that arrow as too easy to miss, so we attach the link to the term."""
     records = _records({
         "key": "rope", "primary_form": "RoPE", "aliases": [],
         "short_def": "x", "full_def": "Rotary positional encoding details.",
@@ -333,21 +337,22 @@ def test_render_glossary_section_emits_back_link_when_first_mention_known():
         used_keys={"rope"},
         first_mention_label={"rope": "sec:positional"},
     )
-    assert r"\hyperref[sec:positional]" in out
-    # The arrow itself must be rendered (rust-tinted to match \glsterm body terms).
-    assert r"\textcolor{glscolor}{$\to$}" in out
-    # The link MUST live in the description-item body, NOT inside \item[...].
-    # \item[...] is a moving argument; math mode there ($\to$) trips
-    # hyperref's babel normalisation and breaks the build. The arrow
-    # should appear after \item[...] but before the definition text.
-    assert (
-        r"\hyperref[sec:positional]{\textcolor{glscolor}{$\to$}} "
-        r"Rotary positional encoding details."
-    ) in out, "back-link must precede full_def in the item body"
+    # Whole term wrapped in \hyperref, with the rust tint that matches
+    # body-text \glsterm cues so the entry name signals "clickable".
+    assert r"\hyperref[sec:positional]{\textcolor{glscolor}{RoPE}}" in out
+    # The link MUST live INSIDE the \item[...] arg (so the clickable
+    # area is exactly the bold term name in the list label). \item[...]
+    # is a moving argument; \hyperref is safe there as long as its
+    # payload contains no math (RoPE is plain text — fine).
+    assert r"\item[\glsanchor{rope}{\hyperref[sec:positional]" in out
+    # No standalone arrow in the definition body any more.
+    assert r"$\to$" not in out
 
 
-def test_render_glossary_section_omits_back_link_when_first_mention_unknown():
-    """Entry whose key has no first-mention label renders without an arrow."""
+def test_render_glossary_section_omits_term_link_when_first_mention_unknown():
+    """If we don't know where a term is formally introduced, render its
+    name plain (no \\hyperref). The reader still sees the entry; just
+    no jump-target."""
     records = _records({
         "key": "rope", "primary_form": "RoPE", "aliases": [],
         "short_def": "x", "full_def": "x", "case_strict": True, "kb_cite": None,
@@ -355,7 +360,7 @@ def test_render_glossary_section_omits_back_link_when_first_mention_unknown():
     # first_mention_label not passed → default {} → no link emitted
     out = render_glossary_section(records, used_keys={"rope"})
     assert r"\hyperref[" not in out
-    assert r"$\to$" not in out
+    assert r"\textcolor{glscolor}" not in out
 
 
 def test_render_glossary_section_scopes_to_used_keys():
