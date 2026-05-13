@@ -110,7 +110,18 @@
 \usepackage{cleveref}
 
 % ----- TODO and margin notes (used during writing pass)
-\usepackage[textsize=footnotesize, color=yellow!40]{todonotes}
+% todonotes drives \deepencite{...} — author-only "this needs deepening"
+% annotations. They render as inline orange boxes which DON'T fit in
+% tabularx cells (Table 6 in paper-4 §13 was a documented offender: the
+% block-element \todo[inline] bled off the page and pushed neighboring
+% row content into white space).
+%
+% Default state: `disable` — \todo / \deepencite are no-ops in the
+% published render. The annotations remain in source files (grep
+% `\deepencite` to find them) so the author can still pick them up
+% during a writing pass; just remove `disable` below to re-enable
+% rendering for an authoring/review build.
+\usepackage[textsize=footnotesize, color=yellow!40, disable]{todonotes}
 \newcommand{\deepencite}[1]{\todo[inline,color=orange!30]{deepen-cite: #1}}
 
 % ----- KB tag environments — preserve [INTUITION]/[ANALOGY]/etc. from notes
