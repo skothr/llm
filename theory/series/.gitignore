@@ -8,3 +8,9 @@ paper-*/main.toc
 # pdfcomment package sidecars (annotation-index aux files; empty in our use).
 paper-*/main.upa
 paper-*/main.upb
+
+# Collected build output: build.sh creates dist/ with relative symlinks
+# named <N>-<topic>.pdf pointing at paper-N/main.pdf. The symlinks are
+# regenerated on every `bash build.sh` run; the canonical PDFs at
+# paper-N/main.pdf remain the committed source of truth.
+dist/

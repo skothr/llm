@@ -32,8 +32,27 @@ series/
 
 ## Build
 
-Each `paper-N/main.tex` builds to `paper-N/main.pdf` via the standard
-LaTeX `pdflatex + bibtex + pdflatex × 2` cycle (no `latexmk` required).
+The end-to-end build is wrapped by `theory/series/build.sh`. From any
+working directory:
+
+```bash
+bash theory/series/build.sh           # clean rebuild all 5 + collect
+bash theory/series/build.sh collect   # just refresh dist/ symlinks
+```
+
+The script does the full pdflatex / bibtex / xr-hyper sweep (three
+passes over all 5 papers so cross-paper labels settle), then creates
+`theory/series/dist/<N>-<topic>.pdf` symlinks pointing at each
+`paper-N/main.pdf`. Names: `1-architecture.pdf`, `2-training.pdf`,
+`3-reasoning.pdf`, `4-interpretability.pdf`,
+`5-evaluation-alignment.pdf`. Open from `dist/` to navigate the
+series by topic instead of by paper number; the canonical PDFs at
+`paper-N/main.pdf` remain the committed source of truth.
+
+The manual sweep below is preserved for when you only want to rebuild
+a single paper. Each `paper-N/main.tex` builds to `paper-N/main.pdf`
+via the standard LaTeX `pdflatex + bibtex + pdflatex × 2` cycle (no
+`latexmk` required).
 
 Before the first build (and any time `theory/kb/glossary.md` or body
 sources change), regenerate the glossary artifacts from project root:
