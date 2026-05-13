@@ -21,6 +21,9 @@ testing/.cache/
 # Test scripts (ad-hoc, not part of the toolkit)
 test.py
 
+# Personal-learning scratch dir (PyTorch tutorials, etc.) — local only
+learn/
+
 # Databases (auto-created, not source)
 testing/experiments.db
 testing/experiments/experiments.db
