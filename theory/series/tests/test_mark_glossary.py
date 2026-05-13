@@ -310,7 +310,11 @@ def test_render_glossary_section_basic():
     })
     out = render_glossary_section(records, used_keys={"rope"})
     assert r"\section*{Glossary}" in out
-    assert r"\hypertarget{glossary:rope}" in out
+    # The emitter wraps each entry's anchor in \glsanchor (which itself
+    # uses \hypertarget internally) so the PDF destination is raised
+    # above the visible term — viewer link-jumps then land with context
+    # above the term instead of flush against the top edge.
+    assert r"\glsanchor{rope}" in out
     assert "RoPE" in out
     assert "Rotary Position Embedding" in out
     assert "Rotates queries and keys by position-dependent angles." in out
