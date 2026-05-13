@@ -528,8 +528,12 @@ def render_glossary_section(
             section_link = (
                 rf"\hyperref[{sec_label}]{{\textcolor{{glscolor}}{{$\to$}}}} "
             )
+        # \glsanchor instead of plain \hypertarget so the PDF destination
+        # sits a couple of baselines above the visible term. Stops the
+        # viewer's link-jump from putting the term flush against the
+        # top toolbar; reader lands on the term with context above.
         items.append(
-            rf"\item[\hypertarget{{glossary:{key}}}{{{primary}}}{alias_part}]"
+            rf"\item[\glsanchor{{{key}}}{{{primary}}}{alias_part}]"
             f"\n{section_link}{full_def}{cite}"
         )
     body = "\n\n".join(items)

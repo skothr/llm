@@ -93,6 +93,18 @@
 \newcommand{\glsterm}[2]{%
   \pdftooltip{\hyperlink{glossary:#1}{\textcolor{glscolor}{\dotuline{#2}}}}{\@nameuse{@gls@def@#1}}%
 }
+% \glsanchor{key}{visible} sets the PDF destination glossary:<key> at a
+% position ~2 baselines ABOVE where `visible` is typeset. PDF viewers
+% scroll a clicked link so the destination point sits at the top of the
+% viewport; without the offset the actual glossary term lands flush
+% against the top toolbar (often partly obscured by viewer chrome).
+% The raised target gives a couple of lines of breathing room above
+% the term so the reader's eye lands on what they actually clicked.
+% Box reports zero height + depth so surrounding layout is unaffected.
+\newcommand{\glsanchor}[2]{%
+  \raisebox{2\baselineskip}[0pt][0pt]{\hypertarget{glossary:#1}{}}%
+  #2%
+}
 % \glsdef{key}{surface} renders IDENTICALLY to \glsterm but semantically
 % marks the site where the term is FORMALLY introduced. The glossary
 % back-arrow → in the glossary section will jump to the surrounding
