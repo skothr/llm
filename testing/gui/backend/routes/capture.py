@@ -400,6 +400,64 @@ async def get_capture_residual(name: str, hash: str, layer: int) -> dict:
     return summary
 
 
+class SteeringRequest(BaseModel):
+    layer: str
+    alpha: float
+    source: str
+    vector: list[float] | None = None
+
+
+@router.post("/sessions/{name}/steering")
+async def install_steering(name: str, req: SteeringRequest) -> dict:
+    """Install (or replace) a steering vector for the session.
+
+    The vector itself is optional — when omitted the endpoint records the
+    steering config metadata only (layer, alpha, source) and the next
+    forward pass applies the alpha-scaled version of whatever vector the
+    Python side already has for this session.  Providing `vector` allows
+    the caller to push an externally-computed vector without a prior
+    computation step on the Python side.
+
+    Returns the installed config as a confirmation.
+    """
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+
+    if info.model is None:
+        raise HTTPException(409, "Session has no PyTorch model loaded (required for steering)")
+
+    # Persist the steering config on the session info object.  Using a
+    # simple dict is sufficient — the field is not part of the persisted
+    # snapshot (steering vectors are ephemeral per-session state).
+    info.steering = {
+        "active": True,
+        "layer":  req.layer,
+        "alpha":  req.alpha,
+        "source": req.source,
+        "vector": req.vector,  # None when caller doesn't supply one
+    }
+    log.info("Installed steering on '%s': layer=%s alpha=%g source=%r",
+             name, req.layer, req.alpha, req.source)
+    return {"installed": True, "layer": req.layer, "alpha": req.alpha, "source": req.source}
+
+
+@router.delete("/sessions/{name}/steering")
+async def clear_steering(name: str) -> dict:
+    """Remove the active steering vector for the session."""
+    mgr = get_manager()
+    try:
+        info = mgr.get(name)
+    except KeyError:
+        raise HTTPException(404, f"Session '{name}' not found")
+
+    info.steering = None
+    log.info("Cleared steering on '%s'", name)
+    return {"cleared": True}
+
+
 @router.get("/sessions/{name}/capture/{hash}/qkv")
 async def get_capture_qkv(
     name: str, hash: str, layer: int, head: int, token: int
