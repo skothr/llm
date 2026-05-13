@@ -13,13 +13,13 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Adam with decoupled weight decay. Maintains per-parameter first and second moments $\mathbf{m}_t, \mathbf{v}_t$; update is $-\eta \cdot \mathbf{m}_t / (\sqrt{\mathbf{v}_t}+\varepsilon) - \eta\lambda\mathbf{w}_t$. The default LLM pre-training optimizer 2020-2024. \citep[\S 3]{hoffmann2022-chinchilla}
 
 \item[\hypertarget{glossary:aha-moment}{Aha moment} (R1-Zero)]
-\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} A spike in the model's use of reflection words like "wait" during training, taken as evidence of self-reorganization of reasoning structure `[deepseek-r1 §2.3]`.
+\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} A spike in the model's use of reflection words like "wait" during training, taken as evidence of self-reorganization of reasoning structure \citep[\S 2.3]{deepseek-r1}
 
 \item[\hypertarget{glossary:alignment-tax}{Alignment tax}]
-\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} The performance regression on standard NLP benchmarks observed after RLHF. PPO-ptx mitigates it by mixing in pre-training likelihood `[ouyang2022-instructgpt §3.5]`.
+\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} The performance regression on standard NLP benchmarks observed after RLHF. PPO-ptx mitigates it by mixing in pre-training likelihood \citep[\S 3.5]{ouyang2022-instructgpt}
 
 \item[\hypertarget{glossary:asynctp}{AsyncTP} (Asynchronous Tensor Parallel)]
-\hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Fractionalizes TP matmuls into chunks and overlaps each chunk's communication with the previous chunk's compute via intra-node `SymmetricMemory` shared buffers. \citep[\S 2.2.3]{torchtitan2024}
+\hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Fractionalizes TP matmuls into chunks and overlaps each chunk's communication with the previous chunk's compute via intra-node \texttt{SymmetricMemory} shared buffers. \citep[\S 2.2.3]{torchtitan2024}
 
 \item[\hypertarget{glossary:autoregressive}{Autoregressive}]
 \hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} Generating tokens one at a time, left to right, where each prediction depends only on previous tokens.
@@ -28,7 +28,7 @@
 \hyperref[sec:mixed-precision]{\textcolor{glscolor}{$\to$}} DeepSeek-V3's strategy: add a per-expert bias to router logits (not to gating weights), update bias online based on observed load. Removes the historical quality regression of high-coefficient aux loss. \citep[\S 2]{deepseek-v3}
 
 \item[\hypertarget{glossary:bitlinear}{BitLinear}]
-\hyperref[sec:mixed-precision]{\textcolor{glscolor}{$\to$}} BitNet's drop-in replacement for `nn.Linear`: weights quantized to $\{-1,0,+1\}$ via absmean, activations to INT8 via absmax, SubLN replacing LayerNorm. Constructs a model whose linear-algebra reduces to integer addition. \citep[\S 2.1; kb/excerpts/ma2024-bitnet\#bitlinear]{ma2024-bitnet}
+\hyperref[sec:mixed-precision]{\textcolor{glscolor}{$\to$}} BitNet's drop-in replacement for \texttt{nn.Linear}: weights quantized to $\{-1,0,+1\}$ via absmean, activations to INT8 via absmax, SubLN replacing LayerNorm. Constructs a model whose linear-algebra reduces to integer addition. \citep[\S 2.1; kb/excerpts/ma2024-bitnet\#bitlinear]{ma2024-bitnet}
 
 \item[\hypertarget{glossary:bpe}{BPE} (Byte Pair Encoding)]
 \hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Subword tokenization algorithm that iteratively merges the most frequent adjacent character pairs to build a vocabulary.
@@ -40,16 +40,16 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps $z$ before emitting a final answer $y$. In few-shot CoT (Wei 2022), the prompt contains exemplars with hand-written reasoning traces; in zero-shot CoT (Kojima 2022), the trigger phrase "Let's think step by step" elicits the same behaviour without exemplars. \citep[\S 1; kojima2022 §3]{wei2022-cot}
 
 \item[\hypertarget{glossary:chinchilla-parametric-loss}{Chinchilla parametric loss}]
-\hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} The functional form $\hat{L}(N, D) = E + A/N^\alpha + B/D^\beta$ with five fitted constants. $E$ $\approx$ entropy of natural text on the eval distribution `[hoffmann2022-chinchilla §3.3 Eq.(2); kb/excerpts/hoffmann2022-chinchilla\#sec-3-3]`.
+\hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} The functional form $\hat{L}(N, D) = E + A/N^\alpha + B/D^\beta$ with five fitted constants. $E$ $\approx$ entropy of natural text on the eval distribution \citep[\S 3.3 Eq.(2); kb/excerpts/hoffmann2022-chinchilla\#sec-3-3]{hoffmann2022-chinchilla}
 
 \item[\hypertarget{glossary:chinchilla-trap}{Chinchilla trap}]
-\hyperref[sec:contradictions]{\textcolor{glscolor}{$\to$}} Community term for the practical problem that a Chinchilla-compute-optimal model is often too large to *serve* economically. Models destined for high-volume deployment over-train (small $N$, large $D$) to minimize inference cost. `[FORUM-SIGNAL]` — widespread but not formally derived.
+\hyperref[sec:contradictions]{\textcolor{glscolor}{$\to$}} Community term for the practical problem that a Chinchilla-compute-optimal model is often too large to *serve* economically. Models destined for high-volume deployment over-train (small $N$, large $D$) to minimize inference cost. \texttt{[FORUM-SIGNAL]} — widespread but not formally derived.
 
 \item[\hypertarget{glossary:claude}{Claude}]
 \hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} Anthropic's proprietary decoder-only LLM family. No public architecture paper; structural family shares the decoder-only Transformer lineage.
 
 \item[\hypertarget{glossary:clip-higher}{Clip-Higher}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} DAPO's asymmetric PPO clip $[1-\epsilon_{\text{low}}, 1+\epsilon_{\text{high}}]$ with $\epsilon_{\text{high}} > \epsilon_{\text{low}}$. Allows larger upward updates on under-probable correct tokens `[dapo2025 §2]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} DAPO's asymmetric PPO clip $[1-\epsilon_{\text{low}}, 1+\epsilon_{\text{high}}]$ with $\epsilon_{\text{high}} > \epsilon_{\text{low}}$. Allows larger upward updates on under-probable correct tokens \citep[\S 2]{dapo2025}
 
 \item[\hypertarget{glossary:cold-start-sft-2}{Cold-start SFT}]
 \hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} A small-scale ($\sim 10^4$ examples) SFT pass on long-CoT exemplars, run before RL to fix readability problems of pure-RL outputs (R1-Zero). Does not change asymptotic capability but improves trace coherence. \citep[\S 2.2.4]{deepseek-r1}
@@ -58,10 +58,10 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Open monthly web crawl run by the Common Crawl Foundation since 2008. Source corpus for FineWeb (96 snapshots), C4, RefinedWeb, and most open web datasets. WARC format with extracted WET (text) variant.
 
 \item[\hypertarget{glossary:constitution}{Constitution}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A list of principles ("the assistant should not be racist," etc.) used by the feedback model to evaluate / critique responses in CAI. Typical size: ~16 principles `[bai2022-cai §3]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A list of principles ("the assistant should not be racist," etc.) used by the feedback model to evaluate / critique responses in CAI. Typical size: ~16 principles \citep[\S 3]{bai2022-cai}
 
 \item[\hypertarget{glossary:constitutional-ai}{Constitutional AI} (CAI)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Anthropic 2022 framework for training harmless assistants without human harm labels. Two stages: SL-CAI (sample $\to$ critique under principle $\to$ revise $\to$ SFT) and RL-CAI (sample pairs $\to$ AI judge under principle $\to$ train RM $\to$ PPO) `[bai2022-cai §3-4]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Anthropic 2022 framework for training harmless assistants without human harm labels. Two stages: SL-CAI (sample $\to$ critique under principle $\to$ revise $\to$ SFT) and RL-CAI (sample pairs $\to$ AI judge under principle $\to$ train RM $\to$ PPO) \citep[\S 3-4]{bai2022-cai}
 
 \item[\hypertarget{glossary:context-extension}{Context extension}]
 \hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Sub-stage of late-stage pre-training that increases trained sequence length (e.g., 4 K $\to$ 32 K $\to$ 128 K) by adjusting RoPE scaling and continuing on long-context data. \citep[\S 1]{deepseek-v3}
@@ -82,7 +82,7 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} ByteDance's GRPO variant. Four modifications: clip-higher (asymmetric clip), dynamic sampling (drop zero-variance groups), token-level loss (vs sequence-level), overlong reward shaping. AIME 2024 50pts on Qwen2.5-32B. \citep[\S 2]{dapo2025}
 
 \item[\hypertarget{glossary:dare}{DARE} (Drop And REscale)]
-\hyperref[sec:contradictions]{\textcolor{glscolor}{$\to$}} Bernoulli-drop $1-p$ of task-vector
+\hyperref[sec:contradictions]{\textcolor{glscolor}{$\to$}} Bernoulli-drop $1-p$ of task-vector entries and rescale survivors by $1/p$ before TIES or Soup merging. Yu et al. 2024.
 
 \item[\hypertarget{glossary:data-mixing-law}{Data Mixing Law} (Eq. 1)]
 \hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} $L_i(\mathbf{r}) = c_i + k_i \exp(\sum_j t_{ij} r_j)$. Validation loss on domain $i$ as an exponential of a linear combination of training-mixture proportions $r_j$. Coefficients $(c_i, k_i, t_{ij})$ are fit per target domain. \citep[\S 1, eq.1]{data-mixing-laws-2024}
@@ -91,13 +91,13 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Same parameters on each worker; each worker processes a shard of the global batch; gradients all-reduced before optimizer step.
 
 \item[\hypertarget{glossary:debate}{Debate} (AI safety)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Two AI debaters in a zero-sum game judged
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge. Hypothesis: it is easier to expose a flawed argument than to construct a sound one, so truthful debaters win more often than deceptive ones. \citep[\S abstract]{irving2018-debate}
 
 \item[\hypertarget{glossary:decoder-only}{decoder-only}]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN layers.
 
 \item[\hypertarget{glossary:dpo}{DPO} (Direct Preference Optimization)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL optimum. No reward model, no on-policy sampling, no PPO loop `[rafailov2023-dpo §4 Eq.7]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL optimum. No reward model, no on-policy sampling, no PPO loop \citep[\S 4 Eq.7]{rafailov2023-dpo}
 
 \item[\hypertarget{glossary:dtensor-devicemesh}{DTensor / DeviceMesh} (PyTorch)]
 \hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Distributed tensor abstraction; weights are stored as DTensor with a placement spec on a $d \times t \times p \times c \times e$ device mesh. The composability layer for 4D/5D parallelism. \citep[\S 2.1.1]{torchtitan2024}
@@ -106,13 +106,13 @@
 \hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} DeepSeek-V3's bidirectional PP. Microbatches feed from both ends of the pipeline simultaneously; each chunk split into 4 stages (attention / dispatch / MLP / combine), backward further split via ZB; achieves $(\tfrac{p}{2}-1)(F\&B+B-3W)$ bubble at $2\times$ parameter memory and $+1$ activation. \citep[\S 3.2.1; kb/excerpts/deepseek-v3-training\#sec-3-2-1-dualpipe]{deepseek-v3}
 
 \item[\hypertarget{glossary:dynamic-sampling}{Dynamic Sampling} (DAPO)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Reject groups where all $G$ trajectories share the same reward, since the GRPO advantage is then zero and the gradient is wasted. Re-sample until each group contains both $R=0$ and $R=1$ trajectories `[dapo2025 §2]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Reject groups where all $G$ trajectories share the same reward, since the GRPO advantage is then zero and the gradient is wasted. Re-sample until each group contains both $R=0$ and $R=1$ trajectories \citep[\S 2]{dapo2025}
 
 \item[\hypertarget{glossary:expert-parallel}{Expert Parallel} (EP)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} MoE-specific sharding: each worker hosts a subset of the experts. Forward pass requires an all-to-all dispatch (each token to its top-$k$ experts) and a combine all-to-all. DeepSeek-V3 uses $e=64$ across 8 nodes. \citep[\S 3.2; kb/excerpts/deepseek-v3-training\#sec-3-2-parallelism]{deepseek-v3}
 
 \item[\hypertarget{glossary:feature}{Feature}]
-\hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} a direction $\mathbf{d} \in \mathbb{R}^n$ in some
+\hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} a direction $\mathbf{d} \in \mathbb{R}^n$ in some activation space such that the projection $\mathbf{x}^\top \mathbf{d}$ (or equivalently, an SAE latent activation with decoder column $\mathbf{d}$) corresponds to a human-interpretable property. The unit of analysis at the *what* level; circuits operate at the *how* level.
 
 \item[\hypertarget{glossary:ffn}{FFN} (Feed-Forward Network)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A position-wise two-layer (or three-layer for GLU variants) fully-connected network applied independently at each sequence position. Transforms representations within each position, complementing attention which mixes across positions.
@@ -121,10 +121,10 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} 1.3 T-token quality-classifier-filtered subset of FineWeb. Llama-3-70B-Instruct annotates 500 K samples 0–5 for "educational value"; classifier learns the score; threshold $\geq$3 keeps the subset. ~6 K H100-hours of annotation cost. \citep[\S 4]{fineweb2024}
 
 \item[\hypertarget{glossary:flan}{FLAN} (Finetuned Language Net)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Original instruction-tuning
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Original instruction-tuning recipe: ~1.8K NLP tasks reformatted as natural-language instructions, used as an SFT mixture. The pre-RLHF post-training baseline. \texttt{[wei2021-flan]}. FLAN-T5 \texttt{[chung2022-flan-t5]} and the FLAN Collection (Longpre et al. 2023, arXiv:2301.13688) extend it.
 
 \item[\hypertarget{glossary:format-reward}{Format reward}]
-\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a `<think>...</think>` block). Keeps the chain-of-thought pathway alive during early training `[deepseek-r1 §2.2]`.
+\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a \texttt{<think>...</think>} block). Keeps the chain-of-thought pathway alive during early training \citep[\S 2.2]{deepseek-r1}
 
 \item[\hypertarget{glossary:fp8}{FP8} (E4M3 / E5M2)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} IEEE-style 8-bit floating-point. E4M3: 4-exp / 3-mantissa, narrower range / better resolution (typical for activations). E5M2: 5-exp / 2-mantissa, wider range (typical for gradients). Production choice from H100 onward. \citep[\S 1; kb/notes/inference/quantization\#§4]{shah2024}
@@ -133,16 +133,16 @@
 \hyperref[sec:optimization]{\textcolor{glscolor}{$\to$}} "Fully Sharded Data Parallel." Native PyTorch ZeRO implementation. Parameters and optimizer state sharded across DP workers; full param-set materialized via all-gather just before each forward/backward. \citep[\S 2.1.2]{torchtitan2024}
 
 \item[\hypertarget{glossary:fsdp2}{FSDP2}]
-\hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Per-parameter `DTensor`-sharded successor to FSDP1. ~7 % per-GPU memory reduction and ~1.5 % throughput improvement vs. FSDP1's flat-parameter design. \citep[\S 2.1.2; kb/excerpts/torchtitan2024\#sec-2-1-2-fsdp2]{torchtitan2024}
+\hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Per-parameter \texttt{DTensor}-sharded successor to FSDP1. ~7 % per-GPU memory reduction and ~1.5 % throughput improvement vs. FSDP1's flat-parameter design. \citep[\S 2.1.2; kb/excerpts/torchtitan2024\#sec-2-1-2-fsdp2]{torchtitan2024}
 
 \item[\hypertarget{glossary:gqa}{GQA} (Grouped-Query Attention)]
-\hyperref[sec:optimization]{\textcolor{glscolor}{$\to$}} Interpolation between MHA and MQA: query heads are partitioned into $g$ groups, each group shares one $W^K, W^V$. GQA-1 = MQA; GQA-$h$ = MHA. KV cache per token is $2 n_g d_h$ elements `[ainslie2023 §2.2]`.
+\hyperref[sec:optimization]{\textcolor{glscolor}{$\to$}} Interpolation between MHA and MQA: query heads are partitioned into $g$ groups, each group shares one $W^K, W^V$. GQA-1 = MQA; GQA-$h$ = MHA. KV cache per token is $2 n_g d_h$ elements \citep[\S 2.2]{ainslie2023}
 
 \item[\hypertarget{glossary:group-normalized-advantage}{Group-normalized advantage}]
-\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} In GRPO, $\tilde{A}_i = (R_i - \mathrm{mean}(\{R_j\}))/\mathrm{std}(\{R_j\})$, broadcast to every token of trajectory $o_i$. Replaces GAE-derived per-token advantages `[shao2024 §4.1; deepseek-r1 §2.1 Eq.3]`.
+\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} In GRPO, $\tilde{A}_i = (R_i - \mathrm{mean}(\{R_j\}))/\mathrm{std}(\{R_j\})$, broadcast to every token of trajectory $o_i$. Replaces GAE-derived per-token advantages \citep[\S 4.1; deepseek-r1 §2.1 Eq.3]{shao2024}
 
 \item[\hypertarget{glossary:grpo}{GRPO} (Group Relative Policy Optimization)]
-\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} Critic-free PPO variant: replaces the value model with a group-mean reward baseline. Sample $G$ trajectories per prompt, normalize rewards within the group, use the standardized advantage in the PPO loss. Used by DeepSeek-R1, Qwen 3, Tülu 3 RLVR `[shao2024 §4.1; deepseek-r1 §2.1 Eq.1]`.
+\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} Critic-free PPO variant: replaces the value model with a group-mean reward baseline. Sample $G$ trajectories per prompt, normalize rewards within the group, use the standardized advantage in the PPO loss. Used by DeepSeek-R1, Qwen 3, Tülu 3 RLVR \citep[\S 4.1; deepseek-r1 §2.1 Eq.1]{shao2024}
 
 \item[\hypertarget{glossary:grpo-2}{GRPO} (Group Relative Policy Optimisation)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Critic-free PPO variant (Shao 2024). Per-prompt group of $G$ samples; advantage is each sample's reward minus group mean, divided by group std. Eliminates the value-network requirement. \citep[\S 4.1; deepseek-r1 §2.1]{shao2024}
@@ -151,16 +151,16 @@
 \hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} The $d_{\text{model}}$-dimensional vector representation at each position, flowing through the residual stream across layers.
 
 \item[\hypertarget{glossary:implicit-reward}{Implicit reward}]
-\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} In DPO, the policy log-ratio $\hat{r}_\theta(x,y) = \beta\log\pi_\theta(y|x)/\pi_{\mathrm{ref}}(y|x)$ that plays the role of a reward function. The policy is trained on preferences over implicit-reward differences `[rafailov2023-dpo §4]`.
+\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} In DPO, the policy log-ratio $\hat{r}_\theta(x,y) = \beta\log\pi_\theta(y|x)/\pi_{\mathrm{ref}}(y|x)$ that plays the role of a reward function. The policy is trained on preferences over implicit-reward differences \citep[\S 4]{rafailov2023-dpo}
 
 \item[\hypertarget{glossary:ipo}{IPO} (Identity Preference Optimization)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} DPO variant replacing log-sigmoid loss with squared loss on the preference gap, addressing DPO's overconfidence pathology `[azar2023-ipo]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} DPO variant replacing log-sigmoid loss with squared loss on the preference gap, addressing DPO's overconfidence pathology [azar2023-ipo]
 
 \item[\hypertarget{glossary:key}{Key} (K)]
 \hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Projected representation of positions being "queried" against. The Q$\cdot$K dot product determines attention weights.
 
 \item[\hypertarget{glossary:kto}{KTO} (Kahneman-Tversky Optimization)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Operates on single-rating data $(x,y,\mathrm{label}\in\{\text{good},\text{bad}\})$ instead of pairwise preferences. Asymmetric prospect-theoretic loss with loss aversion `[ethayarajh2024-kto]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Operates on single-rating data $(x,y,\mathrm{label}\in\{\text{good},\text{bad}\})$ instead of pairwise preferences. Asymmetric prospect-theoretic loss with loss aversion [ethayarajh2024-kto]
 
 \item[\hypertarget{glossary:kv-cache}{KV cache}]
 \hyperref[sec:mixed-precision]{\textcolor{glscolor}{$\to$}} The per-layer cache of key/value tensors $K_{1:t}, V_{1:t}$ produced during autoregressive decoding so each new token's attention is $O(t)$ rather than $O(t^2)$. Size per token per layer is $2 \cdot n_{\text{kv}} \cdot d_h \cdot \text{bytes}$. \citep[\S 2; kb/notes/inference/kv-cache-management\#§1]{kwon2023}
@@ -169,7 +169,7 @@
 \hyperref[sec:mixed-precision]{\textcolor{glscolor}{$\to$}} Normalizes across the feature dimension per position: subtract mean, divide by standard deviation, apply learned scale ($\gamma$) and bias ($\beta$).
 
 \item[\hypertarget{glossary:linear-mode-connectivity-2}{Linear mode connectivity} (LMC)]
-\hyperref[sec:adaptation-and-merging]{\textcolor{glscolor}{$\to$}} The empirical property that
+\hyperref[sec:adaptation-and-merging]{\textcolor{glscolor}{$\to$}} The empirical property that fine-tunes of a shared base land in a connected loss basin: the path $\theta_0 + t(\theta_f - \theta_0)$, $t \in [0,1]$, stays in low-loss territory. Underpins why model merging works.
 
 \item[\hypertarget{glossary:lion}{Lion}]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} "Evolved sign momentum." Lighter optimizer using only sign of momentum: $\mathbf{w}_t \leftarrow \mathbf{w}_{t-1} - \eta \cdot \text{sign}(\mu \mathbf{m}_{t-1} + (1-\mu)\mathbf{g}_t) - \eta\lambda\mathbf{w}_{t-1}$. Halves optimizer state vs. Adam. (Chen et al. 2023)
@@ -181,22 +181,22 @@
 \hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Unnormalized log-probabilities over the vocabulary, produced by the output projection ($h_{\text{final}} \cdot W_e^\top$).
 
 \item[\hypertarget{glossary:lora}{LoRA} (Low-Rank Adaptation)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Parameterizes a frozen weight
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Parameterizes a frozen weight matrix's update as a rank-$r$ product $BA$ with $r \ll \min(d_{\text{in}}, d_{\text{out}})$; only $A, B$ are trained. Merges to a single weight at inference time with no latency cost. \citep[\S 3, §4; kb/excerpts/hu2021-lora\#sec-3]{hu2021-lora}
 
 \item[\hypertarget{glossary:loss-scaling}{Loss scaling}]
-\hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Multiplying the loss by a scale factor $S$
+\hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Multiplying the loss by a scale factor $S$ before backprop, then dividing the resulting gradients by $S$ before the master-weight update. Shifts the gradient distribution upward in the FP16 representable range to avoid underflow. \citep[\S 3; kb/excerpts/micikevicius2017-mixed-precision\#sec-3]{micikevicius2017-mixed-precision}
 
 \item[\hypertarget{glossary:magpie}{MAGPIE}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Alignment data synthesis from scratch: prompt aligned LLMs with only their instruction-template prefix (no question), have them fabricate the question first, then sample the answer. Near-zero-cost SFT data generation `[magpie-2024]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Alignment data synthesis from scratch: prompt aligned LLMs with only their instruction-template prefix (no question), have them fabricate the question first, then sample the answer. Near-zero-cost SFT data generation [magpie-2024]
 
 \item[\hypertarget{glossary:master-weights}{Master weights}]
-\hyperref[sec:optimization]{\textcolor{glscolor}{$\to$}} A high-precision (FP32) copy of the model
+\hyperref[sec:optimization]{\textcolor{glscolor}{$\to$}} A high-precision (FP32) copy of the model parameters maintained alongside a low-precision (FP16/BF16/FP8) working copy used in the forward/backward pass. Optimizer updates are applied to the master copy and cast down to the working copy. \citep[\S 2; kb/excerpts/micikevicius2017-mixed-precision\#sec-2]{micikevicius2017-mixed-precision}
 
 \item[\hypertarget{glossary:mergekit}{MergeKit}]
-\hyperref[sec:frontier-snapshot]{\textcolor{glscolor}{$\to$}} Open-source toolkit for model merging supporting
+\hyperref[sec:frontier-snapshot]{\textcolor{glscolor}{$\to$}} Open-source toolkit for model merging supporting Linear / SLERP / TIES / DARE / passthrough merges with per-tensor configuration. [mergekit2024]
 
 \item[\hypertarget{glossary:metap}{MetaP}]
-\hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Meta's name for their cross-scale HP-transfer approach in the Llama 4 tech report `[meta-llama4]`. Details thin in the report; community working assumption is "$\mu$P-inspired."
+\hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Meta's name for their cross-scale HP-transfer approach in the Llama 4 tech report \texttt{[meta-llama4]}. Details thin in the report; community working assumption is "$\mu$P-inspired."
 
 \item[\hypertarget{glossary:mfu}{MFU} (Model FLOP Utilization)]
 \hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Realized training throughput as a fraction of peak hardware FLOPS. Standard parallelism-plan quality metric.
@@ -208,7 +208,7 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Open-weights decoder-only LLM family from Mistral AI (Jiang et al., 2023). 7B variant uses sliding-window attention and grouped-query attention on top of the LLaMA-style architecture.
 
 \item[\hypertarget{glossary:mmlu}{MMLU} (Massive Multitask Language Understanding)]
-\hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} 57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021. 15,908 questions sourced from public exam banks (AP, GRE, MCAT, professional licensing). Foundational for the post-2021 LLM eval era; saturated at >90% on frontier models as of 2026 `[hendrycks2021-mmlu §abstract]`.
+\hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} 57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021. 15,908 questions sourced from public exam banks (AP, GRE, MCAT, professional licensing). Foundational for the post-2021 LLM eval era; saturated at >90% on frontier models as of 2026 \citep[\S abstract]{hendrycks2021-mmlu}
 
 \item[\hypertarget{glossary:model-merging}{Model merging}]
 \hyperref[sec:adaptation-and-merging]{\textcolor{glscolor}{$\to$}} Combining trained models via parameter-level operations (averaging, interpolation, sign-resolution, sparsification). Subtypes include weight averaging (Model Soups), task arithmetic, TIES, DARE, evolutionary merging. Pending excerpts.
@@ -223,19 +223,19 @@
 \hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} Iterative polynomial $\mathbf{X}_k = a\mathbf{X}_{k-1} + b(\mathbf{X}_{k-1}\mathbf{X}_{k-1}^\top)\mathbf{X}_{k-1} + c(\mathbf{X}_{k-1}\mathbf{X}_{k-1}^\top)^2 \mathbf{X}_{k-1}$ that converges all singular values of $\mathbf{X}_0$ to 1, producing $\mathbf{X}_0(\mathbf{X}_0^\top \mathbf{X}_0)^{-1/2}$. Muon uses 5 iterations with coefficients $(a, b, c) = (3.4445, -4.7750, 2.0315)$. \citep[\S 2.1, eq.2; kb/excerpts/muon-moonlight2025\#sec-2-1-ns]{muon-moonlight2025}
 
 \item[\hypertarget{glossary:nf4}{NF4} (NormalFloat-4)]
-\hyperref[sec:adaptation-and-merging]{\textcolor{glscolor}{$\to$}} 4-bit quantization with quantile-spaced
+\hyperref[sec:adaptation-and-merging]{\textcolor{glscolor}{$\to$}} 4-bit quantization with quantile-spaced bin centers matched to a standard normal distribution. Information- theoretically near-optimal for pretrained weights, which are empirically near-Gaussian per block. \citep[\S 3.1; kb/excerpts/dettmers2023-qlora\#sec-3-nf4]{dettmers2023-qlora}
 
 \item[\hypertarget{glossary:non-embedding-parameters}{Non-embedding parameters}]
-\hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Parameter count excluding token-embedding and positional-embedding tables. Kaplan's $N$ uses this convention; Chinchilla and most modern papers use total parameters `[kaplan2020 §1.3; kb/excerpts/kaplan2020\#sec-1-3-notation]`. The difference is $\approx$ 0.5%–5% at modern $d_{\text{model}}$ + vocab sizes.
+\hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Parameter count excluding token-embedding and positional-embedding tables. Kaplan's $N$ uses this convention; Chinchilla and most modern papers use total parameters \texttt{[kaplan2020 §1.3; kb/excerpts/kaplan2020\#sec-1-3-notation]}. The difference is $\approx$ 0.5%–5% at modern $d_{\text{model}}$ + vocab sizes.
 
 \item[\hypertarget{glossary:non-evasion}{Non-evasion} (CAI behavioral signature)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A model trained with
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A model trained with CAI engages with harmful prompts by stating its objections, rather than refusing flatly. The defining behavioral signature distinguishing CAI from helpful-only RLHF (which complies) and from naive safety RLHF (which refuses without explanation). \citep[\S 6; kb/excerpts/bai2022-cai\#sec-6]{bai2022-cai}
 
 \item[\hypertarget{glossary:nvfp4}{NVFP4}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} 4-bit floating-point format (E2M1) with native
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} 4-bit floating-point format (E2M1) with native hardware MXScale (32-element per-block scaling) on Blackwell-class GPUs. Production-stability for full pre-training is open as of 2026-05.
 
 \item[\hypertarget{glossary:orpo}{ORPO} (Odds Ratio Preference Optimization)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Combines SFT and preference losses in a single objective; no reference model, no SFT stage. Trains from base directly via log-odds ratio of SFT loss between chosen and rejected responses `[hong2024-orpo]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Combines SFT and preference losses in a single objective; no reference model, no SFT stage. Trains from base directly via log-odds ratio of SFT loss between chosen and rejected responses [hong2024-orpo]
 
 \item[\hypertarget{glossary:palm}{PaLM}]
 \hyperref[sec:mixed-precision]{\textcolor{glscolor}{$\to$}} Google's 540B-parameter decoder-only LLM (Chowdhery et al., 2022). Uses SwiGLU, RoPE, parallel attention/FFN layers. Reference point for scaling experiments.
@@ -256,52 +256,52 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Stage-level layer split. Microbatches flow stage-to-stage via P2P send/recv. Tradeoff: per-GPU param drops by $1/p$ but in-flight activations grow.
 
 \item[\hypertarget{glossary:ppo-ptx}{PPO-ptx}]
-\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} InstructGPT's RLHF objective with an added pre-training-mixture term: $+\gamma\, \mathbb{E}_{\mathrm{pretrain}}[\log\pi_\theta]$. Reduces alignment tax on standard NLP benchmarks `[ouyang2022-instructgpt §3.5]`.
+\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} InstructGPT's RLHF objective with an added pre-training-mixture term: $+\gamma\, \mathbb{E}_{\mathrm{pretrain}}[\log\pi_\theta]$. Reduces alignment tax on standard NLP benchmarks \citep[\S 3.5]{ouyang2022-instructgpt}
 
 \item[\hypertarget{glossary:precision-pinning}{Precision pinning} (DeepSeek-V3)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Components held at BF16/FP32 even with FP8 elsewhere: embedding module, output head, MoE gating, normalization, attention. \citep[\S 3.3.1]{deepseek-v3}
 
 \item[\hypertarget{glossary:probe-2}{Probe}]
-\hyperref[sec:optimization]{\textcolor{glscolor}{$\to$}} A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology `[alain-bengio-2017 §1]`.
+\hyperref[sec:optimization]{\textcolor{glscolor}{$\to$}} A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology \citep[\S 1]{alain-bengio-2017}
 
 \item[\hypertarget{glossary:qlora}{QLoRA}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} LoRA over a 4-bit-quantized (NF4) base model. Adds
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} LoRA over a 4-bit-quantized (NF4) base model. Adds double-quantization and paged optimizers. 65B fine-tune on a single 48GB GPU. \citep[\S 3; kb/excerpts/dettmers2023-qlora\#sec-3-nf4]{dettmers2023-qlora}
 
 \item[\hypertarget{glossary:query}{Query} (Q)]
 \hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Projected representation of the position that is "asking" for information in attention.
 
 \item[\hypertarget{glossary:r-cai-2}{R-CAI} (Reverse CAI)]
-\hyperref[sec:rlaif-cai]{\textcolor{glscolor}{$\to$}} Inverts the constitution and applies
+\hyperref[sec:rlaif-cai]{\textcolor{glscolor}{$\to$}} Inverts the constitution and applies probability-clamped RLAIF to generate controlled adversarial / toxic data. [r-cai-2026]
 
 \item[\hypertarget{glossary:r1-zero}{R1-Zero}]
-\hyperref[sec:sft]{\textcolor{glscolor}{$\to$}} DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base. Achieves AIME 2024 pass@1 of 77.9% `[deepseek-r1 §2.3]`.
+\hyperref[sec:sft]{\textcolor{glscolor}{$\to$}} DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base. Achieves AIME 2024 pass@1 of 77.9% \citep[\S 2.3]{deepseek-r1}
 
 \item[\hypertarget{glossary:rejection-sampling}{Rejection sampling}]
-\hyperref[sec:frontier-snapshot]{\textcolor{glscolor}{$\to$}} Llama-3 SFT quality gate: sample $N$ candidates from the model, score by reward model, keep top-$k$, SFT on those. Used as a training-loop stage in modern multi-round pipelines `[meta-llama3]`.
+\hyperref[sec:frontier-snapshot]{\textcolor{glscolor}{$\to$}} Llama-3 SFT quality gate: sample $N$ candidates from the model, score by reward model, keep top-$k$, SFT on those. Used as a training-loop stage in modern multi-round pipelines [meta-llama3]
 
 \item[\hypertarget{glossary:rejection-sampling-sft}{rejection-sampling SFT}]
 \hyperref[sec:mixed-precision]{\textcolor{glscolor}{$\to$}} Generate candidate solutions with the current policy, filter by verifier (and optional quality filter), SFT on the survivors. Used as Stage 3 of the R1 pipeline. \citep[\S 2.3.3]{deepseek-r1}
 
 \item[\hypertarget{glossary:residual-stream}{Residual stream}]
-\hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} the linear data bus running through a
+\hyperref[sec:distributed-training]{\textcolor{glscolor}{$\to$}} the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes to it. The substrate that lens techniques and SAEs decompose. Vocabulary established in Elhage et al. 2021 (Mathematical Framework for Transformer Circuits).
 
 \item[\hypertarget{glossary:reward-hacking}{Reward hacking}]
-\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts). Distinct from overoptimization in that hacking can occur even at low KL `[deepseek-r1 §2.2]`.
+\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts). Distinct from overoptimization in that hacking can occur even at low KL \citep[\S 2.2]{deepseek-r1}
 
 \item[\hypertarget{glossary:reward-model}{reward model} (RM, $r_\phi$)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\pi^{\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO `[ouyang2022-instructgpt §3.5]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\pi^{\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO \citep[\S 3.5]{ouyang2022-instructgpt}
 
 \item[\hypertarget{glossary:reward-overoptimization}{Reward overoptimization}]
-\hyperref[sec:dpo]{\textcolor{glscolor}{$\to$}} The gap between proxy reward $r_\phi$ and gold reward grows as KL($\pi_\theta\|\pi_{\mathrm{ref}}$) grows; the policy "hacks" the RM, scoring high on $r_\phi$ while degrading on true quality. Affects both RLHF (Gao et al. 2023) and DPO-class methods `[rlhf-overopt-2024]`.
+\hyperref[sec:dpo]{\textcolor{glscolor}{$\to$}} The gap between proxy reward $r_\phi$ and gold reward grows as KL($\pi_\theta\|\pi_{\mathrm{ref}}$) grows; the policy "hacks" the RM, scoring high on $r_\phi$ while degrading on true quality. Affects both RLHF (Gao et al. 2023) and DPO-class methods [rlhf-overopt-2024]
 
 \item[\hypertarget{glossary:rl-cai-2}{RL-CAI}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Stage 2 of Constitutional AI: sample response pairs
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Stage 2 of Constitutional AI: sample response pairs from $\pi^{\mathrm{SL-CAI}}$, have an AI judge choose under a principle, train a reward model on AI preferences, run PPO with KL anchor. \citep[\S 4; kb/excerpts/bai2022-cai\#sec-4]{bai2022-cai}
 
 \item[\hypertarget{glossary:rlaif-3}{RLAIF} (Reinforcement Learning from AI Feedback)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} RLHF pipeline
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} RLHF pipeline where preference labels come from an AI feedback model rather than human labelers. The reward model is trained on AI-generated preferences via standard Bradley–Terry. \citep[\S 4; kb/excerpts/bai2022-cai\#sec-4]{bai2022-cai}
 
 \item[\hypertarget{glossary:rlhf}{RLHF} (Reinforcement Learning from Human Feedback)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} The 3-stage post-training pipeline: SFT $\to$ reward-model training on pairwise preferences $\to$ PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT `[ouyang2022-instructgpt §3]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} The 3-stage post-training pipeline: SFT $\to$ reward-model training on pairwise preferences $\to$ PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT \citep[\S 3]{ouyang2022-instructgpt}
 
 \item[\hypertarget{glossary:rlvr-3}{RLVR} (RL with Verifiable Rewards)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} RL post-training where the reward is computed mechanically from the emitted answer (regex match for math, unit-test execution for code, proof-checker for formal proofs), not from a learned reward model. The defining feature of post-2024 reasoning training. \citep[\S 2.2.1]{deepseek-r1}
@@ -316,7 +316,7 @@
 \hyperref[sec:dpo]{\textcolor{glscolor}{$\to$}} Structured State Space sequence model with HiPPO-NPLR $A$, FFT-based convolutional training, recurrent inference. Dual-form architecture. (Gu, Goel, Ré 2022)
 
 \item[\hypertarget{glossary:scaling-law}{Scaling law}]
-\hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} An empirical or theoretical functional relationship between a measure of model performance (typically cross-entropy loss) and one or more "scale" inputs: parameters $N$, training tokens $D$, training compute $C$, or test-time compute $N_{\text{test}}$. Canonical reference: `kaplan2020`.
+\hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} An empirical or theoretical functional relationship between a measure of model performance (typically cross-entropy loss) and one or more "scale" inputs: parameters $N$, training tokens $D$, training compute $C$, or test-time compute $N_{\text{test}}$. Canonical reference: \texttt{kaplan2020}.
 
 \item[\hypertarget{glossary:schatten-p-norm}{Schatten-$p$ norm}]
 \hyperref[sec:optimization]{\textcolor{glscolor}{$\to$}} Matrix norm $\|\mathbf{M}\|_p^{(s)} = (\sum_i \sigma_i^p)^{1/p}$ on singular values. Muon's update is the steepest-descent direction under the Schatten-$\infty$ (spectral) norm constraint, which is why orthogonalization is the right pre-processing step. \citep[\S 2.1]{muon-moonlight2025}
@@ -328,10 +328,10 @@
 \hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Companion to TP: shards normalization and dropout layers along the sequence dimension to reduce activation memory. \citep[\S 2.1.3]{torchtitan2024}
 
 \item[\hypertarget{glossary:simpo}{SimPO} (Simple Preference Optimization)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Reference-free DPO variant using length-normalized average log-prob as implicit reward, plus a target reward margin $\gamma$. Eliminates DPO length bias on length-controlled benchmarks `[meng2024-simpo §3]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Reference-free DPO variant using length-normalized average log-prob as implicit reward, plus a target reward margin $\gamma$. Eliminates DPO length bias on length-controlled benchmarks \citep[\S 3]{meng2024-simpo}
 
 \item[\hypertarget{glossary:sl-cai-2}{SL-CAI}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Stage 1 of Constitutional AI: sample a response from
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Stage 1 of Constitutional AI: sample a response from a helpful-only model, critique under a randomly-chosen principle, revise, and SFT on the revisions. Produces $\pi^{\mathrm{SL-CAI}}$. \citep[\S 3; kb/excerpts/bai2022-cai\#sec-3]{bai2022-cai}
 
 \item[\hypertarget{glossary:softmax}{Softmax}]
 \hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Converts logits to a probability distribution: $P(j) = e^{z_j} / \sum_k e^{z_k}$.
@@ -340,31 +340,31 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} "Second-order clipped stochastic optimization." Diagonal-Hessian preconditioning with clipping. Targets faster convergence in early pre-training. (Liu et al. 2023, arXiv 2305.14342)
 
 \item[\hypertarget{glossary:spoonfeeding}{Spoonfeeding} (Phi-4 intuition)]
-\hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} `[INTUITION]` Synthetic data presents *concept-then-application-then-explanation* as a self-contained unit, vs. organic web data which scatters those parts across many documents. Enables high-density learning per token. \citep[\S 1, §2.1]{phi4}
+\hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} \texttt{[INTUITION]} Synthetic data presents *concept-then-application-then-explanation* as a self-contained unit, vs. organic web data which scatters those parts across many documents. Enables high-density learning per token. \citep[\S 1, §2.1]{phi4}
 
 \item[\hypertarget{glossary:swiglu}{SwiGLU}]
 \hyperref[sec:mixed-precision]{\textcolor{glscolor}{$\to$}} $\mathrm{FFN}_{\mathrm{SwiGLU}}(x) = (\mathrm{Swish}_1(xW) \otimes xV) W_2$. Three-matrix FFN with Swish gating. Universal in modern decoder-only LLMs. \citep[\S 2 Eq.6]{shazeer2020}
 
 \item[\hypertarget{glossary:sycophancy}{Sycophancy}]
-\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} A response is sycophantic if it is more aligned with
+\hyperref[sec:rlhf]{\textcolor{glscolor}{$\to$}} A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth. Distinct from scheming: sycophancy requires no intent, only Goodhart on RLHF preference data. \citep[\S abstract; kb/excerpts/sharma2023-sycophancy\#abstract]{sharma2023-sycophancy}
 
 \item[\hypertarget{glossary:t5}{T5} (Text-to-Text Transfer Transformer)]
 \hyperref[sec:sft]{\textcolor{glscolor}{$\to$}} Google's encoder-decoder Transformer (Raffel et al., 2019) that frames every NLP task as text-to-text. Originator of several conventions reused elsewhere (e.g., SentencePiece vocab, relative positional bias).
 
 \item[\hypertarget{glossary:task-vector}{Task vector}]
-\hyperref[sec:adaptation-and-merging]{\textcolor{glscolor}{$\to$}} A direction in weight space defined as
+\hyperref[sec:adaptation-and-merging]{\textcolor{glscolor}{$\to$}} A direction in weight space defined as $\tau_T = \theta_T - \theta_0$ where $\theta_0$ is a pretrained base and $\theta_T$ is the same base fine-tuned on task $T$. Arithmetic on task vectors (addition, negation, combination) steers model behavior. \citep[\S 2; kb/excerpts/ilharco2022-task-vectors\#sec-2]{ilharco2022-task-vectors}
 
 \item[\hypertarget{glossary:tensor-parallel}{Tensor Parallel} (TP)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Within-layer matmul split (column-parallel `Y = XA`, row-parallel `Z = YB`). Inserts one all-reduce per matmul. Each worker holds a $1/t$ slice of weights. \citep[\S 2.1.3]{torchtitan2024}
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Within-layer matmul split (column-parallel \texttt{Y = XA}, row-parallel \texttt{Z = YB}). Inserts one all-reduce per matmul. Each worker holds a $1/t$ slice of weights. \citep[\S 2.1.3]{torchtitan2024}
 
 \item[\hypertarget{glossary:test-time-compute}{Test-time compute} (TTC)]
 \hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} The inference-side compute spent on a single problem instance to improve answer quality, beyond a single greedy forward pass. Recognised in 2024 as a co-equal scaling axis with training compute. \citep[\S 1]{snell2024}
 
 \item[\hypertarget{glossary:ties-merging}{TIES-Merging} (Trim-Elect-Sign-Disjoint-Merge)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Three-step model
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Three-step model merge: trim each task vector to top-$k\%$, elect a sign per coordinate by magnitude-weighted majority, disjoint-merge the surviving same-sign entries. \citep[\S 3; kb/excerpts/yadav2023-ties-merging\#sec-3]{yadav2023-ties-merging}
 
 \item[\hypertarget{glossary:tokens-per-parameter-ratio}{Tokens-per-parameter ratio}]
-\hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} $D / N$. Chinchilla-optimal value is approximately 20. Industry practice has shifted to over-trained ratios (Llama 3 8B $\approx$ 1875) trading pre-training compute for inference cost. See `scaling/scaling-frontier`.
+\hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} $D / N$. Chinchilla-optimal value is approximately 20. Industry practice has shifted to over-trained ratios (Llama 3 8B $\approx$ 1875) trading pre-training compute for inference cost. See \texttt{scaling/scaling-frontier}.
 
 \item[\hypertarget{glossary:trafilatura}{trafilatura}]
 \hyperref[sec:pre-training-data]{\textcolor{glscolor}{$\to$}} Python text-extraction library; extracts main article text from raw HTML. FineWeb's choice over CC's built-in WET, yielding ~25 % more text. \citep[\S 3.2]{fineweb2024}
@@ -376,19 +376,19 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Projected representation of the content to be aggregated. Weighted by attention scores to produce the output.
 
 \item[\hypertarget{glossary:vapo}{VAPO} (Value-Augmented PPO)]
-\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} RL variant that re-introduces a learned value function on top of GRPO's design, with shared backbone and value-loss-clipping. Reportedly outperforms DAPO on long-CoT tasks `[vapo-2025]`.
+\hyperref[sec:rlvr-grpo]{\textcolor{glscolor}{$\to$}} RL variant that re-introduces a learned value function on top of GRPO's design, with shared backbone and value-loss-clipping. Reportedly outperforms DAPO on long-CoT tasks [vapo-2025]
 
 \item[\hypertarget{glossary:vocabulary}{Vocabulary} (V)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} The fixed set of all tokens a model can recognize. Size ranges from ~32K (LLaMA) to ~50K (GPT-3).
 
 \item[\hypertarget{glossary:warm}{WARM} (Weight-Averaged Reward Models)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Average parameters of $K$ independently-trained RMs to reduce overoptimization and improve robustness. Adopted in Gemma 3 post-training `[warm-2024]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Average parameters of $K$ independently-trained RMs to reduce overoptimization and improve robustness. Adopted in Gemma 3 post-training [warm-2024]
 
 \item[\hypertarget{glossary:warmup}{Warmup}]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Gradually increasing the learning rate from zero during early training steps. Critical for Post-LN; unnecessary for Pre-LN.
 
 \item[\hypertarget{glossary:warp}{WARP}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Alternates RL training with policy weight averaging; companion to WARM at the policy side. Used together in Gemma 3 `[warp-2024]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Alternates RL training with policy weight averaging; companion to WARM at the policy side. Used together in Gemma 3 [warp-2024]
 
 \item[\hypertarget{glossary:wsd-schedule}{WSD schedule} (Warmup-Stable-Decay)]
 \hyperref[sec:scaling-laws]{\textcolor{glscolor}{$\to$}} Three-phase LR: linear warmup, then constant at $\eta_{\max}$ for the bulk of training, then short cooldown to ~$0.1\eta_{\max}$. Used by Moonlight (5.7T-token Muon run); avoids cosine's commitment to a specific budget. \citep[\S 3.3]{muon-moonlight2025}

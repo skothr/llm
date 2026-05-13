@@ -367,6 +367,36 @@ def _format_kb_cite(kb_cite: str | None) -> str:
     return f" [{sec}]"
 
 
+_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+
+
+def _wrap_inline_code(text: str) -> str:
+    """Convert Markdown backtick-quoted `code` segments to \\texttt{code}
+    with LaTeX special chars inside escaped.
+
+    Glossary entries routinely embed JSON / regex / code snippets in
+    backticks (e.g. `{"summary": "`). Without this conversion, the
+    literal `{` is read as a TeX opening brace and pdfLaTeX hits
+    "Missing } inserted" inside \\begin{description}. After conversion
+    the same content renders monospace AND with proper grouping.
+    """
+    def repl(m: re.Match) -> str:
+        inner = m.group(1)
+        # Order: backslash first so subsequent escapes don't get doubled.
+        inner = inner.replace("\\", r"\textbackslash{}")
+        inner = inner.replace("{", r"\{")
+        inner = inner.replace("}", r"\}")
+        inner = inner.replace("&", r"\&")
+        inner = inner.replace("#", r"\#")
+        inner = inner.replace("_", r"\_")
+        inner = inner.replace("^", r"\^{}")
+        inner = inner.replace("%", r"\%")
+        inner = inner.replace("$", r"\$")
+        inner = inner.replace("~", r"\~{}")
+        return rf"\texttt{{{inner}}}"
+    return _INLINE_CODE_RE.sub(repl, text)
+
+
 def _sanitize_full_def(text: str) -> str:
     """Escape LaTeX special chars in full_def body text.
 
@@ -376,8 +406,12 @@ def _sanitize_full_def(text: str) -> str:
     # (macro parameter), _ and ^ (sub/superscript outside math), Unicode math
     symbols (pdfLaTeX rejects bare U+2248, U+2265, etc. without inputenc setup).
     We intentionally do NOT escape $ (inline math), { / } (intentional math),
-    or \\.
+    or \\ — except inside `...` inline-code segments, where every special
+    char gets escaped (see _wrap_inline_code).
     """
+    # Process inline-code segments first so their internal { / } become
+    # \{ / \} before the rest of the sanitizer ignores braces.
+    text = _wrap_inline_code(text)
     # Unicode math/punctuation → LaTeX equivalents or ASCII replacements.
     _UNICODE_MAP = {
         "≈": r"$\approx$",

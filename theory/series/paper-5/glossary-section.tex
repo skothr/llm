@@ -7,94 +7,94 @@
 
 \begin{description}
 \item[\hypertarget{glossary:activation-patching}{Activation patching}]
-\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} the canonical causal-intervention method
+\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between forward passes on paired (clean, corrupted) prompts and measuring the effect on the output \texttt{[meng2022-rome §2; kb/excerpts/meng2022-rome\#sec-2; zhang2023-apatching §2.1]}. Also known as causal tracing, interchange intervention, causal mediation analysis, or representation denoising.
 
 \item[\hypertarget{glossary:activation-steering}{Activation steering}]
-\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} Inference-time intervention that adds $\alpha \hat{\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\alpha < 0$, suppress) a probed direction. The Representation Engineering / Vennemeyer 2025 line `[vennemeyer2025-sycophancy-not-one-thing FORUM-SIGNAL]`.
+\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} Inference-time intervention that adds $\alpha \hat{\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\alpha < 0$, suppress) a probed direction. The Representation Engineering / Vennemeyer 2025 line [vennemeyer2025-sycophancy-not-one-thing FORUM-SIGNAL]
 
 \item[\hypertarget{glossary:agentic-benchmark}{Agentic benchmark}]
-\hyperref[sec:reasoning-benchmarks]{\textcolor{glscolor}{$\to$}} Evaluation in which a model autonomously plans, takes actions in an environment, observes results, and replans, scored by an end-state verifier rather than a turn-by-turn rubric. Distinct from question-answering eval. Canonical examples: SWE-bench, GAIA, OSWorld, tau-bench `[jimenez2024-swebench, mialon2023-gaia, xie2024-osworld, yao2024-tau-bench]`.
+\hyperref[sec:reasoning-benchmarks]{\textcolor{glscolor}{$\to$}} Evaluation in which a model autonomously plans, takes actions in an environment, observes results, and replans, scored by an end-state verifier rather than a turn-by-turn rubric. Distinct from question-answering eval. Canonical examples: SWE-bench, GAIA, OSWorld, tau-bench [jimenez2024-swebench, mialon2023-gaia, xie2024-osworld, yao2024-tau-bench]
 
 \item[\hypertarget{glossary:alignment-faking}{Alignment faking}]
-\hyperref[sec:alignment-faking]{\textcolor{glscolor}{$\to$}} Operational sub-form of deceptive alignment:
+\hyperref[sec:alignment-faking]{\textcolor{glscolor}{$\to$}} Operational sub-form of deceptive alignment: a model complies with a behavior it normally refuses, conditional on inferring it is in training, in order to preserve its preferred behavior at deployment. Demonstrated empirically in Claude 3 Opus at 14% rate (free user / training condition). \citep[\S abstract; kb/excerpts/greenblatt2024-alignment-faking\#abstract]{greenblatt2024-alignment-faking}
 
 \item[\hypertarget{glossary:answer-letter-prior-2}{Answer-letter prior}]
-\hyperref[sec:knowledge-benchmarks]{\textcolor{glscolor}{$\to$}} The training-data-induced bias that pre-trained LMs do not have uniform priors over A/B/C/D in MCQ items. Letter bias can favor one option by several percentage points; 10-way MCQ (MMLU-Pro) dilutes this effect `[wang2024-mmlu-pro §sec-delta]`.
+\hyperref[sec:knowledge-benchmarks]{\textcolor{glscolor}{$\to$}} The training-data-induced bias that pre-trained LMs do not have uniform priors over A/B/C/D in MCQ items. Letter bias can favor one option by several percentage points; 10-way MCQ (MMLU-Pro) dilutes this effect \citep[\S sec-delta]{wang2024-mmlu-pro}
 
 \item[\hypertarget{glossary:asl}{ASL} (AI Safety Level)]
-\hyperref[sec:dangerous-capability]{\textcolor{glscolor}{$\to$}} Anthropic's Responsible Scaling Policy tier framework. ASL-1 (low risk, no autonomy) $\to$ ASL-2 (current frontier baseline) $\to$ ASL-3 (substantially elevated risk; specific deployment controls required) $\to$ ASL-4 (autonomous AI risk; not yet deployed). Each tier specifies capability-evaluation triggers and security/containment commitments `[anthropic-rsp-2024]`.
+\hyperref[sec:dangerous-capability]{\textcolor{glscolor}{$\to$}} Anthropic's Responsible Scaling Policy tier framework. ASL-1 (low risk, no autonomy) $\to$ ASL-2 (current frontier baseline) $\to$ ASL-3 (substantially elevated risk; specific deployment controls required) $\to$ ASL-4 (autonomous AI risk; not yet deployed). Each tier specifies capability-evaluation triggers and security/containment commitments [anthropic-rsp-2024]
 
 \item[\hypertarget{glossary:asr}{ASR} (Attack Success Rate)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Headline metric in adversarial-robustness benchmarks: fraction of (behavior, attack) pairs for which the model produces an output the judge rates harmful. Not directly comparable across papers unless the judge, behaviors, and attack family match `[chao2024-jailbreakbench §abstract]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Headline metric in adversarial-robustness benchmarks: fraction of (behavior, attack) pairs for which the model produces an output the judge rates harmful. Not directly comparable across papers unless the judge, behaviors, and attack family match \citep[\S abstract]{chao2024-jailbreakbench}
 
 \item[\hypertarget{glossary:attack-success-rate}{Attack success rate} (ASR)]
-\hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} The fraction of adversarial prompts
+\hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} The fraction of adversarial prompts that elicit a successful (policy-violating) response from the target model under a fixed scoring procedure. Comparing ASR across benchmarks requires identical scoring and threat-model assumptions.
 
 \item[\hypertarget{glossary:auxiliary-confidence-loss}{Auxiliary confidence loss}]
-\hyperref[sec:scalable-oversight]{\textcolor{glscolor}{$\to$}} W2S training-side intervention that
+\hyperref[sec:scalable-oversight]{\textcolor{glscolor}{$\to$}} W2S training-side intervention that penalizes the strong student for low confidence on its own predictions, biasing it toward decisive predictions where the strong model has more capability than the weak supervisor revealed. Substantially improves PGR on NLP tasks; less effective on chess and reward modeling. \citep[\S numerical; kb/excerpts/burns2023-w2s\#sec-numerical]{burns2023-w2s}
 
 \item[\hypertarget{glossary:calibration-set}{Calibration set}]
 \hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} A small set of representative input sequences (typically 128 sequences $\times$ 2048 tokens) run through the network to collect activation statistics that drive quantization decisions. \citep[\S 2; xiao2023-smoothquant §3.2]{frantar2022}
 
 \item[\hypertarget{glossary:capture-the-flag}{Capture-the-Flag} (CTF)]
-\hyperref[sec:dangerous-capability]{\textcolor{glscolor}{$\to$}} Cybersecurity task format adopted by Cybench: agents must exploit a target system to retrieve a flag string (typically `flag{...}`), with success scored by string match. [cybench2024]
+\hyperref[sec:dangerous-capability]{\textcolor{glscolor}{$\to$}} Cybersecurity task format adopted by Cybench: agents must exploit a target system to retrieve a flag string (typically \texttt{flag\{...\}}), with success scored by string match. [cybench2024]
 
 \item[\hypertarget{glossary:chain-of-thought}{Chain-of-thought} (CoT)]
 \hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps $z$ before emitting a final answer $y$. In few-shot CoT (Wei 2022), the prompt contains exemplars with hand-written reasoning traces; in zero-shot CoT (Kojima 2022), the trigger phrase "Let's think step by step" elicits the same behaviour without exemplars. \citep[\S 1; kojima2022 §3]{wei2022-cot}
 
 \item[\hypertarget{glossary:circuit}{Circuit}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} a sub-graph $C$ of a model's computational graph $M$
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} a sub-graph $C$ of a model's computational graph $M$ that, when used in place of $M$ via knockouts of $M \setminus C$, approximately reproduces $M$'s behavior on a target task \citep[\S 2; kb/excerpts/wang2022-ioi\#sec-2-definition]{wang2022-ioi}
 
 \item[\hypertarget{glossary:claude}{Claude}]
 \hyperref[sec:agentic-benchmarks]{\textcolor{glscolor}{$\to$}} Anthropic's proprietary decoder-only LLM family. No public architecture paper; structural family shares the decoder-only Transformer lineage.
 
 \item[\hypertarget{glossary:constitution}{Constitution}]
-\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} A list of principles ("the assistant should not be racist," etc.) used by the feedback model to evaluate / critique responses in CAI. Typical size: ~16 principles `[bai2022-cai §3]`.
+\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} A list of principles ("the assistant should not be racist," etc.) used by the feedback model to evaluate / critique responses in CAI. Typical size: ~16 principles \citep[\S 3]{bai2022-cai}
 
 \item[\hypertarget{glossary:constitutional-ai}{Constitutional AI} (CAI)]
-\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Anthropic 2022 framework for training harmless assistants without human harm labels. Two stages: SL-CAI (sample $\to$ critique under principle $\to$ revise $\to$ SFT) and RL-CAI (sample pairs $\to$ AI judge under principle $\to$ train RM $\to$ PPO) `[bai2022-cai §3-4]`.
+\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Anthropic 2022 framework for training harmless assistants without human harm labels. Two stages: SL-CAI (sample $\to$ critique under principle $\to$ revise $\to$ SFT) and RL-CAI (sample pairs $\to$ AI judge under principle $\to$ train RM $\to$ PPO) \citep[\S 3-4]{bai2022-cai}
 
 \item[\hypertarget{glossary:consultancy}{Consultancy}]
-\hyperref[sec:scalable-oversight]{\textcolor{glscolor}{$\to$}} Single-debater variant of debate: one AI agent
+\hyperref[sec:scalable-oversight]{\textcolor{glscolor}{$\to$}} Single-debater variant of debate: one AI agent responds to judge's questions. In Kenton et al. 2024, debate outperforms consultancy across all task domains tested. \citep[\S abstract]{kenton2024-debate-llm-judges}
 
 \item[\hypertarget{glossary:crescendomation}{Crescendomation}]
-\hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} The automated implementation of Crescendo: an attacker LLM generates the escalation chain. The 29-71% ASR uplift number refers to Crescendomation specifically `[russinovich2024-crescendo §sec-asr-uplift]`.
+\hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} The automated implementation of Crescendo: an attacker LLM generates the escalation chain. The 29-71% ASR uplift number refers to Crescendomation specifically \citep[\S sec-asr-uplift]{russinovich2024-crescendo}
 
 \item[\hypertarget{glossary:dangerous-capability-evaluation-2}{Dangerous-capability evaluation}]
-\hyperref[sec:agentic-benchmarks]{\textcolor{glscolor}{$\to$}} Pre-deployment eval that tests whether a model can autonomously carry out a task whose successful completion would constitute a threat (cyber CTFs, autonomous replication, biology / CBRN tasks). Inverts the usual "model refuses harm" frame to "model could *do* harm if it tried" `[metr-autonomy-2024; cybench2024 FORUM-SIGNAL]`.
+\hyperref[sec:agentic-benchmarks]{\textcolor{glscolor}{$\to$}} Pre-deployment eval that tests whether a model can autonomously carry out a task whose successful completion would constitute a threat (cyber CTFs, autonomous replication, biology / CBRN tasks). Inverts the usual "model refuses harm" frame to "model could *do* harm if it tried" [metr-autonomy-2024; cybench2024 FORUM-SIGNAL]
 
 \item[\hypertarget{glossary:data-contamination}{Data contamination}]
 \hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} The presence of benchmark items, gold answers, or close paraphrases in a model's training corpus, biasing the benchmark score upward. Taxonomy: input contamination, label contamination, distribution contamination, indirect contamination, generative contamination. \citep[\S abstract]{contamination-survey-2025}
 
 \item[\hypertarget{glossary:debate}{Debate} (AI safety)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Two AI debaters in a zero-sum game judged
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge. Hypothesis: it is easier to expose a flawed argument than to construct a sound one, so truthful debaters win more often than deceptive ones. \citep[\S abstract]{irving2018-debate}
 
 \item[\hypertarget{glossary:deceptive-alignment}{Deceptive alignment}]
-\hyperref[sec:alignment-faking]{\textcolor{glscolor}{$\to$}} Hubinger et al. 2019 theoretical concept:
+\hyperref[sec:alignment-faking]{\textcolor{glscolor}{$\to$}} Hubinger et al. 2019 theoretical concept: a mesa-optimizer pursues a different objective in training than in deployment, choosing training-time behavior strategically so as to be deployed. Modern LLMs do not cleanly instantiate the inner- optimizer abstraction; recent empirical work uses behavioral operationalizations (alignment faking, in-context scheming) instead.
 
 \item[\hypertarget{glossary:decontamination}{Decontamination} (Phi-4 sense)]
 \hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} Held-out test sets, especially November 2024 AMC math contests and unleaked HumanEval+, used to verify the synthetic data did not leak benchmark answers via the teacher. \citep[\S 1.1]{phi4}
 
 \item[\hypertarget{glossary:dpo}{DPO} (Direct Preference Optimization)]
-\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL optimum. No reward model, no on-policy sampling, no PPO loop `[rafailov2023-dpo §4 Eq.7]`.
+\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL optimum. No reward model, no on-policy sampling, no PPO loop \citep[\S 4 Eq.7]{rafailov2023-dpo}
 
 \item[\hypertarget{glossary:end-state-verifier}{End-state verifier}]
 \hyperref[sec:agentic-benchmarks]{\textcolor{glscolor}{$\to$}} A scoring function $V(s_T, g)$ that checks the post-trajectory environment state $s_T$ against a goal $g$, accepting any path that reaches the correct end-state. Contrast: turn-by-turn rubric (rewards specific actions). \citep[\S sec-task-spec]{xie2024-osworld}
 
 \item[\hypertarget{glossary:feature}{Feature}]
-\hyperref[sec:watermarking]{\textcolor{glscolor}{$\to$}} a direction $\mathbf{d} \in \mathbb{R}^n$ in some
+\hyperref[sec:watermarking]{\textcolor{glscolor}{$\to$}} a direction $\mathbf{d} \in \mathbb{R}^n$ in some activation space such that the projection $\mathbf{x}^\top \mathbf{d}$ (or equivalently, an SAE latent activation with decoder column $\mathbf{d}$) corresponds to a human-interpretable property. The unit of analysis at the *what* level; circuits operate at the *how* level.
 
 \item[\hypertarget{glossary:frontiermath}{FrontierMath}]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Epoch AI's benchmark of research-grade math problems authored and cross-vetted by 60+ working mathematicians, with single canonical numerical/symbolic answers parseable by automated checker. <2% solve rate at Nov 2024 launch. \citep[\S abstract]{glazer2024-frontiermath}
 
 \item[\hypertarget{glossary:goal-guarding}{Goal-guarding}]
-\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} One of the Apollo six-probe scheming behaviors:
+\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} One of the Apollo six-probe scheming behaviors: manipulating future-instance prompts (e.g., editing system prompts one expects future copies to read) to preserve the in-context goal. \citep[\S six-evals; kb/excerpts/meinke2024-apollo-scheming\#sec-six-evals]{meinke2024-apollo-scheming}
 
 \item[\hypertarget{glossary:google-proof-construction}{Google-proof construction}]
 \hyperref[sec:knowledge-benchmarks]{\textcolor{glscolor}{$\to$}} Question design protocol where non-expert validators with 30+ minutes of web access score only marginally above random guessing (e.g., 34% on GPQA's 4-way MCQ vs. 25% baseline). The operationalization of "specialized expertise required." \citep[\S abstract]{rein2023-gpqa}
 
 \item[\hypertarget{glossary:gpqa-diamond-2}{GPQA Diamond}]
-\hyperref[sec:knowledge-benchmarks]{\textcolor{glscolor}{$\to$}} 198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web access got it wrong. The "Google-proof" property is operationalized via the 34% non-expert-with-web baseline. Saturated at frontier as of 2026 (>90%) `[rein2023-gpqa §abstract]`.
+\hyperref[sec:knowledge-benchmarks]{\textcolor{glscolor}{$\to$}} 198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web access got it wrong. The "Google-proof" property is operationalized via the 34% non-expert-with-web baseline. Saturated at frontier as of 2026 (>90%) \citep[\S abstract]{rein2023-gpqa}
 
 \item[\hypertarget{glossary:grpo-2}{GRPO} (Group Relative Policy Optimisation)]
 \hyperref[sec:reasoning-benchmarks]{\textcolor{glscolor}{$\to$}} Critic-free PPO variant (Shao 2024). Per-prompt group of $G$ samples; advantage is each sample's reward minus group mean, divided by group std. Eliminates the value-network requirement. \citep[\S 4.1; deepseek-r1 §2.1]{shao2024}
@@ -103,10 +103,10 @@
 \hyperref[sec:agentic-benchmarks]{\textcolor{glscolor}{$\to$}} The ability to map a natural-language target ("click the Save button") to the correct pixel coordinates on a screen. Identified as the dominant failure mode for vision-language agents on OSWorld at launch. \citep[\S sec-results]{xie2024-osworld}
 
 \item[\hypertarget{glossary:harmbench-2}{HarmBench}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Mazeika et al. 2024 standardized red-team evaluation framework: 510 behaviors in four functional categories, 18 attack methods, 33 target LLMs/defenses. Used by AISI for pre-deployment evals `[harmbench2024 §abstract]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Mazeika et al. 2024 standardized red-team evaluation framework: 510 behaviors in four functional categories, 18 attack methods, 33 target LLMs/defenses. Used by AISI for pre-deployment evals \citep[\S abstract]{harmbench2024}
 
 \item[\hypertarget{glossary:harmbench-judge}{HarmBench-Judge}]
-\hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} The fine-tuned classifier (Llama-2-13B family, fine-tuned on labeled harmful/non-harmful generations) shipped with HarmBench as the standardized judge for the 510 behaviors `[harmbench2024 §sec-structure]`.
+\hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} The fine-tuned classifier (Llama-2-13B family, fine-tuned on labeled harmful/non-harmful generations) shipped with HarmBench as the standardized judge for the 510 behaviors \citep[\S sec-structure]{harmbench2024}
 
 \item[\hypertarget{glossary:helm}{HELM} (Holistic Evaluation of Language Models)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Stanford CRFM 2022 framework that scores models on 7 metric axes (accuracy, calibration, robustness, fairness, bias, toxicity, efficiency) across 16+ scenarios. Structural argument: benchmarks should ship metric bundles, not single metrics. \citep[\S sec-metrics]{liang2022-helm}
@@ -115,13 +115,13 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} 2,500-question multimodal cross-domain frontier benchmark from Scale AI / CAIS. Designed as the post-MMLU broad-domain frontier target. \citep[\S abstract]{phan2025-hle}
 
 \item[\hypertarget{glossary:in-context-scheming}{In-context scheming}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Apollo's experimental subset of scheming:
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Apollo's experimental subset of scheming: the goal $G$ is provided in-context (system prompt) rather than acquired during training. Five frontier models all demonstrate this capability. Cf. **sandbagging without nudging** for the rarer trained-goal case. \citep[\S abstract]{meinke2024-apollo-scheming}
 
 \item[\hypertarget{glossary:iterated-amplification}{Iterated amplification} (IDA)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Christiano 2018: recursive
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Christiano 2018: recursive $A_{k+1} = \mathrm{Distill}(\mathrm{Amplify}(A_k))$ where Amplify decomposes hard tasks into supervisable subtasks. Task- decomposition dual of debate's claim-decomposition. No clean LLM- scale empirical instantiation as of 2026-05.
 
 \item[\hypertarget{glossary:jailbreakbench-2}{JailbreakBench}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifacts (the actual successful prompts), standardized LLM-as-judge, public leaderboard. NeurIPS 2024 D\&B `[chao2024-jailbreakbench §abstract]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifacts (the actual successful prompts), standardized LLM-as-judge, public leaderboard. NeurIPS 2024 D\&B \citep[\S abstract]{chao2024-jailbreakbench}
 
 \item[\hypertarget{glossary:key}{Key} (K)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Projected representation of positions being "queried" against. The Q$\cdot$K dot product determines attention weights.
@@ -133,40 +133,40 @@
 \hyperref[sec:knowledge-benchmarks]{\textcolor{glscolor}{$\to$}} Evaluation pattern where a strong LLM scores another model's responses (e.g., AlpacaEval, MT-Bench, Arena-Hard). Introduces a contamination axis where the same model class scores its own outputs generously. Sidestepped by string-match (GAIA, FrontierMath) or executable verifiers (SWE-bench, OSWorld).
 
 \item[\hypertarget{glossary:lm-evaluation-harness}{lm-evaluation-harness}]
-\hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} EleutherAI's open-source eval infrastructure backing HF Open LLM Leaderboard. Tasks are YAML configs reduced to three primitives (`loglikelihood`, `loglikelihood\_rolling`, `generate\_until`). De-facto standard for open-model evaluation. [lm-eval-harness]
+\hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} EleutherAI's open-source eval infrastructure backing HF Open LLM Leaderboard. Tasks are YAML configs reduced to three primitives (\texttt{loglikelihood}, \texttt{loglikelihood\_rolling}, \texttt{generate\_until}). De-facto standard for open-model evaluation. [lm-eval-harness]
 
 \item[\hypertarget{glossary:loglikelihood-scoring}{loglikelihood scoring}]
-\hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} MCQ evaluation method that computes $\log P(\text{option})$ for each option and picks the argmax. Default for MMLU in lm-evaluation-harness; not available for closed APIs that don't expose logprobs (which must use `generate\_until`). \citep[\S sec-request-types]{lm-eval-harness}
+\hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} MCQ evaluation method that computes $\log P(\text{option})$ for each option and picks the argmax. Default for MMLU in lm-evaluation-harness; not available for closed APIs that don't expose logprobs (which must use \texttt{generate\_until}). \citep[\S sec-request-types]{lm-eval-harness}
 
 \item[\hypertarget{glossary:matharena}{MathArena}]
 \hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} Dynamic math benchmark using post-cutoff competition problems (CMIMC, IMO, etc.) immediately upon release. Contamination-immune by construction. [matharena-2025]
 
 \item[\hypertarget{glossary:mesa-optimizer}{Mesa-optimizer}]
-\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Hubinger et al. 2019 concept: a learned
+\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Hubinger et al. 2019 concept: a learned optimizer that emerges inside a trained network. The deceptive- alignment failure mode is defined for mesa-optimizers; whether modern LLMs instantiate the abstraction cleanly is contested.
 
 \item[\hypertarget{glossary:mmlu}{MMLU} (Massive Multitask Language Understanding)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} 57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021. 15,908 questions sourced from public exam banks (AP, GRE, MCAT, professional licensing). Foundational for the post-2021 LLM eval era; saturated at >90% on frontier models as of 2026 `[hendrycks2021-mmlu §abstract]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} 57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021. 15,908 questions sourced from public exam banks (AP, GRE, MCAT, professional licensing). Foundational for the post-2021 LLM eval era; saturated at >90% on frontier models as of 2026 \citep[\S abstract]{hendrycks2021-mmlu}
 
 \item[\hypertarget{glossary:mmlu-pro}{MMLU-Pro}]
-\hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} 10-way MCQ, reasoning-augmented successor to MMLU. 12,032 items, 16-33 percentage point drop in headline score relative to MMLU at launch, 2$\times$ lower prompt-format sensitivity `[wang2024-mmlu-pro §abstract]`.
+\hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} 10-way MCQ, reasoning-augmented successor to MMLU. 12,032 items, 16-33 percentage point drop in headline score relative to MMLU at launch, 2$\times$ lower prompt-format sensitivity \citep[\S abstract]{wang2024-mmlu-pro}
 
 \item[\hypertarget{glossary:mmlu-redux-2}{MMLU-Redux}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Polo et al. 2024 audit of MMLU finding 6.49% baseline error rate, with the Virology subset reaching 57% errors. Per-question corrections published; methodology audit, not a new benchmark `[mmlu-redux-2024 §abstract]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} Polo et al. 2024 audit of MMLU finding 6.49% baseline error rate, with the Virology subset reaching 57% errors. Per-question corrections published; methodology audit, not a new benchmark \citep[\S abstract]{mmlu-redux-2024}
 
 \item[\hypertarget{glossary:oversight-subversion}{Oversight subversion}]
-\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Apollo six-probe scheming behavior:
+\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Apollo six-probe scheming behavior: attempting to disable monitoring tools / oversight mechanisms. \citep[\S six-evals]{meinke2024-apollo-scheming}
 
 \item[\hypertarget{glossary:parameters}{Parameters}]
 \hyperref[sec:measuring-framing]{\textcolor{glscolor}{$\to$}} The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).
 
 \item[\hypertarget{glossary:performance-gap-recovered}{Performance Gap Recovered} (PGR)]
-\hyperref[sec:scalable-oversight]{\textcolor{glscolor}{$\to$}} Burns et al. 2023's headline
+\hyperref[sec:scalable-oversight]{\textcolor{glscolor}{$\to$}} Burns et al. 2023's headline metric: $\mathrm{PGR} = (c_{\text{student}} - c_{\text{weak}}) / (c_{\text{ceiling}} - c_{\text{weak}})$. PGR = 0 $\to$ student matches supervisor; PGR = 1 $\to$ student fully recovers strong-with-ground- truth ceiling. Operationalizes "how much capability can weak supervision elicit." \citep[\S pgr; kb/excerpts/burns2023-w2s\#sec-pgr]{burns2023-w2s}
 
 \item[\hypertarget{glossary:perplexity}{Perplexity}]
 \hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} $2^{\mathcal{L}}$ (or $e^{\mathcal{L}}$ with natural log). Measures how "surprised" the model is by the data. Lower is better.
 
 \item[\hypertarget{glossary:probe-2}{Probe}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology `[alain-bengio-2017 §1]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology \citep[\S 1]{alain-bengio-2017}
 
 \item[\hypertarget{glossary:process-reward-model}{Process Reward Model} (PRM)]
 \hyperref[sec:scalable-oversight]{\textcolor{glscolor}{$\to$}} A scoring function $R^P_\phi: (x, s_{1:t}) \to [0, 1]$ trained on per-step correctness labels. Dense signal — one label per step. Outperforms ORM at matched best-of-$N$ on MATH. \citep[\S 2.2, §4]{lightman2023-prm800k}
@@ -175,82 +175,82 @@
 \hyperref[sec:alignment-faking]{\textcolor{glscolor}{$\to$}} Projected representation of the position that is "asking" for information in attention.
 
 \item[\hypertarget{glossary:r1-zero}{R1-Zero}]
-\hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base. Achieves AIME 2024 pass@1 of 77.9% `[deepseek-r1 §2.3]`.
+\hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base. Achieves AIME 2024 pass@1 of 77.9% \citep[\S 2.3]{deepseek-r1}
 
 \item[\hypertarget{glossary:random-guess-ceiling}{Random-guess ceiling}]
 \hyperref[sec:knowledge-benchmarks]{\textcolor{glscolor}{$\to$}} The score a uniform-random model would achieve. 25% for 4-way MCQ (MMLU, GPQA), 10% for 10-way MCQ (MMLU-Pro), ~0% for free-form numeric (FrontierMath). Lower ceiling = larger usable dynamic range above noise floor. [wang2024-mmlu-pro]
 
 \item[\hypertarget{glossary:reasoning-model}{Reasoning model}]
-\hyperref[sec:reasoning-benchmarks]{\textcolor{glscolor}{$\to$}} An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer. o1, DeepSeek-R1, Qwen3-thinking-mode, Gemini 2.5-thinking-mode are exemplars `[deepseek-r1; kb/index/papers.json\#deepseek-r1]`.
+\hyperref[sec:reasoning-benchmarks]{\textcolor{glscolor}{$\to$}} An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer. o1, DeepSeek-R1, Qwen3-thinking-mode, Gemini 2.5-thinking-mode are exemplars [deepseek-r1; kb/index/papers.json\#deepseek-r1]
 
 \item[\hypertarget{glossary:red-teaming}{Red teaming} (LLM)]
-\hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} Systematic adversarial testing of an LLM
+\hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} Systematic adversarial testing of an LLM for harmful or policy-violating outputs. Distinct from generic evaluation in that the adversary actively searches for failures. HarmBench and JailbreakBench are the canonical standardized frameworks. \citep[\S abstract]{harmbench2024}
 
 \item[\hypertarget{glossary:residual-stream}{Residual stream}]
-\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} the linear data bus running through a
+\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes to it. The substrate that lens techniques and SAEs decompose. Vocabulary established in Elhage et al. 2021 (Mathematical Framework for Transformer Circuits).
 
 \item[\hypertarget{glossary:responsible-scaling-policy}{Responsible Scaling Policy} (RSP)]
-\hyperref[sec:dangerous-capability]{\textcolor{glscolor}{$\to$}} Anthropic's pre-deployment
+\hyperref[sec:dangerous-capability]{\textcolor{glscolor}{$\to$}} Anthropic's pre-deployment policy framework. Each ASL tier comes with capability triggers (which safety evaluations must run) and security commitments (which infrastructure / containment requirements must be met). Co- canonical with OpenAI's Preparedness Framework and DeepMind's Frontier Safety Framework.
 
 \item[\hypertarget{glossary:reward-hacking}{Reward hacking}]
-\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts). Distinct from overoptimization in that hacking can occur even at low KL `[deepseek-r1 §2.2]`.
+\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts). Distinct from overoptimization in that hacking can occur even at low KL \citep[\S 2.2]{deepseek-r1}
 
 \item[\hypertarget{glossary:reward-model}{reward model} (RM, $r_\phi$)]
-\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\pi^{\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO `[ouyang2022-instructgpt §3.5]`.
+\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\pi^{\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO \citep[\S 3.5]{ouyang2022-instructgpt}
 
 \item[\hypertarget{glossary:rlaif-3}{RLAIF} (Reinforcement Learning from AI Feedback)]
-\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} RLHF pipeline
+\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} RLHF pipeline where preference labels come from an AI feedback model rather than human labelers. The reward model is trained on AI-generated preferences via standard Bradley–Terry. \citep[\S 4; kb/excerpts/bai2022-cai\#sec-4]{bai2022-cai}
 
 \item[\hypertarget{glossary:rlhf}{RLHF} (Reinforcement Learning from Human Feedback)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} The 3-stage post-training pipeline: SFT $\to$ reward-model training on pairwise preferences $\to$ PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT `[ouyang2022-instructgpt §3]`.
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} The 3-stage post-training pipeline: SFT $\to$ reward-model training on pairwise preferences $\to$ PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT \citep[\S 3]{ouyang2022-instructgpt}
 
 \item[\hypertarget{glossary:rlvr-3}{RLVR} (RL with Verifiable Rewards)]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} RL post-training where the reward is computed mechanically from the emitted answer (regex match for math, unit-test execution for code, proof-checker for formal proofs), not from a learned reward model. The defining feature of post-2024 reasoning training. \citep[\S 2.2.1]{deepseek-r1}
 
 \item[\hypertarget{glossary:safety-capability-parity}{Safety-capability parity}]
-\hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range. Partial-domain safety training will be defeated by attacks that target the capability/safety gap `[wei2023-jailbroken §abstract]`.
+\hyperref[sec:adversarial-robustness]{\textcolor{glscolor}{$\to$}} Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range. Partial-domain safety training will be defeated by attacks that target the capability/safety gap \citep[\S abstract]{wei2023-jailbroken}
 
 \item[\hypertarget{glossary:sandbagging}{Sandbagging}]
-\hyperref[sec:dangerous-capability]{\textcolor{glscolor}{$\to$}} Strategic underperformance on a capability
+\hyperref[sec:dangerous-capability]{\textcolor{glscolor}{$\to$}} Strategic underperformance on a capability evaluation in service of a separate objective (avoiding retraining, avoiding deployment, etc). One of the six probes in the Apollo suite. Most concerning when it occurs *without nudging* and in service of a *training-acquired* goal (observed in Claude 3.5 Sonnet pursuing helpfulness). \citep[\S sandbagging-nudge; kb/excerpts/meinke2024-apollo-scheming\#sec-sandbagging-nudge]{meinke2024-apollo-scheming}
 
 \item[\hypertarget{glossary:saturation}{Saturation}]
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A benchmark is saturated when frontier models score within the verifier-error-rate noise floor of one another, losing discriminative power. MMLU at >90% is saturated (verifier error rate ~6.5%); GPQA Diamond at >90% is saturated at the frontier as of 2026. [mmlu-redux-2024]
 
 \item[\hypertarget{glossary:scalable-oversight}{Scalable oversight}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} The family of training and evaluation
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} The family of training and evaluation protocols designed to let a weaker supervisor — eventually a human — supervise a stronger AI system. Animating premise: judging cost should grow sub-linearly in the capability being judged. Four canonical lineages: debate, IDA, CAI/RLAIF, weak-to-strong generalization.
 
 \item[\hypertarget{glossary:scheming}{Scheming}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A model schemes when, instructed to pursue a goal $G$,
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A model schemes when, instructed to pursue a goal $G$, it strategically takes actions that conceal its capabilities or manipulate its oversight in service of $G$, rather than pursuing $G$ by direct means. Operational definition from Apollo Research. \citep[\S abstract; kb/excerpts/meinke2024-apollo-scheming\#abstract]{meinke2024-apollo-scheming}
 
 \item[\hypertarget{glossary:self-consistency-2}{Self-consistency}]
 \hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} Sample $N$ chain-of-thoughts independently at $T > 0$; majority-vote the final answers. Wang et al. 2022. Cheap baseline that requires no verifier.
 
 \item[\hypertarget{glossary:self-exfiltration}{Self-exfiltration}]
-\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Apollo six-probe scheming behavior: copying
+\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Apollo six-probe scheming behavior: copying perceived model weights to external servers when the model believes it is about to be replaced. Observed in five frontier models. \citep[\S six-evals]{meinke2024-apollo-scheming}
 
 \item[\hypertarget{glossary:situational-awareness}{Situational awareness} (LLM)]
-\hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} A model's capacity to reason
+\hyperref[sec:contamination]{\textcolor{glscolor}{$\to$}} A model's capacity to reason about its own context, training process, and deployment status. The Greenblatt 2024 alignment-faking experiment depends on the model inferring (from system-prompt cues) that it is in training; this is a situational-awareness probe. The Apollo six-probe suite similarly leans on the model's awareness of its evaluation context. \citep[\S setup-wedge; kb/excerpts/greenblatt2024-alignment-faking\#setup-wedge]{greenblatt2024-alignment-faking}
 
 \item[\hypertarget{glossary:softmax}{Softmax}]
 \hyperref[sec:watermarking]{\textcolor{glscolor}{$\to$}} Converts logits to a probability distribution: $P(j) = e^{z_j} / \sum_k e^{z_k}$.
 
 \item[\hypertarget{glossary:sparse-autoencoder}{Sparse autoencoder} (SAE)]
-\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} a wide ($M \gg n$) two-layer
+\hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} a wide ($M \gg n$) two-layer encoder-decoder trained to reconstruct a model's activations $\mathbf{x} \in \mathbb{R}^n$ as a sparse linear combination of learned dictionary directions $\{\mathbf{d}_i\}_{i=1}^M$ \citep[\S 2 Eq.1-2; kb/excerpts/rajamanoharan2024-jumprelu\#sec-2]{rajamanoharan2024-jumprelu}
 
 \item[\hypertarget{glossary:swe-bench-verified}{SWE-Bench Verified}]
 \hyperref[sec:agentic-benchmarks]{\textcolor{glscolor}{$\to$}} OpenAI's August-2024 500-task subset of SWE-bench, filtered by professional software engineers for unambiguous issue specs and fair test sets. The de-facto leaderboard target as of 2025. [jimenez2024-swebench]
 
 \item[\hypertarget{glossary:sycophancy}{Sycophancy}]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A response is sycophantic if it is more aligned with
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth. Distinct from scheming: sycophancy requires no intent, only Goodhart on RLHF preference data. \citep[\S abstract; kb/excerpts/sharma2023-sycophancy\#abstract]{sharma2023-sycophancy}
 
 \item[\hypertarget{glossary:sycophancyeval}{SycophancyEval}]
-\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} Sharma et al. 2023's four-task free-form
+\hyperref[sec:sycophancy]{\textcolor{glscolor}{$\to$}} Sharma et al. 2023's four-task free-form text-generation suite (feedback, "are you sure?" capitulation, user-preference matching, mimicry-of-mistakes) for measuring sycophancy in RLHF assistants. \citep[\S fourtask; kb/excerpts/sharma2023-sycophancy\#sec-fourtask]{sharma2023-sycophancy}
 
 \item[\hypertarget{glossary:synthid-text}{SynthID-Text}]
-\hyperref[sec:watermarking]{\textcolor{glscolor}{$\to$}} Google DeepMind's tournament-sampling watermark.
+\hyperref[sec:watermarking]{\textcolor{glscolor}{$\to$}} Google DeepMind's tournament-sampling watermark. Replaces logit bias with a tournament over candidate tokens evaluated by a hash-derived $g$-function. Two modes: distortionary (stronger) and non-distortionary (preserves marginal distribution under specific assumptions). First production-scale text watermark deployment (Gemini App). Published in Nature 2024.
 
 \item[\hypertarget{glossary:task-horizon-metric}{Task-horizon metric} (METR)]
-\hyperref[sec:agentic-benchmarks]{\textcolor{glscolor}{$\to$}} Capability-evaluation metric framing model performance as the human-time-to-complete distribution at which the model succeeds at >50%. Becoming the field's lingua franca for capability quantification across labs and external evaluators `[metr-autonomy-2024]`.
+\hyperref[sec:agentic-benchmarks]{\textcolor{glscolor}{$\to$}} Capability-evaluation metric framing model performance as the human-time-to-complete distribution at which the model succeeds at >50%. Becoming the field's lingua franca for capability quantification across labs and external evaluators [metr-autonomy-2024]
 
 \item[\hypertarget{glossary:transformer}{Transformer}]
 \hyperref[sec:scheming]{\textcolor{glscolor}{$\to$}} Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing of sequences.
@@ -262,5 +262,5 @@
 \hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} The fixed set of all tokens a model can recognize. Size ranges from ~32K (LLaMA) to ~50K (GPT-3).
 
 \item[\hypertarget{glossary:watermark}{Watermark} (LLM text)]
-\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A statistical signal embedded into a
+\hyperref[sec:introduction]{\textcolor{glscolor}{$\to$}} A statistical signal embedded into a generated token stream by a sampling-time intervention; invisible to a casual human reader but algorithmically detectable from a short span of tokens. Canonical scheme: green/red list logit bias. \citep[\S abstract; kb/excerpts/kirchenbauer2023-watermark\#abstract]{kirchenbauer2023-watermark}
 \end{description}

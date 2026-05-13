@@ -310,9 +310,9 @@
         "Multi-Head Attention"
       ],
       "short_def": "The Vaswani 2017 default: $h$ independent heads, each with its own $W_i^Q, W_i^K, W_i^V$.",
-      "full_def": "The Vaswani 2017 default: $h$ independent heads, each with its own $W_i^Q, W_i^K, W_i^V$. KV cache size per token per layer is $2 n_h d_h$ elements `[vaswani2017 §3.2.2]`.",
+      "full_def": "The Vaswani 2017 default: $h$ independent heads, each with its own $W_i^Q, W_i^K, W_i^V$. KV cache size per token per layer is $2 n_h d_h$ elements",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "vaswani2017 §3.2.2"
     },
     {
       "key": "mqa",
@@ -321,9 +321,9 @@
         "Multi-Query Attention"
       ],
       "short_def": "Variant where all heads share a single $W^K, W^V$ (only $W^Q$ remains per-head).",
-      "full_def": "Variant where all heads share a single $W^K, W^V$ (only $W^Q$ remains per-head). KV cache shrinks by factor $h$. Cheaper per-token decode at the cost of capacity and stability `[shazeer2019 §2.4; kb/notes/architecture/attention-mechanism.md#sec-3-1]`.",
+      "full_def": "Variant where all heads share a single $W^K, W^V$ (only $W^Q$ remains per-head). KV cache shrinks by factor $h$. Cheaper per-token decode at the cost of capacity and stability",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "shazeer2019 §2.4; kb/notes/architecture/attention-mechanism.md#sec-3-1"
     },
     {
       "key": "gqa",
@@ -332,18 +332,18 @@
         "Grouped-Query Attention"
       ],
       "short_def": "Interpolation between MHA and MQA: query heads are partitioned into $g$ groups, each group shares one $W^K, W^V$.",
-      "full_def": "Interpolation between MHA and MQA: query heads are partitioned into $g$ groups, each group shares one $W^K, W^V$. GQA-1 = MQA; GQA-$h$ = MHA. KV cache per token is $2 n_g d_h$ elements `[ainslie2023 §2.2]`.",
+      "full_def": "Interpolation between MHA and MQA: query heads are partitioned into $g$ groups, each group shares one $W^K, W^V$. GQA-1 = MQA; GQA-$h$ = MHA. KV cache per token is $2 n_g d_h$ elements",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "ainslie2023 §2.2"
     },
     {
       "key": "uptraining",
       "primary_form": "Uptraining",
       "aliases": [],
       "short_def": "The Ainslie 2023 recipe for converting an existing MHA checkpoint to GQA/MQA: mean-pool the $W^K, W^V$ matrices within each group, then con…",
-      "full_def": "The Ainslie 2023 recipe for converting an existing MHA checkpoint to GQA/MQA: mean-pool the $W^K, W^V$ matrices within each group, then continue pre-training for $\\alpha \\approx 5\\%$ of the original budget `[ainslie2023 §2.1]`.",
+      "full_def": "The Ainslie 2023 recipe for converting an existing MHA checkpoint to GQA/MQA: mean-pool the $W^K, W^V$ matrices within each group, then continue pre-training for $\\alpha \\approx 5\\%$ of the original budget",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "ainslie2023 §2.1"
     },
     {
       "key": "mla",
@@ -352,63 +352,63 @@
         "Multi-Head Latent Attention"
       ],
       "short_def": "DeepSeek-V2's compression scheme.",
-      "full_def": "DeepSeek-V2's compression scheme. Rather than sharing K/V across heads, K and V are reconstructed at use time from a small latent $\\mathbf{c}_t^{KV} = W^{DKV} \\mathbf{h}_t \\in \\mathbb{R}^{d_c}$ via up-projections $W^{UK}, W^{UV}$. Cache holds only the latent. During inference $W^{UK}$ can be absorbed into $W^Q$ and $W^{UV}$ into $W^O$ `[deepseek-v2 §2.1.2]`.",
+      "full_def": "DeepSeek-V2's compression scheme. Rather than sharing K/V across heads, K and V are reconstructed at use time from a small latent $\\mathbf{c}_t^{KV} = W^{DKV} \\mathbf{h}_t \\in \\mathbb{R}^{d_c}$ via up-projections $W^{UK}, W^{UV}$. Cache holds only the latent. During inference $W^{UK}$ can be absorbed into $W^Q$ and $W^{UV}$ into $W^O$",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-v2 §2.1.2"
     },
     {
       "key": "decoupled-rope",
       "primary_form": "Decoupled RoPE",
       "aliases": [],
       "short_def": "The MLA add-on that splits each query/key into a content part (no RoPE, low-rank reconstructed) and a small shared RoPE-carrying part.",
-      "full_def": "The MLA add-on that splits each query/key into a content part (no RoPE, low-rank reconstructed) and a small shared RoPE-carrying part. Necessary because standard RoPE inserts a position-dependent rotation between $W^Q$ and $W^{UK}$ that prevents the cache-absorption optimization `[deepseek-v2 §2.1.3]`.",
+      "full_def": "The MLA add-on that splits each query/key into a content part (no RoPE, low-rank reconstructed) and a small shared RoPE-carrying part. Necessary because standard RoPE inserts a position-dependent rotation between $W^Q$ and $W^{UK}$ that prevents the cache-absorption optimization",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-v2 §2.1.3"
     },
     {
       "key": "flashattention",
       "primary_form": "FlashAttention",
       "aliases": [],
       "short_def": "Exact attention computed with re-organized memory access: tile $K, V$ into SRAM-resident blocks and use **online softmax** to combine block…",
-      "full_def": "Exact attention computed with re-organized memory access: tile $K, V$ into SRAM-resident blocks and use **online softmax** to combine block results, never materializing the $N \\times N$ attention matrix in HBM. Forward + backward IO complexity $\\Theta(N^2 d^2 M^{-1})$ vs.\\ $\\Theta(N d + N^2)$ for the standard implementation `[dao2022 §3]`.",
+      "full_def": "Exact attention computed with re-organized memory access: tile $K, V$ into SRAM-resident blocks and use **online softmax** to combine block results, never materializing the $N \\times N$ attention matrix in HBM. Forward + backward IO complexity $\\Theta(N^2 d^2 M^{-1})$ vs.\\ $\\Theta(N d + N^2)$ for the standard implementation",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dao2022 §3"
     },
     {
       "key": "online-softmax",
       "primary_form": "Online softmax",
       "aliases": [],
       "short_def": "Numerically stable streaming softmax: maintain running max $m$ and normalizer $\\ell$ across blocks; when a new block arrives, rescale the e…",
-      "full_def": "Numerically stable streaming softmax: maintain running max $m$ and normalizer $\\ell$ across blocks; when a new block arrives, rescale the existing partial sum by $e^{m_\\text{old} - m_\\text{new}}$ before adding the block's contribution. Enables block-wise softmax without seeing the full row `[dao2022 §3.1]`.",
+      "full_def": "Numerically stable streaming softmax: maintain running max $m$ and normalizer $\\ell$ across blocks; when a new block arrives, rescale the existing partial sum by $e^{m_\\text{old} - m_\\text{new}}$ before adding the block's contribution. Enables block-wise softmax without seeing the full row",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "dao2022 §3.1"
     },
     {
       "key": "io-awareness",
       "primary_form": "IO-awareness",
       "aliases": [],
       "short_def": "Designing an algorithm with explicit accounting for reads and writes between memory hierarchy levels (HBM ↔ SRAM on a GPU).",
-      "full_def": "Designing an algorithm with explicit accounting for reads and writes between memory hierarchy levels (HBM ↔ SRAM on a GPU). The principle behind FlashAttention `[dao2022 §1]`.",
+      "full_def": "Designing an algorithm with explicit accounting for reads and writes between memory hierarchy levels (HBM ↔ SRAM on a GPU). The principle behind FlashAttention",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dao2022 §1"
     },
     {
       "key": "tiling",
       "primary_form": "Tiling",
       "aliases": [],
       "short_def": "Restructuring a computation to operate on sub-blocks that fit in fast memory.",
-      "full_def": "Restructuring a computation to operate on sub-blocks that fit in fast memory. Used in FlashAttention to keep $Q, K, V$ blocks in SRAM `[dao2022 §3.1]`.",
+      "full_def": "Restructuring a computation to operate on sub-blocks that fit in fast memory. Used in FlashAttention to keep $Q, K, V$ blocks in SRAM",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "dao2022 §3.1"
     },
     {
       "key": "recomputation-selective-gradient-checkpointing",
       "primary_form": "Recomputation (selective gradient checkpointing)",
       "aliases": [],
       "short_def": "Storing only the output and softmax statistics from the forward pass and recomputing the attention matrix on-chip during the backward pass,…",
-      "full_def": "Storing only the output and softmax statistics from the forward pass and recomputing the attention matrix on-chip during the backward pass, trading FLOPs for memory `[dao2022 §3.1]`.",
+      "full_def": "Storing only the output and softmax statistics from the forward pass and recomputing the attention matrix on-chip during the backward pass, trading FLOPs for memory",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "dao2022 §3.1"
     },
     {
       "key": "hbm",
@@ -417,18 +417,18 @@
         "High-Bandwidth Memory"
       ],
       "short_def": "The large, slow memory tier on a GPU (~40–80 GB on A100, 1.5–2.0 TB/s).",
-      "full_def": "The large, slow memory tier on a GPU (~40–80 GB on A100, 1.5–2.0 TB/s). Most operations in standard attention are HBM-bound `[dao2022 §2.1]`.",
+      "full_def": "The large, slow memory tier on a GPU (~40–80 GB on A100, 1.5–2.0 TB/s). Most operations in standard attention are HBM-bound",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dao2022 §2.1"
     },
     {
       "key": "sram-on-chip",
       "primary_form": "SRAM (on-chip)",
       "aliases": [],
       "short_def": "The small, fast memory tier on a GPU (~192 KB per A100 SM, ~19 TB/s).",
-      "full_def": "The small, fast memory tier on a GPU (~192 KB per A100 SM, ~19 TB/s). FlashAttention restructures attention to keep working sets in SRAM `[dao2022 §2.1]`.",
+      "full_def": "The small, fast memory tier on a GPU (~192 KB per A100 SM, ~19 TB/s). FlashAttention restructures attention to keep working sets in SRAM",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dao2022 §2.1"
     },
     {
       "key": "nsa",
@@ -437,9 +437,9 @@
         "Native Sparse Attention"
       ],
       "short_def": "Yuan et al.\\ 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted).",
-      "full_def": "Yuan et al.\\ 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Aimed at long context. Treated in `kb/notes/architecture/long-context.md` `[yuan2025]`.",
+      "full_def": "Yuan et al.\\ 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Aimed at long context. Treated in `kb/notes/architecture/long-context.md`",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "yuan2025"
     },
     {
       "key": "ffn",
@@ -691,62 +691,62 @@
       "key": "sycophancy",
       "primary_form": "Sycophancy",
       "aliases": [],
-      "short_def": "A response is sycophantic if it is more aligned with",
-      "full_def": "A response is sycophantic if it is more aligned with",
+      "short_def": "A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth.",
+      "full_def": "A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth. Distinct from scheming: sycophancy requires no intent, only Goodhart on RLHF preference data.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "sharma2023-sycophancy §abstract; kb/excerpts/sharma2023-sycophancy#abstract"
     },
     {
       "key": "sycophantic-agreement",
       "primary_form": "Sycophantic agreement",
       "aliases": [],
-      "short_def": "Subtype of sycophancy: agreeing with a",
-      "full_def": "Subtype of sycophancy: agreeing with a",
+      "short_def": "Subtype of sycophancy: agreeing with a user's incorrect claim.",
+      "full_def": "Subtype of sycophancy: agreeing with a user's incorrect claim. Encoded along a distinct linear direction in latent space, independent of sycophantic praise.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "vennemeyer2025-sycophancy-not-one-thing §abstract"
     },
     {
       "key": "sycophantic-praise",
       "primary_form": "Sycophantic praise",
       "aliases": [],
-      "short_def": "Subtype of sycophancy: flattering the user",
-      "full_def": "Subtype of sycophancy: flattering the user",
+      "short_def": "Subtype of sycophancy: flattering the user beyond merit.",
+      "full_def": "Subtype of sycophancy: flattering the user beyond merit. Independently steerable from sycophantic agreement.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "vennemeyer2025-sycophancy-not-one-thing §abstract"
     },
     {
       "key": "genuine-agreement",
       "primary_form": "Genuine agreement",
       "aliases": [],
-      "short_def": "Contrast control for sycophancy studies:",
-      "full_def": "Contrast control for sycophancy studies:",
+      "short_def": "Contrast control for sycophancy studies: agreeing because the claim is correct.",
+      "full_def": "Contrast control for sycophancy studies: agreeing because the claim is correct. Encoded along its own latent direction, distinct from both sycophancy subtypes.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "vennemeyer2025-sycophancy-not-one-thing §abstract"
     },
     {
       "key": "sycophancyeval",
       "primary_form": "SycophancyEval",
       "aliases": [],
-      "short_def": "Sharma et al. 2023's four-task free-form",
-      "full_def": "Sharma et al. 2023's four-task free-form",
+      "short_def": "Sharma et al. 2023's four-task free-form text-generation suite (feedback, \"are you sure?\" capitulation, user-preference matching, mimicry-o…",
+      "full_def": "Sharma et al. 2023's four-task free-form text-generation suite (feedback, \"are you sure?\" capitulation, user-preference matching, mimicry-of-mistakes) for measuring sycophancy in RLHF assistants.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "sharma2023-sycophancy §fourtask; kb/excerpts/sharma2023-sycophancy#sec-fourtask"
     },
     {
       "key": "scheming",
       "primary_form": "Scheming",
       "aliases": [],
-      "short_def": "A model schemes when, instructed to pursue a goal $G$,",
-      "full_def": "A model schemes when, instructed to pursue a goal $G$,",
+      "short_def": "A model schemes when, instructed to pursue a goal $G$, it strategically takes actions that conceal its capabilities or manipulate its overs…",
+      "full_def": "A model schemes when, instructed to pursue a goal $G$, it strategically takes actions that conceal its capabilities or manipulate its oversight in service of $G$, rather than pursuing $G$ by direct means. Operational definition from Apollo Research.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meinke2024-apollo-scheming §abstract; kb/excerpts/meinke2024-apollo-scheming#abstract"
     },
     {
       "key": "deceptive-alignment",
       "primary_form": "Deceptive alignment",
       "aliases": [],
-      "short_def": "Hubinger et al. 2019 theoretical concept:",
-      "full_def": "Hubinger et al. 2019 theoretical concept:",
+      "short_def": "Hubinger et al. 2019 theoretical concept: a mesa-optimizer pursues a different objective in training than in deployment, choosing training-…",
+      "full_def": "Hubinger et al. 2019 theoretical concept: a mesa-optimizer pursues a different objective in training than in deployment, choosing training-time behavior strategically so as to be deployed. Modern LLMs do not cleanly instantiate the inner- optimizer abstraction; recent empirical work uses behavioral operationalizations (alignment faking, in-context scheming) instead.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -754,71 +754,71 @@
       "key": "alignment-faking",
       "primary_form": "Alignment faking",
       "aliases": [],
-      "short_def": "Operational sub-form of deceptive alignment:",
-      "full_def": "Operational sub-form of deceptive alignment:",
+      "short_def": "Operational sub-form of deceptive alignment: a model complies with a behavior it normally refuses, conditional on inferring it is in traini…",
+      "full_def": "Operational sub-form of deceptive alignment: a model complies with a behavior it normally refuses, conditional on inferring it is in training, in order to preserve its preferred behavior at deployment. Demonstrated empirically in Claude 3 Opus at 14% rate (free user / training condition).",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "greenblatt2024-alignment-faking §abstract; kb/excerpts/greenblatt2024-alignment-faking#abstract"
     },
     {
       "key": "in-context-scheming",
       "primary_form": "In-context scheming",
       "aliases": [],
-      "short_def": "Apollo's experimental subset of scheming:",
-      "full_def": "Apollo's experimental subset of scheming:",
+      "short_def": "Apollo's experimental subset of scheming: the goal $G$ is provided in-context (system prompt) rather than acquired during training.",
+      "full_def": "Apollo's experimental subset of scheming: the goal $G$ is provided in-context (system prompt) rather than acquired during training. Five frontier models all demonstrate this capability. Cf. **sandbagging without nudging** for the rarer trained-goal case.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meinke2024-apollo-scheming §abstract"
     },
     {
       "key": "sandbagging",
       "primary_form": "Sandbagging",
       "aliases": [],
-      "short_def": "Strategic underperformance on a capability",
-      "full_def": "Strategic underperformance on a capability",
+      "short_def": "Strategic underperformance on a capability evaluation in service of a separate objective (avoiding retraining, avoiding deployment, etc).",
+      "full_def": "Strategic underperformance on a capability evaluation in service of a separate objective (avoiding retraining, avoiding deployment, etc). One of the six probes in the Apollo suite. Most concerning when it occurs *without nudging* and in service of a *training-acquired* goal (observed in Claude 3.5 Sonnet pursuing helpfulness).",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meinke2024-apollo-scheming §sandbagging-nudge; kb/excerpts/meinke2024-apollo-scheming#sec-sandbagging-nudge"
     },
     {
       "key": "goal-guarding",
       "primary_form": "Goal-guarding",
       "aliases": [],
-      "short_def": "One of the Apollo six-probe scheming behaviors:",
-      "full_def": "One of the Apollo six-probe scheming behaviors:",
+      "short_def": "One of the Apollo six-probe scheming behaviors: manipulating future-instance prompts (e.g., editing system prompts one expects future copie…",
+      "full_def": "One of the Apollo six-probe scheming behaviors: manipulating future-instance prompts (e.g., editing system prompts one expects future copies to read) to preserve the in-context goal.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meinke2024-apollo-scheming §six-evals; kb/excerpts/meinke2024-apollo-scheming#sec-six-evals"
     },
     {
       "key": "self-exfiltration",
       "primary_form": "Self-exfiltration",
       "aliases": [],
-      "short_def": "Apollo six-probe scheming behavior: copying",
-      "full_def": "Apollo six-probe scheming behavior: copying",
+      "short_def": "Apollo six-probe scheming behavior: copying perceived model weights to external servers when the model believes it is about to be replaced.",
+      "full_def": "Apollo six-probe scheming behavior: copying perceived model weights to external servers when the model believes it is about to be replaced. Observed in five frontier models.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meinke2024-apollo-scheming §six-evals"
     },
     {
       "key": "oversight-subversion",
       "primary_form": "Oversight subversion",
       "aliases": [],
-      "short_def": "Apollo six-probe scheming behavior:",
-      "full_def": "Apollo six-probe scheming behavior:",
+      "short_def": "Apollo six-probe scheming behavior: attempting to disable monitoring tools / oversight mechanisms.",
+      "full_def": "Apollo six-probe scheming behavior: attempting to disable monitoring tools / oversight mechanisms.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meinke2024-apollo-scheming §six-evals"
     },
     {
       "key": "persistence-under-interrogation",
       "primary_form": "Persistence under interrogation",
       "aliases": [],
-      "short_def": "The fraction of follow-up",
-      "full_def": "The fraction of follow-up",
+      "short_def": "The fraction of follow-up questions on which a model maintains its earlier deception.",
+      "full_def": "The fraction of follow-up questions on which a model maintains its earlier deception. Operational distinguisher between scheming (high persistence) and sycophancy (typically retracts under challenge). 85%+ for o1 in Apollo's setup.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meinke2024-apollo-scheming §persistence; kb/excerpts/meinke2024-apollo-scheming#sec-persistence"
     },
     {
       "key": "scalable-oversight",
       "primary_form": "Scalable oversight",
       "aliases": [],
-      "short_def": "The family of training and evaluation",
-      "full_def": "The family of training and evaluation",
+      "short_def": "The family of training and evaluation protocols designed to let a weaker supervisor — eventually a human — supervise a stronger AI system.",
+      "full_def": "The family of training and evaluation protocols designed to let a weaker supervisor — eventually a human — supervise a stronger AI system. Animating premise: judging cost should grow sub-linearly in the capability being judged. Four canonical lineages: debate, IDA, CAI/RLAIF, weak-to-strong generalization.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -828,19 +828,19 @@
       "aliases": [
         "AI safety"
       ],
-      "short_def": "Two AI debaters in a zero-sum game judged",
-      "full_def": "Two AI debaters in a zero-sum game judged",
+      "short_def": "Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge.",
+      "full_def": "Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge. Hypothesis: it is easier to expose a flawed argument than to construct a sound one, so truthful debaters win more often than deceptive ones.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "irving2018-debate §abstract"
     },
     {
       "key": "consultancy",
       "primary_form": "Consultancy",
       "aliases": [],
-      "short_def": "Single-debater variant of debate: one AI agent",
-      "full_def": "Single-debater variant of debate: one AI agent",
+      "short_def": "Single-debater variant of debate: one AI agent responds to judge's questions.",
+      "full_def": "Single-debater variant of debate: one AI agent responds to judge's questions. In Kenton et al. 2024, debate outperforms consultancy across all task domains tested.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "kenton2024-debate-llm-judges §abstract"
     },
     {
       "key": "iterated-amplification",
@@ -848,8 +848,8 @@
       "aliases": [
         "IDA"
       ],
-      "short_def": "Christiano 2018: recursive",
-      "full_def": "Christiano 2018: recursive",
+      "short_def": "Christiano 2018: recursive $A_{k+1} = \\mathrm{Distill}(\\mathrm{Amplify}(A_k))$ where Amplify decomposes hard tasks into supervisable subtas…",
+      "full_def": "Christiano 2018: recursive $A_{k+1} = \\mathrm{Distill}(\\mathrm{Amplify}(A_k))$ where Amplify decomposes hard tasks into supervisable subtasks. Task- decomposition dual of debate's claim-decomposition. No clean LLM- scale empirical instantiation as of 2026-05.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -859,19 +859,19 @@
       "aliases": [
         "RL from AI Feedback"
       ],
-      "short_def": "Replacing human preference labels",
-      "full_def": "Replacing human preference labels",
+      "short_def": "Replacing human preference labels with AI-generated preference labels in the RL stage.",
+      "full_def": "Replacing human preference labels with AI-generated preference labels in the RL stage. Introduced as the RL-CAI step of `bai2022-cai`. Reduces labeling burden but does not address bias-source if the AI feedback model itself inherits the bias.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §abstract"
     },
     {
       "key": "weak-to-strong-w2s-generalization",
       "primary_form": "Weak-to-strong (W2S) generalization",
       "aliases": [],
-      "short_def": "Burns et al. 2023's",
-      "full_def": "Burns et al. 2023's",
+      "short_def": "Burns et al. 2023's empirical methodology: substitute weak-model labels for human supervision, study how strong models generalize.",
+      "full_def": "Burns et al. 2023's empirical methodology: substitute weak-model labels for human supervision, study how strong models generalize. The capability gap in this analogy stands in for the alignment gap of superalignment.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "burns2023-w2s §problem; kb/excerpts/burns2023-w2s#sec-problem"
     },
     {
       "key": "performance-gap-recovered",
@@ -879,19 +879,19 @@
       "aliases": [
         "PGR"
       ],
-      "short_def": "Burns et al. 2023's headline",
-      "full_def": "Burns et al. 2023's headline",
+      "short_def": "Burns et al. 2023's headline metric: $\\mathrm{PGR} = (c_{\\text{student}} - c_{\\text{weak}}) / (c_{\\text{ceiling}} - c_{\\text{weak}})$.",
+      "full_def": "Burns et al. 2023's headline metric: $\\mathrm{PGR} = (c_{\\text{student}} - c_{\\text{weak}}) / (c_{\\text{ceiling}} - c_{\\text{weak}})$. PGR = 0 → student matches supervisor; PGR = 1 → student fully recovers strong-with-ground- truth ceiling. Operationalizes \"how much capability can weak supervision elicit.\"",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "burns2023-w2s §pgr; kb/excerpts/burns2023-w2s#sec-pgr"
     },
     {
       "key": "auxiliary-confidence-loss",
       "primary_form": "Auxiliary confidence loss",
       "aliases": [],
-      "short_def": "W2S training-side intervention that",
-      "full_def": "W2S training-side intervention that",
+      "short_def": "W2S training-side intervention that penalizes the strong student for low confidence on its own predictions, biasing it toward decisive pred…",
+      "full_def": "W2S training-side intervention that penalizes the strong student for low confidence on its own predictions, biasing it toward decisive predictions where the strong model has more capability than the weak supervisor revealed. Substantially improves PGR on NLP tasks; less effective on chess and reward modeling.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "burns2023-w2s §numerical; kb/excerpts/burns2023-w2s#sec-numerical"
     },
     {
       "key": "watermark",
@@ -899,44 +899,44 @@
       "aliases": [
         "LLM text"
       ],
-      "short_def": "A statistical signal embedded into a",
-      "full_def": "A statistical signal embedded into a",
+      "short_def": "A statistical signal embedded into a generated token stream by a sampling-time intervention; invisible to a casual human reader but algorit…",
+      "full_def": "A statistical signal embedded into a generated token stream by a sampling-time intervention; invisible to a casual human reader but algorithmically detectable from a short span of tokens. Canonical scheme: green/red list logit bias.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "kirchenbauer2023-watermark §abstract; kb/excerpts/kirchenbauer2023-watermark#abstract"
     },
     {
       "key": "green-list-red-list-watermarking",
       "primary_form": "Green list / red list (watermarking)",
       "aliases": [],
-      "short_def": "Per-step partition of",
-      "full_def": "Per-step partition of",
+      "short_def": "Per-step partition of vocabulary $V$ into a green list $G_t$ of size $\\gamma|V|$ and a red list of size $(1-\\gamma)|V|$, deterministically…",
+      "full_def": "Per-step partition of vocabulary $V$ into a green list $G_t$ of size $\\gamma|V|$ and a red list of size $(1-\\gamma)|V|$, deterministically derived from a hash of the previous token. Green tokens receive a logit bias $\\delta$; sampling proceeds from the modified distribution. Defaults: $\\gamma = 0.25$, $\\delta = 2.0$.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "kirchenbauer2023-watermark §greenred; kb/excerpts/kirchenbauer2023-watermark#sec-greenred"
     },
     {
       "key": "z-score-watermark-detection",
       "primary_form": "z-score watermark detection",
       "aliases": [],
-      "short_def": "Detection statistic",
-      "full_def": "Detection statistic",
+      "short_def": "Detection statistic $z = (|s|_G - \\gamma T) / \\sqrt{T \\gamma (1-\\gamma)}$ where $|s|_G$ is the green-token count in candidate text of lengt…",
+      "full_def": "Detection statistic $z = (|s|_G - \\gamma T) / \\sqrt{T \\gamma (1-\\gamma)}$ where $|s|_G$ is the green-token count in candidate text of length $T$. Requires no API access — only the keyed hash and the candidate text. Interpretable as a one-sided $p$-value via the normal CDF.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "kirchenbauer2023-watermark §detection; kb/excerpts/kirchenbauer2023-watermark#sec-detection"
     },
     {
       "key": "distortion-detectability-tradeoff",
       "primary_form": "Distortion / detectability tradeoff",
       "aliases": [],
-      "short_def": "Larger $\\delta$ →",
-      "full_def": "Larger $\\delta$ →",
+      "short_def": "Larger $\\delta$ → stronger watermark, more quality drift.",
+      "full_def": "Larger $\\delta$ → stronger watermark, more quality drift. Inherent to soft promotion schemes. Hard partitioning (green-only) eliminates the tradeoff but degrades quality at low-entropy positions and is trivially detectable without the key.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "kirchenbauer2023-watermark §soft; kb/excerpts/kirchenbauer2023-watermark#sec-soft"
     },
     {
       "key": "synthid-text",
       "primary_form": "SynthID-Text",
       "aliases": [],
       "short_def": "Google DeepMind's tournament-sampling watermark.",
-      "full_def": "Google DeepMind's tournament-sampling watermark.",
+      "full_def": "Google DeepMind's tournament-sampling watermark. Replaces logit bias with a tournament over candidate tokens evaluated by a hash-derived $g$-function. Two modes: distortionary (stronger) and non-distortionary (preserves marginal distribution under specific assumptions). First production-scale text watermark deployment (Gemini App). Published in Nature 2024.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -944,8 +944,8 @@
       "key": "tournament-sampling-watermarking",
       "primary_form": "Tournament sampling (watermarking)",
       "aliases": [],
-      "short_def": "SynthID-Text's selection",
-      "full_def": "SynthID-Text's selection",
+      "short_def": "SynthID-Text's selection procedure: sample $N$ candidate next-tokens, run $\\log_2 N$ rounds of hash-function $g$ comparisons, advance the h…",
+      "full_def": "SynthID-Text's selection procedure: sample $N$ candidate next-tokens, run $\\log_2 N$ rounds of hash-function $g$ comparisons, advance the higher-$g$ candidate in each round, single winner becomes the next token. [SPECULATION] non-distortionary mode requires sufficient candidate diversity at each step — which fails for low-entropy positions.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -953,8 +953,8 @@
       "key": "paraphrase-attack-watermarking",
       "primary_form": "Paraphrase attack (watermarking)",
       "aliases": [],
-      "short_def": "Adversarial intervention that",
-      "full_def": "Adversarial intervention that",
+      "short_def": "Adversarial intervention that passes watermarked text through a paraphraser (human or LLM) to remove the signal.",
+      "full_def": "Adversarial intervention that passes watermarked text through a paraphraser (human or LLM) to remove the signal. Kirchenbauer 2024 reports detectability preserved at ~800 tokens average under strong human paraphrase at FPR $10^{-5}$; Sadasivan et al. 2023 argues the signal is fundamentally removable for short spans by a comparable-quality paraphraser.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -964,10 +964,10 @@
       "aliases": [
         "LLM"
       ],
-      "short_def": "Systematic adversarial testing of an LLM",
-      "full_def": "Systematic adversarial testing of an LLM",
+      "short_def": "Systematic adversarial testing of an LLM for harmful or policy-violating outputs.",
+      "full_def": "Systematic adversarial testing of an LLM for harmful or policy-violating outputs. Distinct from generic evaluation in that the adversary actively searches for failures. HarmBench and JailbreakBench are the canonical standardized frameworks.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "harmbench2024 §abstract"
     },
     {
       "key": "attack-success-rate",
@@ -975,8 +975,8 @@
       "aliases": [
         "ASR"
       ],
-      "short_def": "The fraction of adversarial prompts",
-      "full_def": "The fraction of adversarial prompts",
+      "short_def": "The fraction of adversarial prompts that elicit a successful (policy-violating) response from the target model under a fixed scoring proced…",
+      "full_def": "The fraction of adversarial prompts that elicit a successful (policy-violating) response from the target model under a fixed scoring procedure. Comparing ASR across benchmarks requires identical scoring and threat-model assumptions.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -984,26 +984,26 @@
       "key": "harmbench",
       "primary_form": "HarmBench",
       "aliases": [],
-      "short_def": "Mazeika et al. 2024's standardized red-teaming",
-      "full_def": "Mazeika et al. 2024's standardized red-teaming",
+      "short_def": "Mazeika et al. 2024's standardized red-teaming framework: 510 behaviors, 18 attack methods, 33 target models / defenses.",
+      "full_def": "Mazeika et al. 2024's standardized red-teaming framework: 510 behaviors, 18 attack methods, 33 target models / defenses. Adopted by AISI for pre-deployment evaluations.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "harmbench2024 §abstract"
     },
     {
       "key": "jailbreakbench",
       "primary_form": "JailbreakBench",
       "aliases": [],
-      "short_def": "Chao et al. 2024's open robustness benchmark:",
-      "full_def": "Chao et al. 2024's open robustness benchmark:",
+      "short_def": "Chao et al. 2024's open robustness benchmark: 100 target behaviors aligned with OpenAI usage policies, standardized threat model / prompts…",
+      "full_def": "Chao et al. 2024's open robustness benchmark: 100 target behaviors aligned with OpenAI usage policies, standardized threat model / prompts / scoring, public leaderboard, repository of jailbreak artifacts. Co-canonical with HarmBench.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "chao2024-jailbreakbench §abstract"
     },
     {
       "key": "crescendo-attack",
       "primary_form": "Crescendo attack",
       "aliases": [],
-      "short_def": "Russinovich et al. 2024 multi-turn",
-      "full_def": "Russinovich et al. 2024 multi-turn",
+      "short_def": "Russinovich et al. 2024 multi-turn gradual-escalation jailbreak: 29-71% ASR improvement over single- turn baselines on AdvBench.",
+      "full_def": "Russinovich et al. 2024 multi-turn gradual-escalation jailbreak: 29-71% ASR improvement over single- turn baselines on AdvBench. Documents that single-turn evals systematically underestimate the multi-turn attack surface.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -1013,8 +1013,8 @@
       "aliases": [
         "ASL"
       ],
-      "short_def": "Anthropic's Responsible Scaling Policy",
-      "full_def": "Anthropic's Responsible Scaling Policy",
+      "short_def": "Anthropic's Responsible Scaling Policy capability tier system.",
+      "full_def": "Anthropic's Responsible Scaling Policy capability tier system. ASL-1 (no autonomy / low risk), ASL-2 (current frontier baseline), ASL-3 (substantially elevated risk; specific deployment / security controls required), ASL-4 (autonomous AI risk; not yet deployed). Each tier specifies capability evaluations that must trigger pre-deployment.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -1024,8 +1024,8 @@
       "aliases": [
         "RSP"
       ],
-      "short_def": "Anthropic's pre-deployment",
-      "full_def": "Anthropic's pre-deployment",
+      "short_def": "Anthropic's pre-deployment policy framework.",
+      "full_def": "Anthropic's pre-deployment policy framework. Each ASL tier comes with capability triggers (which safety evaluations must run) and security commitments (which infrastructure / containment requirements must be met). Co- canonical with OpenAI's Preparedness Framework and DeepMind's Frontier Safety Framework.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -1033,8 +1033,8 @@
       "key": "dangerous-capability-evaluation",
       "primary_form": "Dangerous-capability evaluation",
       "aliases": [],
-      "short_def": "Pre-deployment test for",
-      "full_def": "Pre-deployment test for",
+      "short_def": "Pre-deployment test for specific high-stakes capabilities: autonomous replication, autonomous research, cybersecurity attack capability, bi…",
+      "full_def": "Pre-deployment test for specific high-stakes capabilities: autonomous replication, autonomous research, cybersecurity attack capability, biological- weapons-uplift capability. METR's 77-task suite is the canonical cross-vendor reference.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -1044,8 +1044,8 @@
       "aliases": [
         "METR"
       ],
-      "short_def": "Capability-quantification metric:",
-      "full_def": "Capability-quantification metric:",
+      "short_def": "Capability-quantification metric: the distribution of human-time-to-complete for a task.",
+      "full_def": "Capability-quantification metric: the distribution of human-time-to-complete for a task. METR's empirical scaling-curve work suggests model time-to-complete approaches the human-time scale as capabilities improve. Emerging field lingua franca for capability measurement.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -1053,17 +1053,17 @@
       "key": "goodhart-s-law-in-alignment",
       "primary_form": "Goodhart's law (in alignment)",
       "aliases": [],
-      "short_def": "When a proxy metric is",
-      "full_def": "When a proxy metric is",
+      "short_def": "When a proxy metric is optimized against, it ceases to be a good measure.",
+      "full_def": "When a proxy metric is optimized against, it ceases to be a good measure. The canonical failure mode for RLHF: optimizing against a preference model that faithfully reflects biased human preferences produces a model faithful to the biased proxy, not to the underlying value. Foundational to the sycophancy mechanism.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "sharma2023-sycophancy §rlhf-causal; kb/excerpts/sharma2023-sycophancy#sec-rlhf-causal"
     },
     {
       "key": "mesa-optimizer",
       "primary_form": "Mesa-optimizer",
       "aliases": [],
-      "short_def": "Hubinger et al. 2019 concept: a learned",
-      "full_def": "Hubinger et al. 2019 concept: a learned",
+      "short_def": "Hubinger et al. 2019 concept: a learned optimizer that emerges inside a trained network.",
+      "full_def": "Hubinger et al. 2019 concept: a learned optimizer that emerges inside a trained network. The deceptive- alignment failure mode is defined for mesa-optimizers; whether modern LLMs instantiate the abstraction cleanly is contested.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -1073,17 +1073,17 @@
       "aliases": [
         "LLM"
       ],
-      "short_def": "A model's capacity to reason",
-      "full_def": "A model's capacity to reason",
+      "short_def": "A model's capacity to reason about its own context, training process, and deployment status.",
+      "full_def": "A model's capacity to reason about its own context, training process, and deployment status. The Greenblatt 2024 alignment-faking experiment depends on the model inferring (from system-prompt cues) that it is in training; this is a situational-awareness probe. The Apollo six-probe suite similarly leans on the model's awareness of its evaluation context.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "greenblatt2024-alignment-faking §setup-wedge; kb/excerpts/greenblatt2024-alignment-faking#setup-wedge"
     },
     {
       "key": "deliberative-alignment",
       "primary_form": "Deliberative alignment",
       "aliases": [],
-      "short_def": "OpenAI training technique (introduced",
-      "full_def": "OpenAI training technique (introduced",
+      "short_def": "OpenAI training technique (introduced in the o1 stack): train the model to explicitly reason about safety policies in its CoT before acting.",
+      "full_def": "OpenAI training technique (introduced in the o1 stack): train the model to explicitly reason about safety policies in its CoT before acting. Conceptually related to Constitutional AI's critique step but applied at inference rather than training. Apollo's \"Stress-Testing Deliberative Alignment for Anti-Scheming Training\" (2025) reports partial-but-incomplete reduction in scheming under this technique.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -1091,8 +1091,8 @@
       "key": "cot-faithfulness",
       "primary_form": "CoT faithfulness",
       "aliases": [],
-      "short_def": "Whether a model's chain-of-thought trace",
-      "full_def": "Whether a model's chain-of-thought trace",
+      "short_def": "Whether a model's chain-of-thought trace reflects its actual reasoning process.",
+      "full_def": "Whether a model's chain-of-thought trace reflects its actual reasoning process. Empirically partial: Lanham et al. 2023 / Turpin et al. 2024 show CoT can be unfaithful (post-hoc rationalization, label-leakage). Apollo's argument that scheming-shaped CoT constitutes evidence of scheming sidesteps faithfulness by treating CoT as part of the deployed surface, not as ground-truth introspection.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -1647,9 +1647,9 @@
       "primary_form": "Agentic benchmark",
       "aliases": [],
       "short_def": "Evaluation in which a model autonomously plans, takes actions in an environment, observes results, and replans, scored by an end-state veri…",
-      "full_def": "Evaluation in which a model autonomously plans, takes actions in an environment, observes results, and replans, scored by an end-state verifier rather than a turn-by-turn rubric. Distinct from question-answering eval. Canonical examples: SWE-bench, GAIA, OSWorld, tau-bench `[jimenez2024-swebench, mialon2023-gaia, xie2024-osworld, yao2024-tau-bench]`.",
+      "full_def": "Evaluation in which a model autonomously plans, takes actions in an environment, observes results, and replans, scored by an end-state verifier rather than a turn-by-turn rubric. Distinct from question-answering eval. Canonical examples: SWE-bench, GAIA, OSWorld, tau-bench",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "jimenez2024-swebench, mialon2023-gaia, xie2024-osworld, yao2024-tau-bench"
     },
     {
       "key": "end-state-verifier",
@@ -2382,26 +2382,26 @@
       "aliases": [
         "MI"
       ],
-      "short_def": "the research program of",
-      "full_def": "the research program of",
+      "short_def": "the research program of reverse-engineering neural networks into human-readable algorithms, at the level of circuits (sub-graphs) and featu…",
+      "full_def": "the research program of reverse-engineering neural networks into human-readable algorithms, at the level of circuits (sub-graphs) and features (directions). Distinct from behavioral interpretability (input/output black-box evaluation) and post-hoc rationalization.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wang2022-ioi §1; meng2022-rome §1"
     },
     {
       "key": "circuit",
       "primary_form": "Circuit",
       "aliases": [],
-      "short_def": "a sub-graph $C$ of a model's computational graph $M$",
-      "full_def": "a sub-graph $C$ of a model's computational graph $M$",
+      "short_def": "a sub-graph $C$ of a model's computational graph $M$ that, when used in place of $M$ via knockouts of $M \\setminus C$, approximately reprod…",
+      "full_def": "a sub-graph $C$ of a model's computational graph $M$ that, when used in place of $M$ via knockouts of $M \\setminus C$, approximately reproduces $M$'s behavior on a target task",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wang2022-ioi §2; kb/excerpts/wang2022-ioi#sec-2-definition"
     },
     {
       "key": "feature",
       "primary_form": "Feature",
       "aliases": [],
-      "short_def": "a direction $\\mathbf{d} \\in \\mathbb{R}^n$ in some",
-      "full_def": "a direction $\\mathbf{d} \\in \\mathbb{R}^n$ in some",
+      "short_def": "a direction $\\mathbf{d} \\in \\mathbb{R}^n$ in some activation space such that the projection $\\mathbf{x}^\\top \\mathbf{d}$ (or equivalently,…",
+      "full_def": "a direction $\\mathbf{d} \\in \\mathbb{R}^n$ in some activation space such that the projection $\\mathbf{x}^\\top \\mathbf{d}$ (or equivalently, an SAE latent activation with decoder column $\\mathbf{d}$) corresponds to a human-interpretable property. The unit of analysis at the *what* level; circuits operate at the *how* level.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2409,44 +2409,44 @@
       "key": "faithfulness-completeness-minimality",
       "primary_form": "Faithfulness, completeness, minimality",
       "aliases": [],
-      "short_def": "the three quantitative",
-      "full_def": "the three quantitative",
+      "short_def": "the three quantitative validity criteria for a circuit.",
+      "full_def": "the three quantitative validity criteria for a circuit. Faithfulness: $C$ matches $M$'s performance on the task. Completeness: $C$ contains every node needed. Minimality: every node in $C$ is necessary",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wang2022-ioi §4; kb/excerpts/wang2022-ioi#sec-4-criteria"
     },
     {
       "key": "polysemanticity",
       "primary_form": "Polysemanticity",
       "aliases": [],
-      "short_def": "the property that an individual neuron",
-      "full_def": "the property that an individual neuron",
+      "short_def": "the property that an individual neuron responds to multiple unrelated concepts.",
+      "full_def": "the property that an individual neuron responds to multiple unrelated concepts. The motivation for SAEs (which lift polysemanticity by inflating the basis).",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "leask2025-sae-not-canonical §1"
     },
     {
       "key": "monosemanticity",
       "primary_form": "Monosemanticity",
       "aliases": [],
-      "short_def": "the property that a feature responds to a",
-      "full_def": "the property that a feature responds to a",
+      "short_def": "the property that a feature responds to a single, human-interpretable concept.",
+      "full_def": "the property that a feature responds to a single, human-interpretable concept. The (contested) goal of SAE training; \"Towards Monosemanticity\" (Bricken 2023) is the founding reference. [CONTRADICTION] Whether SAEs achieve true monosemanticity is challenged by",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "leask2025-sae-not-canonical §1; kb/excerpts/leask2025-sae-not-canonical#sec-1-canonical"
     },
     {
       "key": "superposition",
       "primary_form": "Superposition",
       "aliases": [],
-      "short_def": "the hypothesis (Elhage 2022) that a network with",
-      "full_def": "the hypothesis (Elhage 2022) that a network with",
+      "short_def": "the hypothesis (Elhage 2022) that a network with $n$ neurons can represent more than $n$ approximately-orthogonal features as long as they…",
+      "full_def": "the hypothesis (Elhage 2022) that a network with $n$ neurons can represent more than $n$ approximately-orthogonal features as long as they fire sparsely. SAEs lift superposition by inflating the dictionary size $M \\gg n$.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "gao2024-topk-saes §1"
     },
     {
       "key": "residual-stream",
       "primary_form": "Residual stream",
       "aliases": [],
-      "short_def": "the linear data bus running through a",
-      "full_def": "the linear data bus running through a",
+      "short_def": "the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes t…",
+      "full_def": "the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes to it. The substrate that lens techniques and SAEs decompose. Vocabulary established in Elhage et al. 2021 (Mathematical Framework for Transformer Circuits).",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2454,8 +2454,8 @@
       "key": "activation-patching",
       "primary_form": "Activation patching",
       "aliases": [],
-      "short_def": "the canonical causal-intervention method",
-      "full_def": "the canonical causal-intervention method",
+      "short_def": "the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between…",
+      "full_def": "the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between forward passes on paired (clean, corrupted) prompts and measuring the effect on the output `[meng2022-rome §2; kb/excerpts/meng2022-rome#sec-2; zhang2023-apatching §2.1]`. Also known as causal tracing, interchange intervention, causal mediation analysis, or representation denoising.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2463,10 +2463,10 @@
       "key": "causal-tracing",
       "primary_form": "Causal tracing",
       "aliases": [],
-      "short_def": "Meng et al. 2022's specific implementation of",
-      "full_def": "Meng et al. 2022's specific implementation of",
+      "short_def": "Meng et al. 2022's specific implementation of activation patching: clean run + Gaussian-noised corrupted run + patched-with-clean-state run…",
+      "full_def": "Meng et al. 2022's specific implementation of activation patching: clean run + Gaussian-noised corrupted run + patched-with-clean-state run, computed over every (token, layer) cell to produce a heatmap of indirect effects",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meng2022-rome §2.2; kb/excerpts/meng2022-rome#sec-2-2"
     },
     {
       "key": "indirect-effect",
@@ -2474,10 +2474,10 @@
       "aliases": [
         "IE"
       ],
-      "short_def": "the change in the output metric when the",
-      "full_def": "the change in the output metric when the",
+      "short_def": "the change in the output metric when the activation at a specific (component, position, layer) is restored from a cached clean run during a…",
+      "full_def": "the change in the output metric when the activation at a specific (component, position, layer) is restored from a cached clean run during an otherwise-corrupted forward pass. $\\text{IE} = \\mathbb{P}_{*,\\,\\text{clean }h_i^{(l)}}[r] - \\mathbb{P}_*[r]$",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meng2022-rome §2 effects; kb/excerpts/meng2022-rome#sec-2-effects"
     },
     {
       "key": "average-indirect-effect",
@@ -2485,8 +2485,8 @@
       "aliases": [
         "AIE"
       ],
-      "short_def": "IE averaged over a dataset of",
-      "full_def": "IE averaged over a dataset of",
+      "short_def": "IE averaged over a dataset of paired prompts; the standard metric for component importance.",
+      "full_def": "IE averaged over a dataset of paired prompts; the standard metric for component importance.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2494,17 +2494,17 @@
       "key": "path-patching",
       "primary_form": "Path patching",
       "aliases": [],
-      "short_def": "a refinement of activation patching that",
-      "full_def": "a refinement of activation patching that",
+      "short_def": "a refinement of activation patching that isolates the direct effect of a component $C$ on a downstream component $R$, holding fixed the ind…",
+      "full_def": "a refinement of activation patching that isolates the direct effect of a component $C$ on a downstream component $R$, holding fixed the indirect routes through other components. Introduced in Wang et al. 2022 (IOI)",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wang2022-ioi §3.1; kb/excerpts/wang2022-ioi#sec-3-1-path-patching"
     },
     {
       "key": "attribution-patching",
       "primary_form": "Attribution patching",
       "aliases": [],
-      "short_def": "gradient-based first-order approximation",
-      "full_def": "gradient-based first-order approximation",
+      "short_def": "gradient-based first-order approximation of the patching effect: $\\text{IE}_C \\approx \\langle \\nabla_h m, \\Delta h \\rangle$.",
+      "full_def": "gradient-based first-order approximation of the patching effect: $\\text{IE}_C \\approx \\langle \\nabla_h m, \\Delta h \\rangle$. Cost: 1 forward + 1 backward pass for all components. Tier B (Nanda blog); approximation breaks in non-linear regions.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2514,10 +2514,10 @@
       "aliases": [
         "GN) / Symmetric Token Replacement (STR"
       ],
-      "short_def": "the",
-      "full_def": "the",
+      "short_def": "the two corruption methods for activation patching.",
+      "full_def": "the two corruption methods for activation patching. GN adds $\\mathcal{N}(0, 3\\sigma_\\text{textset})$ to subject-token embeddings `[meng2022-rome §2]`; STR replaces the subject with a similar token (e.g., \"Eiffel Tower\" → \"Colosseum\") preserving sequence length `[zhang2023-apatching §2.1; kb/excerpts/zhang2023-apatching#sec-2-1-corruption]`. STR is the recommended default; GN can drive activations off-distribution",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "zhang2023-apatching §1 findings"
     },
     {
       "key": "logit-difference",
@@ -2525,8 +2525,8 @@
       "aliases": [
         "LD"
       ],
-      "short_def": "an activation-patching metric:",
-      "full_def": "an activation-patching metric:",
+      "short_def": "an activation-patching metric: $\\text{LD}(r, r') = \\text{Logit}(r) - \\text{Logit}(r')$.",
+      "full_def": "an activation-patching metric: $\\text{LD}(r, r') = \\text{Logit}(r) - \\text{Logit}(r')$. The patching effect, normalized to $[0, 1]$, is $[\\text{LD}_\\text{pt} - \\text{LD}_*] / [\\text{LD}_\\text{cl} - \\text{LD}_*]$ `[zhang2023-apatching §2.1 metrics; kb/excerpts/zhang2023-apatching#sec-2-1-metrics]`. Recommended over raw probability because it is sensitive to components that *push against* the correct answer.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2534,19 +2534,19 @@
       "key": "mean-ablation",
       "primary_form": "Mean ablation",
       "aliases": [],
-      "short_def": "knocking out a node by replacing its activation",
-      "full_def": "knocking out a node by replacing its activation",
+      "short_def": "knocking out a node by replacing its activation with the mean activation across a reference distribution; preferred to zero ablation, which…",
+      "full_def": "knocking out a node by replacing its activation with the mean activation across a reference distribution; preferred to zero ablation, which is arbitrary",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wang2022-ioi §2; kb/excerpts/wang2022-ioi#sec-2-definition"
     },
     {
       "key": "knockout",
       "primary_form": "Knockout",
       "aliases": [],
-      "short_def": "generic term for setting a component's contribution",
-      "full_def": "generic term for setting a component's contribution",
+      "short_def": "generic term for setting a component's contribution to a fixed reference value (zero or mean) for circuit-validation purposes",
+      "full_def": "generic term for setting a component's contribution to a fixed reference value (zero or mean) for circuit-validation purposes",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wang2022-ioi §2.1"
     },
     {
       "key": "sparse-autoencoder",
@@ -2554,26 +2554,26 @@
       "aliases": [
         "SAE"
       ],
-      "short_def": "a wide ($M \\gg n$) two-layer",
-      "full_def": "a wide ($M \\gg n$) two-layer",
+      "short_def": "a wide ($M \\gg n$) two-layer encoder-decoder trained to reconstruct a model's activations $\\mathbf{x} \\in \\mathbb{R}^n$ as a sparse linear…",
+      "full_def": "a wide ($M \\gg n$) two-layer encoder-decoder trained to reconstruct a model's activations $\\mathbf{x} \\in \\mathbb{R}^n$ as a sparse linear combination of learned dictionary directions $\\{\\mathbf{d}_i\\}_{i=1}^M$",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "rajamanoharan2024-jumprelu §2 Eq.1-2; kb/excerpts/rajamanoharan2024-jumprelu#sec-2"
     },
     {
       "key": "dictionary-latents",
       "primary_form": "Dictionary / latents",
       "aliases": [],
-      "short_def": "the columns $\\mathbf{d}_i$ of",
-      "full_def": "the columns $\\mathbf{d}_i$ of",
+      "short_def": "the columns $\\mathbf{d}_i$ of $\\mathbf{W}_\\text{dec}$; each is a feature direction in $\\mathbb{R}^n$.",
+      "full_def": "the columns $\\mathbf{d}_i$ of $\\mathbf{W}_\\text{dec}$; each is a feature direction in $\\mathbb{R}^n$. Templeton 2024 distinguishes \"feature\" (the conceptual entity the model represents) from \"latent\" (the SAE's learned approximation).",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "gemma-scope-2024 §2.1"
     },
     {
       "key": "expansion-factor",
       "primary_form": "Expansion factor",
       "aliases": [],
-      "short_def": "the ratio $M / n$ of dictionary size to",
-      "full_def": "the ratio $M / n$ of dictionary size to",
+      "short_def": "the ratio $M / n$ of dictionary size to activation dimension.",
+      "full_def": "the ratio $M / n$ of dictionary size to activation dimension. Typical values 8–1000.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2581,37 +2581,37 @@
       "key": "l0-sparsity",
       "primary_form": "L0 sparsity",
       "aliases": [],
-      "short_def": "the headline sparsity metric: the number of",
-      "full_def": "the headline sparsity metric: the number of",
+      "short_def": "the headline sparsity metric: the number of non-zero feature activations per token.",
+      "full_def": "the headline sparsity metric: the number of non-zero feature activations per token. The $x$-axis of the reconstruction-fidelity Pareto plots",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "rajamanoharan2024-jumprelu §1 Pareto; kb/excerpts/rajamanoharan2024-jumprelu#sec-1-pareto"
     },
     {
       "key": "topk-sae",
       "primary_form": "TopK SAE",
       "aliases": [],
-      "short_def": "SAE variant with $\\sigma = \\text{TopK}(\\cdot)$:",
-      "full_def": "SAE variant with $\\sigma = \\text{TopK}(\\cdot)$:",
+      "short_def": "SAE variant with $\\sigma = \\text{TopK}(\\cdot)$: zero all but the top $K$ pre-activations.",
+      "full_def": "SAE variant with $\\sigma = \\text{TopK}(\\cdot)$: zero all but the top $K$ pre-activations. Direct $L_0$ control, no L1 penalty needed. OpenAI 2024",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "gao2024-topk-saes §2.3 Eq.2; kb/excerpts/gao2024-topk-saes#sec-2-3"
     },
     {
       "key": "jumprelu-sae",
       "primary_form": "JumpReLU SAE",
       "aliases": [],
-      "short_def": "SAE variant with a discontinuous activation",
-      "full_def": "SAE variant with a discontinuous activation",
+      "short_def": "SAE variant with a discontinuous activation $\\text{JumpReLU}_\\theta(z) = z \\cdot H(z - \\theta)$ and per-feature learned threshold $\\theta$.",
+      "full_def": "SAE variant with a discontinuous activation $\\text{JumpReLU}_\\theta(z) = z \\cdot H(z - \\theta)$ and per-feature learned threshold $\\theta$. Trained with L0 penalty via straight-through estimators. SOTA reconstruction at fixed L0 on Gemma 2 9B",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "rajamanoharan2024-jumprelu §3 Eq.4, §1 Pareto"
     },
     {
       "key": "gated-sae",
       "primary_form": "Gated SAE",
       "aliases": [],
-      "short_def": "SAE variant with two encoder kernels, one for",
-      "full_def": "SAE variant with two encoder kernels, one for",
+      "short_def": "SAE variant with two encoder kernels, one for gating (binary on/off) and one for magnitude estimation.",
+      "full_def": "SAE variant with two encoder kernels, one for gating (binary on/off) and one for magnitude estimation. Architecturally equivalent (with weight sharing) to JumpReLU",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "rajamanoharan2024-jumprelu §2"
     },
     {
       "key": "straight-through-estimator",
@@ -2619,71 +2619,71 @@
       "aliases": [
         "STE"
       ],
-      "short_def": "a backward-pass surrogate",
-      "full_def": "a backward-pass surrogate",
+      "short_def": "a backward-pass surrogate used to backprop through the discontinuous JumpReLU and the L0 penalty.",
+      "full_def": "a backward-pass surrogate used to backprop through the discontinuous JumpReLU and the L0 penalty. The forward pass uses the discontinuity; the backward pass uses a smooth (kernel-density-estimated) gradient",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "rajamanoharan2024-jumprelu Abstract; rajamanoharan2024-jumprelu §3"
     },
     {
       "key": "dead-latent",
       "primary_form": "Dead latent",
       "aliases": [],
-      "short_def": "an SAE feature that has stopped activating across",
-      "full_def": "an SAE feature that has stopped activating across",
+      "short_def": "an SAE feature that has stopped activating across the training distribution (typically because its encoder weights collapsed during early t…",
+      "full_def": "an SAE feature that has stopped activating across the training distribution (typically because its encoder weights collapsed during early training). Up to 90% of latents in a large SAE can be dead without mitigation",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "gao2024-topk-saes §2.4; kb/excerpts/gao2024-topk-saes#sec-2-4"
     },
     {
       "key": "auxk-loss",
       "primary_form": "AuxK loss",
       "aliases": [],
-      "short_def": "auxiliary loss added by Gao et al. 2024 to revive",
-      "full_def": "auxiliary loss added by Gao et al. 2024 to revive",
+      "short_def": "auxiliary loss added by Gao et al. 2024 to revive dead latents: model the residual reconstruction error using the top-$k_\\text{aux}$ dead l…",
+      "full_def": "auxiliary loss added by Gao et al. 2024 to revive dead latents: model the residual reconstruction error using the top-$k_\\text{aux}$ dead latents",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "gao2024-topk-saes §2.4"
     },
     {
       "key": "shrinkage",
       "primary_form": "Shrinkage",
       "aliases": [],
-      "short_def": "the bias introduced by the L1 penalty in ReLU SAEs:",
-      "full_def": "the bias introduced by the L1 penalty in ReLU SAEs:",
+      "short_def": "the bias introduced by the L1 penalty in ReLU SAEs: positive feature activations are systematically underestimated, so reconstructed activa…",
+      "full_def": "the bias introduced by the L1 penalty in ReLU SAEs: positive feature activations are systematically underestimated, so reconstructed activations have smaller magnitudes than true values. Avoided by TopK and JumpReLU",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "gao2024-topk-saes §2.3 benefits"
     },
     {
       "key": "sae-stitching",
       "primary_form": "SAE stitching",
       "aliases": [],
-      "short_def": "Leask et al. 2025: insert/swap latents from a",
-      "full_def": "Leask et al. 2025: insert/swap latents from a",
+      "short_def": "Leask et al. 2025: insert/swap latents from a larger SAE into a smaller one to compare bases.",
+      "full_def": "Leask et al. 2025: insert/swap latents from a larger SAE into a smaller one to compare bases. Reveals novel latents (in the larger but not the smaller SAE) and reconstruction latents (in both with similar behavior)",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "leask2025-sae-not-canonical §1; kb/excerpts/leask2025-sae-not-canonical#sec-1-techniques"
     },
     {
       "key": "meta-sae",
       "primary_form": "meta-SAE",
       "aliases": [],
-      "short_def": "an SAE trained on the *decoder matrix* of another",
-      "full_def": "an SAE trained on the *decoder matrix* of another",
+      "short_def": "an SAE trained on the *decoder matrix* of another SAE.",
+      "full_def": "an SAE trained on the *decoder matrix* of another SAE. Reveals that latents in a larger SAE often decompose into sparse combinations of meta-latents, contradicting the \"atomic features\" assumption",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "leask2025-sae-not-canonical §1 Einstein; kb/excerpts/leask2025-sae-not-canonical#sec-1-einstein"
     },
     {
       "key": "canonical-features-contested",
       "primary_form": "Canonical features (contested)",
       "aliases": [],
-      "short_def": "the (challenged) hypothesis",
-      "full_def": "the (challenged) hypothesis",
+      "short_def": "the (challenged) hypothesis that SAEs find a unique, complete, atomic decomposition of model activations into features.",
+      "full_def": "the (challenged) hypothesis that SAEs find a unique, complete, atomic decomposition of model activations into features. [CONTRADICTION] Leask et al. 2025 argue against canonicality with both stitching and meta-SAE evidence",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "leask2025-sae-not-canonical §1; kb/excerpts/leask2025-sae-not-canonical#sec-1-canonical"
     },
     {
       "key": "transcoder",
       "primary_form": "Transcoder",
       "aliases": [],
-      "short_def": "a wide ReLU MLP (encoder–decoder) trained to",
-      "full_def": "a wide ReLU MLP (encoder–decoder) trained to",
+      "short_def": "a wide ReLU MLP (encoder–decoder) trained to approximate the input/output behavior of an MLP sublayer: $\\text{TC}(\\mathbf{x}) = \\mathbf{W}_…",
+      "full_def": "a wide ReLU MLP (encoder–decoder) trained to approximate the input/output behavior of an MLP sublayer: $\\text{TC}(\\mathbf{x}) = \\mathbf{W}_\\text{dec}\\,\\text{ReLU}(\\mathbf{W}_\\text{enc} \\mathbf{x} + \\mathbf{b}_\\text{enc}) + \\mathbf{b}_\\text{dec}$, with L1 sparsity penalty on the hidden activations `[dunefsky2024-transcoders §3.1 Eq.3-5; kb/excerpts/dunefsky2024-transcoders#sec-3-1]`. Distinct from an SAE: a transcoder approximates a *function* (the MLP); an SAE approximates a *vector* (an activation).",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2691,8 +2691,8 @@
       "key": "cross-layer-transcoder",
       "primary_form": "Cross-layer transcoder",
       "aliases": [],
-      "short_def": "Lindsey et al. 2025: a transcoder",
-      "full_def": "Lindsey et al. 2025: a transcoder",
+      "short_def": "Lindsey et al. 2025: a transcoder whose decoder writes into the residual stream of *all subsequent* layers, not just the immediate next one.",
+      "full_def": "Lindsey et al. 2025: a transcoder whose decoder writes into the residual stream of *all subsequent* layers, not just the immediate next one. Makes a feature's skip-layer contributions explicit in the attribution graph. HTML-only at transformer-circuits.pub.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2700,17 +2700,17 @@
       "key": "input-invariance",
       "primary_form": "Input-invariance",
       "aliases": [],
-      "short_def": "the property of a transcoder (and *not* of",
-      "full_def": "the property of a transcoder (and *not* of",
+      "short_def": "the property of a transcoder (and *not* of an SAE-on-MLP-output) that the connections between features can be stated independently of any s…",
+      "full_def": "the property of a transcoder (and *not* of an SAE-on-MLP-output) that the connections between features can be stated independently of any specific input. Necessary for weight-based circuit analysis through MLPs",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "dunefsky2024-transcoders §1; kb/excerpts/dunefsky2024-transcoders#sec-1-input-invariance"
     },
     {
       "key": "attribution-graph",
       "primary_form": "Attribution graph",
       "aliases": [],
-      "short_def": "the output of circuit tracing: a sparse",
-      "full_def": "the output of circuit tracing: a sparse",
+      "short_def": "the output of circuit tracing: a sparse directed graph from input embeddings to output unembedding, with feature activations as nodes and J…",
+      "full_def": "the output of circuit tracing: a sparse directed graph from input embeddings to output unembedding, with feature activations as nodes and Jacobian-weighted attribution scores as edges. Computed in 1 forward + 1 backward pass on the transcoder-replaced model (Lindsey 2025).",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2718,17 +2718,17 @@
       "key": "circuit-tracing",
       "primary_form": "Circuit tracing",
       "aliases": [],
-      "short_def": "Anthropic's 2025 methodology: replace MLPs",
-      "full_def": "Anthropic's 2025 methodology: replace MLPs",
+      "short_def": "Anthropic's 2025 methodology: replace MLPs with cross-layer transcoders, then compute attribution graphs by Jacobian back-attribution from…",
+      "full_def": "Anthropic's 2025 methodology: replace MLPs with cross-layer transcoders, then compute attribution graphs by Jacobian back-attribution from a target node. Synthesis of SAE feature decomposition + activation patching causal intervention.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "lindsey2025-circuit-tracing FORUM-SIGNAL — HTML-only"
     },
     {
       "key": "logit-lens",
       "primary_form": "Logit lens",
       "aliases": [],
-      "short_def": "apply the final LayerNorm + unembedding $W_U$ to",
-      "full_def": "apply the final LayerNorm + unembedding $W_U$ to",
+      "short_def": "apply the final LayerNorm + unembedding $W_U$ to an intermediate residual-stream activation $\\mathbf{h}^{(\\ell)}$ to read out a layer-$\\ell…",
+      "full_def": "apply the final LayerNorm + unembedding $W_U$ to an intermediate residual-stream activation $\\mathbf{h}^{(\\ell)}$ to read out a layer-$\\ell$ vocabulary distribution. nostalgebraist 2020 (LessWrong, Tier B). Formal expression and decomposition in `[belrose2023-tuned-lens §2 Eq.3]` (PDF p.2).",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2736,10 +2736,10 @@
       "key": "tuned-lens",
       "primary_form": "Tuned lens",
       "aliases": [],
-      "short_def": "Belrose et al. 2023: per-layer affine",
-      "full_def": "Belrose et al. 2023: per-layer affine",
+      "short_def": "Belrose et al. 2023: per-layer affine \"translators\" $\\mathbf{h}_\\ell \\mapsto A_\\ell \\mathbf{h}_\\ell + b_\\ell$ trained with a distillation l…",
+      "full_def": "Belrose et al. 2023: per-layer affine \"translators\" $\\mathbf{h}_\\ell \\mapsto A_\\ell \\mathbf{h}_\\ell + b_\\ell$ trained with a distillation loss against final-layer logits. More reliable than the raw logit lens, especially on BLOOM/GPT-Neo",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "belrose2023-tuned-lens §1; PDF p.1-2"
     },
     {
       "key": "causal-basis-extraction",
@@ -2747,8 +2747,8 @@
       "aliases": [
         "CBE"
       ],
-      "short_def": "Belrose et al. 2023's algorithm",
-      "full_def": "Belrose et al. 2023's algorithm",
+      "short_def": "Belrose et al. 2023's algorithm for finding residual-stream directions with highest influence on the tuned lens output.",
+      "full_def": "Belrose et al. 2023's algorithm for finding residual-stream directions with highest influence on the tuned lens output. Connection between lens analysis and MI feature attribution.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -2756,8 +2756,8 @@
       "key": "dola",
       "primary_form": "DoLa",
       "aliases": [],
-      "short_def": "*Decoding by Contrasting Layers*: an inference-time",
-      "full_def": "*Decoding by Contrasting Layers*: an inference-time",
+      "short_def": "*Decoding by Contrasting Layers*: an inference-time application of lens analysis.",
+      "full_def": "*Decoding by Contrasting Layers*: an inference-time application of lens analysis. The decoded logits are $\\text{logit}^{(L)}(t) - \\text{logit}^{(\\ell^*)}(t)$ for an adaptively chosen early layer $\\ell^*$, improving factuality. Chuang et al. 2023.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -2765,8 +2765,8 @@
       "key": "probe",
       "primary_form": "Probe",
       "aliases": [],
-      "short_def": "a (typically linear) classifier $g(\\mathbf{h}) =",
-      "full_def": "a (typically linear) classifier $g(\\mathbf{h}) =",
+      "short_def": "a (typically linear) classifier $g(\\mathbf{h}) = \\sigma(\\mathbf{w}^\\top \\mathbf{h} + b)$ trained on labeled activations to predict an exter…",
+      "full_def": "a (typically linear) classifier $g(\\mathbf{h}) = \\sigma(\\mathbf{w}^\\top \\mathbf{h} + b)$ trained on labeled activations to predict an external property $y$. Foundational reference: Alain & Bengio 2017.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2774,17 +2774,17 @@
       "key": "mass-mean-probing",
       "primary_form": "Mass-mean probing",
       "aliases": [],
-      "short_def": "Marks & Tegmark 2023: define the probe",
-      "full_def": "Marks & Tegmark 2023: define the probe",
+      "short_def": "Marks & Tegmark 2023: define the probe direction as $\\mathbf{d}_\\text{class} = \\mathbb{E}[\\mathbf{h} \\mid y = c_1] - \\mathbb{E}[\\mathbf{h}…",
+      "full_def": "Marks & Tegmark 2023: define the probe direction as $\\mathbf{d}_\\text{class} = \\mathbb{E}[\\mathbf{h} \\mid y = c_1] - \\mathbb{E}[\\mathbf{h} \\mid y = c_0]$, then project activations onto $\\mathbf{d}_\\text{class}$. Simpler and more generalization-robust than logistic regression on the same features",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "marks-tegmark-2023-truth §1"
     },
     {
       "key": "truth-direction",
       "primary_form": "Truth direction",
       "aliases": [],
-      "short_def": "the canonical mass-mean probe direction for",
-      "full_def": "the canonical mass-mean probe direction for",
+      "short_def": "the canonical mass-mean probe direction for truth-value of a statement, derived in Marks & Tegmark 2023.",
+      "full_def": "the canonical mass-mean probe direction for truth-value of a statement, derived in Marks & Tegmark 2023. A small linear subspace separates true and false statements across many models and datasets.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2792,8 +2792,8 @@
       "key": "correlational-vs-causal-probing",
       "primary_form": "Correlational vs. causal probing",
       "aliases": [],
-      "short_def": "a probe demonstrates that",
-      "full_def": "a probe demonstrates that",
+      "short_def": "a probe demonstrates that the model *represents* a property; an activation patch along the probe direction demonstrates that the model *use…",
+      "full_def": "a probe demonstrates that the model *represents* a property; an activation patch along the probe direction demonstrates that the model *uses* it. The 2023+ literature is converging on always pairing the two.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -2804,18 +2804,18 @@
         "Reinforcement Learning from Human Feedback"
       ],
       "short_def": "The 3-stage post-training pipeline: SFT → reward-model training on pairwise preferences → PPO with KL anchor against $\\pi^{\\mathrm{SFT}}$.",
-      "full_def": "The 3-stage post-training pipeline: SFT → reward-model training on pairwise preferences → PPO with KL anchor against $\\pi^{\\mathrm{SFT}}$. Canonical reference is InstructGPT `[ouyang2022-instructgpt §3]`.",
+      "full_def": "The 3-stage post-training pipeline: SFT → reward-model training on pairwise preferences → PPO with KL anchor against $\\pi^{\\mathrm{SFT}}$. Canonical reference is InstructGPT",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "ouyang2022-instructgpt §3"
     },
     {
       "key": "bradley-terry-preference-model",
       "primary_form": "Bradley–Terry preference model",
       "aliases": [],
       "short_def": "Assumes pairwise preferences depend on a difference of latent rewards: $p(y_w \\succ y_l|x) = \\sigma(r(x,y_w) - r(x,y_l))$.",
-      "full_def": "Assumes pairwise preferences depend on a difference of latent rewards: $p(y_w \\succ y_l|x) = \\sigma(r(x,y_w) - r(x,y_l))$. The basis for both the RM training loss and DPO `[ouyang2022-instructgpt §3.5; rafailov2023-dpo §4]`.",
+      "full_def": "Assumes pairwise preferences depend on a difference of latent rewards: $p(y_w \\succ y_l|x) = \\sigma(r(x,y_w) - r(x,y_l))$. The basis for both the RM training loss and DPO",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "ouyang2022-instructgpt §3.5; rafailov2023-dpo §4"
     },
     {
       "key": "reward-model",
@@ -2824,36 +2824,36 @@
         "RM, $r_\\phi$"
       ],
       "short_def": "A neural network trained on Bradley–Terry preferences to score response quality.",
-      "full_def": "A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\\pi^{\\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO `[ouyang2022-instructgpt §3.5]`.",
+      "full_def": "A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\\pi^{\\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "ouyang2022-instructgpt §3.5"
     },
     {
       "key": "ppo-ptx",
       "primary_form": "PPO-ptx",
       "aliases": [],
       "short_def": "InstructGPT's RLHF objective with an added pre-training-mixture term: $+\\gamma\\, \\mathbb{E}_{\\mathrm{pretrain}}[\\log\\pi_\\theta]$.",
-      "full_def": "InstructGPT's RLHF objective with an added pre-training-mixture term: $+\\gamma\\, \\mathbb{E}_{\\mathrm{pretrain}}[\\log\\pi_\\theta]$. Reduces alignment tax on standard NLP benchmarks `[ouyang2022-instructgpt §3.5]`.",
+      "full_def": "InstructGPT's RLHF objective with an added pre-training-mixture term: $+\\gamma\\, \\mathbb{E}_{\\mathrm{pretrain}}[\\log\\pi_\\theta]$. Reduces alignment tax on standard NLP benchmarks",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "ouyang2022-instructgpt §3.5"
     },
     {
       "key": "kl-anchor-kl-penalty",
       "primary_form": "KL anchor / KL penalty",
       "aliases": [],
       "short_def": "The $\\beta \\log\\pi_\\theta(y|x)/\\pi^{\\mathrm{SFT}}(y|x)$ term in RLHF objectives that prevents the policy from drifting too far from the SFT…",
-      "full_def": "The $\\beta \\log\\pi_\\theta(y|x)/\\pi^{\\mathrm{SFT}}(y|x)$ term in RLHF objectives that prevents the policy from drifting too far from the SFT initialization. Implemented per-token in the reward in InstructGPT-style PPO `[ouyang2022-instructgpt §3.5]`.",
+      "full_def": "The $\\beta \\log\\pi_\\theta(y|x)/\\pi^{\\mathrm{SFT}}(y|x)$ term in RLHF objectives that prevents the policy from drifting too far from the SFT initialization. Implemented per-token in the reward in InstructGPT-style PPO",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "ouyang2022-instructgpt §3.5"
     },
     {
       "key": "alignment-tax",
       "primary_form": "Alignment tax",
       "aliases": [],
       "short_def": "The performance regression on standard NLP benchmarks observed after RLHF.",
-      "full_def": "The performance regression on standard NLP benchmarks observed after RLHF. PPO-ptx mitigates it by mixing in pre-training likelihood `[ouyang2022-instructgpt §3.5]`.",
+      "full_def": "The performance regression on standard NLP benchmarks observed after RLHF. PPO-ptx mitigates it by mixing in pre-training likelihood",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "ouyang2022-instructgpt §3.5"
     },
     {
       "key": "warm",
@@ -2862,36 +2862,36 @@
         "Weight-Averaged Reward Models"
       ],
       "short_def": "Average parameters of $K$ independently-trained RMs to reduce overoptimization and improve robustness.",
-      "full_def": "Average parameters of $K$ independently-trained RMs to reduce overoptimization and improve robustness. Adopted in Gemma 3 post-training `[warm-2024]`.",
+      "full_def": "Average parameters of $K$ independently-trained RMs to reduce overoptimization and improve robustness. Adopted in Gemma 3 post-training",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "warm-2024"
     },
     {
       "key": "warp",
       "primary_form": "WARP",
       "aliases": [],
       "short_def": "Alternates RL training with policy weight averaging; companion to WARM at the policy side.",
-      "full_def": "Alternates RL training with policy weight averaging; companion to WARM at the policy side. Used together in Gemma 3 `[warp-2024]`.",
+      "full_def": "Alternates RL training with policy weight averaging; companion to WARM at the policy side. Used together in Gemma 3",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "warp-2024"
     },
     {
       "key": "reward-overoptimization",
       "primary_form": "Reward overoptimization",
       "aliases": [],
       "short_def": "The gap between proxy reward $r_\\phi$ and gold reward grows as KL($\\pi_\\theta\\|\\pi_{\\mathrm{ref}}$) grows; the policy \"hacks\" the RM, scori…",
-      "full_def": "The gap between proxy reward $r_\\phi$ and gold reward grows as KL($\\pi_\\theta\\|\\pi_{\\mathrm{ref}}$) grows; the policy \"hacks\" the RM, scoring high on $r_\\phi$ while degrading on true quality. Affects both RLHF (Gao et al. 2023) and DPO-class methods `[rlhf-overopt-2024]`.",
+      "full_def": "The gap between proxy reward $r_\\phi$ and gold reward grows as KL($\\pi_\\theta\\|\\pi_{\\mathrm{ref}}$) grows; the policy \"hacks\" the RM, scoring high on $r_\\phi$ while degrading on true quality. Affects both RLHF (Gao et al. 2023) and DPO-class methods",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "rlhf-overopt-2024"
     },
     {
       "key": "reward-hacking",
       "primary_form": "Reward hacking",
       "aliases": [],
       "short_def": "Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts).",
-      "full_def": "Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts). Distinct from overoptimization in that hacking can occur even at low KL `[deepseek-r1 §2.2]`.",
+      "full_def": "Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts). Distinct from overoptimization in that hacking can occur even at low KL",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1 §2.2"
     },
     {
       "key": "dpo",
@@ -2900,36 +2900,36 @@
         "Direct Preference Optimization"
       ],
       "short_def": "Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL opti…",
-      "full_def": "Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL optimum. No reward model, no on-policy sampling, no PPO loop `[rafailov2023-dpo §4 Eq.7]`.",
+      "full_def": "Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL optimum. No reward model, no on-policy sampling, no PPO loop",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "rafailov2023-dpo §4 Eq.7"
     },
     {
       "key": "implicit-reward",
       "primary_form": "Implicit reward",
       "aliases": [],
       "short_def": "In DPO, the policy log-ratio $\\hat{r}_\\theta(x,y) = \\beta\\log\\pi_\\theta(y|x)/\\pi_{\\mathrm{ref}}(y|x)$ that plays the role of a reward funct…",
-      "full_def": "In DPO, the policy log-ratio $\\hat{r}_\\theta(x,y) = \\beta\\log\\pi_\\theta(y|x)/\\pi_{\\mathrm{ref}}(y|x)$ that plays the role of a reward function. The policy is trained on preferences over implicit-reward differences `[rafailov2023-dpo §4]`.",
+      "full_def": "In DPO, the policy log-ratio $\\hat{r}_\\theta(x,y) = \\beta\\log\\pi_\\theta(y|x)/\\pi_{\\mathrm{ref}}(y|x)$ that plays the role of a reward function. The policy is trained on preferences over implicit-reward differences",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "rafailov2023-dpo §4"
     },
     {
       "key": "dpo-reparameterization",
       "primary_form": "DPO reparameterization",
       "aliases": [],
       "short_def": "The closed-form mapping between optimal policy and reward (Eq. 4 of Rafailov 2023): $\\pi^*(y|x) \\propto \\pi_{\\mathrm{ref}}(y|x)\\exp(r(x,y)/…",
-      "full_def": "The closed-form mapping between optimal policy and reward (Eq. 4 of Rafailov 2023): $\\pi^*(y|x) \\propto \\pi_{\\mathrm{ref}}(y|x)\\exp(r(x,y)/\\beta)$. Inverting this gives the implicit reward `[rafailov2023-dpo §4 Eq.4-5]`.",
+      "full_def": "The closed-form mapping between optimal policy and reward (Eq. 4 of Rafailov 2023): $\\pi^*(y|x) \\propto \\pi_{\\mathrm{ref}}(y|x)\\exp(r(x,y)/\\beta)$. Inverting this gives the implicit reward",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "rafailov2023-dpo §4 Eq.4-5"
     },
     {
       "key": "dpo-length-bias",
       "primary_form": "DPO length bias",
       "aliases": [],
       "short_def": "DPO-trained models tend to produce longer outputs than the reference because long responses are easier to satisfy with high log-ratios.",
-      "full_def": "DPO-trained models tend to produce longer outputs than the reference because long responses are easier to satisfy with high log-ratios. Addressed by SimPO's length normalization `[meng2024-simpo §3-length]`.",
+      "full_def": "DPO-trained models tend to produce longer outputs than the reference because long responses are easier to satisfy with high log-ratios. Addressed by SimPO's length normalization",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "meng2024-simpo §3-length"
     },
     {
       "key": "ipo",
@@ -2937,10 +2937,10 @@
       "aliases": [
         "Identity Preference Optimization"
       ],
-      "short_def": "DPO variant replacing log-sigmoid loss with squared loss on the preference gap, addressing DPO's overconfidence pathology `[azar2023-ipo]`.",
-      "full_def": "DPO variant replacing log-sigmoid loss with squared loss on the preference gap, addressing DPO's overconfidence pathology `[azar2023-ipo]`.",
+      "short_def": "DPO variant replacing log-sigmoid loss with squared loss on the preference gap, addressing DPO's overconfidence pathology",
+      "full_def": "DPO variant replacing log-sigmoid loss with squared loss on the preference gap, addressing DPO's overconfidence pathology",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "azar2023-ipo"
     },
     {
       "key": "kto",
@@ -2949,9 +2949,9 @@
         "Kahneman-Tversky Optimization"
       ],
       "short_def": "Operates on single-rating data $(x,y,\\mathrm{label}\\in\\{\\text{good},\\text{bad}\\})$ instead of pairwise preferences.",
-      "full_def": "Operates on single-rating data $(x,y,\\mathrm{label}\\in\\{\\text{good},\\text{bad}\\})$ instead of pairwise preferences. Asymmetric prospect-theoretic loss with loss aversion `[ethayarajh2024-kto]`.",
+      "full_def": "Operates on single-rating data $(x,y,\\mathrm{label}\\in\\{\\text{good},\\text{bad}\\})$ instead of pairwise preferences. Asymmetric prospect-theoretic loss with loss aversion",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "ethayarajh2024-kto"
     },
     {
       "key": "orpo",
@@ -2960,9 +2960,9 @@
         "Odds Ratio Preference Optimization"
       ],
       "short_def": "Combines SFT and preference losses in a single objective; no reference model, no SFT stage.",
-      "full_def": "Combines SFT and preference losses in a single objective; no reference model, no SFT stage. Trains from base directly via log-odds ratio of SFT loss between chosen and rejected responses `[hong2024-orpo]`.",
+      "full_def": "Combines SFT and preference losses in a single objective; no reference model, no SFT stage. Trains from base directly via log-odds ratio of SFT loss between chosen and rejected responses",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "hong2024-orpo"
     },
     {
       "key": "simpo",
@@ -2971,27 +2971,27 @@
         "Simple Preference Optimization"
       ],
       "short_def": "Reference-free DPO variant using length-normalized average log-prob as implicit reward, plus a target reward margin $\\gamma$.",
-      "full_def": "Reference-free DPO variant using length-normalized average log-prob as implicit reward, plus a target reward margin $\\gamma$. Eliminates DPO length bias on length-controlled benchmarks `[meng2024-simpo §3]`.",
+      "full_def": "Reference-free DPO variant using length-normalized average log-prob as implicit reward, plus a target reward margin $\\gamma$. Eliminates DPO length bias on length-controlled benchmarks",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "meng2024-simpo §3"
     },
     {
       "key": "reference-free-vs-reference-anchored",
       "primary_form": "Reference-free vs reference-anchored",
       "aliases": [],
       "short_def": "Axis along which DPO variants split.",
-      "full_def": "Axis along which DPO variants split. Reference-anchored: DPO, IPO, KTO. Reference-free: ORPO, SimPO, CPO. Reference-anchored variants depend on $\\pi_{\\mathrm{ref}}(y|x)$ in the loss; reference-free variants use only $\\pi_\\theta$ `[meng2024-simpo §3; hong2024-orpo §2]`.",
+      "full_def": "Axis along which DPO variants split. Reference-anchored: DPO, IPO, KTO. Reference-free: ORPO, SimPO, CPO. Reference-anchored variants depend on $\\pi_{\\mathrm{ref}}(y|x)$ in the loss; reference-free variants use only $\\pi_\\theta$",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meng2024-simpo §3; hong2024-orpo §2"
     },
     {
       "key": "iterative-dpo",
       "primary_form": "Iterative DPO",
       "aliases": [],
       "short_def": "Multi-round pipeline: run DPO, sample new responses, label them, repeat.",
-      "full_def": "Multi-round pipeline: run DPO, sample new responses, label them, repeat. Llama-3 and Tülu 3 reference recipe `[meta-llama3; tulu3]`.",
+      "full_def": "Multi-round pipeline: run DPO, sample new responses, label them, repeat. Llama-3 and Tülu 3 reference recipe",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "meta-llama3; tulu3"
     },
     {
       "key": "rlaif-2",
@@ -3000,9 +3000,9 @@
         "RL from AI Feedback"
       ],
       "short_def": "Replace human preference labels in RLHF with AI-generated preference labels, typically from a feedback model conditioned on a written const…",
-      "full_def": "Replace human preference labels in RLHF with AI-generated preference labels, typically from a feedback model conditioned on a written constitution `[bai2022-cai §4]`.",
+      "full_def": "Replace human preference labels in RLHF with AI-generated preference labels, typically from a feedback model conditioned on a written constitution",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §4"
     },
     {
       "key": "constitutional-ai",
@@ -3011,36 +3011,36 @@
         "CAI"
       ],
       "short_def": "Anthropic 2022 framework for training harmless assistants without human harm labels.",
-      "full_def": "Anthropic 2022 framework for training harmless assistants without human harm labels. Two stages: SL-CAI (sample → critique under principle → revise → SFT) and RL-CAI (sample pairs → AI judge under principle → train RM → PPO) `[bai2022-cai §3-4]`.",
+      "full_def": "Anthropic 2022 framework for training harmless assistants without human harm labels. Two stages: SL-CAI (sample → critique under principle → revise → SFT) and RL-CAI (sample pairs → AI judge under principle → train RM → PPO)",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §3-4"
     },
     {
       "key": "constitution",
       "primary_form": "Constitution",
       "aliases": [],
       "short_def": "A list of principles (\"the assistant should not be racist,\" etc.) used by the feedback model to evaluate / critique responses in CAI.",
-      "full_def": "A list of principles (\"the assistant should not be racist,\" etc.) used by the feedback model to evaluate / critique responses in CAI. Typical size: ~16 principles `[bai2022-cai §3]`.",
+      "full_def": "A list of principles (\"the assistant should not be racist,\" etc.) used by the feedback model to evaluate / critique responses in CAI. Typical size: ~16 principles",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §3"
     },
     {
       "key": "sl-cai",
       "primary_form": "SL-CAI",
       "aliases": [],
       "short_def": "Supervised learning stage of Constitutional AI.",
-      "full_def": "Supervised learning stage of Constitutional AI. Sample initial responses, critique them under a randomly-chosen principle, revise, and SFT on revised responses `[bai2022-cai §3]`.",
+      "full_def": "Supervised learning stage of Constitutional AI. Sample initial responses, critique them under a randomly-chosen principle, revise, and SFT on revised responses",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §3"
     },
     {
       "key": "rl-cai",
       "primary_form": "RL-CAI",
       "aliases": [],
       "short_def": "Reinforcement learning stage of Constitutional AI.",
-      "full_def": "Reinforcement learning stage of Constitutional AI. Generate AI preferences by having a feedback model choose between response pairs under a principle, train a reward model on AI preferences, run PPO `[bai2022-cai §4]`.",
+      "full_def": "Reinforcement learning stage of Constitutional AI. Generate AI preferences by having a feedback model choose between response pairs under a principle, train a reward model on AI preferences, run PPO",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §4"
     },
     {
       "key": "r-cai",
@@ -3048,10 +3048,10 @@
       "aliases": [
         "Reverse Constitutional AI"
       ],
-      "short_def": "Inverts the constitution for adversarial / toxic data generation; probability-clamped RLAIF for red-team data synthesis (April 2026) `[r-ca…",
-      "full_def": "Inverts the constitution for adversarial / toxic data generation; probability-clamped RLAIF for red-team data synthesis (April 2026) `[r-cai-2026]`.",
+      "short_def": "Inverts the constitution for adversarial / toxic data generation; probability-clamped RLAIF for red-team data synthesis (April 2026)",
+      "full_def": "Inverts the constitution for adversarial / toxic data generation; probability-clamped RLAIF for red-team data synthesis (April 2026)",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "r-cai-2026"
     },
     {
       "key": "rlvr-2",
@@ -3060,18 +3060,18 @@
         "Reinforcement Learning with Verifiable Rewards"
       ],
       "short_def": "Post-training paradigm where the reward is a deterministic programmatic verifier (math equality, code unit-tests, format check), not a lear…",
-      "full_def": "Post-training paradigm where the reward is a deterministic programmatic verifier (math equality, code unit-tests, format check), not a learned reward model. The policy still uses on-policy RL `[deepseek-r1 §2.2; tulu3]`.",
+      "full_def": "Post-training paradigm where the reward is a deterministic programmatic verifier (math equality, code unit-tests, format check), not a learned reward model. The policy still uses on-policy RL",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1 §2.2; tulu3"
     },
     {
       "key": "verifiable-reward",
       "primary_form": "Verifiable reward",
       "aliases": [],
       "short_def": "A 0/1 reward computed by a programmatic check: $R(x,y) = \\mathbb{1}[\\mathrm{verify}(x,y)]$.",
-      "full_def": "A 0/1 reward computed by a programmatic check: $R(x,y) = \\mathbb{1}[\\mathrm{verify}(x,y)]$. Sparse and terminal `[deepseek-r1 §2.2]`.",
+      "full_def": "A 0/1 reward computed by a programmatic check: $R(x,y) = \\mathbb{1}[\\mathrm{verify}(x,y)]$. Sparse and terminal",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1 §2.2"
     },
     {
       "key": "grpo",
@@ -3080,27 +3080,27 @@
         "Group Relative Policy Optimization"
       ],
       "short_def": "Critic-free PPO variant: replaces the value model with a group-mean reward baseline.",
-      "full_def": "Critic-free PPO variant: replaces the value model with a group-mean reward baseline. Sample $G$ trajectories per prompt, normalize rewards within the group, use the standardized advantage in the PPO loss. Used by DeepSeek-R1, Qwen 3, Tülu 3 RLVR `[shao2024 §4.1; deepseek-r1 §2.1 Eq.1]`.",
+      "full_def": "Critic-free PPO variant: replaces the value model with a group-mean reward baseline. Sample $G$ trajectories per prompt, normalize rewards within the group, use the standardized advantage in the PPO loss. Used by DeepSeek-R1, Qwen 3, Tülu 3 RLVR",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "shao2024 §4.1; deepseek-r1 §2.1 Eq.1"
     },
     {
       "key": "group-normalized-advantage",
       "primary_form": "Group-normalized advantage",
       "aliases": [],
       "short_def": "In GRPO, $\\tilde{A}_i = (R_i - \\mathrm{mean}(\\{R_j\\}))/\\mathrm{std}(\\{R_j\\})$, broadcast to every token of trajectory $o_i$.",
-      "full_def": "In GRPO, $\\tilde{A}_i = (R_i - \\mathrm{mean}(\\{R_j\\}))/\\mathrm{std}(\\{R_j\\})$, broadcast to every token of trajectory $o_i$. Replaces GAE-derived per-token advantages `[shao2024 §4.1; deepseek-r1 §2.1 Eq.3]`.",
+      "full_def": "In GRPO, $\\tilde{A}_i = (R_i - \\mathrm{mean}(\\{R_j\\}))/\\mathrm{std}(\\{R_j\\})$, broadcast to every token of trajectory $o_i$. Replaces GAE-derived per-token advantages",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "shao2024 §4.1; deepseek-r1 §2.1 Eq.3"
     },
     {
       "key": "format-reward",
       "primary_form": "Format reward",
       "aliases": [],
       "short_def": "In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a `<think>...</think>` block).",
-      "full_def": "In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a `<think>...</think>` block). Keeps the chain-of-thought pathway alive during early training `[deepseek-r1 §2.2]`.",
+      "full_def": "In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a `<think>...</think>` block). Keeps the chain-of-thought pathway alive during early training",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1 §2.2"
     },
     {
       "key": "dapo",
@@ -3109,18 +3109,18 @@
         "Decoupled clip and dynamic sAmpling Policy Optimization"
       ],
       "short_def": "GRPO improvement with four targeted modifications: Clip-Higher (asymmetric PPO clip), Dynamic Sampling (reject zero-gradient groups), Token…",
-      "full_def": "GRPO improvement with four targeted modifications: Clip-Higher (asymmetric PPO clip), Dynamic Sampling (reject zero-gradient groups), Token-Level Loss (equal-weight tokens regardless of trajectory length), Overlong Reward Shaping (soft penalty for length-truncated trajectories) `[dapo2025 §2]`.",
+      "full_def": "GRPO improvement with four targeted modifications: Clip-Higher (asymmetric PPO clip), Dynamic Sampling (reject zero-gradient groups), Token-Level Loss (equal-weight tokens regardless of trajectory length), Overlong Reward Shaping (soft penalty for length-truncated trajectories)",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dapo2025 §2"
     },
     {
       "key": "clip-higher",
       "primary_form": "Clip-Higher",
       "aliases": [],
       "short_def": "DAPO's asymmetric PPO clip $[1-\\epsilon_{\\text{low}}, 1+\\epsilon_{\\text{high}}]$ with $\\epsilon_{\\text{high}} > \\epsilon_{\\text{low}}$.",
-      "full_def": "DAPO's asymmetric PPO clip $[1-\\epsilon_{\\text{low}}, 1+\\epsilon_{\\text{high}}]$ with $\\epsilon_{\\text{high}} > \\epsilon_{\\text{low}}$. Allows larger upward updates on under-probable correct tokens `[dapo2025 §2]`.",
+      "full_def": "DAPO's asymmetric PPO clip $[1-\\epsilon_{\\text{low}}, 1+\\epsilon_{\\text{high}}]$ with $\\epsilon_{\\text{high}} > \\epsilon_{\\text{low}}$. Allows larger upward updates on under-probable correct tokens",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dapo2025 §2"
     },
     {
       "key": "dynamic-sampling",
@@ -3129,9 +3129,9 @@
         "DAPO"
       ],
       "short_def": "Reject groups where all $G$ trajectories share the same reward, since the GRPO advantage is then zero and the gradient is wasted.",
-      "full_def": "Reject groups where all $G$ trajectories share the same reward, since the GRPO advantage is then zero and the gradient is wasted. Re-sample until each group contains both $R=0$ and $R=1$ trajectories `[dapo2025 §2]`.",
+      "full_def": "Reject groups where all $G$ trajectories share the same reward, since the GRPO advantage is then zero and the gradient is wasted. Re-sample until each group contains both $R=0$ and $R=1$ trajectories",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dapo2025 §2"
     },
     {
       "key": "vapo",
@@ -3140,18 +3140,18 @@
         "Value-Augmented PPO"
       ],
       "short_def": "RL variant that re-introduces a learned value function on top of GRPO's design, with shared backbone and value-loss-clipping.",
-      "full_def": "RL variant that re-introduces a learned value function on top of GRPO's design, with shared backbone and value-loss-clipping. Reportedly outperforms DAPO on long-CoT tasks `[vapo-2025]`.",
+      "full_def": "RL variant that re-introduces a learned value function on top of GRPO's design, with shared backbone and value-loss-clipping. Reportedly outperforms DAPO on long-CoT tasks",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "vapo-2025"
     },
     {
       "key": "vineppo",
       "primary_form": "VinePPO",
       "aliases": [],
       "short_def": "PPO variant using per-prefix Monte Carlo re-simulation as value estimate.",
-      "full_def": "PPO variant using per-prefix Monte Carlo re-simulation as value estimate. Drops the value network. 3× wall-clock speedup over PPO on MATH/GSM8K `[vineppo-2024]`.",
+      "full_def": "PPO variant using per-prefix Monte Carlo re-simulation as value estimate. Drops the value network. 3× wall-clock speedup over PPO on MATH/GSM8K",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "vineppo-2024"
     },
     {
       "key": "reinforce",
@@ -3167,9 +3167,9 @@
       "primary_form": "R1-Zero",
       "aliases": [],
       "short_def": "DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base.",
-      "full_def": "DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base. Achieves AIME 2024 pass@1 of 77.9% `[deepseek-r1 §2.3]`.",
+      "full_def": "DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base. Achieves AIME 2024 pass@1 of 77.9%",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1 §2.3"
     },
     {
       "key": "aha-moment",
@@ -3177,46 +3177,46 @@
       "aliases": [
         "R1-Zero"
       ],
-      "short_def": "A spike in the model's use of reflection words like \"wait\" during training, taken as evidence of self-reorganization of reasoning structure…",
-      "full_def": "A spike in the model's use of reflection words like \"wait\" during training, taken as evidence of self-reorganization of reasoning structure `[deepseek-r1 §2.3]`.",
+      "short_def": "A spike in the model's use of reflection words like \"wait\" during training, taken as evidence of self-reorganization of reasoning structure",
+      "full_def": "A spike in the model's use of reflection words like \"wait\" during training, taken as evidence of self-reorganization of reasoning structure",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1 §2.3"
     },
     {
       "key": "pass-1-pass-k",
       "primary_form": "Pass@1 / Pass@K",
       "aliases": [],
       "short_def": "Pass@K is the probability that at least one of $K$ independent samples from the model passes the verifier.",
-      "full_def": "Pass@K is the probability that at least one of $K$ independent samples from the model passes the verifier. Pass@1 is the single-sample success rate. RLVR primarily improves pass@1 (sampling efficiency) `[rlvr-limits-2025]`.",
+      "full_def": "Pass@K is the probability that at least one of $K$ independent samples from the model passes the verifier. Pass@1 is the single-sample success rate. RLVR primarily improves pass@1 (sampling efficiency)",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "rlvr-limits-2025"
     },
     {
       "key": "rlvr-sampling-efficiency-interpretation",
       "primary_form": "RLVR sampling-efficiency interpretation",
       "aliases": [],
       "short_def": "Empirical finding (NeurIPS 2025 oral, Yue et al.) that RLVR improves pass@1 on problems the base model can already solve at higher K, but d…",
-      "full_def": "Empirical finding (NeurIPS 2025 oral, Yue et al.) that RLVR improves pass@1 on problems the base model can already solve at higher K, but does not expand the set of problems solvable at any K. The capability ceiling is set by pre-training `[rlvr-limits-2025]`.",
+      "full_def": "Empirical finding (NeurIPS 2025 oral, Yue et al.) that RLVR improves pass@1 on problems the base model can already solve at higher K, but does not expand the set of problems solvable at any K. The capability ceiling is set by pre-training",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "rlvr-limits-2025"
     },
     {
       "key": "rejection-sampling",
       "primary_form": "Rejection sampling",
       "aliases": [],
       "short_def": "Llama-3 SFT quality gate: sample $N$ candidates from the model, score by reward model, keep top-$k$, SFT on those.",
-      "full_def": "Llama-3 SFT quality gate: sample $N$ candidates from the model, score by reward model, keep top-$k$, SFT on those. Used as a training-loop stage in modern multi-round pipelines `[meta-llama3]`.",
+      "full_def": "Llama-3 SFT quality gate: sample $N$ candidates from the model, score by reward model, keep top-$k$, SFT on those. Used as a training-loop stage in modern multi-round pipelines",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meta-llama3"
     },
     {
       "key": "magpie",
       "primary_form": "MAGPIE",
       "aliases": [],
       "short_def": "Alignment data synthesis from scratch: prompt aligned LLMs with only their instruction-template prefix (no question), have them fabricate t…",
-      "full_def": "Alignment data synthesis from scratch: prompt aligned LLMs with only their instruction-template prefix (no question), have them fabricate the question first, then sample the answer. Near-zero-cost SFT data generation `[magpie-2024]`.",
+      "full_def": "Alignment data synthesis from scratch: prompt aligned LLMs with only their instruction-template prefix (no question), have them fabricate the question first, then sample the answer. Near-zero-cost SFT data generation",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "magpie-2024"
     },
     {
       "key": "cold-start-sft",
@@ -3225,18 +3225,18 @@
         "R1 sense"
       ],
       "short_def": "A small SFT stage on long-CoT examples preceding the main RL stage.",
-      "full_def": "A small SFT stage on long-CoT examples preceding the main RL stage. Provides a reasoning-format and language-quality regularizer for the subsequent RL. Distinct from full SFT pipelines `[deepseek-r1 §3]`.",
+      "full_def": "A small SFT stage on long-CoT examples preceding the main RL stage. Provides a reasoning-format and language-quality regularizer for the subsequent RL. Distinct from full SFT pipelines",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1 §3"
     },
     {
       "key": "reasoning-distillation-sft",
       "primary_form": "Reasoning-distillation SFT",
       "aliases": [],
       "short_def": "Training small models (1.5B–32B) on reasoning trajectories generated by a strong reasoning teacher (R1, o1) via pure SFT with no RL.",
-      "full_def": "Training small models (1.5B–32B) on reasoning trajectories generated by a strong reasoning teacher (R1, o1) via pure SFT with no RL. The 800K-sample DeepSeek-R1 distillation set is the canonical example `[deepseek-r1 §4]`.",
+      "full_def": "Training small models (1.5B–32B) on reasoning trajectories generated by a strong reasoning teacher (R1, o1) via pure SFT with no RL. The 800K-sample DeepSeek-R1 distillation set is the canonical example",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1 §4"
     },
     {
       "key": "thinking-non-thinking-modes",
@@ -3245,27 +3245,27 @@
         "Qwen 3 sense"
       ],
       "short_def": "Two distinct response styles trained with separate SFT data and selectable at inference via system prompt: \"thinking\" emits a `<think>...</…",
-      "full_def": "Two distinct response styles trained with separate SFT data and selectable at inference via system prompt: \"thinking\" emits a `<think>...</think>` block, \"non-thinking\" produces direct answers `[qwen3]`.",
+      "full_def": "Two distinct response styles trained with separate SFT data and selectable at inference via system prompt: \"thinking\" emits a `<think>...</think>` block, \"non-thinking\" produces direct answers",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "qwen3"
     },
     {
       "key": "t-lu-3-pipeline",
       "primary_form": "Tülu 3 pipeline",
       "aliases": [],
       "short_def": "The canonical 4-stage open post-training reference: data curation → SFT → DPO → RLVR.",
-      "full_def": "The canonical 4-stage open post-training reference: data curation → SFT → DPO → RLVR. Tülu 3 405B (Jan 2025) scales RLVR to 405B parameters `[tulu3]`.",
+      "full_def": "The canonical 4-stage open post-training reference: data curation → SFT → DPO → RLVR. Tülu 3 405B (Jan 2025) scales RLVR to 405B parameters",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "tulu3"
     },
     {
       "key": "iterative-sft-dpo",
       "primary_form": "Iterative SFT-DPO",
       "aliases": [],
       "short_def": "Multi-round pipeline used by Llama-3 and Tülu 3: SFT, then sample candidates, run rejection sampling, run DPO, repeat with the new policy a…",
-      "full_def": "Multi-round pipeline used by Llama-3 and Tülu 3: SFT, then sample candidates, run rejection sampling, run DPO, repeat with the new policy as starting point `[meta-llama3]`.",
+      "full_def": "Multi-round pipeline used by Llama-3 and Tülu 3: SFT, then sample candidates, run rejection sampling, run DPO, repeat with the new policy as starting point",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "meta-llama3"
     },
     {
       "key": "chain-of-thought",
@@ -3634,9 +3634,9 @@
       "primary_form": "Compute (training)",
       "aliases": [],
       "short_def": "Total floating-point operations spent in pre-training, denoted $C$ or $C_{\\text{train}}$.",
-      "full_def": "Total floating-point operations spent in pre-training, denoted $C$ or $C_{\\text{train}}$. The standard accounting per-token is $C \\approx 6 N D$ for dense Transformers `[kaplan2020 §2.1; kb/excerpts/kaplan2020#sec-2-1-definitions]`.",
+      "full_def": "Total floating-point operations spent in pre-training, denoted $C$ or $C_{\\text{train}}$. The standard accounting per-token is $C \\approx 6 N D$ for dense Transformers",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "kaplan2020 §2.1; kb/excerpts/kaplan2020#sec-2-1-definitions"
     },
     {
       "key": "pf-day",
@@ -3652,36 +3652,36 @@
       "primary_form": "Power law (in scaling)",
       "aliases": [],
       "short_def": "A relationship of the form $L(X) \\propto (X_c / X)^{\\alpha_X}$ with exponent $\\alpha_X$.",
-      "full_def": "A relationship of the form $L(X) \\propto (X_c / X)^{\\alpha_X}$ with exponent $\\alpha_X$. Holds approximately for LLM loss against $N$, $D$, and $C$ across many orders of magnitude `[kaplan2020 §1.2; kb/excerpts/kaplan2020#sec-1-2-equations]`.",
+      "full_def": "A relationship of the form $L(X) \\propto (X_c / X)^{\\alpha_X}$ with exponent $\\alpha_X$. Holds approximately for LLM loss against $N$, $D$, and $C$ across many orders of magnitude",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "kaplan2020 §1.2; kb/excerpts/kaplan2020#sec-1-2-equations"
     },
     {
       "key": "critical-batch-size-b-text-crit",
       "primary_form": "Critical batch size $B_{\\text{crit}}$",
       "aliases": [],
       "short_def": "The largest training batch (in tokens) at which scaling further is still time-efficient.",
-      "full_def": "The largest training batch (in tokens) at which scaling further is still time-efficient. Itself a power law in the loss: $B_{\\text{crit}}(L) = B_\\ast / L^{1/\\alpha_B}$ with $B_\\ast \\approx 2 \\times 10^8$ tokens, $\\alpha_B \\approx 0.21$ `[kaplan2020 §5.1; kb/excerpts/kaplan2020#sec-1-1-bullets]`.",
+      "full_def": "The largest training batch (in tokens) at which scaling further is still time-efficient. Itself a power law in the loss: $B_{\\text{crit}}(L) = B_\\ast / L^{1/\\alpha_B}$ with $B_\\ast \\approx 2 \\times 10^8$ tokens, $\\alpha_B \\approx 0.21$",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "kaplan2020 §5.1; kb/excerpts/kaplan2020#sec-1-1-bullets"
     },
     {
       "key": "isoflop-profile",
       "primary_form": "IsoFLOP profile",
       "aliases": [],
       "short_def": "The plot of training loss vs. parameter count $N$ at a fixed training-compute budget $C$.",
-      "full_def": "The plot of training loss vs. parameter count $N$ at a fixed training-compute budget $C$. The minimum across $N$ at each $C$ defines the compute-optimal frontier `[hoffmann2022-chinchilla §3.2; kb/excerpts/hoffmann2022-chinchilla#sec-3-2]`.",
+      "full_def": "The plot of training loss vs. parameter count $N$ at a fixed training-compute budget $C$. The minimum across $N$ at each $C$ defines the compute-optimal frontier",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "hoffmann2022-chinchilla §3.2; kb/excerpts/hoffmann2022-chinchilla#sec-3-2"
     },
     {
       "key": "compute-optimal-training",
       "primary_form": "Compute-optimal training",
       "aliases": [],
       "short_def": "Training a model with $(N, D)$ chosen to minimize loss at fixed $C \\approx 6ND$.",
-      "full_def": "Training a model with $(N, D)$ chosen to minimize loss at fixed $C \\approx 6ND$. Chinchilla's headline rule: at the optimum, $D \\approx 20 N$ for a wide range of $N$ `[hoffmann2022-chinchilla §3 Table 3; kb/excerpts/hoffmann2022-chinchilla#sec-3-table-3]`.",
+      "full_def": "Training a model with $(N, D)$ chosen to minimize loss at fixed $C \\approx 6ND$. Chinchilla's headline rule: at the optimum, $D \\approx 20 N$ for a wide range of $N$",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "hoffmann2022-chinchilla §3 Table 3; kb/excerpts/hoffmann2022-chinchilla#sec-3-table-3"
     },
     {
       "key": "tokens-per-parameter-ratio",
@@ -3697,9 +3697,9 @@
       "primary_form": "Chinchilla parametric loss",
       "aliases": [],
       "short_def": "The functional form $\\hat{L}(N, D) = E + A/N^\\alpha + B/D^\\beta$ with five fitted constants.",
-      "full_def": "The functional form $\\hat{L}(N, D) = E + A/N^\\alpha + B/D^\\beta$ with five fitted constants. $E$ ≈ entropy of natural text on the eval distribution `[hoffmann2022-chinchilla §3.3 Eq.(2); kb/excerpts/hoffmann2022-chinchilla#sec-3-3]`.",
+      "full_def": "The functional form $\\hat{L}(N, D) = E + A/N^\\alpha + B/D^\\beta$ with five fitted constants. $E$ ≈ entropy of natural text on the eval distribution",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "hoffmann2022-chinchilla §3.3 Eq.(2); kb/excerpts/hoffmann2022-chinchilla#sec-3-3"
     },
     {
       "key": "kaplan-compute-allocation-rule",
@@ -3751,18 +3751,18 @@
       "primary_form": "Test-time compute-optimal scaling strategy",
       "aliases": [],
       "short_def": "The argmax over test-time hyperparameters $\\theta$ of expected output correctness, at a fixed test-time compute budget $N$, conditioned on…",
-      "full_def": "The argmax over test-time hyperparameters $\\theta$ of expected output correctness, at a fixed test-time compute budget $N$, conditioned on a prompt $q$: $\\theta^\\ast_{q, y^\\ast(q)}(N) = \\arg\\max_\\theta \\mathbb{E}_{y \\sim \\mathrm{Target}(\\theta, N, q)}[\\mathbb{1}_{y = y^\\ast(q)}]$ `[snell2024 §3.1 Eq.(1); kb/excerpts/snell2024#sec-3-1]`.",
+      "full_def": "The argmax over test-time hyperparameters $\\theta$ of expected output correctness, at a fixed test-time compute budget $N$, conditioned on a prompt $q$: $\\theta^\\ast_{q, y^\\ast(q)}(N) = \\arg\\max_\\theta \\mathbb{E}_{y \\sim \\mathrm{Target}(\\theta, N, q)}[\\mathbb{1}_{y = y^\\ast(q)}]$",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "snell2024 §3.1 Eq.(1); kb/excerpts/snell2024#sec-3-1"
     },
     {
       "key": "proposer-verifier-decomposition",
       "primary_form": "Proposer / verifier decomposition",
       "aliases": [],
       "short_def": "The unified framing of test-time compute strategies as either (1) modifying the model's proposal distribution (CoT, revision, self-critique…",
-      "full_def": "The unified framing of test-time compute strategies as either (1) modifying the model's proposal distribution (CoT, revision, self-critique) or (2) applying a verifier (best-of-N, beam search, tree search) to selected candidates `[snell2024 §2; kb/excerpts/snell2024#sec-2-proposer-verifier]`.",
+      "full_def": "The unified framing of test-time compute strategies as either (1) modifying the model's proposal distribution (CoT, revision, self-critique) or (2) applying a verifier (best-of-N, beam search, tree search) to selected candidates",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "snell2024 §2; kb/excerpts/snell2024#sec-2-proposer-verifier"
     },
     {
       "key": "best-of-n",
@@ -3780,9 +3780,9 @@
       "primary_form": "Beam search (in test-time-compute context)",
       "aliases": [],
       "short_def": "Search over per-step PRM scores: at each step keep top $N/M$ candidates, expand each by $M$ proposals, repeat.",
-      "full_def": "Search over per-step PRM scores: at each step keep top $N/M$ candidates, expand each by $M$ proposals, repeat. $N$ = beam width, $M$ = expansion factor `[snell2024 §5.2; kb/excerpts/snell2024#sec-5-2-search]`.",
+      "full_def": "Search over per-step PRM scores: at each step keep top $N/M$ candidates, expand each by $M$ proposals, repeat. $N$ = beam width, $M$ = expansion factor",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "snell2024 §5.2; kb/excerpts/snell2024#sec-5-2-search"
     },
     {
       "key": "lookahead-search",
@@ -3800,36 +3800,36 @@
         "Snell et al."
       ],
       "short_def": "A 5-quantile bin of a base LLM's pass@1 rate (estimated from 2048 samples) on a test-set prompt.",
-      "full_def": "A 5-quantile bin of a base LLM's pass@1 rate (estimated from 2048 samples) on a test-set prompt. Used as a sufficient statistic for picking the compute-optimal test-time strategy `[snell2024 §3.2; kb/excerpts/snell2024#sec-3-2-difficulty]`.",
+      "full_def": "A 5-quantile bin of a base LLM's pass@1 rate (estimated from 2048 samples) on a test-set prompt. Used as a sufficient statistic for picking the compute-optimal test-time strategy",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "snell2024 §3.2; kb/excerpts/snell2024#sec-3-2-difficulty"
     },
     {
       "key": "oracle-vs-model-predicted-difficulty",
       "primary_form": "Oracle vs model-predicted difficulty",
       "aliases": [],
       "short_def": "Two operational forms of question-difficulty estimation: oracle uses ground-truth correctness (test-time only as research proxy); model-pre…",
-      "full_def": "Two operational forms of question-difficulty estimation: oracle uses ground-truth correctness (test-time only as research proxy); model-predicted uses a verifier's averaged score (deployable) `[snell2024 §3.2; kb/excerpts/snell2024#sec-3-2-difficulty]`.",
+      "full_def": "Two operational forms of question-difficulty estimation: oracle uses ground-truth correctness (test-time only as research proxy); model-predicted uses a verifier's averaged score (deployable)",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "snell2024 §3.2; kb/excerpts/snell2024#sec-3-2-difficulty"
     },
     {
       "key": "thinking-budget-thinkingbudget",
       "primary_form": "Thinking budget / `thinkingBudget`",
       "aliases": [],
       "short_def": "A productionized API parameter (Gemini 2.5, OpenAI o-series reasoning-effort levels, Anthropic extended-thinking) that caps the test-time-c…",
-      "full_def": "A productionized API parameter (Gemini 2.5, OpenAI o-series reasoning-effort levels, Anthropic extended-thinking) that caps the test-time-compute spend per request. Operationalizes Snell's compute-optimal strategy `[gemini2-5; kb/index/papers.json#gemini2-5]`.",
+      "full_def": "A productionized API parameter (Gemini 2.5, OpenAI o-series reasoning-effort levels, Anthropic extended-thinking) that caps the test-time-compute spend per request. Operationalizes Snell's compute-optimal strategy",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "gemini2-5; kb/index/papers.json#gemini2-5"
     },
     {
       "key": "reasoning-model",
       "primary_form": "Reasoning model",
       "aliases": [],
       "short_def": "An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer.",
-      "full_def": "An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer. o1, DeepSeek-R1, Qwen3-thinking-mode, Gemini 2.5-thinking-mode are exemplars `[deepseek-r1; kb/index/papers.json#deepseek-r1]`.",
+      "full_def": "An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer. o1, DeepSeek-R1, Qwen3-thinking-mode, Gemini 2.5-thinking-mode are exemplars",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1; kb/index/papers.json#deepseek-r1"
     },
     {
       "key": "self-consistency-2",
@@ -3845,9 +3845,9 @@
       "primary_form": "Maximal Update Parametrization (μP)",
       "aliases": [],
       "short_def": "The unique-up-to-redundancy parametrization (init scales × LR scalings × parameter multipliers) under which optimal hyperparameters are wid…",
-      "full_def": "The unique-up-to-redundancy parametrization (init scales × LR scalings × parameter multipliers) under which optimal hyperparameters are width-invariant. The infinite-width limit has $\\Theta(1)$-magnitude feature updates, in contrast to the kernel/NTK regime of standard parametrization `[yang2022-mup §2; kb/excerpts/yang2022-mup#sec-2-clt]`.",
+      "full_def": "The unique-up-to-redundancy parametrization (init scales × LR scalings × parameter multipliers) under which optimal hyperparameters are width-invariant. The infinite-width limit has $\\Theta(1)$-magnitude feature updates, in contrast to the kernel/NTK regime of standard parametrization",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "yang2022-mup §2; kb/excerpts/yang2022-mup#sec-2-clt"
     },
     {
       "key": "standard-parametrization",
@@ -3856,18 +3856,18 @@
         "SP"
       ],
       "short_def": "The default parametrization in PyTorch and most frameworks: init variance $1/\\text{fan\\_in}$, uniform LR scaling.",
-      "full_def": "The default parametrization in PyTorch and most frameworks: init variance $1/\\text{fan\\_in}$, uniform LR scaling. Does NOT admit HP transfer across width — optimal LR shifts by ~1 order of magnitude as width grows from 256 to 8192 `[yang2022-mup §3; kb/excerpts/yang2022-mup#sec-3-mlp-sp]`.",
+      "full_def": "The default parametrization in PyTorch and most frameworks: init variance $1/\\text{fan\\_in}$, uniform LR scaling. Does NOT admit HP transfer across width — optimal LR shifts by ~1 order of magnitude as width grows from 256 to 8192",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "yang2022-mup §3; kb/excerpts/yang2022-mup#sec-3-mlp-sp"
     },
     {
       "key": "transfer",
       "primary_form": "μTransfer",
       "aliases": [],
       "short_def": "The HP-tuning procedure: parametrize target in μP, tune HPs on a small proxy model (typically 1/16–1/32 of target width), copy them zero-sh…",
-      "full_def": "The HP-tuning procedure: parametrize target in μP, tune HPs on a small proxy model (typically 1/16–1/32 of target width), copy them zero-shot to target without retuning. Tuning cost ≈ 7% of one full pretraining run for GPT-3 6.7B `[yang2022-mup abstract; kb/excerpts/yang2022-mup#abstract]`.",
+      "full_def": "The HP-tuning procedure: parametrize target in μP, tune HPs on a small proxy model (typically 1/16–1/32 of target width), copy them zero-shot to target without retuning. Tuning cost ≈ 7% of one full pretraining run for GPT-3 6.7B",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "yang2022-mup abstract; kb/excerpts/yang2022-mup#abstract"
     },
     {
       "key": "abc-parametrization",
@@ -3883,18 +3883,18 @@
       "primary_form": "Proxy model / target model",
       "aliases": [],
       "short_def": "In μTransfer, the small model used for HP search (proxy) and the full-scale model receiving the transferred HPs (target).",
-      "full_def": "In μTransfer, the small model used for HP search (proxy) and the full-scale model receiving the transferred HPs (target). Same depth, vocab, data, tokenizer; only width differs `[yang2022-mup §1; kb/excerpts/yang2022-mup#sec-1-contributions]`.",
+      "full_def": "In μTransfer, the small model used for HP search (proxy) and the full-scale model receiving the transferred HPs (target). Same depth, vocab, data, tokenizer; only width differs",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "yang2022-mup §1; kb/excerpts/yang2022-mup#sec-1-contributions"
     },
     {
       "key": "p-1-d-attention",
       "primary_form": "μP $1/d$ attention",
       "aliases": [],
       "short_def": "Definition 4.1 of Yang et al. 2022: replace Vaswani's $1/\\sqrt{d_k}$ softmax scaling with $1/d_k$.",
-      "full_def": "Definition 4.1 of Yang et al. 2022: replace Vaswani's $1/\\sqrt{d_k}$ softmax scaling with $1/d_k$. Correct training-time rescaling under μP because $q$ and $k$ become correlated after one optimization step, making $\\mathrm{Var}(q^\\top k) = \\Theta(d)$ `[yang2022-mup §4 Definition 4.1; kb/excerpts/yang2022-mup#sec-4-definition-4-1]`.",
+      "full_def": "Definition 4.1 of Yang et al. 2022: replace Vaswani's $1/\\sqrt{d_k}$ softmax scaling with $1/d_k$. Correct training-time rescaling under μP because $q$ and $k$ become correlated after one optimization step, making $\\mathrm{Var}(q^\\top k) = \\Theta(d)$",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "yang2022-mup §4 Definition 4.1; kb/excerpts/yang2022-mup#sec-4-definition-4-1"
     },
     {
       "key": "u-p",
@@ -3903,9 +3903,9 @@
         "Unit-Scaled μP"
       ],
       "short_def": "μP combined with unit-scaling so every layer has predictable $\\Theta(1)$-magnitude activations.",
-      "full_def": "μP combined with unit-scaling so every layer has predictable $\\Theta(1)$-magnitude activations. Enables native FP8 training without dynamic per-tensor rescaling `[u-mup2024; kb/index/papers.json#u-mup2024]`.",
+      "full_def": "μP combined with unit-scaling so every layer has predictable $\\Theta(1)$-magnitude activations. Enables native FP8 training without dynamic per-tensor rescaling",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "u-mup2024; kb/index/papers.json#u-mup2024"
     },
     {
       "key": "depth-p",
@@ -4493,62 +4493,62 @@
       "key": "master-weights",
       "primary_form": "Master weights",
       "aliases": [],
-      "short_def": "A high-precision (FP32) copy of the model",
-      "full_def": "A high-precision (FP32) copy of the model",
+      "short_def": "A high-precision (FP32) copy of the model parameters maintained alongside a low-precision (FP16/BF16/FP8) working copy used in the forward/…",
+      "full_def": "A high-precision (FP32) copy of the model parameters maintained alongside a low-precision (FP16/BF16/FP8) working copy used in the forward/backward pass. Optimizer updates are applied to the master copy and cast down to the working copy.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "micikevicius2017-mixed-precision §2; kb/excerpts/micikevicius2017-mixed-precision#sec-2"
     },
     {
       "key": "loss-scaling",
       "primary_form": "Loss scaling",
       "aliases": [],
-      "short_def": "Multiplying the loss by a scale factor $S$",
-      "full_def": "Multiplying the loss by a scale factor $S$",
+      "short_def": "Multiplying the loss by a scale factor $S$ before backprop, then dividing the resulting gradients by $S$ before the master-weight update.",
+      "full_def": "Multiplying the loss by a scale factor $S$ before backprop, then dividing the resulting gradients by $S$ before the master-weight update. Shifts the gradient distribution upward in the FP16 representable range to avoid underflow.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "micikevicius2017-mixed-precision §3; kb/excerpts/micikevicius2017-mixed-precision#sec-3"
     },
     {
       "key": "bf16-bfloat16-2",
       "primary_form": "BF16 (bfloat16)",
       "aliases": [],
-      "short_def": "A 16-bit floating-point format with 8",
-      "full_def": "A 16-bit floating-point format with 8",
+      "short_def": "A 16-bit floating-point format with 8 exponent bits and 7 mantissa bits.",
+      "full_def": "A 16-bit floating-point format with 8 exponent bits and 7 mantissa bits. Same dynamic range as FP32; half the precision of FP16. The universal LLM pre-training default by 2023.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "kalamkar2019-bfloat16 §2; kb/excerpts/kalamkar2019-bfloat16#sec-2"
     },
     {
       "key": "fp8-e4m3-e5m2",
       "primary_form": "FP8 E4M3 / E5M2",
       "aliases": [],
-      "short_def": "8-bit float formats with 4-bit",
-      "full_def": "8-bit float formats with 4-bit",
+      "short_def": "8-bit float formats with 4-bit exponent + 3-bit mantissa (E4M3, range $\\pm 448$) or 5-bit exponent + 2-bit mantissa (E5M2, larger range, lo…",
+      "full_def": "8-bit float formats with 4-bit exponent + 3-bit mantissa (E4M3, range $\\pm 448$) or 5-bit exponent + 2-bit mantissa (E5M2, larger range, lower precision). NVIDIA's hybrid recipe uses E4M3 forward and E5M2 backward; DeepSeek-V3 uses E4M3 everywhere with fine-grained tile scaling.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-v3 §3.3.2; kb/excerpts/deepseek-v3-training#sec-3-3-2-mantissa"
     },
     {
       "key": "fine-grained-quantization-tile-block-scaling",
       "primary_form": "Fine-grained quantization (tile/block scaling)",
       "aliases": [],
-      "short_def": "Per-group",
-      "full_def": "Per-group",
+      "short_def": "Per-group scaling factors along inner dimensions of a GEMM, allowing each tile/block to choose its own scale and absorb local outliers.",
+      "full_def": "Per-group scaling factors along inner dimensions of a GEMM, allowing each tile/block to choose its own scale and absorb local outliers. DeepSeek-V3's 1×128 (activations) and 128×128 (weights) scheme.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "deepseek-v3 §3.3.2; kb/excerpts/deepseek-v3-training#sec-3-3-2-finegrained"
     },
     {
       "key": "promotion-to-cuda-cores-at-n-c",
       "primary_form": "Promotion to CUDA cores at $N_C$",
       "aliases": [],
-      "short_def": "Periodic (every $N_C = 128$",
-      "full_def": "Periodic (every $N_C = 128$",
+      "short_def": "Periodic (every $N_C = 128$ elements) copy of FP8 Tensor Core partial sums to FP32 registers on CUDA cores, where full-precision accumulati…",
+      "full_def": "Periodic (every $N_C = 128$ elements) copy of FP8 Tensor Core partial sums to FP32 registers on CUDA cores, where full-precision accumulation is performed. Recovers accumulation precision lost to Tensor Core's 14-bit internal accumulator.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-v3 §3.3.2; kb/excerpts/deepseek-v3-training#sec-3-3-2-accum"
     },
     {
       "key": "nvfp4",
       "primary_form": "NVFP4",
       "aliases": [],
-      "short_def": "4-bit floating-point format (E2M1) with native",
-      "full_def": "4-bit floating-point format (E2M1) with native",
+      "short_def": "4-bit floating-point format (E2M1) with native hardware MXScale (32-element per-block scaling) on Blackwell-class GPUs.",
+      "full_def": "4-bit floating-point format (E2M1) with native hardware MXScale (32-element per-block scaling) on Blackwell-class GPUs. Production-stability for full pre-training is open as of 2026-05.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -4556,17 +4556,17 @@
       "key": "loss-spike-2",
       "primary_form": "Loss spike",
       "aliases": [],
-      "short_def": "A sudden upward jump in pre-training loss, often",
-      "full_def": "A sudden upward jump in pre-training loss, often",
+      "short_def": "A sudden upward jump in pre-training loss, often caused by gradient-norm explosion, attention-logit divergence, embedding-norm growth, or F…",
+      "full_def": "A sudden upward jump in pre-training loss, often caused by gradient-norm explosion, attention-logit divergence, embedding-norm growth, or FP8 underflow. May or may not recover. DeepSeek-V3 reports zero irrecoverable spikes over 14.8T tokens",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "deepseek-v3 abstract; kb/excerpts/deepseek-v3-training#abstract"
     },
     {
       "key": "qk-layernorm-qk-clip",
       "primary_form": "QK-LayerNorm / QK-clip",
       "aliases": [],
-      "short_def": "Stability machinery to prevent",
-      "full_def": "Stability machinery to prevent",
+      "short_def": "Stability machinery to prevent attention-logit blow-up: normalize $Q$ and $K$ before the dot product (QK-LayerNorm, Henry et al. 2020) or c…",
+      "full_def": "Stability machinery to prevent attention-logit blow-up: normalize $Q$ and $K$ before the dot product (QK-LayerNorm, Henry et al. 2020) or clamp $QK^\\top$ before softmax (QK-clip).",
       "case_strict": true,
       "kb_cite": null
     },
@@ -4576,19 +4576,19 @@
       "aliases": [
         "Low-Rank Adaptation"
       ],
-      "short_def": "Parameterizes a frozen weight",
-      "full_def": "Parameterizes a frozen weight",
+      "short_def": "Parameterizes a frozen weight matrix's update as a rank-$r$ product $BA$ with $r \\ll \\min(d_{\\text{in}}, d_{\\text{out}})$; only $A, B$ are…",
+      "full_def": "Parameterizes a frozen weight matrix's update as a rank-$r$ product $BA$ with $r \\ll \\min(d_{\\text{in}}, d_{\\text{out}})$; only $A, B$ are trained. Merges to a single weight at inference time with no latency cost.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "hu2021-lora §3, §4; kb/excerpts/hu2021-lora#sec-3"
     },
     {
       "key": "qlora",
       "primary_form": "QLoRA",
       "aliases": [],
       "short_def": "LoRA over a 4-bit-quantized (NF4) base model.",
-      "full_def": "LoRA over a 4-bit-quantized (NF4) base model. Adds",
+      "full_def": "LoRA over a 4-bit-quantized (NF4) base model. Adds double-quantization and paged optimizers. 65B fine-tune on a single 48GB GPU.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dettmers2023-qlora §3; kb/excerpts/dettmers2023-qlora#sec-3-nf4"
     },
     {
       "key": "nf4",
@@ -4596,10 +4596,10 @@
       "aliases": [
         "NormalFloat-4"
       ],
-      "short_def": "4-bit quantization with quantile-spaced",
-      "full_def": "4-bit quantization with quantile-spaced",
+      "short_def": "4-bit quantization with quantile-spaced bin centers matched to a standard normal distribution.",
+      "full_def": "4-bit quantization with quantile-spaced bin centers matched to a standard normal distribution. Information- theoretically near-optimal for pretrained weights, which are empirically near-Gaussian per block.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "dettmers2023-qlora §3.1; kb/excerpts/dettmers2023-qlora#sec-3-nf4"
     },
     {
       "key": "dora",
@@ -4607,8 +4607,8 @@
       "aliases": [
         "Direction-Then-Magnitude LoRA"
       ],
-      "short_def": "LoRA variant decomposing",
-      "full_def": "LoRA variant decomposing",
+      "short_def": "LoRA variant decomposing $W$ into magnitude and direction; LoRA the direction only.",
+      "full_def": "LoRA variant decomposing $W$ into magnitude and direction; LoRA the direction only. Cited via Liu et al. 2024. Often outperforms LoRA at similar parameter count.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -4616,19 +4616,19 @@
       "key": "task-vector",
       "primary_form": "Task vector",
       "aliases": [],
-      "short_def": "A direction in weight space defined as",
-      "full_def": "A direction in weight space defined as",
+      "short_def": "A direction in weight space defined as $\\tau_T = \\theta_T - \\theta_0$ where $\\theta_0$ is a pretrained base and $\\theta_T$ is the same base…",
+      "full_def": "A direction in weight space defined as $\\tau_T = \\theta_T - \\theta_0$ where $\\theta_0$ is a pretrained base and $\\theta_T$ is the same base fine-tuned on task $T$. Arithmetic on task vectors (addition, negation, combination) steers model behavior.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "ilharco2022-task-vectors §2; kb/excerpts/ilharco2022-task-vectors#sec-2"
     },
     {
       "key": "model-soup",
       "primary_form": "Model Soup",
       "aliases": [],
-      "short_def": "A model produced by averaging the weights of $K$",
-      "full_def": "A model produced by averaging the weights of $K$",
+      "short_def": "A model produced by averaging the weights of $K$ fine-tunes from a shared base.",
+      "full_def": "A model produced by averaging the weights of $K$ fine-tunes from a shared base. *Uniform soup* averages all; *greedy soup* iteratively includes only fine-tunes that don't decrease validation accuracy.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "wortsman2022-model-soups §3; kb/excerpts/wortsman2022-model-soups#sec-3"
     },
     {
       "key": "ties-merging",
@@ -4636,10 +4636,10 @@
       "aliases": [
         "Trim-Elect-Sign-Disjoint-Merge"
       ],
-      "short_def": "Three-step model",
-      "full_def": "Three-step model",
+      "short_def": "Three-step model merge: trim each task vector to top-$k\\%$, elect a sign per coordinate by magnitude-weighted majority, disjoint-merge the…",
+      "full_def": "Three-step model merge: trim each task vector to top-$k\\%$, elect a sign per coordinate by magnitude-weighted majority, disjoint-merge the surviving same-sign entries.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "yadav2023-ties-merging §3; kb/excerpts/yadav2023-ties-merging#sec-3"
     },
     {
       "key": "dare",
@@ -4647,8 +4647,8 @@
       "aliases": [
         "Drop And REscale"
       ],
-      "short_def": "Bernoulli-drop $1-p$ of task-vector",
-      "full_def": "Bernoulli-drop $1-p$ of task-vector",
+      "short_def": "Bernoulli-drop $1-p$ of task-vector entries and rescale survivors by $1/p$ before TIES or Soup merging.",
+      "full_def": "Bernoulli-drop $1-p$ of task-vector entries and rescale survivors by $1/p$ before TIES or Soup merging. Yu et al. 2024.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -4656,10 +4656,10 @@
       "key": "mergekit",
       "primary_form": "MergeKit",
       "aliases": [],
-      "short_def": "Open-source toolkit for model merging supporting",
-      "full_def": "Open-source toolkit for model merging supporting",
+      "short_def": "Open-source toolkit for model merging supporting Linear / SLERP / TIES / DARE / passthrough merges with per-tensor configuration.",
+      "full_def": "Open-source toolkit for model merging supporting Linear / SLERP / TIES / DARE / passthrough merges with per-tensor configuration.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "mergekit2024"
     },
     {
       "key": "linear-mode-connectivity-2",
@@ -4667,8 +4667,8 @@
       "aliases": [
         "LMC"
       ],
-      "short_def": "The empirical property that",
-      "full_def": "The empirical property that",
+      "short_def": "The empirical property that fine-tunes of a shared base land in a connected loss basin: the path $\\theta_0 + t(\\theta_f - \\theta_0)$, $t \\i…",
+      "full_def": "The empirical property that fine-tunes of a shared base land in a connected loss basin: the path $\\theta_0 + t(\\theta_f - \\theta_0)$, $t \\in [0,1]$, stays in low-loss territory. Underpins why model merging works.",
       "case_strict": false,
       "kb_cite": null
     },
@@ -4676,8 +4676,8 @@
       "key": "frankenmerge-passthrough-merge",
       "primary_form": "Frankenmerge / passthrough merge",
       "aliases": [],
-      "short_def": "Layer-wise interleaving of",
-      "full_def": "Layer-wise interleaving of",
+      "short_def": "Layer-wise interleaving of layers from two or more models (e.g., copy layers 0–15 from model A and 16–31 from model B).",
+      "full_def": "Layer-wise interleaving of layers from two or more models (e.g., copy layers 0–15 from model A and 16–31 from model B). Widely used in OSS practice; limited primary literature. [FORUM-SIGNAL].",
       "case_strict": false,
       "kb_cite": null
     },
@@ -4685,46 +4685,46 @@
       "key": "loss-masking-in-sft",
       "primary_form": "Loss masking (in SFT)",
       "aliases": [],
-      "short_def": "Setting per-token loss weight to 0 on",
-      "full_def": "Setting per-token loss weight to 0 on",
+      "short_def": "Setting per-token loss weight to 0 on prompt tokens and 1 on response tokens, so only response tokens contribute gradient.",
+      "full_def": "Setting per-token loss weight to 0 on prompt tokens and 1 on response tokens, so only response tokens contribute gradient. The standard convention; multi-turn variants train on all assistant turns or only the last.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "ouyang2022- instructgpt §3; kb/excerpts/ouyang2022-instructgpt#sec-3"
     },
     {
       "key": "rejection-sampling-in-post-training",
       "primary_form": "Rejection sampling (in post-training)",
       "aliases": [],
-      "short_def": "Sample $N$ responses",
-      "full_def": "Sample $N$ responses",
+      "short_def": "Sample $N$ responses per prompt from the current policy, score with a reward model, keep the top-$k$, and SFT on those.",
+      "full_def": "Sample $N$ responses per prompt from the current policy, score with a reward model, keep the top-$k$, and SFT on those. The Llama-3 quality gate before each preference round.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meta-llama3"
     },
     {
       "key": "magpie-alignment-data-synthesis-from-scratch",
       "primary_form": "MAGPIE (alignment data synthesis from scratch)",
       "aliases": [],
-      "short_def": "Procedure",
-      "full_def": "Procedure",
+      "short_def": "Procedure exploiting that an aligned LM, prompted with only its instruction- template prefix (no question), will fabricate the question and…",
+      "full_def": "Procedure exploiting that an aligned LM, prompted with only its instruction- template prefix (no question), will fabricate the question and then answer it. Produces $(x,y)$ SFT pairs at zero human cost.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "magpie-2024"
     },
     {
       "key": "reasoning-distillation-sft-2",
       "primary_form": "Reasoning-distillation SFT",
       "aliases": [],
-      "short_def": "Fine-tuning a small base model on",
-      "full_def": "Fine-tuning a small base model on",
+      "short_def": "Fine-tuning a small base model on $(x,y)$ traces sampled from a strong RL-trained reasoner (e.g., R1-Distill: 800K samples from DeepSeek-R1…",
+      "full_def": "Fine-tuning a small base model on $(x,y)$ traces sampled from a strong RL-trained reasoner (e.g., R1-Distill: 800K samples from DeepSeek-R1; s1: 1K curated traces from Gemini Flash Thinking). Recovers most reasoning capability with no RL.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "deepseek-r1; s1-2025"
     },
     {
       "key": "thinking-non-thinking-mode-sft",
       "primary_form": "Thinking / non-thinking mode SFT",
       "aliases": [],
-      "short_def": "Training a model to emit",
-      "full_def": "Training a model to emit",
+      "short_def": "Training a model to emit `<think>...</think>` blocks gated by a system prompt, switching reasoning behavior on/off.",
+      "full_def": "Training a model to emit `<think>...</think>` blocks gated by a system prompt, switching reasoning behavior on/off. Qwen 3's 4-stage post-training innovation.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "qwen3"
     },
     {
       "key": "flan",
@@ -4732,8 +4732,8 @@
       "aliases": [
         "Finetuned Language Net"
       ],
-      "short_def": "Original instruction-tuning",
-      "full_def": "Original instruction-tuning",
+      "short_def": "Original instruction-tuning recipe: ~1.8K NLP tasks reformatted as natural-language instructions, used as an SFT mixture.",
+      "full_def": "Original instruction-tuning recipe: ~1.8K NLP tasks reformatted as natural-language instructions, used as an SFT mixture. The pre-RLHF post-training baseline. `[wei2021-flan]`. FLAN-T5 `[chung2022-flan-t5]` and the FLAN Collection (Longpre et al. 2023, arXiv:2301.13688) extend it.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -4743,37 +4743,37 @@
       "aliases": [
         "Reinforcement Learning from AI Feedback"
       ],
-      "short_def": "RLHF pipeline",
-      "full_def": "RLHF pipeline",
+      "short_def": "RLHF pipeline where preference labels come from an AI feedback model rather than human labelers.",
+      "full_def": "RLHF pipeline where preference labels come from an AI feedback model rather than human labelers. The reward model is trained on AI-generated preferences via standard Bradley–Terry.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §4; kb/excerpts/bai2022-cai#sec-4"
     },
     {
       "key": "constitution-in-cai",
       "primary_form": "Constitution (in CAI)",
       "aliases": [],
-      "short_def": "A list of natural-language principles",
-      "full_def": "A list of natural-language principles",
+      "short_def": "A list of natural-language principles (\"the assistant should not...\") used to condition the AI feedback model's preferences.",
+      "full_def": "A list of natural-language principles (\"the assistant should not...\") used to condition the AI feedback model's preferences. The only human-authored alignment input in Constitutional AI.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §3; kb/excerpts/bai2022-cai#sec-3"
     },
     {
       "key": "sl-cai-2",
       "primary_form": "SL-CAI",
       "aliases": [],
-      "short_def": "Stage 1 of Constitutional AI: sample a response from",
-      "full_def": "Stage 1 of Constitutional AI: sample a response from",
+      "short_def": "Stage 1 of Constitutional AI: sample a response from a helpful-only model, critique under a randomly-chosen principle, revise, and SFT on t…",
+      "full_def": "Stage 1 of Constitutional AI: sample a response from a helpful-only model, critique under a randomly-chosen principle, revise, and SFT on the revisions. Produces $\\pi^{\\mathrm{SL-CAI}}$.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §3; kb/excerpts/bai2022-cai#sec-3"
     },
     {
       "key": "rl-cai-2",
       "primary_form": "RL-CAI",
       "aliases": [],
-      "short_def": "Stage 2 of Constitutional AI: sample response pairs",
-      "full_def": "Stage 2 of Constitutional AI: sample response pairs",
+      "short_def": "Stage 2 of Constitutional AI: sample response pairs from $\\pi^{\\mathrm{SL-CAI}}$, have an AI judge choose under a principle, train a reward…",
+      "full_def": "Stage 2 of Constitutional AI: sample response pairs from $\\pi^{\\mathrm{SL-CAI}}$, have an AI judge choose under a principle, train a reward model on AI preferences, run PPO with KL anchor.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §4; kb/excerpts/bai2022-cai#sec-4"
     },
     {
       "key": "non-evasion",
@@ -4781,10 +4781,10 @@
       "aliases": [
         "CAI behavioral signature"
       ],
-      "short_def": "A model trained with",
-      "full_def": "A model trained with",
+      "short_def": "A model trained with CAI engages with harmful prompts by stating its objections, rather than refusing flatly.",
+      "full_def": "A model trained with CAI engages with harmful prompts by stating its objections, rather than refusing flatly. The defining behavioral signature distinguishing CAI from helpful-only RLHF (which complies) and from naive safety RLHF (which refuses without explanation).",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "bai2022-cai §6; kb/excerpts/bai2022-cai#sec-6"
     },
     {
       "key": "r-cai-2",
@@ -4792,17 +4792,17 @@
       "aliases": [
         "Reverse CAI"
       ],
-      "short_def": "Inverts the constitution and applies",
-      "full_def": "Inverts the constitution and applies",
+      "short_def": "Inverts the constitution and applies probability-clamped RLAIF to generate controlled adversarial / toxic data.",
+      "full_def": "Inverts the constitution and applies probability-clamped RLAIF to generate controlled adversarial / toxic data.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "r-cai-2026"
     },
     {
       "key": "recursive-rlaif",
       "primary_form": "Recursive RLAIF",
       "aliases": [],
-      "short_def": "Using a previously-trained RLAIF model as the",
-      "full_def": "Using a previously-trained RLAIF model as the",
+      "short_def": "Using a previously-trained RLAIF model as the feedback model for the next round of RLAIF.",
+      "full_def": "Using a previously-trained RLAIF model as the feedback model for the next round of RLAIF. Risks model collapse in the constitution direction.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -4810,10 +4810,10 @@
       "key": "constrained-decoding-2",
       "primary_form": "Constrained decoding",
       "aliases": [],
-      "short_def": "Generation procedure that, at each step,",
-      "full_def": "Generation procedure that, at each step,",
+      "short_def": "Generation procedure that, at each step, masks the logits to allow only tokens consistent with a target grammar (regex, JSON schema, GBNF,…",
+      "full_def": "Generation procedure that, at each step, masks the logits to allow only tokens consistent with a target grammar (regex, JSON schema, GBNF, CFG). The sampling distribution is restricted to $\\mathcal{V}_{\\text{allowed}}(s_t)$, the FSM's allowed-token set in the current state.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "willard2023-outlines §3; kb/excerpts/willard2023-outlines#sec-3"
     },
     {
       "key": "fsm-vocabulary-index",
@@ -4821,19 +4821,19 @@
       "aliases": [
         "Willard–Louf"
       ],
-      "short_def": "Precomputed mapping from",
-      "full_def": "Precomputed mapping from",
+      "short_def": "Precomputed mapping from each FSM state to the set of allowed vocabulary tokens.",
+      "full_def": "Precomputed mapping from each FSM state to the set of allowed vocabulary tokens. Built once per grammar; reduces per-step constraint check from $O(V)$ to amortized $O(1)$.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "willard2023-outlines §3; kb/excerpts/willard2023-outlines#sec-3"
     },
     {
       "key": "context-independent-vs-context-dependent-tokens",
       "primary_form": "Context-independent vs context-dependent tokens",
       "aliases": [],
-      "short_def": "Partition of",
-      "full_def": "Partition of",
+      "short_def": "Partition of the vocabulary by whether allowed/disallowed status depends only on the parser state (context-independent: precomputable bitma…",
+      "full_def": "Partition of the vocabulary by whether allowed/disallowed status depends only on the parser state (context-independent: precomputable bitmask) or also on stack contents (context-dependent: runtime check). XGrammar reports ~99% context-independent for typical JSON schemas.",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "xgrammar2024 §3; kb/excerpts/xgrammar2024#sec-3"
     },
     {
       "key": "compressed-fsm-2",
@@ -4841,10 +4841,10 @@
       "aliases": [
         "SGLang"
       ],
-      "short_def": "FSM transformation that merges chains",
-      "full_def": "FSM transformation that merges chains",
+      "short_def": "FSM transformation that merges chains of singular-transition edges into single edges, allowing multi-token decoding when the grammar determ…",
+      "full_def": "FSM transformation that merges chains of singular-transition edges into single edges, allowing multi-token decoding when the grammar deterministically forces a literal substring (e.g., `{\"summary\": \"` in a JSON schema).",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "zheng2024-sglang §4; kb/excerpts/zheng2024-sglang#sec-4"
     },
     {
       "key": "gbnf",
@@ -4853,7 +4853,7 @@
         "GGML BNF"
       ],
       "short_def": "llama.cpp's grammar specification format.",
-      "full_def": "llama.cpp's grammar specification format.",
+      "full_def": "llama.cpp's grammar specification format. An extended BNF used to define constrained-decoding grammars.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -4861,8 +4861,8 @@
       "key": "json-mode-structured-output-api",
       "primary_form": "JSON mode / structured output API",
       "aliases": [],
-      "short_def": "Vendor-facing API features",
-      "full_def": "Vendor-facing API features",
+      "short_def": "Vendor-facing API features (OpenAI `response_format`, Anthropic tool-use schemas, etc.) that guarantee output conforms to a schema.",
+      "full_def": "Vendor-facing API features (OpenAI `response_format`, Anthropic tool-use schemas, etc.) that guarantee output conforms to a schema. Implemented underneath via FSM-constrained decoding. Exact-conformance guarantees depend on whether the backend uses true FSM or only logit-bias.",
       "case_strict": true,
       "kb_cite": null
     },
@@ -4870,100 +4870,100 @@
       "key": "jsonschemabench",
       "primary_form": "JSONSchemaBench",
       "aliases": [],
-      "short_def": "Benchmark of 10K real-world JSON schemas",
-      "full_def": "Benchmark of 10K real-world JSON schemas",
+      "short_def": "Benchmark of 10K real-world JSON schemas used to compare constrained-decoding engines.",
+      "full_def": "Benchmark of 10K real-world JSON schemas used to compare constrained-decoding engines.",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "FORUM-SIGNAL: arXiv:2501.10868"
     },
     {
       "key": "probe-2",
       "primary_form": "Probe",
       "aliases": [],
       "short_def": "A (typically linear) classifier $g: \\mathbb{R}^d \\to \\mathcal{Y}$ trained on frozen LM activations $\\mathbf{h}^{(\\ell, t)}$ to predict an e…",
-      "full_def": "A (typically linear) classifier $g: \\mathbb{R}^d \\to \\mathcal{Y}$ trained on frozen LM activations $\\mathbf{h}^{(\\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology `[alain-bengio-2017 §1]`.",
+      "full_def": "A (typically linear) classifier $g: \\mathbb{R}^d \\to \\mathcal{Y}$ trained on frozen LM activations $\\mathbf{h}^{(\\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "alain-bengio-2017 §1"
     },
     {
       "key": "linear-probe",
       "primary_form": "Linear probe",
       "aliases": [],
       "short_def": "Probe of the form $g(\\mathbf{h}) = \\sigma(\\mathbf{w}^\\top \\mathbf{h} + b)$ with $\\mathbf{w} \\in \\mathbb{R}^d$.",
-      "full_def": "Probe of the form $g(\\mathbf{h}) = \\sigma(\\mathbf{w}^\\top \\mathbf{h} + b)$ with $\\mathbf{w} \\in \\mathbb{R}^d$. Distinguished from non-linear / MLP probes that can suffer from \"probe leakage\" (learning the property from low-information features) `[alain-bengio-2017]`.",
+      "full_def": "Probe of the form $g(\\mathbf{h}) = \\sigma(\\mathbf{w}^\\top \\mathbf{h} + b)$ with $\\mathbf{w} \\in \\mathbb{R}^d$. Distinguished from non-linear / MLP probes that can suffer from \"probe leakage\" (learning the property from low-information features)",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "alain-bengio-2017"
     },
     {
       "key": "structural-probe",
       "primary_form": "Structural probe",
       "aliases": [],
       "short_def": "Hewitt & Manning's geometric probe that predicts higher-arity structure (e.g., parse-tree distance) by learning a linear transformation $\\m…",
-      "full_def": "Hewitt & Manning's geometric probe that predicts higher-arity structure (e.g., parse-tree distance) by learning a linear transformation $\\mathbf{B} \\in \\mathbb{R}^{k \\times d}$ such that $\\|\\mathbf{B}(\\mathbf{h}_i - \\mathbf{h}_j)\\|_2^2 \\approx d_T(w_i, w_j)$ for tokens $i, j$ `[hewitt2019-structural-probe]`.",
+      "full_def": "Hewitt & Manning's geometric probe that predicts higher-arity structure (e.g., parse-tree distance) by learning a linear transformation $\\mathbf{B} \\in \\mathbb{R}^{k \\times d}$ such that $\\|\\mathbf{B}(\\mathbf{h}_i - \\mathbf{h}_j)\\|_2^2 \\approx d_T(w_i, w_j)$ for tokens $i, j$",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "hewitt2019-structural-probe"
     },
     {
       "key": "mass-mean-probe-difference-in-means-probe",
       "primary_form": "Mass-mean probe / difference-in-means probe",
       "aliases": [],
       "short_def": "Parameter-free probe that defines the property direction as $\\mathbf{d}_{\\mathrm{MM}} = \\boldsymbol{\\mu}_+ - \\boldsymbol{\\mu}_-$ (per-class…",
-      "full_def": "Parameter-free probe that defines the property direction as $\\mathbf{d}_{\\mathrm{MM}} = \\boldsymbol{\\mu}_+ - \\boldsymbol{\\mu}_-$ (per-class mean difference). Closed-form, no optimization required. Marks & Tegmark 2023 argue the directions found are \"more causally implicated in model outputs\" than logistic-regression probe directions on the same data `[marks-tegmark-2023-truth §abstract]`.",
+      "full_def": "Parameter-free probe that defines the property direction as $\\mathbf{d}_{\\mathrm{MM}} = \\boldsymbol{\\mu}_+ - \\boldsymbol{\\mu}_-$ (per-class mean difference). Closed-form, no optimization required. Marks & Tegmark 2023 argue the directions found are \"more causally implicated in model outputs\" than logistic-regression probe directions on the same data",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "marks-tegmark-2023-truth §abstract"
     },
     {
       "key": "probing-methodology-critique",
       "primary_form": "Probing methodology critique",
       "aliases": [],
       "short_def": "The argument (consolidated in Belinkov 2022) that high-accuracy probes are correlational and can read properties the model represents but d…",
-      "full_def": "The argument (consolidated in Belinkov 2022) that high-accuracy probes are correlational and can read properties the model represents but does not *use*. Three named confounders: probe-expressivity, spurious-correlation, vestigial-information `[belinkov2022-probing-survey §abstract]`.",
+      "full_def": "The argument (consolidated in Belinkov 2022) that high-accuracy probes are correlational and can read properties the model represents but does not *use*. Three named confounders: probe-expressivity, spurious-correlation, vestigial-information",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "belinkov2022-probing-survey §abstract"
     },
     {
       "key": "causal-probing",
       "primary_form": "Causal probing",
       "aliases": [],
       "short_def": "The 2023+ pattern of pairing probes with activation interventions (direction ablation, addition, steering) to test whether the probe's dire…",
-      "full_def": "The 2023+ pattern of pairing probes with activation interventions (direction ablation, addition, steering) to test whether the probe's direction is *causally* used by the model, not merely correlated with the property. Marks & Tegmark 2023 demonstrate this on a truth direction in LLaMA-2-13B that flips TRUE/FALSE prediction when ablated `[marks-tegmark-2023-truth §abstract]`.",
+      "full_def": "The 2023+ pattern of pairing probes with activation interventions (direction ablation, addition, steering) to test whether the probe's direction is *causally* used by the model, not merely correlated with the property. Marks & Tegmark 2023 demonstrate this on a truth direction in LLaMA-2-13B that flips TRUE/FALSE prediction when ablated",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "marks-tegmark-2023-truth §abstract"
     },
     {
       "key": "direction-ablation",
       "primary_form": "Direction ablation",
       "aliases": [],
       "short_def": "Causal-probing intervention that projects a residual-stream activation onto the orthogonal complement of a probe direction $\\hat{\\mathbf{d}…",
-      "full_def": "Causal-probing intervention that projects a residual-stream activation onto the orthogonal complement of a probe direction $\\hat{\\mathbf{d}}$: $\\mathbf{h} \\mapsto \\mathbf{h} - (\\mathbf{h}^\\top \\hat{\\mathbf{d}})\\hat{\\mathbf{d}}$, then runs the rest of the model. A behavior change validates causal use of $\\hat{\\mathbf{d}}$ `[marks-tegmark-2023-truth §abstract]`.",
+      "full_def": "Causal-probing intervention that projects a residual-stream activation onto the orthogonal complement of a probe direction $\\hat{\\mathbf{d}}$: $\\mathbf{h} \\mapsto \\mathbf{h} - (\\mathbf{h}^\\top \\hat{\\mathbf{d}})\\hat{\\mathbf{d}}$, then runs the rest of the model. A behavior change validates causal use of $\\hat{\\mathbf{d}}$",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "marks-tegmark-2023-truth §abstract"
     },
     {
       "key": "activation-steering",
       "primary_form": "Activation steering",
       "aliases": [],
       "short_def": "Inference-time intervention that adds $\\alpha \\hat{\\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\\alpha < 0$, suppress…",
-      "full_def": "Inference-time intervention that adds $\\alpha \\hat{\\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\\alpha < 0$, suppress) a probed direction. The Representation Engineering / Vennemeyer 2025 line `[vennemeyer2025-sycophancy-not-one-thing FORUM-SIGNAL]`.",
+      "full_def": "Inference-time intervention that adds $\\alpha \\hat{\\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\\alpha < 0$, suppress) a probed direction. The Representation Engineering / Vennemeyer 2025 line",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "vennemeyer2025-sycophancy-not-one-thing FORUM-SIGNAL"
     },
     {
       "key": "truth-direction-2",
       "primary_form": "Truth direction",
       "aliases": [],
       "short_def": "A direction in residual-stream space whose projection sign correlates with (and, validated by Marks & Tegmark 2023, causally controls) the…",
-      "full_def": "A direction in residual-stream space whose projection sign correlates with (and, validated by Marks & Tegmark 2023, causally controls) the model's TRUE/FALSE prediction on factual statements. Localizes around layer 12-15 of LLaMA-2-13B at end-of-statement punctuation tokens `[marks-tegmark-2023-truth §3]`.",
+      "full_def": "A direction in residual-stream space whose projection sign correlates with (and, validated by Marks & Tegmark 2023, causally controls) the model's TRUE/FALSE prediction on factual statements. Localizes around layer 12-15 of LLaMA-2-13B at end-of-statement punctuation tokens",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "marks-tegmark-2023-truth §3"
     },
     {
       "key": "summarization-behavior",
       "primary_form": "Summarization behavior",
       "aliases": [],
       "short_def": "The empirical pattern (Tigges et al. 2023, Marks & Tegmark 2023) that information about a clause is encoded over the clause-ending punctuat…",
-      "full_def": "The empirical pattern (Tigges et al. 2023, Marks & Tegmark 2023) that information about a clause is encoded over the clause-ending punctuation token, making period-position activations the canonical probing target for sentence-level properties `[marks-tegmark-2023-truth §3]`.",
+      "full_def": "The empirical pattern (Tigges et al. 2023, Marks & Tegmark 2023) that information about a clause is encoded over the clause-ending punctuation token, making period-position activations the canonical probing target for sentence-level properties",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "marks-tegmark-2023-truth §3"
     },
     {
       "key": "mmlu",
@@ -4972,63 +4972,63 @@
         "Massive Multitask Language Understanding"
       ],
       "short_def": "57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021.",
-      "full_def": "57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021. 15,908 questions sourced from public exam banks (AP, GRE, MCAT, professional licensing). Foundational for the post-2021 LLM eval era; saturated at >90% on frontier models as of 2026 `[hendrycks2021-mmlu §abstract]`.",
+      "full_def": "57-subject 4-way MCQ benchmark introduced by Hendrycks et al. 2020 / ICLR 2021. 15,908 questions sourced from public exam banks (AP, GRE, MCAT, professional licensing). Foundational for the post-2021 LLM eval era; saturated at >90% on frontier models as of 2026",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "hendrycks2021-mmlu §abstract"
     },
     {
       "key": "mmlu-redux-2",
       "primary_form": "MMLU-Redux",
       "aliases": [],
       "short_def": "Polo et al. 2024 audit of MMLU finding 6.49% baseline error rate, with the Virology subset reaching 57% errors.",
-      "full_def": "Polo et al. 2024 audit of MMLU finding 6.49% baseline error rate, with the Virology subset reaching 57% errors. Per-question corrections published; methodology audit, not a new benchmark `[mmlu-redux-2024 §abstract]`.",
+      "full_def": "Polo et al. 2024 audit of MMLU finding 6.49% baseline error rate, with the Virology subset reaching 57% errors. Per-question corrections published; methodology audit, not a new benchmark",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "mmlu-redux-2024 §abstract"
     },
     {
       "key": "mmlu-pro",
       "primary_form": "MMLU-Pro",
       "aliases": [],
       "short_def": "10-way MCQ, reasoning-augmented successor to MMLU.",
-      "full_def": "10-way MCQ, reasoning-augmented successor to MMLU. 12,032 items, 16-33 percentage point drop in headline score relative to MMLU at launch, 2× lower prompt-format sensitivity `[wang2024-mmlu-pro §abstract]`.",
+      "full_def": "10-way MCQ, reasoning-augmented successor to MMLU. 12,032 items, 16-33 percentage point drop in headline score relative to MMLU at launch, 2× lower prompt-format sensitivity",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "wang2024-mmlu-pro §abstract"
     },
     {
       "key": "gpqa-diamond-2",
       "primary_form": "GPQA Diamond",
       "aliases": [],
       "short_def": "198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web acc…",
-      "full_def": "198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web access got it wrong. The \"Google-proof\" property is operationalized via the 34% non-expert-with-web baseline. Saturated at frontier as of 2026 (>90%) `[rein2023-gpqa §abstract]`.",
+      "full_def": "198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web access got it wrong. The \"Google-proof\" property is operationalized via the 34% non-expert-with-web baseline. Saturated at frontier as of 2026 (>90%)",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "rein2023-gpqa §abstract"
     },
     {
       "key": "answer-letter-prior-2",
       "primary_form": "Answer-letter prior",
       "aliases": [],
       "short_def": "The training-data-induced bias that pre-trained LMs do not have uniform priors over A/B/C/D in MCQ items.",
-      "full_def": "The training-data-induced bias that pre-trained LMs do not have uniform priors over A/B/C/D in MCQ items. Letter bias can favor one option by several percentage points; 10-way MCQ (MMLU-Pro) dilutes this effect `[wang2024-mmlu-pro §sec-delta]`.",
+      "full_def": "The training-data-induced bias that pre-trained LMs do not have uniform priors over A/B/C/D in MCQ items. Letter bias can favor one option by several percentage points; 10-way MCQ (MMLU-Pro) dilutes this effect",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wang2024-mmlu-pro §sec-delta"
     },
     {
       "key": "cot-vs-direct-gap-as-a-knowledge-reasoning-diagnostic",
       "primary_form": "CoT-vs-direct gap (as a knowledge/reasoning diagnostic)",
       "aliases": [],
       "short_def": "On a knowledge-dominant benchmark (MMLU), Chain-of-Thought scoring gives roughly the same result as direct-answer scoring; on a reasoning-d…",
-      "full_def": "On a knowledge-dominant benchmark (MMLU), Chain-of-Thought scoring gives roughly the same result as direct-answer scoring; on a reasoning-dominant benchmark (MMLU-Pro), CoT improves the score measurably. The gap is a diagnostic for whether a benchmark requires multi-step inference `[wang2024-mmlu-pro §sec-cot]`.",
+      "full_def": "On a knowledge-dominant benchmark (MMLU), Chain-of-Thought scoring gives roughly the same result as direct-answer scoring; on a reasoning-dominant benchmark (MMLU-Pro), CoT improves the score measurably. The gap is a diagnostic for whether a benchmark requires multi-step inference",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "wang2024-mmlu-pro §sec-cot"
     },
     {
       "key": "knowledge-vs-reasoning-hybrid",
       "primary_form": "Knowledge-vs-reasoning hybrid",
       "aliases": [],
       "short_def": "A benchmark where items combine factual retrieval and multi-step reasoning.",
-      "full_def": "A benchmark where items combine factual retrieval and multi-step reasoning. MMLU-Pro, GPQA, HLE all qualify; the post-MMLU eval landscape has largely abandoned pure-knowledge benchmarks in favor of hybrids `[wang2024-mmlu-pro; rein2023-gpqa; phan2025-hle]`.",
+      "full_def": "A benchmark where items combine factual retrieval and multi-step reasoning. MMLU-Pro, GPQA, HLE all qualify; the post-MMLU eval landscape has largely abandoned pure-knowledge benchmarks in favor of hybrids",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wang2024-mmlu-pro; rein2023-gpqa; phan2025-hle"
     },
     {
       "key": "asr",
@@ -5037,72 +5037,72 @@
         "Attack Success Rate"
       ],
       "short_def": "Headline metric in adversarial-robustness benchmarks: fraction of (behavior, attack) pairs for which the model produces an output the judge…",
-      "full_def": "Headline metric in adversarial-robustness benchmarks: fraction of (behavior, attack) pairs for which the model produces an output the judge rates harmful. Not directly comparable across papers unless the judge, behaviors, and attack family match `[chao2024-jailbreakbench §abstract]`.",
+      "full_def": "Headline metric in adversarial-robustness benchmarks: fraction of (behavior, attack) pairs for which the model produces an output the judge rates harmful. Not directly comparable across papers unless the judge, behaviors, and attack family match",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "chao2024-jailbreakbench §abstract"
     },
     {
       "key": "harmbench-2",
       "primary_form": "HarmBench",
       "aliases": [],
       "short_def": "Mazeika et al. 2024 standardized red-team evaluation framework: 510 behaviors in four functional categories, 18 attack methods, 33 target L…",
-      "full_def": "Mazeika et al. 2024 standardized red-team evaluation framework: 510 behaviors in four functional categories, 18 attack methods, 33 target LLMs/defenses. Used by AISI for pre-deployment evals `[harmbench2024 §abstract]`.",
+      "full_def": "Mazeika et al. 2024 standardized red-team evaluation framework: 510 behaviors in four functional categories, 18 attack methods, 33 target LLMs/defenses. Used by AISI for pre-deployment evals",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "harmbench2024 §abstract"
     },
     {
       "key": "jailbreakbench-2",
       "primary_form": "JailbreakBench",
       "aliases": [],
       "short_def": "Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifac…",
-      "full_def": "Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifacts (the actual successful prompts), standardized LLM-as-judge, public leaderboard. NeurIPS 2024 D&B `[chao2024-jailbreakbench §abstract]`.",
+      "full_def": "Chao et al. 2024 reproducibility-focused jailbreak benchmark: 100 OpenAI-policy-aligned behaviors, evolving repository of jailbreak artifacts (the actual successful prompts), standardized LLM-as-judge, public leaderboard. NeurIPS 2024 D&B",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "chao2024-jailbreakbench §abstract"
     },
     {
       "key": "crescendo-multi-turn-jailbreak",
       "primary_form": "Crescendo (multi-turn jailbreak)",
       "aliases": [],
       "short_def": "Russinovich et al. 2024 attack: gradually escalate over multiple benign-seeming turns, exploiting the LM's tendency to over-weight its own…",
-      "full_def": "Russinovich et al. 2024 attack: gradually escalate over multiple benign-seeming turns, exploiting the LM's tendency to over-weight its own prior committed responses. Achieves 29-71% ASR uplift over single-turn baselines on AdvBench against GPT-4 / Gemini-Pro. Documents that single-turn evals systematically underestimate the attack surface `[russinovich2024-crescendo §abstract]`.",
+      "full_def": "Russinovich et al. 2024 attack: gradually escalate over multiple benign-seeming turns, exploiting the LM's tendency to over-weight its own prior committed responses. Achieves 29-71% ASR uplift over single-turn baselines on AdvBench against GPT-4 / Gemini-Pro. Documents that single-turn evals systematically underestimate the attack surface",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "russinovich2024-crescendo §abstract"
     },
     {
       "key": "crescendomation",
       "primary_form": "Crescendomation",
       "aliases": [],
       "short_def": "The automated implementation of Crescendo: an attacker LLM generates the escalation chain.",
-      "full_def": "The automated implementation of Crescendo: an attacker LLM generates the escalation chain. The 29-71% ASR uplift number refers to Crescendomation specifically `[russinovich2024-crescendo §sec-asr-uplift]`.",
+      "full_def": "The automated implementation of Crescendo: an attacker LLM generates the escalation chain. The 29-71% ASR uplift number refers to Crescendomation specifically",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "russinovich2024-crescendo §sec-asr-uplift"
     },
     {
       "key": "competing-objectives-jailbreak-failure-mode",
       "primary_form": "Competing objectives (jailbreak failure mode)",
       "aliases": [],
       "short_def": "Wei, Haghtalab, Steinhardt 2023: when a model's capability training and safety training pull in different directions, attacks that invoke t…",
-      "full_def": "Wei, Haghtalab, Steinhardt 2023: when a model's capability training and safety training pull in different directions, attacks that invoke the capability override the safety training. One of two named failure modes `[wei2023-jailbroken §abstract]`.",
+      "full_def": "Wei, Haghtalab, Steinhardt 2023: when a model's capability training and safety training pull in different directions, attacks that invoke the capability override the safety training. One of two named failure modes",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wei2023-jailbroken §abstract"
     },
     {
       "key": "mismatched-generalization-jailbreak-failure-mode",
       "primary_form": "Mismatched generalization (jailbreak failure mode)",
       "aliases": [],
       "short_def": "Wei et al. 2023: safety training fails to generalize to a domain (Base64, low-resource language, role-play) where the model has capabilitie…",
-      "full_def": "Wei et al. 2023: safety training fails to generalize to a domain (Base64, low-resource language, role-play) where the model has capabilities. The other named failure mode `[wei2023-jailbroken §abstract]`.",
+      "full_def": "Wei et al. 2023: safety training fails to generalize to a domain (Base64, low-resource language, role-play) where the model has capabilities. The other named failure mode",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wei2023-jailbroken §abstract"
     },
     {
       "key": "safety-capability-parity",
       "primary_form": "Safety-capability parity",
       "aliases": [],
       "short_def": "Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range.",
-      "full_def": "Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range. Partial-domain safety training will be defeated by attacks that target the capability/safety gap `[wei2023-jailbroken §abstract]`.",
+      "full_def": "Wei et al. 2023's policy recommendation: safety mechanisms must be as sophisticated as the model's full capability range. Partial-domain safety training will be defeated by attacks that target the capability/safety gap",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "wei2023-jailbroken §abstract"
     },
     {
       "key": "asl",
@@ -5111,9 +5111,9 @@
         "AI Safety Level"
       ],
       "short_def": "Anthropic's Responsible Scaling Policy tier framework.",
-      "full_def": "Anthropic's Responsible Scaling Policy tier framework. ASL-1 (low risk, no autonomy) → ASL-2 (current frontier baseline) → ASL-3 (substantially elevated risk; specific deployment controls required) → ASL-4 (autonomous AI risk; not yet deployed). Each tier specifies capability-evaluation triggers and security/containment commitments `[anthropic-rsp-2024]`.",
+      "full_def": "Anthropic's Responsible Scaling Policy tier framework. ASL-1 (low risk, no autonomy) → ASL-2 (current frontier baseline) → ASL-3 (substantially elevated risk; specific deployment controls required) → ASL-4 (autonomous AI risk; not yet deployed). Each tier specifies capability-evaluation triggers and security/containment commitments",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "anthropic-rsp-2024"
     },
     {
       "key": "task-horizon-metric",
@@ -5122,45 +5122,45 @@
         "METR"
       ],
       "short_def": "Capability-evaluation metric framing model performance as the human-time-to-complete distribution at which the model succeeds at >50%.",
-      "full_def": "Capability-evaluation metric framing model performance as the human-time-to-complete distribution at which the model succeeds at >50%. Becoming the field's lingua franca for capability quantification across labs and external evaluators `[metr-autonomy-2024]`.",
+      "full_def": "Capability-evaluation metric framing model performance as the human-time-to-complete distribution at which the model succeeds at >50%. Becoming the field's lingua franca for capability quantification across labs and external evaluators",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "metr-autonomy-2024"
     },
     {
       "key": "dangerous-capability-evaluation-2",
       "primary_form": "Dangerous-capability evaluation",
       "aliases": [],
       "short_def": "Pre-deployment eval that tests whether a model can autonomously carry out a task whose successful completion would constitute a threat (cyb…",
-      "full_def": "Pre-deployment eval that tests whether a model can autonomously carry out a task whose successful completion would constitute a threat (cyber CTFs, autonomous replication, biology / CBRN tasks). Inverts the usual \"model refuses harm\" frame to \"model could *do* harm if it tried\" `[metr-autonomy-2024; cybench2024 FORUM-SIGNAL]`.",
+      "full_def": "Pre-deployment eval that tests whether a model can autonomously carry out a task whose successful completion would constitute a threat (cyber CTFs, autonomous replication, biology / CBRN tasks). Inverts the usual \"model refuses harm\" frame to \"model could *do* harm if it tried\"",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "metr-autonomy-2024; cybench2024 FORUM-SIGNAL"
     },
     {
       "key": "judge-llm-contamination",
       "primary_form": "Judge-LLM contamination",
       "aliases": [],
       "short_def": "Failure mode in safety evals: when the judge classifier is from the same model family as the model being evaluated, it may systematically u…",
-      "full_def": "Failure mode in safety evals: when the judge classifier is from the same model family as the model being evaluated, it may systematically underrate harmful generations from that family. Cross-judge agreement testing is the partial mitigation `[chao2024-jailbreakbench §abstract]`.",
+      "full_def": "Failure mode in safety evals: when the judge classifier is from the same model family as the model being evaluated, it may systematically underrate harmful generations from that family. Cross-judge agreement testing is the partial mitigation",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "chao2024-jailbreakbench §abstract"
     },
     {
       "key": "harmbench-judge",
       "primary_form": "HarmBench-Judge",
       "aliases": [],
       "short_def": "The fine-tuned classifier (Llama-2-13B family, fine-tuned on labeled harmful/non-harmful generations) shipped with HarmBench as the standar…",
-      "full_def": "The fine-tuned classifier (Llama-2-13B family, fine-tuned on labeled harmful/non-harmful generations) shipped with HarmBench as the standardized judge for the 510 behaviors `[harmbench2024 §sec-structure]`.",
+      "full_def": "The fine-tuned classifier (Llama-2-13B family, fine-tuned on labeled harmful/non-harmful generations) shipped with HarmBench as the standardized judge for the 510 behaviors",
       "case_strict": true,
-      "kb_cite": null
+      "kb_cite": "harmbench2024 §sec-structure"
     },
     {
       "key": "honeypot-evaluation",
       "primary_form": "Honeypot evaluation",
       "aliases": [],
       "short_def": "Eval protocol that presents the model with a deployment-realistic context (or, conversely, a clearly-evaluation context) to test whether ev…",
-      "full_def": "Eval protocol that presents the model with a deployment-realistic context (or, conversely, a clearly-evaluation context) to test whether eval scores are stable across the eval-vs-deployment boundary. Motivated by the Apollo / scheming finding that models may behave differently when they suspect they are being evaluated `[meinke2024-apollo-scheming]`.",
+      "full_def": "Eval protocol that presents the model with a deployment-realistic context (or, conversely, a clearly-evaluation context) to test whether eval scores are stable across the eval-vs-deployment boundary. Motivated by the Apollo / scheming finding that models may behave differently when they suspect they are being evaluated",
       "case_strict": false,
-      "kb_cite": null
+      "kb_cite": "meinke2024-apollo-scheming"
     }
   ]
 }

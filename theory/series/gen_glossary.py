@@ -19,7 +19,12 @@ OUT = THEORY / "series" / "glossary-terms.json"
 
 BULLET_RE = re.compile(r"^- \*\*(?P<term>.+?)\*\*\s*[—-]\s*(?P<def>.+)$")
 PAREN_RE = re.compile(r"^(?P<head>[^(]+?)\s*\((?P<paren>.+?)\)\s*$")
-KB_CITE_RE = re.compile(r"`\[([^\]`]+)\]`\s*$")
+# Match a trailing kb-cite of the form `[paper-key §X; kb/excerpts/...]`
+# at the end of the def. Allow optional trailing punctuation (.,;) and
+# whitespace after the closing backtick — some entries terminate with
+# `[...]`.` while others omit the period; both should be treated as a
+# clean cite plus a clean def.
+KB_CITE_RE = re.compile(r"`\[([^\]`]+)\]`[\s.,;]*$")
 
 
 def _looks_like_alias(s: str) -> bool:
@@ -45,16 +50,43 @@ def _split_def_and_cite(defn: str) -> tuple[str, str | None]:
 def parse_entries(lines: Sequence[str]) -> list[dict]:
     """Parse the bullet entries from a glossary.md line iterable.
 
+    Multi-line bullets are joined into a single definition: any line
+    immediately following a bullet that is indented by at least two
+    spaces (Markdown-list continuation) is appended to the current
+    bullet's text. Empty lines and unindented lines end the bullet.
+
     Returns one record per entry: {primary_form, aliases, full_def, kb_cite}.
     More fields (key, short_def, case_strict) are added by later passes.
     """
     entries: list[dict] = []
-    for line in lines:
+    lst = list(lines)
+    i = 0
+    while i < len(lst):
+        line = lst[i]
         m = BULLET_RE.match(line)
         if not m:
+            i += 1
             continue
         term = m.group("term").strip()
-        defn_raw = m.group("def").strip()
+        defn_parts: list[str] = [m.group("def").strip()]
+        # Walk forward collecting indented continuation lines until we hit
+        # a blank line, another bullet, a heading, or unindented content.
+        j = i + 1
+        while j < len(lst):
+            nxt = lst[j]
+            if nxt.strip() == "":
+                break
+            if nxt.startswith("- ") or nxt.startswith("#"):
+                break
+            # CommonMark list continuation: any indentation past the bullet
+            # marker keeps the line attached. Our bullets use `- **Term**`
+            # so content indents at 2 spaces.
+            if nxt[:1] == " ":
+                defn_parts.append(nxt.strip())
+                j += 1
+                continue
+            break
+        defn_raw = " ".join(defn_parts).strip()
         primary = term
         aliases: list[str] = []
         pm = PAREN_RE.match(term)
@@ -71,6 +103,7 @@ def parse_entries(lines: Sequence[str]) -> list[dict]:
             "full_def": clean_def,
             "kb_cite": kb_cite,
         })
+        i = j
     return entries
 
 
