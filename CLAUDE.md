@@ -1,6 +1,61 @@
 # Purpose
 This is a workspace for robust experimental LLM research using open source models that can be tested and modified locally or fine-tuned.
 
+# Concurrent-session workflow: ALWAYS work in a worktree
+
+This project regularly has multiple concurrent Claude Code sessions
+operating on different parts of the tree (theory, gui_cpp,
+llm_engine_cpp, llm_surgeon). To prevent the cross-session staging
+chaos that happens when several sessions share the same working tree
+— uncommitted work from one session getting accidentally swept into
+another session's commit — every session works in its own git
+worktree and merges back to master via PR.
+
+**Don't work directly in the main checkout at `/home/ai/ai-projects/llm/`
+on `master`.** That checkout is the integration point only.
+
+## Starting a session
+
+1. Invoke the `superpowers:using-git-worktrees` skill at session
+   start. Its `EnterWorktree` tool creates a worktree in
+   `.claude/worktrees/<name>/` (already gitignored — no .gitignore
+   changes needed) on a new branch.
+2. Base from HEAD (current master state) for work that builds on
+   unpushed commits; default `fresh` (origin/master) is fine for work
+   that should be PR-able against the public main.
+3. Branch name: `session/<short-scope>` or a conventional feature
+   branch name (`feat/...`, `fix/...`, `refactor/...`). Avoid
+   `wip/...` for anything you intend to PR — `wip/` is reserved for
+   local checkpoints that get split before PR.
+
+## During the session
+
+- `cd .claude/worktrees/<name>/` is the working directory.
+- Commits land on the session's branch — never directly on `master`.
+- Other sessions' worktrees are siblings under `.claude/worktrees/`;
+  inspect them read-only if needed (`git -C .claude/worktrees/other
+  log`), but don't edit files there.
+
+## Ending a session
+
+1. Push the branch to origin if the user wants to PR it: `git push
+   -u origin <branch>`.
+2. Open a PR to merge into master via `gh pr create`.
+3. After merge, remove the worktree with `git worktree remove
+   .claude/worktrees/<name>` (or via `ExitWorktree` if you used
+   `EnterWorktree`).
+
+## Recovery: the `wip/multi-session-checkpoint` branch
+
+A 2026-05-13 checkpoint commit (`2922f55`) on
+`wip/multi-session-checkpoint` (worktree at
+`.claude/worktrees/checkpoint/`) holds the in-flight uncommitted
+state of three earlier sessions that pre-dated this convention:
+gui_cpp Phase-1 imgui frontend work, llm_engine_cpp backend
+extraction, llm_surgeon NLA round-trip research, plus a learn/pytorch/
+tutorial directory. Split into per-scope branches and PR back to
+master at convenience.
+
 ## Project Structure
 
 `theory/` — LLM theoretical-framework workspace (**GROUND TRUTH**) for theory, math, historical progression, and visualizations. KB-substrate layout (v2 from 2026-05-03):
