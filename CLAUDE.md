@@ -1,60 +1,97 @@
-# Purpose
-This is a workspace for robust experimental LLM research using open source models that can be tested and modified locally or fine-tuned.
+# HARD RULE: every session MUST work in a git worktree
 
-# Concurrent-session workflow: ALWAYS work in a worktree
+**Not a guideline. Not a preference. A hard rule.** This project runs
+multiple concurrent Claude Code sessions on different parts of the
+tree (theory, gui_cpp, llm_engine_cpp, llm_surgeon). When two sessions
+share the main checkout, uncommitted work from one session gets
+accidentally swept into the other's `git add` and commit — exactly
+what happened in commit c844d24 (2026-05-12), which mixed a theory
+en-dash commit with 8 unrelated rename-stage files from a parallel
+refactor session. The cleanup was blocked when more concurrent
+commits piled on top, turning a 2-commit history rewrite into a risky
+4-commit one. Worktrees are the fix.
 
-This project regularly has multiple concurrent Claude Code sessions
-operating on different parts of the tree (theory, gui_cpp,
-llm_engine_cpp, llm_surgeon). To prevent the cross-session staging
-chaos that happens when several sessions share the same working tree
-— uncommitted work from one session getting accidentally swept into
-another session's commit — every session works in its own git
-worktree and merges back to master via PR.
+## Pre-flight check — BEFORE your first edit/write/bash-write
 
-**Don't work directly in the main checkout at `/home/ai/ai-projects/llm/`
-on `master`.** That checkout is the integration point only.
+Run this as the very first thing in any session at this project:
 
-## Starting a session
+```bash
+GIT_DIR=$(cd "$(git rev-parse --git-dir)" && pwd -P)
+GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
+[ "$GIT_DIR" = "$GIT_COMMON" ] && echo "MAIN CHECKOUT — MUST CREATE WORKTREE" || echo "in worktree — proceed"
+```
 
-1. Invoke the `superpowers:using-git-worktrees` skill at session
-   start. Its `EnterWorktree` tool creates a worktree in
-   `.claude/worktrees/<name>/` (already gitignored — no .gitignore
-   changes needed) on a new branch.
-2. Base from HEAD (current master state) for work that builds on
-   unpushed commits; default `fresh` (origin/master) is fine for work
-   that should be PR-able against the public main.
-3. Branch name: `session/<short-scope>` or a conventional feature
-   branch name (`feat/...`, `fix/...`, `refactor/...`). Avoid
-   `wip/...` for anything you intend to PR — `wip/` is reserved for
-   local checkpoints that get split before PR.
+If the check says "MAIN CHECKOUT": **STOP. Do not edit any file.**
+Invoke `superpowers:using-git-worktrees` (which calls `EnterWorktree`)
+and create a worktree at `.claude/worktrees/<scope>/` before doing
+anything else. `.claude/` is already gitignored — no .gitignore
+changes needed.
+
+The only commits permitted directly on master in the main checkout
+are **integration commits**: merge commits (`gh pr merge`), or
+convention-establishing changes to CLAUDE.md and `.gitignore` itself.
+Everything else — even one-line typo fixes — goes through a worktree.
+
+## Starting a session (the right way)
+
+1. **`EnterWorktree name=<scope>`** — creates worktree at
+   `.claude/worktrees/<scope>/` and switches your session into it.
+2. Branch name auto-chosen by EnterWorktree, or pick one via the
+   `name` arg. Conventional prefixes: `feat/`, `fix/`, `refactor/`,
+   `docs/`, `session/` (for general-purpose scopes). `wip/` is
+   reserved for holding pens that get split before PR — don't use it
+   for work you intend to merge directly.
+3. The session's cwd is now the worktree. Your `Edit`, `Write`, `Bash`
+   tool calls all operate inside it. Master in the main checkout is
+   untouched.
 
 ## During the session
 
-- `cd .claude/worktrees/<name>/` is the working directory.
-- Commits land on the session's branch — never directly on `master`.
-- Other sessions' worktrees are siblings under `.claude/worktrees/`;
-  inspect them read-only if needed (`git -C .claude/worktrees/other
-  log`), but don't edit files there.
+- All edits and commits land on the session's branch in its worktree.
+- Other sessions' worktrees are siblings under `.claude/worktrees/`.
+  Inspect read-only if needed (`git -C .claude/worktrees/other log`)
+  but **never edit files in another session's worktree.**
+- The main checkout (`/home/ai/ai-projects/llm/` on `master`) is for
+  integration only. Don't `cd` back there to edit.
 
 ## Ending a session
 
-1. Push the branch to origin if the user wants to PR it: `git push
-   -u origin <branch>`.
-2. Open a PR to merge into master via `gh pr create`.
-3. After merge, remove the worktree with `git worktree remove
-   .claude/worktrees/<name>` (or via `ExitWorktree` if you used
-   `EnterWorktree`).
+1. Push the branch: `git push -u origin <branch>`.
+2. **Open a PR** with `gh pr create`. The user can then run
+   `/ultrareview <PR#>` for multi-agent cloud review on the PR.
+3. After the PR merges, remove the worktree:
+   `git worktree remove .claude/worktrees/<scope>` (or via
+   `ExitWorktree`).
 
-## Recovery: the `wip/multi-session-checkpoint` branch
+## Why this enables /ultrareview and conflict-free parallel sessions
+
+- Each worktree's branch has a **clean, scope-bounded diff** —
+  `gh pr create` produces a PR that reviews exactly one session's
+  work, nothing extra. `/ultrareview <PR#>` then evaluates a coherent
+  unit of change, not a cross-session bundle.
+- Concurrent sessions can't fight over the index because each has its
+  own. `git status` in one worktree shows only that session's mods.
+- Recovery is cheap: if a session goes off the rails, just remove its
+  worktree (`git worktree remove --force`); master is untouched.
+
+## Recovery branch: `wip/multi-session-checkpoint`
 
 A 2026-05-13 checkpoint commit (`2922f55`) on
 `wip/multi-session-checkpoint` (worktree at
 `.claude/worktrees/checkpoint/`) holds the in-flight uncommitted
-state of three earlier sessions that pre-dated this convention:
-gui_cpp Phase-1 imgui frontend work, llm_engine_cpp backend
-extraction, llm_surgeon NLA round-trip research, plus a learn/pytorch/
-tutorial directory. Split into per-scope branches and PR back to
-master at convenience.
+state of earlier sessions that pre-dated this convention: gui_cpp
+Phase-1 imgui frontend work (the "llobotomy" C++ research tool),
+llm_engine_cpp backend extraction (gguf_inspector, libtorch,
+llama_cpp, native_runtime), llm_surgeon NLA round-trip research,
+and a `learn/pytorch/` tutorial directory. When the relevant session
+resumes it should `cd .claude/worktrees/checkpoint/`, split the
+holding-pen commit into per-scope PR-able branches, and discard the
+`wip/` checkpoint once those branches are merged.
+
+---
+
+# Purpose
+This is a workspace for robust experimental LLM research using open source models that can be tested and modified locally or fine-tuned.
 
 ## Project Structure
 
