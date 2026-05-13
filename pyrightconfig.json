@@ -2,7 +2,7 @@
   "extends": "/home/skothr/.config/pyright/base.json",
   "pythonVersion": "3.12",
   "include": ["testing"],
-  "venvPath": "testing",
+  "venvPath": "/home/ai/ai-projects/llm/testing",
   "venv": ".venv",
   "extraPaths": ["testing"]
 }
