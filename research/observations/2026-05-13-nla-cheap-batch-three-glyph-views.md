@@ -33,7 +33,7 @@ Two structural observations:
 
 1. **The classifier-identified feature dims are NOT the country-discriminating dims.** Of our 8 feature dims (20, 32, 392, 608, 1121, 1790, 2604, 2953), only **dim 2953** appears in the CAV's top-10 contributors. The classifier found dims with "feature-bearing geometry" (sign-flipping × bursty) but those general-content dims aren't where country-vs-non-country signal lives. The country signal lives in dims with weaker general-content character.
 
-2. **3 of the top 8 CAV contributors are SINK dims** (2107: -0.10, 3110: -0.09, 2570: +0.08). I'd assumed sinks contribute zero to content axes because they're nearly constant. But "nearly constant" ≠ "constant." Sinks pick up tiny systematic differences between country and non-country prompts, and at the resolution of difference-of-means CAV computation, those tiny modulations matter. **Sinks have a content-modulated component on top of their large constant offset.**
+2. **2 of the top 8 CAV contributors are SINK dims** (2107: -0.10 at rank 6, 3110: -0.09 at rank 8). Dim 2570 also contributes (rank 15, +0.08) but at lower rank than the original observation claimed — the audit caught this off-by-one. I'd assumed sinks contribute zero to content axes because they're nearly constant. But "nearly constant" ≠ "constant." Sinks pick up tiny systematic differences between country and non-country prompts, and at the resolution of difference-of-means CAV computation, those tiny modulations matter. **Sinks have a content-modulated component on top of their large constant offset.**
 
 ### Design implication
 
