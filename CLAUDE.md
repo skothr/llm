@@ -74,19 +74,28 @@ Everything else — even one-line typo fixes — goes through a worktree.
 - Recovery is cheap: if a session goes off the rails, just remove its
   worktree (`git worktree remove --force`); master is untouched.
 
-## Recovery branch: `wip/multi-session-checkpoint`
+## Existing per-session worktrees (resume points)
 
-A 2026-05-13 checkpoint commit (`2922f55`) on
-`wip/multi-session-checkpoint` (worktree at
-`.claude/worktrees/checkpoint/`) holds the in-flight uncommitted
-state of earlier sessions that pre-dated this convention: gui_cpp
-Phase-1 imgui frontend work (the "llobotomy" C++ research tool),
-llm_engine_cpp backend extraction (gguf_inspector, libtorch,
-llama_cpp, native_runtime), llm_surgeon NLA round-trip research,
-and a `learn/pytorch/` tutorial directory. When the relevant session
-resumes it should `cd .claude/worktrees/checkpoint/`, split the
-holding-pen commit into per-scope PR-able branches, and discard the
-`wip/` checkpoint once those branches are merged.
+The pre-convention in-flight state of multiple sessions has been
+split into per-scope worktrees. Each session that pre-existed the
+convention has its own resume point:
+
+| Worktree | Branch | Scope |
+|---|---|---|
+| `.claude/worktrees/llobotomy/` | `session/llobotomy` | gui_cpp (C++ ImGui llobotomy tool) + llm_engine_cpp wave-2 backends (gguf_inspector, libtorch, llama_cpp, native_runtime) |
+| `.claude/worktrees/nla-research/` | `session/nla-research` | testing/examples/nla_aggregate_faithfulness.py + pyproject.toml |
+| `.claude/worktrees/theory/` | `session/theory` | fresh from master (theory session's prior work is all on master already) |
+
+The bundled checkpoint branch `wip/multi-session-checkpoint`
+(commit `2922f55`) is retained as a safety net until each session
+verifies its split is complete. Delete the branch with `git branch
+-D wip/multi-session-checkpoint` once you're confident nothing was
+lost in the split.
+
+Resume the relevant session by switching into its worktree:
+`cd .claude/worktrees/<scope>` or via `EnterWorktree
+path=.claude/worktrees/<scope>`. Work on its `session/<scope>`
+branch; PR to master via `gh pr create` when ready.
 
 ---
 
