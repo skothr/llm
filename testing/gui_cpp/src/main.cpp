@@ -8,8 +8,22 @@
 
 #include "appstate.hpp"
 #include "logger.hpp"
-#include "llm_engine/hf_proxy_engine.hpp"
 #include "llm_engine/model.hpp"
+#ifdef LLM_ENGINE_HAVE_HF_PROXY
+#  include "llm_engine/hf_proxy_engine.hpp"
+#endif
+#ifdef LLM_ENGINE_HAVE_GGUF_INSPECTOR
+#  include "llm_engine/gguf_inspector_engine.hpp"
+#endif
+#ifdef LLM_ENGINE_HAVE_LLAMA_CPP
+#  include "llm_engine/llama_cpp_engine.hpp"
+#endif
+#ifdef LLM_ENGINE_HAVE_LIBTORCH
+#  include "llm_engine/libtorch_engine.hpp"
+#endif
+#ifdef LLM_ENGINE_HAVE_NATIVE_RUNTIME
+#  include "llm_engine/native_runtime_engine.hpp"
+#endif
 #include "style.hpp"
 #include "ui/chrome.hpp"
 #include "ui/dialogs.hpp"
@@ -447,28 +461,71 @@ int main() {
 #endif
 
     // Backend selection — LLOB_BACKEND env var picks the implementation
-    // (mock | hf), LLOB_BACKEND_URL overrides the FastAPI base URL when
-    // backend=hf.  Defaults to the mock so a vanilla launch keeps showing
-    // the demo data (or sentinels in mock-OFF builds).  See
-    // docs/HFPROXY_PLAN.md and ENGINE_API.md §2.3.
+    // (mock | hf | gguf | llama | torch | native).  Each non-mock choice
+    // requires its build option to have been ON at compile time; if not,
+    // we log an explanatory error and fall back to mock so the UI still
+    // launches.  See docs/BACKENDS.md §4–§5 for the full matrix.
+    //
+    // Per-backend configuration env vars:
+    //   LLOB_BACKEND_URL   — HFProxyEngine base URL  (default 127.0.0.1:8000)
+    //   LLOB_BACKEND_PATH  — filesystem path for gguf / llama / torch / native
+    auto missing_backend = [](const char* name, const char* flag) {
+        LLOB_LOG_ERROR("init",
+                       "backend=%s requested but %s was OFF at build time "
+                       "— falling back to mock", name, flag);
+    };
     std::unique_ptr<llob::Model> backend;
     {
         const char* sel    = std::getenv("LLOB_BACKEND");
         const std::string choice = sel ? sel : "mock";
+        const char* url_env  = std::getenv("LLOB_BACKEND_URL");
+        const char* path_env = std::getenv("LLOB_BACKEND_PATH");
+        const std::string base = url_env  ? url_env  : "http://127.0.0.1:8000";
+        const std::string path = path_env ? path_env : "";
+
         if (choice == "hf") {
-            const char* url_env = std::getenv("LLOB_BACKEND_URL");
-            std::string base    = url_env ? url_env : "http://127.0.0.1:8000";
+#ifdef LLM_ENGINE_HAVE_HF_PROXY
             LLOB_LOG_INFO("init", "backend=hf base=%s", base.c_str());
-            backend = std::make_unique<llob::HFProxyEngine>(std::move(base));
-        } else {
-            if (choice != "mock") {
-                LLOB_LOG_WARN("init",
-                              "unknown LLOB_BACKEND='%s' — falling back to mock",
-                              choice.c_str());
-            } else {
-                LLOB_LOG_INFO("init", "backend=mock");
-            }
-            backend = std::make_unique<llob::MockModel>();
+            backend = std::make_unique<llmengine::HFProxyEngine>(base);
+#else
+            missing_backend("hf", "LLM_ENGINE_BUILD_HF_PROXY");
+#endif
+        } else if (choice == "gguf") {
+#ifdef LLM_ENGINE_HAVE_GGUF_INSPECTOR
+            LLOB_LOG_INFO("init", "backend=gguf path=%s", path.c_str());
+            backend = std::make_unique<llmengine::GGUFInspectorEngine>(path);
+#else
+            missing_backend("gguf", "LLM_ENGINE_BUILD_GGUF_INSPECTOR");
+#endif
+        } else if (choice == "llama") {
+#ifdef LLM_ENGINE_HAVE_LLAMA_CPP
+            LLOB_LOG_INFO("init", "backend=llama path=%s", path.c_str());
+            backend = std::make_unique<llmengine::LlamaCppEngine>(path);
+#else
+            missing_backend("llama", "LLM_ENGINE_BUILD_LLAMA_CPP");
+#endif
+        } else if (choice == "torch") {
+#ifdef LLM_ENGINE_HAVE_LIBTORCH
+            LLOB_LOG_INFO("init", "backend=torch path=%s", path.c_str());
+            backend = std::make_unique<llmengine::LibtorchEngine>(path);
+#else
+            missing_backend("torch", "LLM_ENGINE_BUILD_LIBTORCH");
+#endif
+        } else if (choice == "native") {
+#ifdef LLM_ENGINE_HAVE_NATIVE_RUNTIME
+            LLOB_LOG_INFO("init", "backend=native path=%s", path.c_str());
+            backend = std::make_unique<llmengine::NativeRuntimeEngine>(path);
+#else
+            missing_backend("native", "LLM_ENGINE_BUILD_NATIVE_RUNTIME");
+#endif
+        } else if (choice != "mock") {
+            LLOB_LOG_WARN("init",
+                          "unknown LLOB_BACKEND='%s' — falling back to mock",
+                          choice.c_str());
+        }
+        if (!backend) {
+            if (choice == "mock") LLOB_LOG_INFO("init", "backend=mock");
+            backend = std::make_unique<llmengine::MockModel>();
         }
     }
     llob::Model& model = *backend;
