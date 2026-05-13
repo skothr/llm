@@ -242,7 +242,18 @@ canonical-scale finding has been independently reproduced outside the
 originating lab on a frontier-2026 model.}
 \label{tab:method-scaling}
 \small
-\begin{tabularx}{\textwidth}{@{}l l l l l X@{}}
+% Six-column layout. The first 5 were `l` (no-wrap, natural width) which
+% overflowed the page right edge once the long-text rows landed —
+% "no fixed artifact (decoding rule)" and similar phrases in the
+% Open-release column don't fit on a letter-page width. Switch to
+% explicit p{} widths that wrap; widths sum to ~16cm matching the
+% \textwidth on a letterpaper 1in-margin layout.
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.0cm}
+                                >{\raggedright\arraybackslash}p{2.5cm}
+                                >{\raggedright\arraybackslash}p{2.0cm}
+                                >{\raggedright\arraybackslash}p{1.3cm}
+                                >{\raggedright\arraybackslash}p{3.2cm}
+                                >{\raggedright\arraybackslash}X@{}}
 \toprule
 Method & Canonical paper & Target model & Scale & Open release &
 2026 reproduction \\
