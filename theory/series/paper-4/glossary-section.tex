@@ -7,248 +7,248 @@
 
 \begin{description}
 \item[\glsanchor{activation-patching}{\hyperref[sec:introduction]{\textcolor{glscolor}{Activation patching}}}]
-the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between forward passes on paired (clean, corrupted) prompts and measuring the effect on the output \texttt{[meng2022-rome §2; kb/excerpts/meng2022-rome\#sec-2; zhang2023-apatching §2.1]}. Also known as causal tracing, interchange intervention, causal mediation analysis, or representation denoising.
+-- the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between forward passes on paired (clean, corrupted) prompts and measuring the effect on the output \texttt{[meng2022-rome §2; kb/excerpts/meng2022-rome\#sec-2; zhang2023-apatching §2.1]}. Also known as causal tracing, interchange intervention, causal mediation analysis, or representation denoising.
 
 \item[\glsanchor{activation-reconstructor}{\hyperref[sec:nla]{\textcolor{glscolor}{Activation reconstructor}}} (AR)]
-The AR $\mathrm{AR}(z)$ takes the verbalized explanation $z$ and produces a reconstructed activation $\hat h_\ell \in \mathbb{R}^{d_\mathrm{model}}$. Trained jointly with the AV to minimise the round-trip MSE on activation reconstruction. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
+-- The AR $\mathrm{AR}(z)$ takes the verbalized explanation $z$ and produces a reconstructed activation $\hat h_\ell \in \mathbb{R}^{d_\mathrm{model}}$. Trained jointly with the AV to minimise the round-trip MSE on activation reconstruction. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
 
 \item[\glsanchor{activation-steering}{\hyperref[sec:contradictions]{\textcolor{glscolor}{Activation steering}}}]
-Inference-time intervention that adds $\alpha \hat{\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\alpha < 0$, suppress) a probed direction. The Representation Engineering / Vennemeyer 2025 line [vennemeyer2025-sycophancy-not-one-thing FORUM-SIGNAL]
+-- Inference-time intervention that adds $\alpha \hat{\mathbf{d}}$ to a residual-stream activation to amplify (or, with $\alpha < 0$, suppress) a probed direction. The Representation Engineering / Vennemeyer 2025 line [vennemeyer2025-sycophancy-not-one-thing FORUM-SIGNAL]
 
 \item[\glsanchor{activation-verbalizer}{\hyperref[sec:nla]{\textcolor{glscolor}{Activation verbalizer}}} (AV)]
-The AV $\mathrm{AV}(z \mid h_\ell)$ takes a residual-stream activation $h_\ell$ and emits a natural-language explanation token sequence $z$. One half of the NLA pair. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
+-- The AV $\mathrm{AV}(z \mid h_\ell)$ takes a residual-stream activation $h_\ell$ and emits a natural-language explanation token sequence $z$. One half of the NLA pair. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
 
 \item[\glsanchor{attention-weights}{\hyperref[sec:circuits]{\textcolor{glscolor}{attention weights}}}]
-The softmax-normalized scores ($a_j \geq 0$, $\sum a_j = 1$) that determine how much each position contributes to the output.
+-- The softmax-normalized scores ($a_j \geq 0$, $\sum a_j = 1$) that determine how much each position contributes to the output.
 
 \item[\glsanchor{attribution-graph}{\hyperref[sec:sae-canonicality]{\textcolor{glscolor}{Attribution graph}}}]
-the output of circuit tracing: a sparse directed graph from input embeddings to output unembedding, with feature activations as nodes and Jacobian-weighted attribution scores as edges. Computed in 1 forward + 1 backward pass on the transcoder-replaced model (Lindsey 2025).
+-- the output of circuit tracing: a sparse directed graph from input embeddings to output unembedding, with feature activations as nodes and Jacobian-weighted attribution scores as edges. Computed in 1 forward + 1 backward pass on the transcoder-replaced model (Lindsey 2025).
 
 \item[\glsanchor{attribution-patching}{\hyperref[sec:patching]{\textcolor{glscolor}{Attribution patching}}}]
-gradient-based first-order approximation of the patching effect: $\text{IE}_C \approx \langle \nabla_h m, \Delta h \rangle$. Cost: 1 forward + 1 backward pass for all components. Tier B (Nanda blog); approximation breaks in non-linear regions.
+-- gradient-based first-order approximation of the patching effect: $\text{IE}_C \approx \langle \nabla_h m, \Delta h \rangle$. Cost: 1 forward + 1 backward pass for all components. Tier B (Nanda blog); approximation breaks in non-linear regions.
 
 \item[\glsanchor{average-indirect-effect}{\hyperref[sec:patching]{\textcolor{glscolor}{Average indirect effect}}} (AIE)]
-IE averaged over a dataset of paired prompts; the standard metric for component importance.
+-- IE averaged over a dataset of paired prompts; the standard metric for component importance.
 
 \item[\glsanchor{causal-basis-extraction}{\hyperref[sec:logit-lens-family]{\textcolor{glscolor}{Causal Basis Extraction}}} (CBE)]
-Belrose et al. 2023's algorithm for finding residual-stream directions with highest influence on the tuned lens output. Connection between lens analysis and MI feature attribution.
+-- Belrose et al. 2023's algorithm for finding residual-stream directions with highest influence on the tuned lens output. Connection between lens analysis and MI feature attribution.
 
 \item[\glsanchor{causal-tracing}{\hyperref[sec:rome]{\textcolor{glscolor}{Causal tracing}}}]
-Meng et al. 2022's specific implementation of activation patching: clean run + Gaussian-noised corrupted run + patched-with-clean-state run, computed over every (token, layer) cell to produce a heatmap of indirect effects \citep[\S 2.2; kb/excerpts/meng2022-rome\#sec-2-2]{meng2022-rome}
+-- Meng et al. 2022's specific implementation of activation patching: clean run + Gaussian-noised corrupted run + patched-with-clean-state run, computed over every (token, layer) cell to produce a heatmap of indirect effects \citep[\S 2.2; kb/excerpts/meng2022-rome\#sec-2-2]{meng2022-rome}
 
 \item[\glsanchor{chain-of-thought}{\hyperref[sec:correlation-causation]{\textcolor{glscolor}{Chain-of-thought}}} (CoT)]
-A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps $z$ before emitting a final answer $y$. In few-shot CoT (Wei 2022), the prompt contains exemplars with hand-written reasoning traces; in zero-shot CoT (Kojima 2022), the trigger phrase "Let's think step by step" elicits the same behaviour without exemplars. \citep[\S 1; kojima2022 §3]{wei2022-cot}
+-- A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps $z$ before emitting a final answer $y$. In few-shot CoT (Wei 2022), the prompt contains exemplars with hand-written reasoning traces; in zero-shot CoT (Kojima 2022), the trigger phrase "Let's think step by step" elicits the same behaviour without exemplars. \citep[\S 1; kojima2022 §3]{wei2022-cot}
 
 \item[\glsanchor{circuit}{\hyperref[sec:introduction]{\textcolor{glscolor}{Circuit}}}]
-a sub-graph $C$ of a model's computational graph $M$ that, when used in place of $M$ via knockouts of $M \setminus C$, approximately reproduces $M$'s behavior on a target task \citep[\S 2; kb/excerpts/wang2022-ioi\#sec-2-definition]{wang2022-ioi}
+-- a sub-graph $C$ of a model's computational graph $M$ that, when used in place of $M$ via knockouts of $M \setminus C$, approximately reproduces $M$'s behavior on a target task \citep[\S 2; kb/excerpts/wang2022-ioi\#sec-2-definition]{wang2022-ioi}
 
 \item[\glsanchor{circuit-tracing}{\hyperref[sec:introduction]{\textcolor{glscolor}{Circuit tracing}}}]
-Anthropic's 2025 methodology: replace MLPs with cross-layer transcoders, then compute attribution graphs by Jacobian back-attribution from a target node. Synthesis of SAE feature decomposition + activation patching causal intervention. [lindsey2025-circuit-tracing FORUM-SIGNAL — HTML-only]
+-- Anthropic's 2025 methodology: replace MLPs with cross-layer transcoders, then compute attribution graphs by Jacobian back-attribution from a target node. Synthesis of SAE feature decomposition + activation patching causal intervention. [lindsey2025-circuit-tracing FORUM-SIGNAL — HTML-only]
 
 \item[\glsanchor{claude}{\hyperref[sec:introduction]{\textcolor{glscolor}{Claude}}}]
-Anthropic's proprietary decoder-only LLM family. No public architecture paper; structural family shares the decoder-only Transformer lineage.
+-- Anthropic's proprietary decoder-only LLM family. No public architecture paper; structural family shares the decoder-only Transformer lineage.
 
 \item[\glsanchor{common-crawl}{\hyperref[sec:scaling-snapshot]{\textcolor{glscolor}{Common Crawl}}} (CC)]
-Open monthly web crawl run by the Common Crawl Foundation since 2008. Source corpus for FineWeb (96 snapshots), C4, RefinedWeb, and most open web datasets. WARC format with extracted WET (text) variant.
+-- Open monthly web crawl run by the Common Crawl Foundation since 2008. Source corpus for FineWeb (96 snapshots), C4, RefinedWeb, and most open web datasets. WARC format with extracted WET (text) variant.
 
 \item[\glsanchor{cross-entropy-loss}{\hyperref[sec:probing]{\textcolor{glscolor}{cross-entropy loss}}}]
-Training objective: $\mathcal{L} = -\log P(t_i \mid t_1, \ldots, t_{i-1})$, summed over all positions.
+-- Training objective: $\mathcal{L} = -\log P(t_i \mid t_1, \ldots, t_{i-1})$, summed over all positions.
 
 \item[\glsanchor{cross-layer-transcoder}{\hyperref[sec:sparse-autoencoders]{\textcolor{glscolor}{Cross-layer transcoder}}}]
-Lindsey et al. 2025: a transcoder whose decoder writes into the residual stream of *all subsequent* layers, not just the immediate next one. Makes a feature's skip-layer contributions explicit in the attribution graph. HTML-only at transformer-circuits.pub.
+-- Lindsey et al. 2025: a transcoder whose decoder writes into the residual stream of *all subsequent* layers, not just the immediate next one. Makes a feature's skip-layer contributions explicit in the attribution graph. HTML-only at transformer-circuits.pub.
 
 \item[\glsanchor{debate}{\hyperref[sec:sparse-autoencoders]{\textcolor{glscolor}{Debate}}} (AI safety)]
-Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge. Hypothesis: it is easier to expose a flawed argument than to construct a sound one, so truthful debaters win more often than deceptive ones. \citep[\S abstract]{irving2018-debate}
+-- Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge. Hypothesis: it is easier to expose a flawed argument than to construct a sound one, so truthful debaters win more often than deceptive ones. \citep[\S abstract]{irving2018-debate}
 
 \item[\glsanchor{decoder-only}{\hyperref[sec:substrate]{\textcolor{glscolor}{decoder-only}}}]
-Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN layers.
+-- Simplified Transformer architecture (GPT, LLaMA) that removes the encoder and cross-attention, using only masked self-attention and FFN layers.
 
 \item[\glsanchor{direction-ablation}{\hyperref[sec:probing]{\textcolor{glscolor}{Direction ablation}}}]
-Causal-probing intervention that projects a residual-stream activation onto the orthogonal complement of a probe direction $\hat{\mathbf{d}}$: $\mathbf{h} \mapsto \mathbf{h} - (\mathbf{h}^\top \hat{\mathbf{d}})\hat{\mathbf{d}}$, then runs the rest of the model. A behavior change validates causal use of $\hat{\mathbf{d}}$ \citep[\S abstract]{marks-tegmark-2023-truth}
+-- Causal-probing intervention that projects a residual-stream activation onto the orthogonal complement of a probe direction $\hat{\mathbf{d}}$: $\mathbf{h} \mapsto \mathbf{h} - (\mathbf{h}^\top \hat{\mathbf{d}})\hat{\mathbf{d}}$, then runs the rest of the model. A behavior change validates causal use of $\hat{\mathbf{d}}$ \citep[\S abstract]{marks-tegmark-2023-truth}
 
 \item[\glsanchor{dola}{\hyperref[sec:logit-lens-family]{\textcolor{glscolor}{DoLa}}}]
-*Decoding by Contrasting Layers*: an inference-time application of lens analysis. The decoded logits are $\text{logit}^{(L)}(t) - \text{logit}^{(\ell^*)}(t)$ for an adaptively chosen early layer $\ell^*$, improving factuality. Chuang et al. 2023.
+-- *Decoding by Contrasting Layers*: an inference-time application of lens analysis. The decoded logits are $\text{logit}^{(L)}(t) - \text{logit}^{(\ell^*)}(t)$ for an adaptively chosen early layer $\ell^*$, improving factuality. Chuang et al. 2023.
 
 \item[\glsanchor{dpo}{\hyperref[sec:rome]{\textcolor{glscolor}{DPO}}} (Direct Preference Optimization)]
-Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL optimum. No reward model, no on-policy sampling, no PPO loop \citep[\S 4 Eq.7]{rafailov2023-dpo}
+-- Closed-form, classification-loss reformulation of RLHF: trains the policy directly on preference pairs by inverting the closed-form RL optimum. No reward model, no on-policy sampling, no PPO loop \citep[\S 4 Eq.7]{rafailov2023-dpo}
 
 \item[\glsanchor{expansion-factor}{\hyperref[sec:sparse-autoencoders]{\textcolor{glscolor}{Expansion factor}}}]
-the ratio $M / n$ of dictionary size to activation dimension. Typical values 8–1000.
+-- the ratio $M / n$ of dictionary size to activation dimension. Typical values 8–1000.
 
 \item[\glsanchor{feature}{\hyperref[sec:introduction]{\textcolor{glscolor}{Feature}}}]
-a direction $\mathbf{d} \in \mathbb{R}^n$ in some activation space such that the projection $\mathbf{x}^\top \mathbf{d}$ (or equivalently, an SAE latent activation with decoder column $\mathbf{d}$) corresponds to a human-interpretable property. The unit of analysis at the *what* level; circuits operate at the *how* level.
+-- a direction $\mathbf{d} \in \mathbb{R}^n$ in some activation space such that the projection $\mathbf{x}^\top \mathbf{d}$ (or equivalently, an SAE latent activation with decoder column $\mathbf{d}$) corresponds to a human-interpretable property. The unit of analysis at the *what* level; circuits operate at the *how* level.
 
 \item[\glsanchor{ffn}{\hyperref[sec:logit-lens-family]{\textcolor{glscolor}{FFN}}} (Feed-Forward Network)]
-A position-wise two-layer (or three-layer for GLU variants) fully-connected network applied independently at each sequence position. Transforms representations within each position, complementing attention which mixes across positions.
+-- A position-wise two-layer (or three-layer for GLU variants) fully-connected network applied independently at each sequence position. Transforms representations within each position, complementing attention which mixes across positions.
 
 \item[\glsanchor{fraction-of-variance-explained}{\hyperref[sec:nla]{\textcolor{glscolor}{Fraction of Variance Explained}}} (FVE)]
-NLA quality metric: $\mathrm{FVE} = 1 - \mathcal{L}/\mathbb{E}\lVert h_\ell - \bar h_\ell\rVert^2$ where $\mathcal{L}$ is the round-trip MSE. FVE = 1 is a lossless natural-language code; FVE = 0 means the explanation does no better than the mean activation. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
+-- NLA quality metric: $\mathrm{FVE} = 1 - \mathcal{L}/\mathbb{E}\lVert h_\ell - \bar h_\ell\rVert^2$ where $\mathcal{L}$ is the round-trip MSE. FVE = 1 is a lossless natural-language code; FVE = 0 means the explanation does no better than the mean activation. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
 
 \item[\glsanchor{gaussian-noising}{\hyperref[sec:patching]{\textcolor{glscolor}{Gaussian Noising}}} (GN) / Symmetric Token Replacement (STR)]
-the two corruption methods for activation patching. GN adds $\mathcal{N}(0, 3\sigma_\text{textset})$ to subject-token embeddings \texttt{[meng2022-rome §2]}; STR replaces the subject with a similar token (e.g., "Eiffel Tower" $\to$ "Colosseum") preserving sequence length \texttt{[zhang2023-apatching §2.1; kb/excerpts/zhang2023-apatching\#sec-2-1-corruption]}. STR is the recommended default; GN can drive activations off-distribution \citep[\S 1 findings]{zhang2023-apatching}
+-- the two corruption methods for activation patching. GN adds $\mathcal{N}(0, 3\sigma_\text{textset})$ to subject-token embeddings \texttt{[meng2022-rome §2]}; STR replaces the subject with a similar token (e.g., "Eiffel Tower" $\to$ "Colosseum") preserving sequence length \texttt{[zhang2023-apatching §2.1; kb/excerpts/zhang2023-apatching\#sec-2-1-corruption]}. STR is the recommended default; GN can drive activations off-distribution \citep[\S 1 findings]{zhang2023-apatching}
 
 \item[\glsanchor{gelu}{\hyperref[sec:substrate]{\textcolor{glscolor}{GELU}}} (Gaussian Error Linear Unit)]
-Smooth activation $x \cdot \Phi(x)$ where $\Phi$ is the standard normal CDF. Used by GPT-1 (2018).
+-- Smooth activation $x \cdot \Phi(x)$ where $\Phi$ is the standard normal CDF. Used by GPT-1 (2018).
 
 \item[\glsanchor{hidden-state}{\hyperref[sec:logit-lens-family]{\textcolor{glscolor}{hidden state}}}]
-The $d_{\text{model}}$-dimensional vector representation at each position, flowing through the residual stream across layers.
+-- The $d_{\text{model}}$-dimensional vector representation at each position, flowing through the residual stream across layers.
 
 \item[\glsanchor{indirect-effect}{\hyperref[sec:introduction]{\textcolor{glscolor}{Indirect effect}}} (IE)]
-the change in the output metric when the activation at a specific (component, position, layer) is restored from a cached clean run during an otherwise-corrupted forward pass. $\text{IE} = \mathbb{P}_{*,\,\text{clean }h_i^{(l)}}[r] - \mathbb{P}_*[r]$ \citep[\S 2 effects; kb/excerpts/meng2022-rome\#sec-2-effects]{meng2022-rome}
+-- the change in the output metric when the activation at a specific (component, position, layer) is restored from a cached clean run during an otherwise-corrupted forward pass. $\text{IE} = \mathbb{P}_{*,\,\text{clean }h_i^{(l)}}[r] - \mathbb{P}_*[r]$ \citep[\S 2 effects; kb/excerpts/meng2022-rome\#sec-2-effects]{meng2022-rome}
 
 \item[\glsanchor{input-invariance}{\hyperref[sec:sae-canonicality]{\textcolor{glscolor}{Input-invariance}}}]
-the property of a transcoder (and *not* of an SAE-on-MLP-output) that the connections between features can be stated independently of any specific input. Necessary for weight-based circuit analysis through MLPs \citep[\S 1; kb/excerpts/dunefsky2024-transcoders\#sec-1-input-invariance]{dunefsky2024-transcoders}
+-- the property of a transcoder (and *not* of an SAE-on-MLP-output) that the connections between features can be stated independently of any specific input. Necessary for weight-based circuit analysis through MLPs \citep[\S 1; kb/excerpts/dunefsky2024-transcoders\#sec-1-input-invariance]{dunefsky2024-transcoders}
 
 \item[\glsanchor{jumprelu-sae}{\hyperref[sec:sparse-autoencoders]{\textcolor{glscolor}{JumpReLU SAE}}}]
-SAE variant with a discontinuous activation $\text{JumpReLU}_\theta(z) = z \cdot H(z - \theta)$ and per-feature learned threshold $\theta$. Trained with L0 penalty via straight-through estimators. SOTA reconstruction at fixed L0 on Gemma 2 9B \citep[\S 3 Eq.4, §1 Pareto]{rajamanoharan2024-jumprelu}
+-- SAE variant with a discontinuous activation $\text{JumpReLU}_\theta(z) = z \cdot H(z - \theta)$ and per-feature learned threshold $\theta$. Trained with L0 penalty via straight-through estimators. SOTA reconstruction at fixed L0 on Gemma 2 9B \citep[\S 3 Eq.4, §1 Pareto]{rajamanoharan2024-jumprelu}
 
 \item[\glsanchor{key}{\hyperref[sec:introduction]{\textcolor{glscolor}{Key}}} (K)]
-Projected representation of positions being "queried" against. The Q$\cdot$K dot product determines attention weights.
+-- Projected representation of positions being "queried" against. The Q$\cdot$K dot product determines attention weights.
 
 \item[\glsanchor{knockout}{\hyperref[sec:substrate]{\textcolor{glscolor}{Knockout}}}]
-generic term for setting a component's contribution to a fixed reference value (zero or mean) for circuit-validation purposes \citep[\S 2.1]{wang2022-ioi}
+-- generic term for setting a component's contribution to a fixed reference value (zero or mean) for circuit-validation purposes \citep[\S 2.1]{wang2022-ioi}
 
 \item[\glsanchor{layer-normalization}{\hyperref[sec:substrate]{\textcolor{glscolor}{Layer Normalization}}} (LayerNorm)]
-Normalizes across the feature dimension per position: subtract mean, divide by standard deviation, apply learned scale ($\gamma$) and bias ($\beta$).
+-- Normalizes across the feature dimension per position: subtract mean, divide by standard deviation, apply learned scale ($\gamma$) and bias ($\beta$).
 
 \item[\glsanchor{linear-probe}{\hyperref[sec:probing]{\textcolor{glscolor}{Linear probe}}}]
-Probe of the form $g(\mathbf{h}) = \sigma(\mathbf{w}^\top \mathbf{h} + b)$ with $\mathbf{w} \in \mathbb{R}^d$. Distinguished from non-linear / MLP probes that can suffer from "probe leakage" (learning the property from low-information features) [alain-bengio-2017]
+-- Probe of the form $g(\mathbf{h}) = \sigma(\mathbf{w}^\top \mathbf{h} + b)$ with $\mathbf{w} \in \mathbb{R}^d$. Distinguished from non-linear / MLP probes that can suffer from "probe leakage" (learning the property from low-information features) [alain-bengio-2017]
 
 \item[\glsanchor{llm}{\hyperref[sec:logit-lens-family]{\textcolor{glscolor}{LLM}}}]
-Large Language Model. A neural network with billions of parameters trained on large text corpora to predict and generate language.
+-- Large Language Model. A neural network with billions of parameters trained on large text corpora to predict and generate language.
 
 \item[\glsanchor{logit-difference}{\hyperref[sec:patching]{\textcolor{glscolor}{Logit difference}}} (LD)]
-an activation-patching metric: $\text{LD}(r, r') = \text{Logit}(r) - \text{Logit}(r')$. The patching effect, normalized to $[0, 1]$, is $[\text{LD}_\text{pt} - \text{LD}_*] / [\text{LD}_\text{cl} - \text{LD}_*]$ \texttt{[zhang2023-apatching §2.1 metrics; kb/excerpts/zhang2023-apatching\#sec-2-1-metrics]}. Recommended over raw probability because it is sensitive to components that *push against* the correct answer.
+-- an activation-patching metric: $\text{LD}(r, r') = \text{Logit}(r) - \text{Logit}(r')$. The patching effect, normalized to $[0, 1]$, is $[\text{LD}_\text{pt} - \text{LD}_*] / [\text{LD}_\text{cl} - \text{LD}_*]$ \texttt{[zhang2023-apatching §2.1 metrics; kb/excerpts/zhang2023-apatching\#sec-2-1-metrics]}. Recommended over raw probability because it is sensitive to components that *push against* the correct answer.
 
 \item[\glsanchor{logit-lens}{\hyperref[sec:introduction]{\textcolor{glscolor}{Logit lens}}}]
-apply the final LayerNorm + unembedding $W_U$ to an intermediate residual-stream activation $\mathbf{h}^{(\ell)}$ to read out a layer-$\ell$ vocabulary distribution. nostalgebraist 2020 (LessWrong, Tier B). Formal expression and decomposition in \texttt{[belrose2023-tuned-lens §2 Eq.3]} (PDF p.2).
+-- apply the final LayerNorm + unembedding $W_U$ to an intermediate residual-stream activation $\mathbf{h}^{(\ell)}$ to read out a layer-$\ell$ vocabulary distribution. nostalgebraist 2020 (LessWrong, Tier B). Formal expression and decomposition in \texttt{[belrose2023-tuned-lens §2 Eq.3]} (PDF p.2).
 
 \item[\glsanchor{logits}{\hyperref[sec:substrate]{\textcolor{glscolor}{Logits}}}]
-Unnormalized log-probabilities over the vocabulary, produced by the output projection ($h_{\text{final}} \cdot W_e^\top$).
+-- Unnormalized log-probabilities over the vocabulary, produced by the output projection ($h_{\text{final}} \cdot W_e^\top$).
 
 \item[\glsanchor{lora}{\hyperref[sec:rome]{\textcolor{glscolor}{LoRA}}} (Low-Rank Adaptation)]
-Parameterizes a frozen weight matrix's update as a rank-$r$ product $BA$ with $r \ll \min(d_{\text{in}}, d_{\text{out}})$; only $A, B$ are trained. Merges to a single weight at inference time with no latency cost. \citep[\S 3, §4; kb/excerpts/hu2021-lora\#sec-3]{hu2021-lora}
+-- Parameterizes a frozen weight matrix's update as a rank-$r$ product $BA$ with $r \ll \min(d_{\text{in}}, d_{\text{out}})$; only $A, B$ are trained. Merges to a single weight at inference time with no latency cost. \citep[\S 3, §4; kb/excerpts/hu2021-lora\#sec-3]{hu2021-lora}
 
 \item[\glsanchor{mass-mean-probing}{\hyperref[sec:correlation-causation]{\textcolor{glscolor}{Mass-mean probing}}}]
-Marks \& Tegmark 2023: define the probe direction as $\mathbf{d}_\text{class} = \mathbb{E}[\mathbf{h} \mid y = c_1] - \mathbb{E}[\mathbf{h} \mid y = c_0]$, then project activations onto $\mathbf{d}_\text{class}$. Simpler and more generalization-robust than logistic regression on the same features \citep[\S 1]{marks-tegmark-2023-truth}
+-- Marks \& Tegmark 2023: define the probe direction as $\mathbf{d}_\text{class} = \mathbb{E}[\mathbf{h} \mid y = c_1] - \mathbb{E}[\mathbf{h} \mid y = c_0]$, then project activations onto $\mathbf{d}_\text{class}$. Simpler and more generalization-robust than logistic regression on the same features \citep[\S 1]{marks-tegmark-2023-truth}
 
 \item[\glsanchor{mean-ablation}{\hyperref[sec:substrate]{\textcolor{glscolor}{Mean ablation}}}]
-knocking out a node by replacing its activation with the mean activation across a reference distribution; preferred to zero ablation, which is arbitrary \citep[\S 2; kb/excerpts/wang2022-ioi\#sec-2-definition]{wang2022-ioi}
+-- knocking out a node by replacing its activation with the mean activation across a reference distribution; preferred to zero ablation, which is arbitrary \citep[\S 2; kb/excerpts/wang2022-ioi\#sec-2-definition]{wang2022-ioi}
 
 \item[\glsanchor{mechanistic-interpretability}{\hyperref[sec:sae-canonicality]{\textcolor{glscolor}{Mechanistic interpretability}}} (MI)]
-the research program of reverse-engineering neural networks into human-readable algorithms, at the level of circuits (sub-graphs) and features (directions). Distinct from behavioral interpretability (input/output black-box evaluation) and post-hoc rationalization. \citep[\S 1; meng2022-rome §1]{wang2022-ioi}
+-- the research program of reverse-engineering neural networks into human-readable algorithms, at the level of circuits (sub-graphs) and features (directions). Distinct from behavioral interpretability (input/output black-box evaluation) and post-hoc rationalization. \citep[\S 1; meng2022-rome §1]{wang2022-ioi}
 
 \item[\glsanchor{meta-sae}{\hyperref[sec:sae-canonicality]{\textcolor{glscolor}{meta-SAE}}}]
-an SAE trained on the *decoder matrix* of another SAE. Reveals that latents in a larger SAE often decompose into sparse combinations of meta-latents, contradicting the "atomic features" assumption \citep[\S 1 Einstein; kb/excerpts/leask2025-sae-not-canonical\#sec-1-einstein]{leask2025-sae-not-canonical}
+-- an SAE trained on the *decoder matrix* of another SAE. Reveals that latents in a larger SAE often decompose into sparse combinations of meta-latents, contradicting the "atomic features" assumption \citep[\S 1 Einstein; kb/excerpts/leask2025-sae-not-canonical\#sec-1-einstein]{leask2025-sae-not-canonical}
 
 \item[\glsanchor{monosemanticity}{\hyperref[sec:sparse-autoencoders]{\textcolor{glscolor}{Monosemanticity}}}]
-the property that a feature responds to a single, human-interpretable concept. The (contested) goal of SAE training; "Towards Monosemanticity" (Bricken 2023) is the founding reference. [CONTRADICTION] Whether SAEs achieve true monosemanticity is challenged by \citep[\S 1; kb/excerpts/leask2025-sae-not-canonical\#sec-1-canonical]{leask2025-sae-not-canonical}
+-- the property that a feature responds to a single, human-interpretable concept. The (contested) goal of SAE training; "Towards Monosemanticity" (Bricken 2023) is the founding reference. [CONTRADICTION] Whether SAEs achieve true monosemanticity is challenged by \citep[\S 1; kb/excerpts/leask2025-sae-not-canonical\#sec-1-canonical]{leask2025-sae-not-canonical}
 
 \item[\glsanchor{multi-head-attention}{\hyperref[sec:substrate]{\textcolor{glscolor}{multi-head attention}}}]
-Running $h$ parallel attention operations on different learned projections, then concatenating and projecting the results. Allows attending to different representation subspaces simultaneously.
+-- Running $h$ parallel attention operations on different learned projections, then concatenating and projecting the results. Allows attending to different representation subspaces simultaneously.
 
 \item[\glsanchor{multi-head-latent-attention}{\hyperref[sec:introduction]{\textcolor{glscolor}{Multi-head Latent Attention}}} (MLA)]
-DeepSeek's architectural compression: project to a low-rank latent $C \in \mathbb{R}^{d_c}$ shared across heads, expand back to per-head $(K, V)$ at attention time. Achieves ~93% KV-cache reduction vs MHA at deepseek-v2 dimensions. \citep[\S 2.1; kb/notes/inference/kv-cache-management\#§2]{deepseek-v2}
+-- DeepSeek's architectural compression: project to a low-rank latent $C \in \mathbb{R}^{d_c}$ shared across heads, expand back to per-head $(K, V)$ at attention time. Achieves ~93% KV-cache reduction vs MHA at deepseek-v2 dimensions. \citep[\S 2.1; kb/notes/inference/kv-cache-management\#§2]{deepseek-v2}
 
 \item[\glsanchor{natural-language-autoencoder}{\hyperref[sec:nla]{\textcolor{glscolor}{Natural Language Autoencoder}}} (NLA)]
-Anthropic 2026's interpretability method: a pair of LLM modules (AV + AR) jointly trained with reinforcement learning to round-trip a residual-stream activation through a natural-language explanation. The text bottleneck makes the explanation testable via reconstruction fidelity (FVE). Used in pre-deployment audits to surface unverbalized model cognition — including evaluation awareness. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
+-- Anthropic 2026's interpretability method: a pair of LLM modules (AV + AR) jointly trained with reinforcement learning to round-trip a residual-stream activation through a natural-language explanation. The text bottleneck makes the explanation testable via reconstruction fidelity (FVE). Used in pre-deployment audits to surface unverbalized model cognition — including evaluation awareness. \citep[\S method; kb/excerpts/anthropic2026-nla\#sec-method]{anthropic2026-nla}
 
 \item[\glsanchor{nsa}{\hyperref[sec:introduction]{\textcolor{glscolor}{NSA}}} (Native Sparse Attention)]
-Yuan et al.\ 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Aimed at long context. Treated in \texttt{kb/notes/architecture/long-context.md} [yuan2025]
+-- Yuan et al.\ 2025: hardware-aligned natively sparse attention trained end-to-end (sparsity is part of pre-training, not retrofitted). Aimed at long context. Treated in \texttt{kb/notes/architecture/long-context.md} [yuan2025]
 
 \item[\glsanchor{parameters}{\hyperref[sec:introduction]{\textcolor{glscolor}{Parameters}}}]
-The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).
+-- The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).
 
 \item[\glsanchor{path-patching}{\hyperref[sec:patching]{\textcolor{glscolor}{Path patching}}}]
-a refinement of activation patching that isolates the direct effect of a component $C$ on a downstream component $R$, holding fixed the indirect routes through other components. Introduced in Wang et al. 2022 (IOI) \citep[\S 3.1; kb/excerpts/wang2022-ioi\#sec-3-1-path-patching]{wang2022-ioi}
+-- a refinement of activation patching that isolates the direct effect of a component $C$ on a downstream component $R$, holding fixed the indirect routes through other components. Introduced in Wang et al. 2022 (IOI) \citep[\S 3.1; kb/excerpts/wang2022-ioi\#sec-3-1-path-patching]{wang2022-ioi}
 
 \item[\glsanchor{perplexity}{\hyperref[sec:logit-lens-family]{\textcolor{glscolor}{Perplexity}}}]
-$2^{\mathcal{L}}$ (or $e^{\mathcal{L}}$ with natural log). Measures how "surprised" the model is by the data. Lower is better.
+-- $2^{\mathcal{L}}$ (or $e^{\mathcal{L}}$ with natural log). Measures how "surprised" the model is by the data. Lower is better.
 
 \item[\glsanchor{precision-pinning}{\hyperref[sec:introduction]{\textcolor{glscolor}{Precision pinning}}} (DeepSeek-V3)]
-Components held at BF16/FP32 even with FP8 elsewhere: embedding module, output head, MoE gating, normalization, attention. \citep[\S 3.3.1]{deepseek-v3}
+-- Components held at BF16/FP32 even with FP8 elsewhere: embedding module, output head, MoE gating, normalization, attention. \citep[\S 3.3.1]{deepseek-v3}
 
 \item[\glsanchor{probe-2}{\hyperref[sec:introduction]{\textcolor{glscolor}{Probe}}}]
-A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology \citep[\S 1]{alain-bengio-2017}
+-- A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology \citep[\S 1]{alain-bengio-2017}
 
 \item[\glsanchor{qlora}{\hyperref[sec:rome]{\textcolor{glscolor}{QLoRA}}}]
-LoRA over a 4-bit-quantized (NF4) base model. Adds double-quantization and paged optimizers. 65B fine-tune on a single 48GB GPU. \citep[\S 3; kb/excerpts/dettmers2023-qlora\#sec-3-nf4]{dettmers2023-qlora}
+-- LoRA over a 4-bit-quantized (NF4) base model. Adds double-quantization and paged optimizers. 65B fine-tune on a single 48GB GPU. \citep[\S 3; kb/excerpts/dettmers2023-qlora\#sec-3-nf4]{dettmers2023-qlora}
 
 \item[\glsanchor{query}{\hyperref[sec:substrate]{\textcolor{glscolor}{Query}}} (Q)]
-Projected representation of the position that is "asking" for information in attention.
+-- Projected representation of the position that is "asking" for information in attention.
 
 \item[\glsanchor{relu}{\hyperref[sec:sparse-autoencoders]{\textcolor{glscolor}{ReLU}}}]
-Rectified Linear Unit: $\max(0, x)$. Original Transformer activation (2017).
+-- Rectified Linear Unit: $\max(0, x)$. Original Transformer activation (2017).
 
 \item[\glsanchor{residual-stream}{\hyperref[sec:introduction]{\textcolor{glscolor}{Residual stream}}}]
-the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes to it. The substrate that lens techniques and SAEs decompose. Vocabulary established in Elhage et al. 2021 (Mathematical Framework for Transformer Circuits).
+-- the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes to it. The substrate that lens techniques and SAEs decompose. Vocabulary established in Elhage et al. 2021 (Mathematical Framework for Transformer Circuits).
 
 \item[\glsanchor{rlhf}{\hyperref[sec:rome]{\textcolor{glscolor}{RLHF}}} (Reinforcement Learning from Human Feedback)]
-The 3-stage post-training pipeline: SFT $\to$ reward-model training on pairwise preferences $\to$ PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT \citep[\S 3]{ouyang2022-instructgpt}
+-- The 3-stage post-training pipeline: SFT $\to$ reward-model training on pairwise preferences $\to$ PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT \citep[\S 3]{ouyang2022-instructgpt}
 
 \item[\glsanchor{rmsnorm}{\hyperref[sec:substrate]{\textcolor{glscolor}{RMSNorm}}} (Root Mean Square Normalization)]
-Simplified LayerNorm that drops mean-centering and bias, normalizing only by the RMS of the input. 7–64% faster with comparable quality. Used by LLaMA.
+-- Simplified LayerNorm that drops mean-centering and bias, normalizing only by the RMS of the input. 7–64% faster with comparable quality. Used by LLaMA.
 
 \item[\glsanchor{sae-stitching}{\hyperref[sec:sae-canonicality]{\textcolor{glscolor}{SAE stitching}}}]
-Leask et al. 2025: insert/swap latents from a larger SAE into a smaller one to compare bases. Reveals novel latents (in the larger but not the smaller SAE) and reconstruction latents (in both with similar behavior) \citep[\S 1; kb/excerpts/leask2025-sae-not-canonical\#sec-1-techniques]{leask2025-sae-not-canonical}
+-- Leask et al. 2025: insert/swap latents from a larger SAE into a smaller one to compare bases. Reveals novel latents (in the larger but not the smaller SAE) and reconstruction latents (in both with similar behavior) \citep[\S 1; kb/excerpts/leask2025-sae-not-canonical\#sec-1-techniques]{leask2025-sae-not-canonical}
 
 \item[\glsanchor{saturation}{\hyperref[sec:patching]{\textcolor{glscolor}{Saturation}}}]
-A benchmark is saturated when frontier models score within the verifier-error-rate noise floor of one another, losing discriminative power. MMLU at >90% is saturated (verifier error rate ~6.5%); GPQA Diamond at >90% is saturated at the frontier as of 2026. [mmlu-redux-2024]
+-- A benchmark is saturated when frontier models score within the verifier-error-rate noise floor of one another, losing discriminative power. MMLU at >90% is saturated (verifier error rate ~6.5%); GPQA Diamond at >90% is saturated at the frontier as of 2026. [mmlu-redux-2024]
 
 \item[\glsanchor{scheming}{\hyperref[sec:correlation-causation]{\textcolor{glscolor}{Scheming}}}]
-A model schemes when, instructed to pursue a goal $G$, it strategically takes actions that conceal its capabilities or manipulate its oversight in service of $G$, rather than pursuing $G$ by direct means. Operational definition from Apollo Research. \citep[\S abstract; kb/excerpts/meinke2024-apollo-scheming\#abstract]{meinke2024-apollo-scheming}
+-- A model schemes when, instructed to pursue a goal $G$, it strategically takes actions that conceal its capabilities or manipulate its oversight in service of $G$, rather than pursuing $G$ by direct means. Operational definition from Apollo Research. \citep[\S abstract; kb/excerpts/meinke2024-apollo-scheming\#abstract]{meinke2024-apollo-scheming}
 
 \item[\glsanchor{self-consistency-2}{\hyperref[sec:probing]{\textcolor{glscolor}{Self-consistency}}}]
-Sample $N$ chain-of-thoughts independently at $T > 0$; majority-vote the final answers. Wang et al. 2022. Cheap baseline that requires no verifier.
+-- Sample $N$ chain-of-thoughts independently at $T > 0$; majority-vote the final answers. Wang et al. 2022. Cheap baseline that requires no verifier.
 
 \item[\glsanchor{shrinkage}{\hyperref[sec:sparse-autoencoders]{\textcolor{glscolor}{Shrinkage}}}]
-the bias introduced by the L1 penalty in ReLU SAEs: positive feature activations are systematically underestimated, so reconstructed activations have smaller magnitudes than true values. Avoided by TopK and JumpReLU \citep[\S 2.3 benefits]{gao2024-topk-saes}
+-- the bias introduced by the L1 penalty in ReLU SAEs: positive feature activations are systematically underestimated, so reconstructed activations have smaller magnitudes than true values. Avoided by TopK and JumpReLU \citep[\S 2.3 benefits]{gao2024-topk-saes}
 
 \item[\glsanchor{softmax}{\hyperref[sec:logit-lens-family]{\textcolor{glscolor}{Softmax}}}]
-Converts logits to a probability distribution: $P(j) = e^{z_j} / \sum_k e^{z_k}$.
+-- Converts logits to a probability distribution: $P(j) = e^{z_j} / \sum_k e^{z_k}$.
 
 \item[\glsanchor{sparse-autoencoder}{\hyperref[sec:introduction]{\textcolor{glscolor}{Sparse autoencoder}}} (SAE)]
-a wide ($M \gg n$) two-layer encoder-decoder trained to reconstruct a model's activations $\mathbf{x} \in \mathbb{R}^n$ as a sparse linear combination of learned dictionary directions $\{\mathbf{d}_i\}_{i=1}^M$ \citep[\S 2 Eq.1-2; kb/excerpts/rajamanoharan2024-jumprelu\#sec-2]{rajamanoharan2024-jumprelu}
+-- a wide ($M \gg n$) two-layer encoder-decoder trained to reconstruct a model's activations $\mathbf{x} \in \mathbb{R}^n$ as a sparse linear combination of learned dictionary directions $\{\mathbf{d}_i\}_{i=1}^M$ \citep[\S 2 Eq.1-2; kb/excerpts/rajamanoharan2024-jumprelu\#sec-2]{rajamanoharan2024-jumprelu}
 
 \item[\glsanchor{state-space-model}{\hyperref[sec:scaling-snapshot]{\textcolor{glscolor}{State-space model}}} (SSM)]
-Sequence model with recurrent state $\boldsymbol{h}_t$ updated linearly: $\boldsymbol{h}_t = \bar{A} \boldsymbol{h}_{t-1} + \bar{B} u_t$. Per-token compute $O(d^2)$, sequence-linear. (Gu, Goel, Ré 2022)
+-- Sequence model with recurrent state $\boldsymbol{h}_t$ updated linearly: $\boldsymbol{h}_t = \bar{A} \boldsymbol{h}_{t-1} + \bar{B} u_t$. Per-token compute $O(d^2)$, sequence-linear. (Gu, Goel, Ré 2022)
 
 \item[\glsanchor{structural-probe}{\hyperref[sec:probing]{\textcolor{glscolor}{Structural probe}}}]
-Hewitt \& Manning's geometric probe that predicts higher-arity structure (e.g., parse-tree distance) by learning a linear transformation $\mathbf{B} \in \mathbb{R}^{k \times d}$ such that $\|\mathbf{B}(\mathbf{h}_i - \mathbf{h}_j)\|_2^2 \approx d_T(w_i, w_j)$ for tokens $i, j$ [hewitt2019-structural-probe]
+-- Hewitt \& Manning's geometric probe that predicts higher-arity structure (e.g., parse-tree distance) by learning a linear transformation $\mathbf{B} \in \mathbb{R}^{k \times d}$ such that $\|\mathbf{B}(\mathbf{h}_i - \mathbf{h}_j)\|_2^2 \approx d_T(w_i, w_j)$ for tokens $i, j$ [hewitt2019-structural-probe]
 
 \item[\glsanchor{summarization-behavior}{\hyperref[sec:probing]{\textcolor{glscolor}{Summarization behavior}}}]
-The empirical pattern (Tigges et al. 2023, Marks \& Tegmark 2023) that information about a clause is encoded over the clause-ending punctuation token, making period-position activations the canonical probing target for sentence-level properties \citep[\S 3]{marks-tegmark-2023-truth}
+-- The empirical pattern (Tigges et al. 2023, Marks \& Tegmark 2023) that information about a clause is encoded over the clause-ending punctuation token, making period-position activations the canonical probing target for sentence-level properties \citep[\S 3]{marks-tegmark-2023-truth}
 
 \item[\glsanchor{superposition}{\hyperref[sec:substrate]{\textcolor{glscolor}{Superposition}}}]
-the hypothesis (Elhage 2022) that a network with $n$ neurons can represent more than $n$ approximately-orthogonal features as long as they fire sparsely. SAEs lift superposition by inflating the dictionary size $M \gg n$. \citep[\S 1]{gao2024-topk-saes}
+-- the hypothesis (Elhage 2022) that a network with $n$ neurons can represent more than $n$ approximately-orthogonal features as long as they fire sparsely. SAEs lift superposition by inflating the dictionary size $M \gg n$. \citep[\S 1]{gao2024-topk-saes}
 
 \item[\glsanchor{swiglu}{\hyperref[sec:substrate]{\textcolor{glscolor}{SwiGLU}}}]
-$\mathrm{FFN}_{\mathrm{SwiGLU}}(x) = (\mathrm{Swish}_1(xW) \otimes xV) W_2$. Three-matrix FFN with Swish gating. Universal in modern decoder-only LLMs. \citep[\S 2 Eq.6]{shazeer2020}
+-- $\mathrm{FFN}_{\mathrm{SwiGLU}}(x) = (\mathrm{Swish}_1(xW) \otimes xV) W_2$. Three-matrix FFN with Swish gating. Universal in modern decoder-only LLMs. \citep[\S 2 Eq.6]{shazeer2020}
 
 \item[\glsanchor{sycophancy}{\hyperref[sec:substrate]{\textcolor{glscolor}{Sycophancy}}}]
-A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth. Distinct from scheming: sycophancy requires no intent, only Goodhart on RLHF preference data. \citep[\S abstract; kb/excerpts/sharma2023-sycophancy\#abstract]{sharma2023-sycophancy}
+-- A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth. Distinct from scheming: sycophancy requires no intent, only Goodhart on RLHF preference data. \citep[\S abstract; kb/excerpts/sharma2023-sycophancy\#abstract]{sharma2023-sycophancy}
 
 \item[\glsanchor{topk-sae}{\hyperref[sec:scaling-snapshot]{\textcolor{glscolor}{TopK SAE}}}]
-SAE variant with $\sigma = \text{TopK}(\cdot)$: zero all but the top $K$ pre-activations. Direct $L_0$ control, no L1 penalty needed. OpenAI 2024 \citep[\S 2.3 Eq.2; kb/excerpts/gao2024-topk-saes\#sec-2-3]{gao2024-topk-saes}
+-- SAE variant with $\sigma = \text{TopK}(\cdot)$: zero all but the top $K$ pre-activations. Direct $L_0$ control, no L1 penalty needed. OpenAI 2024 \citep[\S 2.3 Eq.2; kb/excerpts/gao2024-topk-saes\#sec-2-3]{gao2024-topk-saes}
 
 \item[\glsanchor{transcoder}{\hyperref[sec:introduction]{\textcolor{glscolor}{Transcoder}}}]
-a wide ReLU MLP (encoder–decoder) trained to approximate the input/output behavior of an MLP sublayer: $\text{TC}(\mathbf{x}) = \mathbf{W}_\text{dec}\,\text{ReLU}(\mathbf{W}_\text{enc} \mathbf{x} + \mathbf{b}_\text{enc}) + \mathbf{b}_\text{dec}$, with L1 sparsity penalty on the hidden activations \texttt{[dunefsky2024-transcoders §3.1 Eq.3-5; kb/excerpts/dunefsky2024-transcoders\#sec-3-1]}. Distinct from an SAE: a transcoder approximates a *function* (the MLP); an SAE approximates a *vector* (an activation).
+-- a wide ReLU MLP (encoder–decoder) trained to approximate the input/output behavior of an MLP sublayer: $\text{TC}(\mathbf{x}) = \mathbf{W}_\text{dec}\,\text{ReLU}(\mathbf{W}_\text{enc} \mathbf{x} + \mathbf{b}_\text{enc}) + \mathbf{b}_\text{dec}$, with L1 sparsity penalty on the hidden activations \texttt{[dunefsky2024-transcoders §3.1 Eq.3-5; kb/excerpts/dunefsky2024-transcoders\#sec-3-1]}. Distinct from an SAE: a transcoder approximates a *function* (the MLP); an SAE approximates a *vector* (an activation).
 
 \item[\glsanchor{transformer}{\hyperref[sec:introduction]{\textcolor{glscolor}{Transformer}}}]
-Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing of sequences.
+-- Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing of sequences.
 
 \item[\glsanchor{truth-direction-2}{\hyperref[sec:probing]{\textcolor{glscolor}{Truth direction}}}]
-A direction in residual-stream space whose projection sign correlates with (and, validated by Marks \& Tegmark 2023, causally controls) the model's TRUE/FALSE prediction on factual statements. Localizes around layer 12-15 of LLaMA-2-13B at end-of-statement punctuation tokens \citep[\S 3]{marks-tegmark-2023-truth}
+-- A direction in residual-stream space whose projection sign correlates with (and, validated by Marks \& Tegmark 2023, causally controls) the model's TRUE/FALSE prediction on factual statements. Localizes around layer 12-15 of LLaMA-2-13B at end-of-statement punctuation tokens \citep[\S 3]{marks-tegmark-2023-truth}
 
 \item[\glsanchor{tuned-lens}{\hyperref[sec:introduction]{\textcolor{glscolor}{Tuned lens}}}]
-Belrose et al. 2023: per-layer affine "translators" $\mathbf{h}_\ell \mapsto A_\ell \mathbf{h}_\ell + b_\ell$ trained with a distillation loss against final-layer logits. More reliable than the raw logit lens, especially on BLOOM/GPT-Neo \citep[\S 1; PDF p.1-2]{belrose2023-tuned-lens}
+-- Belrose et al. 2023: per-layer affine "translators" $\mathbf{h}_\ell \mapsto A_\ell \mathbf{h}_\ell + b_\ell$ trained with a distillation loss against final-layer logits. More reliable than the raw logit lens, especially on BLOOM/GPT-Neo \citep[\S 1; PDF p.1-2]{belrose2023-tuned-lens}
 
 \item[\glsanchor{unverbalized-evaluation-awareness}{\hyperref[sec:nla]{\textcolor{glscolor}{Unverbalized evaluation awareness}}}]
-Cases where a model internally suspects it is being tested but does not say so in its visible output. NLAs were validated as a tool for surfacing this signal during Anthropic's pre-deployment audit of Claude Opus 4.6. \citep[\S auditing; kb/excerpts/anthropic2026-nla\#sec-auditing]{anthropic2026-nla}
+-- Cases where a model internally suspects it is being tested but does not say so in its visible output. NLAs were validated as a tool for surfacing this signal during Anthropic's pre-deployment audit of Claude Opus 4.6. \citep[\S auditing; kb/excerpts/anthropic2026-nla\#sec-auditing]{anthropic2026-nla}
 
 \item[\glsanchor{value}{\hyperref[sec:introduction]{\textcolor{glscolor}{Value}}} (V)]
-Projected representation of the content to be aggregated. Weighted by attention scores to produce the output.
+-- Projected representation of the content to be aggregated. Weighted by attention scores to produce the output.
 
 \item[\glsanchor{vocabulary}{\hyperref[sec:introduction]{\textcolor{glscolor}{Vocabulary}}} (V)]
-The fixed set of all tokens a model can recognize. Size ranges from ~32K (LLaMA) to ~50K (GPT-3).
+-- The fixed set of all tokens a model can recognize. Size ranges from ~32K (LLaMA) to ~50K (GPT-3).
 \end{description}

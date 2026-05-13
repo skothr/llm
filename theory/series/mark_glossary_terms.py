@@ -532,9 +532,17 @@ def render_glossary_section(
         # sits a couple of baselines above the visible term. Stops the
         # viewer's link-jump from putting the term flush against the
         # top toolbar; reader lands on the term with context above.
+        #
+        # En dash (--) separates the bold term from the definition text
+        # so the reader can scan term/definition boundaries at a glance;
+        # description-list default would otherwise butt them together
+        # with only a small interword space. En dash chosen over em
+        # dash because it's the conventional separator in dictionaries
+        # and glossaries — em dash (---) reads as visually too heavy
+        # at body-text size, dominating the line.
         items.append(
             rf"\item[\glsanchor{{{key}}}{{{primary_rendered}}}{alias_part}]"
-            f"\n{full_def}{cite}"
+            f"\n-- {full_def}{cite}"
         )
     body = "\n\n".join(items)
     header = (

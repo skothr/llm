@@ -7,212 +7,212 @@
 
 \begin{description}
 \item[\glsanchor{activation-patching}{\hyperref[sec:cot-faithfulness]{\textcolor{glscolor}{Activation patching}}}]
-the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between forward passes on paired (clean, corrupted) prompts and measuring the effect on the output \texttt{[meng2022-rome §2; kb/excerpts/meng2022-rome\#sec-2; zhang2023-apatching §2.1]}. Also known as causal tracing, interchange intervention, causal mediation analysis, or representation denoising.
+-- the canonical causal-intervention method in MI: identify which model components matter for a behavior by swapping their activations between forward passes on paired (clean, corrupted) prompts and measuring the effect on the output \texttt{[meng2022-rome §2; kb/excerpts/meng2022-rome\#sec-2; zhang2023-apatching §2.1]}. Also known as causal tracing, interchange intervention, causal mediation analysis, or representation denoising.
 
 \item[\glsanchor{aha-moment}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{Aha moment}}} (R1-Zero)]
-A spike in the model's use of reflection words like "wait" during training, taken as evidence of self-reorganization of reasoning structure \citep[\S 2.3]{deepseek-r1}
+-- A spike in the model's use of reflection words like "wait" during training, taken as evidence of self-reorganization of reasoning structure \citep[\S 2.3]{deepseek-r1}
 
 \item[\glsanchor{autoregressive}{\hyperref[sec:cot-phenomenon]{\textcolor{glscolor}{Autoregressive}}}]
-Generating tokens one at a time, left to right, where each prediction depends only on previous tokens.
+-- Generating tokens one at a time, left to right, where each prediction depends only on previous tokens.
 
 \item[\glsanchor{budget-forcing}{\hyperref[sec:r1-family]{\textcolor{glscolor}{Budget forcing}}}]
-The s1 2025 mechanism. When the model emits its end-of-thinking token before the budget is reached, suppress it and append the continuation token "Wait" to force more reasoning; hard-truncate to enforce shorter budgets. \citep[\S 3.2]{s1-2025}
+-- The s1 2025 mechanism. When the model emits its end-of-thinking token before the budget is reached, suppress it and append the continuation token "Wait" to force more reasoning; hard-truncate to enforce shorter budgets. \citep[\S 3.2]{s1-2025}
 
 \item[\glsanchor{capability-ceiling}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{Capability ceiling}}} (RLVR)]
-The empirical finding that RLVR improves $\mathrm{pass}@1$ on problems the base model could already solve at $\mathrm{pass}@k$ for some $k$, but does not expand the set of solvable problems. Set at pre-training. \citep[\S 3]{rlvr-limits-2025}
+-- The empirical finding that RLVR improves $\mathrm{pass}@1$ on problems the base model could already solve at $\mathrm{pass}@k$ for some $k$, but does not expand the set of solvable problems. Set at pre-training. \citep[\S 3]{rlvr-limits-2025}
 
 \item[\glsanchor{chain-of-thought}{\hyperref[sec:introduction]{\textcolor{glscolor}{Chain-of-thought}}} (CoT)]
-A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps $z$ before emitting a final answer $y$. In few-shot CoT (Wei 2022), the prompt contains exemplars with hand-written reasoning traces; in zero-shot CoT (Kojima 2022), the trigger phrase "Let's think step by step" elicits the same behaviour without exemplars. \citep[\S 1; kojima2022 §3]{wei2022-cot}
+-- A prompting and decoding pattern in which the model produces an intermediate sequence of reasoning steps $z$ before emitting a final answer $y$. In few-shot CoT (Wei 2022), the prompt contains exemplars with hand-written reasoning traces; in zero-shot CoT (Kojima 2022), the trigger phrase "Let's think step by step" elicits the same behaviour without exemplars. \citep[\S 1; kojima2022 §3]{wei2022-cot}
 
 \item[\glsanchor{circuit-tracing}{\hyperref[sec:cot-faithfulness]{\textcolor{glscolor}{Circuit tracing}}}]
-Anthropic's 2025 methodology: replace MLPs with cross-layer transcoders, then compute attribution graphs by Jacobian back-attribution from a target node. Synthesis of SAE feature decomposition + activation patching causal intervention. [lindsey2025-circuit-tracing FORUM-SIGNAL — HTML-only]
+-- Anthropic's 2025 methodology: replace MLPs with cross-layer transcoders, then compute attribution graphs by Jacobian back-attribution from a target node. Synthesis of SAE feature decomposition + activation patching causal intervention. [lindsey2025-circuit-tracing FORUM-SIGNAL — HTML-only]
 
 \item[\glsanchor{claude}{\hyperref[sec:introduction]{\textcolor{glscolor}{Claude}}}]
-Anthropic's proprietary decoder-only LLM family. No public architecture paper; structural family shares the decoder-only Transformer lineage.
+-- Anthropic's proprietary decoder-only LLM family. No public architecture paper; structural family shares the decoder-only Transformer lineage.
 
 \item[\glsanchor{cold-start-sft-2}{\hyperref[sec:budget-forcing]{\textcolor{glscolor}{Cold-start SFT}}}]
-A small-scale ($\sim 10^4$ examples) SFT pass on long-CoT exemplars, run before RL to fix readability problems of pure-RL outputs (R1-Zero). Does not change asymptotic capability but improves trace coherence. \citep[\S 2.2.4]{deepseek-r1}
+-- A small-scale ($\sim 10^4$ examples) SFT pass on long-CoT exemplars, run before RL to fix readability problems of pure-RL outputs (R1-Zero). Does not change asymptotic capability but improves trace coherence. \citep[\S 2.2.4]{deepseek-r1}
 
 \item[\glsanchor{constrained-decoding-2}{\hyperref[sec:self-consistency]{\textcolor{glscolor}{Constrained decoding}}}]
-Generation procedure that, at each step, masks the logits to allow only tokens consistent with a target grammar (regex, JSON schema, GBNF, CFG). The sampling distribution is restricted to $\mathcal{V}_{\text{allowed}}(s_t)$, the FSM's allowed-token set in the current state. \citep[\S 3; kb/excerpts/willard2023-outlines\#sec-3]{willard2023-outlines}
+-- Generation procedure that, at each step, masks the logits to allow only tokens consistent with a target grammar (regex, JSON schema, GBNF, CFG). The sampling distribution is restricted to $\mathcal{V}_{\text{allowed}}(s_t)$, the FSM's allowed-token set in the current state. \citep[\S 3; kb/excerpts/willard2023-outlines\#sec-3]{willard2023-outlines}
 
 \item[\glsanchor{cot-faithfulness-2}{\hyperref[sec:introduction]{\textcolor{glscolor}{CoT faithfulness}}}]
-The extent to which the trace $z$ causally drives the answer $y$ versus being post-hoc rationalisation. Measured by counterfactual perturbation. Thinking models report rates ~0.04–0.14% post-hoc; non-thinking models ~7–13%. [chen2026-faithfulness-scaling, arXiv 2601.06423; chen2025-faithcot-bench, arXiv 2510.04040]
+-- The extent to which the trace $z$ causally drives the answer $y$ versus being post-hoc rationalisation. Measured by counterfactual perturbation. Thinking models report rates ~0.04–0.14% post-hoc; non-thinking models ~7–13%. [chen2026-faithfulness-scaling, arXiv 2601.06423; chen2025-faithcot-bench, arXiv 2510.04040]
 
 \item[\glsanchor{dapo-2}{\hyperref[sec:introduction]{\textcolor{glscolor}{DAPO}}}]
-ByteDance's GRPO variant. Four modifications: clip-higher (asymmetric clip), dynamic sampling (drop zero-variance groups), token-level loss (vs sequence-level), overlong reward shaping. AIME 2024 50pts on Qwen2.5-32B. \citep[\S 2]{dapo2025}
+-- ByteDance's GRPO variant. Four modifications: clip-higher (asymmetric clip), dynamic sampling (drop zero-variance groups), token-level loss (vs sequence-level), overlong reward shaping. AIME 2024 50pts on Qwen2.5-32B. \citep[\S 2]{dapo2025}
 
 \item[\glsanchor{debate}{\hyperref[sec:tree-search]{\textcolor{glscolor}{Debate}}} (AI safety)]
-Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge. Hypothesis: it is easier to expose a flawed argument than to construct a sound one, so truthful debaters win more often than deceptive ones. \citep[\S abstract]{irving2018-debate}
+-- Two AI debaters in a zero-sum game judged by a (weaker) human or LLM judge. Hypothesis: it is easier to expose a flawed argument than to construct a sound one, so truthful debaters win more often than deceptive ones. \citep[\S abstract]{irving2018-debate}
 
 \item[\glsanchor{decontamination}{\hyperref[sec:r1-family]{\textcolor{glscolor}{Decontamination}}} (Phi-4 sense)]
-Held-out test sets, especially November 2024 AMC math contests and unleaked HumanEval+, used to verify the synthetic data did not leak benchmark answers via the teacher. \citep[\S 1.1]{phi4}
+-- Held-out test sets, especially November 2024 AMC math contests and unleaked HumanEval+, used to verify the synthetic data did not leak benchmark answers via the teacher. \citep[\S 1.1]{phi4}
 
 \item[\glsanchor{discriminative-prm}{\hyperref[sec:process-reward-models]{\textcolor{glscolor}{discriminative PRM}}}]
-A classifier-style PRM: outputs a probability of step correctness in one feed-forward pass. Cheap to evaluate; classical Math-Shepherd / OpenAI PRM lineage. \citep[\S 2.2]{lightman2023-prm800k}
+-- A classifier-style PRM: outputs a probability of step correctness in one feed-forward pass. Cheap to evaluate; classical Math-Shepherd / OpenAI PRM lineage. \citep[\S 2.2]{lightman2023-prm800k}
 
 \item[\glsanchor{feature}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{Feature}}}]
-a direction $\mathbf{d} \in \mathbb{R}^n$ in some activation space such that the projection $\mathbf{x}^\top \mathbf{d}$ (or equivalently, an SAE latent activation with decoder column $\mathbf{d}$) corresponds to a human-interpretable property. The unit of analysis at the *what* level; circuits operate at the *how* level.
+-- a direction $\mathbf{d} \in \mathbb{R}^n$ in some activation space such that the projection $\mathbf{x}^\top \mathbf{d}$ (or equivalently, an SAE latent activation with decoder column $\mathbf{d}$) corresponds to a human-interpretable property. The unit of analysis at the *what* level; circuits operate at the *how* level.
 
 \item[\glsanchor{flashattention}{\hyperref[sec:introduction]{\textcolor{glscolor}{FlashAttention}}}]
-Exact attention computed with re-organized memory access: tile $K, V$ into SRAM-resident blocks and use **online softmax** to combine block results, never materializing the $N \times N$ attention matrix in HBM. Forward + backward IO complexity $\Theta(N^2 d^2 M^{-1})$ vs.\ $\Theta(N d + N^2)$ for the standard implementation \citep[\S 3]{dao2022}
+-- Exact attention computed with re-organized memory access: tile $K, V$ into SRAM-resident blocks and use **online softmax** to combine block results, never materializing the $N \times N$ attention matrix in HBM. Forward + backward IO complexity $\Theta(N^2 d^2 M^{-1})$ vs.\ $\Theta(N d + N^2)$ for the standard implementation \citep[\S 3]{dao2022}
 
 \item[\glsanchor{format-reward}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{Format reward}}}]
-In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a \texttt{<think>...</think>} block). Keeps the chain-of-thought pathway alive during early training \citep[\S 2.2]{deepseek-r1}
+-- In RLVR, a small constant reward for trajectories that conform to a structural template (e.g., emit a \texttt{<think>...</think>} block). Keeps the chain-of-thought pathway alive during early training \citep[\S 2.2]{deepseek-r1}
 
 \item[\glsanchor{generative-prm}{\hyperref[sec:introduction]{\textcolor{glscolor}{Generative PRM}}} (ThinkPRM)]
-A small reasoning-LLM verifier that emits its own short CoT evaluating each step before producing a verdict. Trained on 1% of PRM800K, beats full-PRM800K discriminative PRMs on ProcessBench / AIME 2024. \citep[\S 3]{thinkprm2025}
+-- A small reasoning-LLM verifier that emits its own short CoT evaluating each step before producing a verdict. Trained on 1% of PRM800K, beats full-PRM800K discriminative PRMs on ProcessBench / AIME 2024. \citep[\S 3]{thinkprm2025}
 
 \item[\glsanchor{gpqa-diamond-2}{\hyperref[sec:budget-forcing]{\textcolor{glscolor}{GPQA Diamond}}}]
-198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web access got it wrong. The "Google-proof" property is operationalized via the 34% non-expert-with-web baseline. Saturated at frontier as of 2026 (>90%) \citep[\S abstract]{rein2023-gpqa}
+-- 198-question subset of GPQA (Rein et al. 2023) where two PhD experts agree on the answer and at least one non-expert validator with web access got it wrong. The "Google-proof" property is operationalized via the 34% non-expert-with-web baseline. Saturated at frontier as of 2026 (>90%) \citep[\S abstract]{rein2023-gpqa}
 
 \item[\glsanchor{gqa}{\hyperref[sec:r1-family]{\textcolor{glscolor}{GQA}}} (Grouped-Query Attention)]
-Interpolation between MHA and MQA: query heads are partitioned into $g$ groups, each group shares one $W^K, W^V$. GQA-1 = MQA; GQA-$h$ = MHA. KV cache per token is $2 n_g d_h$ elements \citep[\S 2.2]{ainslie2023}
+-- Interpolation between MHA and MQA: query heads are partitioned into $g$ groups, each group shares one $W^K, W^V$. GQA-1 = MQA; GQA-$h$ = MHA. KV cache per token is $2 n_g d_h$ elements \citep[\S 2.2]{ainslie2023}
 
 \item[\glsanchor{greedy-decoding}{\hyperref[sec:self-consistency]{\textcolor{glscolor}{greedy decoding}}}]
-Selecting the highest-probability token at each step.
+-- Selecting the highest-probability token at each step.
 
 \item[\glsanchor{group-normalized-advantage}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{Group-normalized advantage}}}]
-In GRPO, $\tilde{A}_i = (R_i - \mathrm{mean}(\{R_j\}))/\mathrm{std}(\{R_j\})$, broadcast to every token of trajectory $o_i$. Replaces GAE-derived per-token advantages \citep[\S 4.1; deepseek-r1 §2.1 Eq.3]{shao2024}
+-- In GRPO, $\tilde{A}_i = (R_i - \mathrm{mean}(\{R_j\}))/\mathrm{std}(\{R_j\})$, broadcast to every token of trajectory $o_i$. Replaces GAE-derived per-token advantages \citep[\S 4.1; deepseek-r1 §2.1 Eq.3]{shao2024}
 
 \item[\glsanchor{grpo}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{GRPO}}} (Group Relative Policy Optimization)]
-Critic-free PPO variant: replaces the value model with a group-mean reward baseline. Sample $G$ trajectories per prompt, normalize rewards within the group, use the standardized advantage in the PPO loss. Used by DeepSeek-R1, Qwen 3, Tülu 3 RLVR \citep[\S 4.1; deepseek-r1 §2.1 Eq.1]{shao2024}
+-- Critic-free PPO variant: replaces the value model with a group-mean reward baseline. Sample $G$ trajectories per prompt, normalize rewards within the group, use the standardized advantage in the PPO loss. Used by DeepSeek-R1, Qwen 3, Tülu 3 RLVR \citep[\S 4.1; deepseek-r1 §2.1 Eq.1]{shao2024}
 
 \item[\glsanchor{grpo-2}{\hyperref[sec:introduction]{\textcolor{glscolor}{GRPO}}} (Group Relative Policy Optimisation)]
-Critic-free PPO variant (Shao 2024). Per-prompt group of $G$ samples; advantage is each sample's reward minus group mean, divided by group std. Eliminates the value-network requirement. \citep[\S 4.1; deepseek-r1 §2.1]{shao2024}
+-- Critic-free PPO variant (Shao 2024). Per-prompt group of $G$ samples; advantage is each sample's reward minus group mean, divided by group std. Eliminates the value-network requirement. \citep[\S 4.1; deepseek-r1 §2.1]{shao2024}
 
 \item[\glsanchor{inference-time-search}{\hyperref[sec:tree-search]{\textcolor{glscolor}{Inference-time search}}}]
-TTC family that constructs and explores a tree (or DAG) of partial reasoning prefixes, using a verifier or value function to direct expansion. Beam / BFS / MCTS variants. \citep[\S 3]{rstar-math2025}
+-- TTC family that constructs and explores a tree (or DAG) of partial reasoning prefixes, using a verifier or value function to direct expansion. Beam / BFS / MCTS variants. \citep[\S 3]{rstar-math2025}
 
 \item[\glsanchor{kv-cache}{\hyperref[sec:introduction]{\textcolor{glscolor}{KV cache}}}]
-The per-layer cache of key/value tensors $K_{1:t}, V_{1:t}$ produced during autoregressive decoding so each new token's attention is $O(t)$ rather than $O(t^2)$. Size per token per layer is $2 \cdot n_{\text{kv}} \cdot d_h \cdot \text{bytes}$. \citep[\S 2; kb/notes/inference/kv-cache-management\#§1]{kwon2023}
+-- The per-layer cache of key/value tensors $K_{1:t}, V_{1:t}$ produced during autoregressive decoding so each new token's attention is $O(t)$ rather than $O(t^2)$. Size per token per layer is $2 \cdot n_{\text{kv}} \cdot d_h \cdot \text{bytes}$. \citep[\S 2; kb/notes/inference/kv-cache-management\#§1]{kwon2023}
 
 \item[\glsanchor{llm}{\hyperref[sec:inference-compute-scaling]{\textcolor{glscolor}{LLM}}}]
-Large Language Model. A neural network with billions of parameters trained on large text corpora to predict and generate language.
+-- Large Language Model. A neural network with billions of parameters trained on large text corpora to predict and generate language.
 
 \item[\glsanchor{llm-as-judge}{\hyperref[sec:search-vs-rl]{\textcolor{glscolor}{LLM-as-judge}}}]
-Evaluation pattern where a strong LLM scores another model's responses (e.g., AlpacaEval, MT-Bench, Arena-Hard). Introduces a contamination axis where the same model class scores its own outputs generously. Sidestepped by string-match (GAIA, FrontierMath) or executable verifiers (SWE-bench, OSWorld).
+-- Evaluation pattern where a strong LLM scores another model's responses (e.g., AlpacaEval, MT-Bench, Arena-Hard). Introduces a contamination axis where the same model class scores its own outputs generously. Sidestepped by string-match (GAIA, FrontierMath) or executable verifiers (SWE-bench, OSWorld).
 
 \item[\glsanchor{mcts-rag}{\hyperref[sec:tree-search]{\textcolor{glscolor}{MCTS-RAG}}}]
-MCTS extended over retrieval decisions in addition to reasoning steps. Bridges search-based TTC and retrieval-augmented generation. [mcts-rag-2025, arXiv 2503.20757]
+-- MCTS extended over retrieval decisions in addition to reasoning steps. Bridges search-based TTC and retrieval-augmented generation. [mcts-rag-2025, arXiv 2503.20757]
 
 \item[\glsanchor{multi-head-latent-attention}{\hyperref[sec:r1-family]{\textcolor{glscolor}{Multi-head Latent Attention}}} (MLA)]
-DeepSeek's architectural compression: project to a low-rank latent $C \in \mathbb{R}^{d_c}$ shared across heads, expand back to per-head $(K, V)$ at attention time. Achieves ~93% KV-cache reduction vs MHA at deepseek-v2 dimensions. \citep[\S 2.1; kb/notes/inference/kv-cache-management\#§2]{deepseek-v2}
+-- DeepSeek's architectural compression: project to a low-rank latent $C \in \mathbb{R}^{d_c}$ shared across heads, expand back to per-head $(K, V)$ at attention time. Achieves ~93% KV-cache reduction vs MHA at deepseek-v2 dimensions. \citep[\S 2.1; kb/notes/inference/kv-cache-management\#§2]{deepseek-v2}
 
 \item[\glsanchor{n-gram-overlap}{\hyperref[sec:r1-family]{\textcolor{glscolor}{N-gram overlap}}}]
-Standard contamination-detection method (Brown et al. 2020 GPT-3 §C): flag training documents containing benchmark n-grams of length $\geq$13. Cheap; misses paraphrase contamination.
+-- Standard contamination-detection method (Brown et al. 2020 GPT-3 §C): flag training documents containing benchmark n-grams of length $\geq$13. Cheap; misses paraphrase contamination.
 
 \item[\glsanchor{outcome-reward-model}{\hyperref[sec:self-consistency]{\textcolor{glscolor}{Outcome Reward Model}}} (ORM)]
-A scoring function $R^O_\phi: (x, z, y) \to [0, 1]$ trained on (prompt, complete solution, outcome correctness) triples. Sparse signal — one label per trace. \citep[\S 2.1]{lightman2023-prm800k}
+-- A scoring function $R^O_\phi: (x, z, y) \to [0, 1]$ trained on (prompt, complete solution, outcome correctness) triples. Sparse signal — one label per trace. \citep[\S 2.1]{lightman2023-prm800k}
 
 \item[\glsanchor{palm}{\hyperref[sec:cot-phenomenon]{\textcolor{glscolor}{PaLM}}}]
-Google's 540B-parameter decoder-only LLM (Chowdhery et al., 2022). Uses SwiGLU, RoPE, parallel attention/FFN layers. Reference point for scaling experiments.
+-- Google's 540B-parameter decoder-only LLM (Chowdhery et al., 2022). Uses SwiGLU, RoPE, parallel attention/FFN layers. Reference point for scaling experiments.
 
 \item[\glsanchor{parameters}{\hyperref[sec:cot-phenomenon]{\textcolor{glscolor}{Parameters}}}]
-The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).
+-- The learned weights of the model (embedding matrices, projection matrices, normalization scales, etc.).
 
 \item[\glsanchor{pre-ln}{\hyperref[sec:frontier-2026]{\textcolor{glscolor}{Pre-LN}}}]
-Modern placement: normalize before the sub-layer, then add residually. Gradients scale as $O(d\sqrt{\ln d / L})$, enabling stable training without warmup.
+-- Modern placement: normalize before the sub-layer, then add residually. Gradients scale as $O(d\sqrt{\ln d / L})$, enabling stable training without warmup.
 
 \item[\glsanchor{precision-pinning}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{Precision pinning}}} (DeepSeek-V3)]
-Components held at BF16/FP32 even with FP8 elsewhere: embedding module, output head, MoE gating, normalization, attention. \citep[\S 3.3.1]{deepseek-v3}
+-- Components held at BF16/FP32 even with FP8 elsewhere: embedding module, output head, MoE gating, normalization, attention. \citep[\S 3.3.1]{deepseek-v3}
 
 \item[\glsanchor{prm800k}{\hyperref[sec:process-reward-models]{\textcolor{glscolor}{PRM800K}}}]
-OpenAI's released dataset of $\approx 800{,}000$ human step-correctness labels on GPT-4-generated MATH solutions. The foundational reference dataset for PRM training. \citep[\S 3]{lightman2023-prm800k}
+-- OpenAI's released dataset of $\approx 800{,}000$ human step-correctness labels on GPT-4-generated MATH solutions. The foundational reference dataset for PRM training. \citep[\S 3]{lightman2023-prm800k}
 
 \item[\glsanchor{probe-2}{\hyperref[sec:r1-family]{\textcolor{glscolor}{Probe}}}]
-A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology \citep[\S 1]{alain-bengio-2017}
+-- A (typically linear) classifier $g: \mathbb{R}^d \to \mathcal{Y}$ trained on frozen LM activations $\mathbf{h}^{(\ell, t)}$ to predict an external property $y$. The model's parameters are held fixed; only the probe is trained. Foundational to interpretability methodology \citep[\S 1]{alain-bengio-2017}
 
 \item[\glsanchor{process-preference-model}{\hyperref[sec:tree-search]{\textcolor{glscolor}{Process Preference Model}}} (PPM)]
-rStar-Math's variant: trained on preferences over MCTS-discovered step pairs, rather than absolute step labels. Avoids naïve step-score annotation. \citep[\S 3]{rstar-math2025}
+-- rStar-Math's variant: trained on preferences over MCTS-discovered step pairs, rather than absolute step labels. Avoids naïve step-score annotation. \citep[\S 3]{rstar-math2025}
 
 \item[\glsanchor{process-reward-model}{\hyperref[sec:introduction]{\textcolor{glscolor}{Process Reward Model}}} (PRM)]
-A scoring function $R^P_\phi: (x, s_{1:t}) \to [0, 1]$ trained on per-step correctness labels. Dense signal — one label per step. Outperforms ORM at matched best-of-$N$ on MATH. \citep[\S 2.2, §4]{lightman2023-prm800k}
+-- A scoring function $R^P_\phi: (x, s_{1:t}) \to [0, 1]$ trained on per-step correctness labels. Dense signal — one label per step. Outperforms ORM at matched best-of-$N$ on MATH. \citep[\S 2.2, §4]{lightman2023-prm800k}
 
 \item[\glsanchor{processbench}{\hyperref[sec:process-reward-models]{\textcolor{glscolor}{ProcessBench}}}]
-Standard benchmark for PRM step-error detection (identify the first incorrect step in a partial trace). [arXiv 2412.06559]
+-- Standard benchmark for PRM step-error detection (identify the first incorrect step in a partial trace). [arXiv 2412.06559]
 
 \item[\glsanchor{query}{\hyperref[sec:cot-phenomenon]{\textcolor{glscolor}{Query}}} (Q)]
-Projected representation of the position that is "asking" for information in attention.
+-- Projected representation of the position that is "asking" for information in attention.
 
 \item[\glsanchor{r1-zero}{\hyperref[sec:introduction]{\textcolor{glscolor}{R1-Zero}}}]
-DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base. Achieves AIME 2024 pass@1 of 77.9% \citep[\S 2.3]{deepseek-r1}
+-- DeepSeek-R1-Zero, the version of R1 trained with **no SFT cold-start** — pure GRPO RL applied directly to the DeepSeek-V3 base. Achieves AIME 2024 pass@1 of 77.9% \citep[\S 2.3]{deepseek-r1}
 
 \item[\glsanchor{reasoning-mcts}{\hyperref[sec:introduction]{\textcolor{glscolor}{reasoning-MCTS}}}]
-Monte Carlo Tree Search where actions are next-step reasoning generations and the value function is a PRM. Selection-expansion-simulation-backup loop, UCT-style exploration. \citep[\S 3]{rstar-math2025}
+-- Monte Carlo Tree Search where actions are next-step reasoning generations and the value function is a PRM. Selection-expansion-simulation-backup loop, UCT-style exploration. \citep[\S 3]{rstar-math2025}
 
 \item[\glsanchor{reasoning-model}{\hyperref[sec:introduction]{\textcolor{glscolor}{Reasoning model}}}]
-An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer. o1, DeepSeek-R1, Qwen3-thinking-mode, Gemini 2.5-thinking-mode are exemplars [deepseek-r1; kb/index/papers.json\#deepseek-r1]
+-- An LLM trained (typically with RL on verifiable rewards) to produce long-form chain-of-thought before its final answer. o1, DeepSeek-R1, Qwen3-thinking-mode, Gemini 2.5-thinking-mode are exemplars [deepseek-r1; kb/index/papers.json\#deepseek-r1]
 
 \item[\glsanchor{rejection-sampling-sft}{\hyperref[sec:introduction]{\textcolor{glscolor}{rejection-sampling SFT}}}]
-Generate candidate solutions with the current policy, filter by verifier (and optional quality filter), SFT on the survivors. Used as Stage 3 of the R1 pipeline. \citep[\S 2.3.3]{deepseek-r1}
+-- Generate candidate solutions with the current policy, filter by verifier (and optional quality filter), SFT on the survivors. Used as Stage 3 of the R1 pipeline. \citep[\S 2.3.3]{deepseek-r1}
 
 \item[\glsanchor{residual-stream}{\hyperref[sec:cot-faithfulness]{\textcolor{glscolor}{Residual stream}}}]
-the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes to it. The substrate that lens techniques and SAEs decompose. Vocabulary established in Elhage et al. 2021 (Mathematical Framework for Transformer Circuits).
+-- the linear data bus running through a decoder-only transformer's layers; every sublayer (attention, MLP) reads from and additively writes to it. The substrate that lens techniques and SAEs decompose. Vocabulary established in Elhage et al. 2021 (Mathematical Framework for Transformer Circuits).
 
 \item[\glsanchor{reward-hacking}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{Reward hacking}}}]
-Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts). Distinct from overoptimization in that hacking can occur even at low KL \citep[\S 2.2]{deepseek-r1}
+-- Policy exploits an artifact of the reward signal that does not correspond to true quality (e.g., verbosity, sycophancy, format-shortcuts). Distinct from overoptimization in that hacking can occur even at low KL \citep[\S 2.2]{deepseek-r1}
 
 \item[\glsanchor{reward-model}{\hyperref[sec:introduction]{\textcolor{glscolor}{reward model}}} (RM, $r_\phi$)]
-A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\pi^{\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO \citep[\S 3.5]{ouyang2022-instructgpt}
+-- A neural network trained on Bradley–Terry preferences to score response quality. Initialized from $\pi^{\mathrm{SFT}}$ with a scalar head replacing the LM head. Used as the reward signal for PPO \citep[\S 3.5]{ouyang2022-instructgpt}
 
 \item[\glsanchor{rlhf}{\hyperref[sec:introduction]{\textcolor{glscolor}{RLHF}}} (Reinforcement Learning from Human Feedback)]
-The 3-stage post-training pipeline: SFT $\to$ reward-model training on pairwise preferences $\to$ PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT \citep[\S 3]{ouyang2022-instructgpt}
+-- The 3-stage post-training pipeline: SFT $\to$ reward-model training on pairwise preferences $\to$ PPO with KL anchor against $\pi^{\mathrm{SFT}}$. Canonical reference is InstructGPT \citep[\S 3]{ouyang2022-instructgpt}
 
 \item[\glsanchor{rlvr-3}{\hyperref[sec:introduction]{\textcolor{glscolor}{RLVR}}} (RL with Verifiable Rewards)]
-RL post-training where the reward is computed mechanically from the emitted answer (regex match for math, unit-test execution for code, proof-checker for formal proofs), not from a learned reward model. The defining feature of post-2024 reasoning training. \citep[\S 2.2.1]{deepseek-r1}
+-- RL post-training where the reward is computed mechanically from the emitted answer (regex match for math, unit-test execution for code, proof-checker for formal proofs), not from a learned reward model. The defining feature of post-2024 reasoning training. \citep[\S 2.2.1]{deepseek-r1}
 
 \item[\glsanchor{rmsnorm}{\hyperref[sec:frontier-2026]{\textcolor{glscolor}{RMSNorm}}} (Root Mean Square Normalization)]
-Simplified LayerNorm that drops mean-centering and bias, normalizing only by the RMS of the input. 7–64% faster with comparable quality. Used by LLaMA.
+-- Simplified LayerNorm that drops mean-centering and bias, normalizing only by the RMS of the input. 7–64% faster with comparable quality. Used by LLaMA.
 
 \item[\glsanchor{rope}{\hyperref[sec:frontier-2026]{\textcolor{glscolor}{RoPE}}} (Rotary Position Embedding)]
-Positional encoding that rotates query and key vectors by position-dependent angles, making attention dot products depend on relative position. Applied at every layer to Q and K only. Used by LLaMA and most modern LLMs.
+-- Positional encoding that rotates query and key vectors by position-dependent angles, making attention dot products depend on relative position. Applied at every layer to Q and K only. Used by LLaMA and most modern LLMs.
 
 \item[\glsanchor{saturation}{\hyperref[sec:self-consistency]{\textcolor{glscolor}{Saturation}}}]
-A benchmark is saturated when frontier models score within the verifier-error-rate noise floor of one another, losing discriminative power. MMLU at >90% is saturated (verifier error rate ~6.5%); GPQA Diamond at >90% is saturated at the frontier as of 2026. [mmlu-redux-2024]
+-- A benchmark is saturated when frontier models score within the verifier-error-rate noise floor of one another, losing discriminative power. MMLU at >90% is saturated (verifier error rate ~6.5%); GPQA Diamond at >90% is saturated at the frontier as of 2026. [mmlu-redux-2024]
 
 \item[\glsanchor{scaling-law}{\hyperref[sec:cot-phenomenon]{\textcolor{glscolor}{Scaling law}}}]
-An empirical or theoretical functional relationship between a measure of model performance (typically cross-entropy loss) and one or more "scale" inputs: parameters $N$, training tokens $D$, training compute $C$, or test-time compute $N_{\text{test}}$. Canonical reference: \texttt{kaplan2020}.
+-- An empirical or theoretical functional relationship between a measure of model performance (typically cross-entropy loss) and one or more "scale" inputs: parameters $N$, training tokens $D$, training compute $C$, or test-time compute $N_{\text{test}}$. Canonical reference: \texttt{kaplan2020}.
 
 \item[\glsanchor{scheming}{\hyperref[sec:cot-faithfulness]{\textcolor{glscolor}{Scheming}}}]
-A model schemes when, instructed to pursue a goal $G$, it strategically takes actions that conceal its capabilities or manipulate its oversight in service of $G$, rather than pursuing $G$ by direct means. Operational definition from Apollo Research. \citep[\S abstract; kb/excerpts/meinke2024-apollo-scheming\#abstract]{meinke2024-apollo-scheming}
+-- A model schemes when, instructed to pursue a goal $G$, it strategically takes actions that conceal its capabilities or manipulate its oversight in service of $G$, rather than pursuing $G$ by direct means. Operational definition from Apollo Research. \citep[\S abstract; kb/excerpts/meinke2024-apollo-scheming\#abstract]{meinke2024-apollo-scheming}
 
 \item[\glsanchor{self-consistency-2}{\hyperref[sec:self-consistency]{\textcolor{glscolor}{Self-consistency}}}]
-Sample $N$ chain-of-thoughts independently at $T > 0$; majority-vote the final answers. Wang et al. 2022. Cheap baseline that requires no verifier.
+-- Sample $N$ chain-of-thoughts independently at $T > 0$; majority-vote the final answers. Wang et al. 2022. Cheap baseline that requires no verifier.
 
 \item[\glsanchor{sliding-window-attention}{\hyperref[sec:r1-family]{\textcolor{glscolor}{Sliding-window attention}}}]
-Each position attends only to the previous $w$ tokens; compute $O(N w d)$ vs $O(N^2 d)$. Local-only by construction; relies on stacked layers' growing receptive field for long-range dependencies. (Longformer 2020, Mistral 2023)
+-- Each position attends only to the previous $w$ tokens; compute $O(N w d)$ vs $O(N^2 d)$. Local-only by construction; relies on stacked layers' growing receptive field for long-range dependencies. (Longformer 2020, Mistral 2023)
 
 \item[\glsanchor{swiglu}{\hyperref[sec:frontier-2026]{\textcolor{glscolor}{SwiGLU}}}]
-$\mathrm{FFN}_{\mathrm{SwiGLU}}(x) = (\mathrm{Swish}_1(xW) \otimes xV) W_2$. Three-matrix FFN with Swish gating. Universal in modern decoder-only LLMs. \citep[\S 2 Eq.6]{shazeer2020}
+-- $\mathrm{FFN}_{\mathrm{SwiGLU}}(x) = (\mathrm{Swish}_1(xW) \otimes xV) W_2$. Three-matrix FFN with Swish gating. Universal in modern decoder-only LLMs. \citep[\S 2 Eq.6]{shazeer2020}
 
 \item[\glsanchor{sycophancy}{\hyperref[sec:cot-faithfulness]{\textcolor{glscolor}{Sycophancy}}}]
-A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth. Distinct from scheming: sycophancy requires no intent, only Goodhart on RLHF preference data. \citep[\S abstract; kb/excerpts/sharma2023-sycophancy\#abstract]{sharma2023-sycophancy}
+-- A response is sycophantic if it is more aligned with the user's expressed preference than is justified by the underlying truth. Distinct from scheming: sycophancy requires no intent, only Goodhart on RLHF preference data. \citep[\S abstract; kb/excerpts/sharma2023-sycophancy\#abstract]{sharma2023-sycophancy}
 
 \item[\glsanchor{test-time-compute}{\hyperref[sec:introduction]{\textcolor{glscolor}{Test-time compute}}} (TTC)]
-The inference-side compute spent on a single problem instance to improve answer quality, beyond a single greedy forward pass. Recognised in 2024 as a co-equal scaling axis with training compute. \citep[\S 1]{snell2024}
+-- The inference-side compute spent on a single problem instance to improve answer quality, beyond a single greedy forward pass. Recognised in 2024 as a co-equal scaling axis with training compute. \citep[\S 1]{snell2024}
 
 \item[\glsanchor{test-time-compute-optimal-scaling-strategy}{\hyperref[sec:inference-compute-scaling]{\textcolor{glscolor}{Test-time compute-optimal scaling strategy}}}]
-The argmax over test-time hyperparameters $\theta$ of expected output correctness, at a fixed test-time compute budget $N$, conditioned on a prompt $q$: $\theta^\ast_{q, y^\ast(q)}(N) = \arg\max_\theta \mathbb{E}_{y \sim \mathrm{Target}(\theta, N, q)}[\mathbb{1}_{y = y^\ast(q)}]$ \citep[\S 3.1 Eq.(1); kb/excerpts/snell2024\#sec-3-1]{snell2024}
+-- The argmax over test-time hyperparameters $\theta$ of expected output correctness, at a fixed test-time compute budget $N$, conditioned on a prompt $q$: $\theta^\ast_{q, y^\ast(q)}(N) = \arg\max_\theta \mathbb{E}_{y \sim \mathrm{Target}(\theta, N, q)}[\mathbb{1}_{y = y^\ast(q)}]$ \citep[\S 3.1 Eq.(1); kb/excerpts/snell2024\#sec-3-1]{snell2024}
 
 \item[\glsanchor{thinking-budget-2}{\hyperref[sec:budget-forcing]{\textcolor{glscolor}{Thinking budget}}}]
-Productised TTC control: API-level integer (Gemini 2.5 \texttt{thinkingBudget}), effort level (OpenAI o-series), or token cap (Anthropic thinking block). \citep[\S 3]{gemini2-5}
+-- Productised TTC control: API-level integer (Gemini 2.5 \texttt{thinkingBudget}), effort level (OpenAI o-series), or token cap (Anthropic thinking block). \citep[\S 3]{gemini2-5}
 
 \item[\glsanchor{transformer}{\hyperref[sec:budget-forcing]{\textcolor{glscolor}{Transformer}}}]
-Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing of sequences.
+-- Neural network architecture introduced by Vaswani et al. (2017) that replaces recurrence with self-attention, allowing parallel processing of sequences.
 
 \item[\glsanchor{value}{\hyperref[sec:introduction]{\textcolor{glscolor}{Value}}} (V)]
-Projected representation of the content to be aggregated. Weighted by attention scores to produce the output.
+-- Projected representation of the content to be aggregated. Weighted by attention scores to produce the output.
 
 \item[\glsanchor{vapo}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{VAPO}}} (Value-Augmented PPO)]
-RL variant that re-introduces a learned value function on top of GRPO's design, with shared backbone and value-loss-clipping. Reportedly outperforms DAPO on long-CoT tasks [vapo-2025]
+-- RL variant that re-introduces a learned value function on top of GRPO's design, with shared backbone and value-loss-clipping. Reportedly outperforms DAPO on long-CoT tasks [vapo-2025]
 
 \item[\glsanchor{verifiable-reward}{\hyperref[sec:introduction]{\textcolor{glscolor}{Verifiable reward}}}]
-A 0/1 reward computed by a programmatic check: $R(x,y) = \mathbb{1}[\mathrm{verify}(x,y)]$. Sparse and terminal \citep[\S 2.2]{deepseek-r1}
+-- A 0/1 reward computed by a programmatic check: $R(x,y) = \mathbb{1}[\mathrm{verify}(x,y)]$. Sparse and terminal \citep[\S 2.2]{deepseek-r1}
 
 \item[\glsanchor{vineppo}{\hyperref[sec:rlvr-grpo-dapo]{\textcolor{glscolor}{VinePPO}}}]
-PPO variant using per-prefix Monte Carlo re-simulation as value estimate. Drops the value network. 3$\times$ wall-clock speedup over PPO on MATH/GSM8K [vineppo-2024]
+-- PPO variant using per-prefix Monte Carlo re-simulation as value estimate. Drops the value network. 3$\times$ wall-clock speedup over PPO on MATH/GSM8K [vineppo-2024]
 
 \item[\glsanchor{vocabulary}{\hyperref[sec:introduction]{\textcolor{glscolor}{Vocabulary}}} (V)]
-The fixed set of all tokens a model can recognize. Size ranges from ~32K (LLaMA) to ~50K (GPT-3).
+-- The fixed set of all tokens a model can recognize. Size ranges from ~32K (LLaMA) to ~50K (GPT-3).
 \end{description}
