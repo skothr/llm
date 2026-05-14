@@ -36,6 +36,10 @@ class SessionInfo:
     # (source_gguf_path is user-supplied and left alone).
     _owned_export_dir: Path | None = field(default=None, repr=False)
     dirty: bool = field(default=False)
+    # Ephemeral steering config (not persisted across restarts).  Set by
+    # POST /api/sessions/{name}/steering, cleared by DELETE of same route.
+    # None means no active steering.
+    steering: "dict | None" = field(default=None, repr=False)
 
     @property
     def pending_ops(self) -> list:
