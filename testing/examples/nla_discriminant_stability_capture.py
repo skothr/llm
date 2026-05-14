@@ -1,17 +1,19 @@
-"""fig28 setup: capture h[20] for 8 anchor words at 4 different
-contexts each — to measure discriminant-projection stability.
+"""fig28 setup: capture h[20] for 8 anchor words at 4 prefix-length
+variants each — to measure discriminant-projection stability.
 
 If the discriminant directions encode genuine semantic content, then
-the same anchor word in different positions should project similarly
-onto its category's discriminant. If position dominates content, the
-projections will diverge wildly.
+the same anchor word at end-of-prompt should project similarly
+regardless of prefix length. If prefix-length dominates the readout,
+the discriminants are unstable.
 
-Captures per anchor (chat-templated; capture h[20] at the anchor's
-position in the user message):
-  - single: anchor IS the entire user message
-  - subject: "{anchor} is interesting." (start position)
-  - object: "I am thinking about {anchor}." (late position)
-  - middle: "The word {anchor} appears here often." (mid-prompt)
+Captures per anchor: each context has anchor as the LAST content token
+of the user message; capture h[20] at position -1 (same protocol as
+the vocab atlas) so the comparison is apples-to-apples.
+
+  - single: "{anchor}"
+  - short:  "Word: {anchor}"
+  - medium: "Tell me about {anchor}"
+  - long:   "I want to discuss with you the following word, which is {anchor}"
 
 Outputs: testing/.cache/nla_artifacts/discriminant_stability.pt
 """
@@ -55,48 +57,40 @@ ANCHORS: list[tuple[str, str, str]] = [
 
 
 def context_prompts(anchor: str) -> dict[str, str]:
-    """Returns {context_name: user_message_text} for the four contexts."""
+    """Returns {context_name: user_message_text} where anchor is always
+    the LAST content token. Varies prefix length to test how the same
+    anchor at end-of-prompt shifts under different prefix contexts."""
     return {
-        "single":   anchor,
-        "subject":  f"{anchor} is interesting.",
-        "object":   f"I am thinking about {anchor}.",
-        "middle":   f"The word {anchor} appears here often.",
+        "single":  anchor,
+        "short":   f"Word: {anchor}",
+        "medium":  f"Tell me about {anchor}",
+        "long":    f"I want to discuss with you the following word, which is {anchor}",
     }
 
 
-def find_anchor_position(tokenizer: Any, full_prompt_ids: torch.Tensor,
-                          anchor_text: str, context_text: str) -> int:
-    """Locate the LAST occurrence of anchor_text in the tokenized
-    user-message portion. Returns the position index in full_prompt_ids."""
-    # Find the position of anchor in context (string-level)
-    # We capture h at the LAST token corresponding to the anchor word.
-    # Strategy: tokenize the context prefix up to the END of the anchor
-    # word, and use that length as the position.
+def find_anchor_position(tokenizer: Any, anchor_text: str, context_text: str) -> int:
+    """Locate the LAST occurrence of anchor_text in the tokenized chat-
+    templated prompt. Returns the position index of the anchor's final token."""
     anchor_end_in_context = context_text.rfind(anchor_text) + len(anchor_text)
     prefix_text = context_text[:anchor_end_in_context]
 
-    # Tokenize the FULL chat-templated prompt up to where the user-message
-    # contains only the prefix. We get the full chat-template ids and find
-    # where prefix ends.
     full_msg_ids = tokenizer.apply_chat_template(
         [{"role": "user", "content": context_text}],
-        tokenize=True, add_generation_prompt=True, return_tensors="pt",
-    )[0].tolist()
+        tokenize=True, add_generation_prompt=True,
+    )
     prefix_msg_ids = tokenizer.apply_chat_template(
         [{"role": "user", "content": prefix_text}],
-        tokenize=True, add_generation_prompt=False, return_tensors="pt",
-    )[0].tolist()
+        tokenize=True, add_generation_prompt=False,
+    )
 
-    # The prefix's token sequence should be a prefix of the full message
-    # up through the anchor. Find the longest common prefix.
+    # prefix tokens should match the first N tokens of full; find longest
+    # common prefix length, where the anchor's last token lives at position N-1
     common = 0
     for a, b in zip(full_msg_ids, prefix_msg_ids):
         if a == b:
             common += 1
         else:
             break
-
-    # Return position (0-indexed) of the LAST anchor token in full_prompt_ids
     return common - 1
 
 
@@ -119,20 +113,9 @@ def main() -> None:
             )
             input_ids = enc["input_ids"]
 
-            # Find where the anchor ends in this prompt
-            if ctx_name == "single":
-                # For single-token msg, capture at the last user-side token (same
-                # protocol as vocab atlas)
-                pos = int(input_ids.shape[1]) - 1
-                # Adjust for the assistant turn tokens — actually for single
-                # captures we want -1, matching the vocab atlas protocol exactly
-                # so they're directly comparable. We'll use position -1 throughout.
-                anchor_pos = pos
-            else:
-                anchor_pos = find_anchor_position(tok, input_ids[0], anchor, ctx_text)
-                if anchor_pos < 0 or anchor_pos >= int(input_ids.shape[1]):
-                    print(f"  [WARN] {anchor!r} {ctx_name}: position out of range; falling back to -1")
-                    anchor_pos = int(input_ids.shape[1]) - 1
+            # All contexts have the anchor as the LAST CONTENT TOKEN.
+            # Capture at position -1 (same protocol as the vocab atlas).
+            anchor_pos = int(input_ids.shape[1]) - 1
 
             with torch.no_grad():
                 out = model(input_ids=input_ids, output_hidden_states=True, use_cache=False)
