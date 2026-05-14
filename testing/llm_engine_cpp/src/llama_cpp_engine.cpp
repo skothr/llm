@@ -399,14 +399,30 @@ void LlamaCppEngine::setAblation(
     }
 
     // Translate ComponentRef::component strings → llama.cpp compute-graph
-    // basenames (cb_eval observes "attn_out-{L}" / "ffn_out-{L}").
-    // Accepts the common UI/canonical aliases ("attn", "mlp", "ffn").
-    // Unknown component names are recorded into view.surgery for honest
-    // reporting but skipped in the cb_eval set — logged as a warn.
-    auto component_to_basename = [](std::string_view comp) -> std::string {
-        if (comp == "attn" || comp == "attn_out") return "attn_out";
-        if (comp == "mlp"  || comp == "ffn" || comp == "ffn_out") return "ffn_out";
-        return {};  // unrecognised
+    // basenames (cb_eval observes "{base}-{L}" tensors).  Returns ALL
+    // candidate basenames across known archs because cb_eval matches by
+    // exact string; entries for archs the active model doesn't use are
+    // silent no-ops, so over-inclusion costs zero per-decode work.  This
+    // is preferable to per-arch dispatch because it requires no
+    // architecture detection at setAblation time and stays correct when
+    // new archs are added that introduce new tensor names (just append).
+    //
+    // Coverage verified against lib/llama.cpp/src/models/*.cpp (2026-05-14):
+    //   "attn_out"        — llama, qwen, qwen2, qwen3, mistral, gemma,
+    //                       phi, phi3, exaone4, cogvlm, ... (most archs)
+    //   "attn_residual"   — qwen3next (qwen3next.cpp:42)
+    //   "ffn_out"         — universal across non-MoE FFN paths
+    //   "ffn_moe_out"     — MoE FFN path: qwen3next, minimax-m2,
+    //                       deepseek/deepseek2, phi3 (moe variant),
+    //                       llama-graph (moe path)
+    auto component_to_basenames = [](std::string_view comp)
+        -> std::vector<std::string>
+    {
+        if (comp == "attn" || comp == "attn_out")
+            return {"attn_out", "attn_residual"};
+        if (comp == "mlp"  || comp == "ffn" || comp == "ffn_out")
+            return {"ffn_out", "ffn_moe_out"};
+        return {};
     };
     std::set<std::pair<int, std::string>> new_components;
     std::vector<ComponentRef> comp_refs;
@@ -419,15 +435,17 @@ void LlamaCppEngine::setAblation(
             continue;
         }
         comp_refs.push_back(*parsed);
-        std::string basename = component_to_basename(parsed->component);
-        if (basename.empty()) {
+        auto basenames = component_to_basenames(parsed->component);
+        if (basenames.empty()) {
             m_impl->pushLog(Severity::Warn,
                 "setAblation: component '" + std::string(parsed->component) +
                 "' has no llama.cpp tensor mapping; recorded in view.surgery "
                 "but won't affect forward pass");
             continue;
         }
-        new_components.insert({parsed->layer, std::move(basename)});
+        for (auto& base : basenames) {
+            new_components.insert({parsed->layer, std::move(base)});
+        }
     }
 
     {

@@ -212,6 +212,133 @@ int main()
         }
     }
 
+    // ── Helpers for the next two deep tests ──────────────────────────────
+    auto settle_streaming = [&] {
+        std::size_t prev = 0;
+        const auto deadline = std::chrono::steady_clock::now()
+                            + std::chrono::seconds(10);
+        while (std::chrono::steady_clock::now() < deadline) {
+            auto b = engine.view().current.load();
+            std::size_t now = b ? b->token_strs.size() : 0;
+            if (now == prev && now > 0) break;
+            prev = now;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+    };
+    auto wait_new_bundle = [&](
+        std::shared_ptr<const llmengine::CaptureBundle> baseline,
+        int timeout_s) -> bool
+    {
+        const auto deadline = std::chrono::steady_clock::now()
+                            + std::chrono::seconds(timeout_s);
+        while (std::chrono::steady_clock::now() < deadline) {
+            auto b = engine.view().current.load();
+            if (b && b != baseline && !b->attention.empty()) return true;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        return false;
+    };
+
+    // ── Component ablation actually mutates the forward pass ─────────────
+    // After setAblation on "blocks.5.mlp", the residual stream at a
+    // downstream layer (10) must differ measurably from the baseline.
+    // Catches regression to silent no-op of component-ablation cb_eval
+    // write-back.
+    {
+        // Clear residue from the head test, then re-prompt for a clean
+        // baseline reading.
+        engine.setAblation({}, {});
+        auto pre0 = engine.view().current.load();
+        engine.setActivePrompt("The capital of France is");
+        REQUIRE(wait_new_bundle(pre0, 30),
+                "baseline (no ablation) capture appears within 30s");
+        auto pre_resid = engine.getResidualSummary(10);
+        REQUIRE(pre_resid.resid_norm > 0.0f,
+                "pre-component-ablation residual norm at L=10 > 0");
+
+        settle_streaming();
+        auto pre_bundle = engine.view().current.load();
+
+        engine.setAblation({}, {"blocks.5.mlp"});
+        engine.setActivePrompt("The capital of France is");
+        const bool post_ready = wait_new_bundle(pre_bundle, 30);
+        REQUIRE(post_ready,
+                "post-component-ablation capture appears within 30s");
+
+        if (post_ready) {
+            auto post_resid = engine.getResidualSummary(10);
+            REQUIRE(post_resid.resid_norm > 0.0f,
+                    "post-component-ablation residual norm > 0");
+            const float delta = std::abs(post_resid.resid_norm
+                                       - pre_resid.resid_norm);
+            const float rel   = delta / std::max(pre_resid.resid_norm, 1e-6f);
+            std::fprintf(stdout,
+                "  component pre_resid=%.4f post=%.4f rel_delta=%.4f\n",
+                double(pre_resid.resid_norm),
+                double(post_resid.resid_norm),
+                double(rel));
+            REQUIRE(rel > 0.01f,
+                    "component ablation (blocks.5.mlp) produces residual "
+                    "delta > 1% at L=10");
+        }
+    }
+
+    // ── Steering vector actually mutates the forward pass ────────────────
+    // Install a steering vector at layer 5 with non-trivial alpha; the
+    // residual norm at L=5 should differ from baseline (no steering)
+    // by more than measurement noise.
+    {
+        engine.setAblation({}, {});
+        settle_streaming();
+
+        // Baseline at L=5, no steering.
+        auto pre0 = engine.view().current.load();
+        engine.setActivePrompt("The capital of France is");
+        REQUIRE(wait_new_bundle(pre0, 30),
+                "pre-steering baseline capture appears within 30s");
+        auto pre_resid = engine.getResidualSummary(5);
+        REQUIRE(pre_resid.resid_norm > 0.0f,
+                "pre-steering residual norm at L=5 > 0");
+
+        settle_streaming();
+        auto pre_bundle = engine.view().current.load();
+
+        // alpha=10.0 * uniform 0.1 across d_model dims gives a
+        // per-token shift of magnitude sqrt(dModel)*0.1 — large enough
+        // to surface above measurement noise without saturating.
+        llmengine::SteeringConfig sc;
+        sc.active = true;
+        sc.alpha  = 10.0f;
+        sc.layer  = "5";
+        sc.direction.assign(topo.dModel, 0.1f);
+        engine.setSteering(sc);
+        engine.setActivePrompt("The capital of France is");
+        const bool post_ready = wait_new_bundle(pre_bundle, 30);
+        REQUIRE(post_ready,
+                "post-steering capture appears within 30s");
+
+        if (post_ready) {
+            auto post_resid = engine.getResidualSummary(5);
+            REQUIRE(post_resid.resid_norm > 0.0f,
+                    "post-steering residual norm > 0");
+            const float delta = std::abs(post_resid.resid_norm
+                                       - pre_resid.resid_norm);
+            const float rel   = delta / std::max(pre_resid.resid_norm, 1e-6f);
+            std::fprintf(stdout,
+                "  steering pre_resid=%.4f post=%.4f rel_delta=%.4f\n",
+                double(pre_resid.resid_norm),
+                double(post_resid.resid_norm),
+                double(rel));
+            REQUIRE(rel > 0.05f,
+                    "steering vector at L=5 (alpha=10, dir=0.1) produces "
+                    "residual delta > 5%");
+        }
+
+        // Clear steering so subsequent test code (drain logs etc.) isn't
+        // confused by lingering surgery state.
+        engine.clearSteering();
+    }
+
     // ── Drain logs ────────────────────────────────────────────────────────
     auto logs = engine.drainEngineLogs();
     if (!logs.empty()) {
