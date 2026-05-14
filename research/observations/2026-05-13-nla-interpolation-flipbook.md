@@ -20,9 +20,10 @@ Phrased to mimic AV's own 3-paragraph template language (format-class / phrase c
 
 ## Geometric findings (fig18)
 
-* `||h_A|| = 51.94`, `||h_B|| = 66.30`. AR-encoded vectors land at moderate norms, similar to real model captures.
+* `||h_A|| = 65.73`, `||h_B|| = 66.30`. AR-encoded vectors land at moderate norms, similar to real model captures. (Earlier draft of this observation misread fig18's `||h_A − h_B|| = 51.94` legend as `||h_A||`; the audit caught it.)
+* `||h_A − h_B|| = 51.94` — the inter-anchor distance in raw h-space.
 * `cos(h_A, h_B) = +0.6905`. **The anchors are far more similar than I'd designed for.** Two semantically-divergent texts collapse to vectors that are 69% cosine — the chat-template structural attractor dominates AR's outputs.
-* `||h_t||` dips to ~47 at t=0.5 — a 10% midpoint depression from `max(||h_A||, ||h_B||) = 66`. The geometric path bows toward the origin, consistent with anchors that aren't collinear but aren't orthogonal either.
+* `||h_t||` dips to ~60.7 at t=0.5 — an ~8% midpoint depression from `max(||h_A||, ||h_B||) = 66.30`. The geometric path bows toward the origin, consistent with anchors that aren't collinear but aren't orthogonal either.
 * `cos(h_t, h_A)` and `cos(h_t, h_B)` curves cross at exactly t=0.5 (linear-interp sanity check passed).
 * Per-step distance is constant at 2.734 up to floating-point precision (sanity check).
 

@@ -390,6 +390,171 @@ def main() -> None:
 
     print()
     print("=" * 80)
+    print("AUDIT 11: Path B interpolation flipbook")
+    print("=" * 80)
+    flip_path = ARTIFACTS / "interpolation_flipbook.pt"
+    if flip_path.exists():
+        flip = torch.load(flip_path, weights_only=False)
+        h_A_flip = flip["h_A"]
+        h_B_flip = flip["h_B"]
+        steps_flip = sorted(flip["steps"], key=lambda s: s["step"])
+        claim_eq("interpolation step count", 20, len(steps_flip))
+        anchor_cos = float(torch.nn.functional.cosine_similarity(h_A_flip, h_B_flip, dim=0).item())
+        claim_near("anchor cosine cos(h_A, h_B)", 0.6905, anchor_cos, atol=0.0005)
+        # Note: the Path B observation originally mislabeled 51.94 as ||h_A||;
+        # 51.94 is actually ||h_A - h_B|| (the inter-anchor distance).
+        claim_near("||h_A||", 65.73, float(h_A_flip.norm().item()), atol=0.05)
+        claim_near("||h_B||", 66.30, float(h_B_flip.norm().item()), atol=0.05)
+        claim_near("||h_A - h_B|| (inter-anchor distance)",
+                   51.94, float((h_A_flip - h_B_flip).norm().item()), atol=0.05)
+        # per-step distance should be constant for linear interp
+        h_ts_flip = torch.stack([s["h_t"] for s in steps_flip])
+        step_dists = (h_ts_flip[1:] - h_ts_flip[:-1]).norm(dim=1)
+        claim_near("per-step ||Δh|| (mean)", 2.734, float(step_dists.mean().item()), atol=0.01)
+        claim_near("per-step ||Δh|| (std, near-zero for linear interp)",
+                   0.0, float(step_dists.std().item()), atol=0.01)
+        # midpoint norm should dip below max(||h_A||, ||h_B||)
+        midpoint_norm = float(h_ts_flip[len(steps_flip) // 2].norm().item())
+        claim("midpoint ||h_t|| < min(||h_A||, ||h_B||) (geometric bow)",
+              midpoint_norm < min(float(h_A_flip.norm().item()), float(h_B_flip.norm().item())),
+              "below both anchor norms", f"midpoint={midpoint_norm:.2f}")
+    else:
+        print(f"  (skipping AUDIT 11: {flip_path} not present)")
+
+    print()
+    print("=" * 80)
+    print("AUDIT 12: Vocab atlas size + PCA variance")
+    print("=" * 80)
+    vocab_path = ARTIFACTS / "vocab_atlas.pt"
+    if vocab_path.exists():
+        vocab = torch.load(vocab_path, weights_only=False)
+        v_caps = vocab["captures"]
+        claim_eq("vocab atlas capture count", 128, len(v_caps))
+        claim_eq("vocab atlas category count", 23, len(vocab["categories"]))
+        H_v = torch.stack([c["h"] for c in v_caps])
+        H_v_res = H_v.clone()
+        for d in sinks:
+            H_v_res[:, d] = 0.0
+        mean_v = H_v_res.mean(dim=0, keepdim=True)
+        _, S_v, _ = torch.linalg.svd(H_v_res - mean_v, full_matrices=False)
+        var_v = S_v ** 2
+        total_var_v = float(var_v.sum().item())
+        pc1_v = float(var_v[0] / total_var_v)
+        pc2_v = float(var_v[1] / total_var_v)
+        top3_v = float(var_v[:3].sum() / total_var_v)
+        claim_near("vocab atlas PC1 fraction (sink-removed)", 0.335, pc1_v, atol=0.005)
+        claim_near("vocab atlas PC2 fraction (sink-removed)", 0.153, pc2_v, atol=0.005)
+        claim_near("vocab atlas top-3 cumulative variance",   0.559, top3_v, atol=0.005)
+        # Intra-category cosines (sink-removed)
+        H_v_unit = torch.nn.functional.normalize(H_v_res, dim=1)
+        C_v = H_v_unit @ H_v_unit.T
+        def intra_cat(cat: str) -> float:
+            idxs = [i for i, c in enumerate(v_caps) if c["category"] == cat]
+            if len(idxs) < 2:
+                return 0.0
+            block = C_v[idxs][:, idxs]
+            eye_b = torch.eye(len(idxs), dtype=torch.bool)
+            return float(block[~eye_b].mean().item())
+        claim_near("capital intra-cos (sink-removed)", 0.983, intra_cat("capital"), atol=0.005)
+        claim_near("country intra-cos (sink-removed)", 0.981, intra_cat("country"), atol=0.005)
+        claim_near("emotion intra-cos (sink-removed, loosest)", 0.849, intra_cat("emotion"), atol=0.01)
+        claim_near("refusal intra-cos (sink-removed)", 0.847, intra_cat("refusal"), atol=0.01)
+
+        print()
+        print("=" * 80)
+        print("AUDIT 13: Discriminant directions (centroid → discriminant fix)")
+        print("=" * 80)
+        # Compute centroids and discriminants from scratch
+        categories = list(vocab["categories"])
+        cat_indices: dict[str, list[int]] = {
+            cat: [i for i, c in enumerate(v_caps) if c["category"] == cat]
+            for cat in categories
+        }
+        # Centroids (sink-removed, unit normalized)
+        centroids: dict[str, torch.Tensor] = {}
+        for cat in categories:
+            cat_hs = H_v_res[cat_indices[cat]]
+            cen = cat_hs.mean(dim=0)
+            centroids[cat] = cen / (cen.norm() + 1e-9)
+        cen_stack = torch.stack([centroids[c] for c in categories])
+        C_cen = cen_stack @ cen_stack.T
+        eye_cat = torch.eye(len(categories), dtype=torch.bool)
+        claim_near("mean cross-centroid cosine (the all-axes-active problem)",
+                   0.850, float(C_cen[~eye_cat].mean().item()), atol=0.005)
+        grand_mean = cen_stack.mean(dim=0)
+        claim_near("||grand_mean of centroids|| (would be 0.209 if spread)",
+                   0.926, float(grand_mean.norm().item()), atol=0.005)
+
+        # Discriminants (mean(cat) - mean(non-cat), sink-removed, unit normalized)
+        discr: dict[str, torch.Tensor] = {}
+        for cat in categories:
+            in_idxs = cat_indices[cat]
+            out_idxs = [i for i in range(len(v_caps)) if i not in in_idxs]
+            in_mean = H_v_res[in_idxs].mean(dim=0)
+            out_mean = H_v_res[out_idxs].mean(dim=0)
+            d = in_mean - out_mean
+            discr[cat] = d / (d.norm() + 1e-9)
+        D_stack = torch.stack([discr[c] for c in categories])
+        C_d = D_stack @ D_stack.T
+        d_off = C_d[~eye_cat]
+        claim_near("mean cross-discriminant cosine (after fix)",
+                   0.006, float(d_off.mean().item()), atol=0.01)
+        claim_near("min cross-discriminant cosine (country↔demonstrative opposite)",
+                   -0.638, float(d_off.min().item()), atol=0.01)
+        # country-capital sibling cosine
+        ci = categories.index("country")
+        cap_i = categories.index("capital")
+        claim_near("country-capital discriminant cosine",
+                   0.938, float(C_d[ci, cap_i].item()), atol=0.005)
+
+        print()
+        print("=" * 80)
+        print("AUDIT 14: Stability scan (8 anchors × 4 contexts)")
+        print("=" * 80)
+        stab_path = ARTIFACTS / "discriminant_stability.pt"
+        if stab_path.exists():
+            stab = torch.load(stab_path, weights_only=False)
+            stab_caps = stab["captures"]
+            claim_eq("stability capture count", 32, len(stab_caps))
+            by_anchor: dict[str, dict[str, torch.Tensor]] = {}
+            for c in stab_caps:
+                by_anchor.setdefault(c["anchor"], {})[c["context"]] = c["h"]
+            contexts = ["single", "short", "medium", "long"]
+            def ctx_cos_for(anchor: str) -> float:
+                projs = []
+                for ctx in contexts:
+                    h = by_anchor[anchor][ctx].clone()
+                    for d in sinks:
+                        h[d] = 0.0
+                    h_unit = h / (h.norm() + 1e-9)
+                    proj = torch.tensor([float(torch.dot(h_unit, discr[c]).item()) for c in categories])
+                    projs.append(proj)
+                pv = torch.stack(projs)
+                pv_unit = torch.nn.functional.normalize(pv, dim=1)
+                cmat = pv_unit @ pv_unit.T
+                eye_c = torch.eye(len(contexts), dtype=torch.bool)
+                return float(cmat[~eye_c].mean().item())
+            claim_near("ctx-cos for `the` (most stable)",    0.917, ctx_cos_for("the"),    atol=0.005)
+            claim_near("ctx-cos for `happy` (least stable)", 0.399, ctx_cos_for("happy"),  atol=0.005)
+            claim_near("ctx-cos for `France`",               0.851, ctx_cos_for("France"), atol=0.005)
+            claim_near("ctx-cos for `refuse`",               0.589, ctx_cos_for("refuse"), atol=0.005)
+            # expected_proj for happy → emotion should be weak (the prompt-topic finding)
+            happy_emo_projs = []
+            for ctx in contexts:
+                h = by_anchor["happy"][ctx].clone()
+                for d in sinks:
+                    h[d] = 0.0
+                h_unit = h / (h.norm() + 1e-9)
+                happy_emo_projs.append(float(torch.dot(h_unit, discr["emotion"]).item()))
+            claim_near("happy → emotion projection mean (weak; the topic-not-token finding)",
+                       0.083, float(sum(happy_emo_projs) / len(happy_emo_projs)), atol=0.005)
+        else:
+            print(f"  (skipping AUDIT 14: {stab_path} not present)")
+    else:
+        print(f"  (skipping AUDIT 12/13/14: {vocab_path} not present)")
+
+    print()
+    print("=" * 80)
     print(f"SUMMARY:  {PASS} PASS  |  {FAIL} FAIL")
     print("=" * 80)
     if FAIL > 0:
