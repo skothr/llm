@@ -118,7 +118,7 @@ def main() -> None:
                  f"min = {float(C_d[~np.eye(n_cats, dtype=bool)].min()):+.3f}; "
                  f"max = {float(C_d[~np.eye(n_cats, dtype=bool)].max()):+.3f}")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig27_discriminant_connectivity.png", dpi=140)
+    fig.savefig(FIGDIR / "fig27_discriminant_connectivity.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig27_discriminant_connectivity.png")
 
@@ -186,7 +186,7 @@ def main() -> None:
                  "Black dots mark the EXPECTED top category per row (from src/prompt_id mapping).\n"
                  "Strong reds where the dots are = success; reds elsewhere = unexpected high projection.")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig29_self_validation.png", dpi=110)
+    fig.savefig(FIGDIR / "fig29_self_validation.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig29_self_validation.png")
 

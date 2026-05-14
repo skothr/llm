@@ -143,7 +143,7 @@ def main() -> None:
                  f"natural/forced scaled to ||*||≤{abs_max:.1f}; diff scaled to ||*||≤{abs_max_diff:.1f}",
                  fontsize=11)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig15_counterfactual_diff.png", dpi=140)
+    fig.savefig(FIGDIR / "fig15_counterfactual_diff.png", dpi=180)
     plt.close(fig)
     print(f"\nwrote {FIGDIR}/fig15_counterfactual_diff.png")
 

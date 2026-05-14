@@ -228,7 +228,7 @@ def main() -> None:
     ax.grid(True, alpha=0.3, axis="y")
     ax.legend(loc="upper right", framealpha=0.9)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig30_hierarchical_accuracy.png", dpi=140)
+    fig.savefig(FIGDIR / "fig30_hierarchical_accuracy.png", dpi=180)
     plt.close(fig)
     print(f"\nwrote {FIGDIR}/fig30_hierarchical_accuracy.png")
 

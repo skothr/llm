@@ -89,7 +89,7 @@ def fig1_pca(pw: dict[str, Any]) -> None:
     ax.legend(loc="best", framealpha=0.9)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig1_pca_scatter.png", dpi=130)
+    fig.savefig(FIGDIR / "fig1_pca_scatter.png", dpi=180)
     plt.close(fig)
     print(f"  wrote {FIGDIR}/fig1_pca_scatter.png")
 
@@ -123,7 +123,7 @@ def fig2_cosine_heatmap(pw: dict[str, Any]) -> None:
     ax.set_title("Pairwise cosine between 167 h[20] vectors, grouped by source")
     fig.colorbar(im, ax=ax, label="cosine")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig2_cosine_heatmap.png", dpi=130)
+    fig.savefig(FIGDIR / "fig2_cosine_heatmap.png", dpi=180)
     plt.close(fig)
     print(f"  wrote {FIGDIR}/fig2_cosine_heatmap.png")
 
@@ -163,7 +163,7 @@ def fig3_hot_dim_space(pw: dict[str, Any]) -> None:
     ax.legend(loc="upper right", framealpha=0.9)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig3_hot_dim_space.png", dpi=130)
+    fig.savefig(FIGDIR / "fig3_hot_dim_space.png", dpi=180)
     plt.close(fig)
     print(f"  wrote {FIGDIR}/fig3_hot_dim_space.png")
 
@@ -218,7 +218,7 @@ def fig4_hotdim_activations(pw: dict[str, Any]) -> None:
         ax.grid(True, alpha=0.3)
     fig.suptitle("Sinks stay locked; features flip with content")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig4_hotdim_activations.png", dpi=130)
+    fig.savefig(FIGDIR / "fig4_hotdim_activations.png", dpi=180)
     plt.close(fig)
     print(f"  wrote {FIGDIR}/fig4_hotdim_activations.png")
 
@@ -253,7 +253,7 @@ def fig5_kurtosis_vs_ar(geo: dict[str, Any]) -> None:
     ax.legend(loc="best", framealpha=0.9)
     ax.grid(True, alpha=0.3, which="both")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig5_kurtosis_vs_ar.png", dpi=130)
+    fig.savefig(FIGDIR / "fig5_kurtosis_vs_ar.png", dpi=180)
     plt.close(fig)
     print(f"  wrote {FIGDIR}/fig5_kurtosis_vs_ar.png")
 
@@ -289,7 +289,7 @@ def fig6_haiku_trajectory(geo: dict[str, Any]) -> None:
     axes[3].set_xticklabels([f"{s}\n{t!r}" for s, t in zip(steps, tokens)],
                              rotation=0, fontsize=8)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig6_haiku_trajectory.png", dpi=130)
+    fig.savefig(FIGDIR / "fig6_haiku_trajectory.png", dpi=180)
     plt.close(fig)
     print(f"  wrote {FIGDIR}/fig6_haiku_trajectory.png")
 

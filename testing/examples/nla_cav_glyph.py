@@ -126,7 +126,7 @@ def main() -> None:
                  f"({'H3 PASS, dim-32-aligned' if abs(cos_e32) >= 0.4 else 'H3 FAIL, not dim-32-aligned'})",
                  fontsize=12)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig13_cav_glyph.png", dpi=140)
+    fig.savefig(FIGDIR / "fig13_cav_glyph.png", dpi=180)
     plt.close(fig)
     print(f"\nwrote {FIGDIR}/fig13_cav_glyph.png")
 

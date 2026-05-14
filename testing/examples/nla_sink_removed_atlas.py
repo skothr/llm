@@ -147,7 +147,7 @@ def main() -> None:
                 (float(var_res[0]/total_res), float(var_res[1]/total_res)))
     fig.suptitle(f"Removing 7 sink dims {sink_dims} rotates the PCA layout")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig7_pca_sink_vs_clean.png", dpi=130)
+    fig.savefig(FIGDIR / "fig7_pca_sink_vs_clean.png", dpi=180)
     plt.close(fig)
     print(f"\nwrote {FIGDIR}/fig7_pca_sink_vs_clean.png")
 
@@ -181,7 +181,7 @@ def main() -> None:
         fig.colorbar(im, ax=ax, label="cosine")
     fig.suptitle("Removing sinks reveals genuine content similarity structure")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig8_cosine_sink_vs_clean.png", dpi=130)
+    fig.savefig(FIGDIR / "fig8_cosine_sink_vs_clean.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig8_cosine_sink_vs_clean.png")
 
@@ -242,7 +242,7 @@ def main() -> None:
 
     fig.suptitle("Sink-removed atlas: source, two feature-dim values, AR fidelity")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig9_feature_colored_atlas.png", dpi=130)
+    fig.savefig(FIGDIR / "fig9_feature_colored_atlas.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig9_feature_colored_atlas.png")
 

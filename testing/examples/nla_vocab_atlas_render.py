@@ -117,7 +117,7 @@ def main() -> None:
     ax.legend(loc="best", framealpha=0.9, fontsize=8, ncol=2)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig19_vocab_atlas.png", dpi=140)
+    fig.savefig(FIGDIR / "fig19_vocab_atlas.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig19_vocab_atlas.png")
 
@@ -153,7 +153,7 @@ def main() -> None:
                  f"shared PC space, sink-removed")
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig20_combined_atlas.png", dpi=140)
+    fig.savefig(FIGDIR / "fig20_combined_atlas.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig20_combined_atlas.png")
 
@@ -225,7 +225,7 @@ def main() -> None:
         fig.suptitle(f"fig21 — Interpolation trajectory through anchor space\n"
                      f"AR({flip['anchor_A_label']}) → AR({flip['anchor_B_label']})", fontsize=12)
         fig.tight_layout()
-        fig.savefig(FIGDIR / "fig21_interp_through_anchors.png", dpi=140)
+        fig.savefig(FIGDIR / "fig21_interp_through_anchors.png", dpi=180)
         plt.close(fig)
         print(f"wrote {FIGDIR}/fig21_interp_through_anchors.png")
     else:
@@ -261,7 +261,7 @@ def main() -> None:
                  f"diagonal bright blocks = tight category clusters")
     fig.colorbar(im, ax=ax, label="cosine")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig22_anchor_cosine_matrix.png", dpi=140)
+    fig.savefig(FIGDIR / "fig22_anchor_cosine_matrix.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig22_anchor_cosine_matrix.png")
 
