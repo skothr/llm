@@ -100,11 +100,13 @@ def main() -> None:
     print(f"abs_max interp-dim:  {abs_max_interp:.2f}")
 
     # --- fig17: vertical strip flipbook ---
+    # Reserve top TITLE_RESERVE fraction for suptitle so first row doesn't overlap.
+    TITLE_RESERVE = 0.04
     n_rows = len(row_h)
     fig = plt.figure(figsize=(20, 1.8 * n_rows))
     for j, (lbl, t, h_t, av_text) in enumerate(row_h):
-        row_y = 1 - (j + 1) / n_rows
-        row_height = 1.0 / n_rows
+        row_height = (1.0 - TITLE_RESERVE) / n_rows
+        row_y = (1.0 - TITLE_RESERVE) - (j + 1) * row_height
 
         # col 1: t-marker
         ax_t = fig.add_axes((0.01, row_y, 0.07, row_height))
@@ -157,7 +159,7 @@ def main() -> None:
         f"{n_steps} steps, h_t = (1-t)·h_A + t·h_B, AV-decoded at each step  |  cos(h_A, h_B) = "
         f"{torch.nn.functional.cosine_similarity(h_A, h_B, dim=0).item():+.3f}",
         fontsize=12, y=0.995)
-    fig.savefig(FIGDIR / "fig17_interp_flipbook.png", dpi=130)
+    fig.savefig(FIGDIR / "fig17_interp_flipbook.png", dpi=180)
     plt.close(fig)
     print(f"\nwrote {FIGDIR}/fig17_interp_flipbook.png")
 
@@ -219,7 +221,7 @@ def main() -> None:
         f"{torch.nn.functional.cosine_similarity(h_A, h_B, dim=0).item():+.3f}",
         fontsize=12)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig18_interp_diagnostic.png", dpi=130)
+    fig.savefig(FIGDIR / "fig18_interp_diagnostic.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig18_interp_diagnostic.png")
 

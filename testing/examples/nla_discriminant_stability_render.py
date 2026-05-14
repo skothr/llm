@@ -200,7 +200,7 @@ def main() -> None:
         f"(scale_max = {scale_max:.3f}, sink-removed)",
         fontsize=12, y=0.99)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig28_discriminant_stability.png", dpi=140)
+    fig.savefig(FIGDIR / "fig28_discriminant_stability.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig28_discriminant_stability.png")
 

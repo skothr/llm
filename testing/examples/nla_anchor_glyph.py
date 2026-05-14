@@ -135,10 +135,11 @@ def main() -> None:
     scale_max = max(max(abs(v) for v in p.values()) for p in all_projs)
     print(f"interp scale_max (max |cosine to centroid|): {scale_max:.3f}")
 
+    TITLE_RESERVE = 0.04
     fig = plt.figure(figsize=(20, 1.7 * n_steps))
     for j, s in enumerate(steps):
-        row_y = 1 - (j + 1) / n_steps
-        row_height = 1.0 / n_steps
+        row_height = (1.0 - TITLE_RESERVE) / n_steps
+        row_y = (1.0 - TITLE_RESERVE) - (j + 1) * row_height
         projs = all_projs[j]
         t = s["t"]
 
@@ -183,7 +184,7 @@ def main() -> None:
         f"length = cos(h_t, centroid), sink-removed. "
         f"Dotted = negative projection.",
         fontsize=11, y=0.995)
-    fig.savefig(FIGDIR / "fig23_anchor_glyph_interp.png", dpi=140)
+    fig.savefig(FIGDIR / "fig23_anchor_glyph_interp.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig23_anchor_glyph_interp.png")
 
@@ -240,7 +241,7 @@ def main() -> None:
         f"Each ray = a named category centroid; ray length = cos(h, centroid) sink-removed",
         fontsize=11)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig24_anchor_glyph_samples.png", dpi=140)
+    fig.savefig(FIGDIR / "fig24_anchor_glyph_samples.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig24_anchor_glyph_samples.png")
 

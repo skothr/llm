@@ -159,10 +159,11 @@ def main() -> None:
     scale_max = max(max(abs(v) for v in p.values()) for p in all_projs)
     print(f"interp scale_max: {scale_max:.3f}")
 
+    TITLE_RESERVE = 0.04
     fig = plt.figure(figsize=(20, 1.7 * n_steps))
     for j, s in enumerate(steps):
-        row_y = 1 - (j + 1) / n_steps
-        row_height = 1.0 / n_steps
+        row_height = (1.0 - TITLE_RESERVE) / n_steps
+        row_y = (1.0 - TITLE_RESERVE) - (j + 1) * row_height
         projs = all_projs[j]
         t = s["t"]
 
@@ -205,7 +206,7 @@ def main() -> None:
         f"length = cosine projection. Solid = +, dotted = -. "
         f"Mean cross-axis cos: {float(off.mean().item()):+.3f}",
         fontsize=11, y=0.995)
-    fig.savefig(FIGDIR / "fig25_discriminant_glyph_interp.png", dpi=140)
+    fig.savefig(FIGDIR / "fig25_discriminant_glyph_interp.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig25_discriminant_glyph_interp.png")
 
@@ -260,7 +261,7 @@ def main() -> None:
         f"Dotted rays = anti-category (h projects negative on that discriminant).",
         fontsize=11)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig26_discriminant_glyph_samples.png", dpi=140)
+    fig.savefig(FIGDIR / "fig26_discriminant_glyph_samples.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig26_discriminant_glyph_samples.png")
 

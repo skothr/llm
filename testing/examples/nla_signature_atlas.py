@@ -129,7 +129,7 @@ def main() -> None:
     ax.grid(True, alpha=0.2)
     ax.set_aspect("equal", adjustable="datalim")
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig10_signature_atlas.png", dpi=150)
+    fig.savefig(FIGDIR / "fig10_signature_atlas.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig10_signature_atlas.png")
 
@@ -189,7 +189,7 @@ def main() -> None:
     axes[1].set_aspect("equal", adjustable="datalim")
 
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig11_signature_zoom.png", dpi=150)
+    fig.savefig(FIGDIR / "fig11_signature_zoom.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig11_signature_zoom.png")
 

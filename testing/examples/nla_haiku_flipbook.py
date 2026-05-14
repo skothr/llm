@@ -69,11 +69,13 @@ def main() -> None:
     abs_max = float(np.abs(all_feat_vals).max())
     print(f"abs_max across haiku captures (feature dims): {abs_max:.2f}")
 
-    # figure layout: rows = n_steps, cols = 4 (label, glyph, AV text, AR-cos bar)
+    # figure layout: rows = n_steps, cols = 4 (label, glyph, AV text, AR-cos bar).
+    # Reserve top TITLE_RESERVE fraction for the suptitle so first row doesn't overlap.
+    TITLE_RESERVE = 0.05
     fig = plt.figure(figsize=(18, 1.6 * n_steps))
-    row_height = 1.0 / n_steps
+    row_height = (1.0 - TITLE_RESERVE) / n_steps
     for j, cap in enumerate(captures):
-        row_y = 1 - (j + 1) * row_height
+        row_y = (1.0 - TITLE_RESERVE) - (j + 1) * row_height
         # column 1: step + token (text only)
         ax_lbl = fig.add_axes((0.02, row_y, 0.10, row_height))
         ax_lbl.axis("off")
@@ -125,7 +127,7 @@ def main() -> None:
     fig.suptitle(f"Haiku generation flipbook: rabbit haiku, 15 steps\n"
                  f"glyph rays = {feature_dims} | red = +, blue = -",
                  fontsize=12, y=0.995)
-    fig.savefig(FIGDIR / "fig14_haiku_flipbook.png", dpi=130)
+    fig.savefig(FIGDIR / "fig14_haiku_flipbook.png", dpi=180)
     plt.close(fig)
     print(f"\nwrote {FIGDIR}/fig14_haiku_flipbook.png")
 

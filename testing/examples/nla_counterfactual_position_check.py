@@ -140,7 +140,7 @@ def main() -> None:
                  f"feature dims = {feature_dims}",
                  fontsize=11)
     fig.tight_layout()
-    fig.savefig(FIGDIR / "fig16_counterfactual_position_check.png", dpi=140)
+    fig.savefig(FIGDIR / "fig16_counterfactual_position_check.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig16_counterfactual_position_check.png")
 
