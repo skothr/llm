@@ -550,8 +550,52 @@ def main() -> None:
                        0.083, float(sum(happy_emo_projs) / len(happy_emo_projs)), atol=0.005)
         else:
             print(f"  (skipping AUDIT 14: {stab_path} not present)")
+
+        # AUDIT 15: Mid-sequence vocab atlas (MAIN-44) — null result numbers
+        print()
+        print("AUDIT 15: Mid-sequence vocab atlas (MAIN-44 null result)")
+        mid_path = ARTIFACTS / "mid_seq_vocab_atlas.pt"
+        if mid_path.exists():
+            mid = torch.load(mid_path, weights_only=False)
+            mid_caps = mid["captures"]
+            claim_eq("mid_seq capture count", 128, len(mid_caps))
+            claim_eq("mid_seq skip count", 0, len(mid.get("skipped", [])))
+            # Re-derive: discriminants are computed from end-of-prompt vocab atlas;
+            # project mid-seq h's onto them and check aggregate signal/accuracy.
+            assert discr is not None and sinks is not None
+            mid_sigs: list[float] = []
+            happy_mid_emo: float | None = None
+            by_cat_sigs: dict[str, list[float]] = {}
+            by_cat_correct: dict[str, list[bool]] = {}
+            for cap in mid_caps:
+                h = cap["h"].clone()
+                for d in sinks:
+                    h[d] = 0.0
+                h_unit = h / (h.norm() + 1e-9)
+                projs = {c: float(torch.dot(h_unit, discr[c]).item()) for c in categories}
+                sig = projs[cap["category"]]
+                mid_sigs.append(sig)
+                by_cat_sigs.setdefault(cap["category"], []).append(sig)
+                is_correct = max(projs.items(), key=lambda x: x[1])[0] == cap["category"]
+                by_cat_correct.setdefault(cap["category"], []).append(is_correct)
+                if cap["word"] == "happy" and cap["category"] == "emotion":
+                    happy_mid_emo = sig
+            # Per-CATEGORY means then unweighted mean across categories
+            # (matches the aggregate row in the compare script's table)
+            cat_sig_means = [sum(v) / len(v) for v in by_cat_sigs.values()]
+            cat_acc_means = [sum(v) / len(v) for v in by_cat_correct.values()]
+            mid_sig_agg = sum(cat_sig_means) / len(cat_sig_means)
+            mid_acc_agg = sum(cat_acc_means) / len(cat_acc_means)
+            claim_near("mid_seq aggregate within-class signal (~8x weaker than eop)",
+                       0.0491, mid_sig_agg, atol=0.005)
+            claim_near("mid_seq aggregate argmax accuracy (per-cat mean, vs 75.4% eop)",
+                       0.3204, mid_acc_agg, atol=0.005)
+            if happy_mid_emo is not None:
+                claim_near("mid_seq happy → emotion signal", 0.0759, happy_mid_emo, atol=0.005)
+        else:
+            print(f"  (skipping AUDIT 15: {mid_path} not present)")
     else:
-        print(f"  (skipping AUDIT 12/13/14: {vocab_path} not present)")
+        print(f"  (skipping AUDIT 12/13/14/15: {vocab_path} not present)")
 
     print()
     print("=" * 80)
