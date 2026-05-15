@@ -1,10 +1,10 @@
-# NLA Research Arc — Resume Checkpoint (2026-05-14)
+# NLA Research Arc — Resume Checkpoint (2026-05-15)
 
 **Branch:** `session/nla-research`
 **Worktree:** `/home/ai/ai-projects/llm/.claude/worktrees/nla-research`
-**Tip commit:** `2135289` (27 commits ahead of master)
+**Tip commit:** `7a10001` (32 commits ahead of master, MAIN-34 hybrid plateau landed)
 **Working tree:** clean (only gitignored `testing/.cache` symlink visible)
-**Audit state:** `nla_audit_findings.py` passes 93/0
+**Audit state:** `nla_audit_findings.py` passes 123/0 (extended through MAIN-34)
 
 Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (written at commit `c49a1d9`, before Path B, vocab atlas, discriminant validation, MAIN-46, MAIN-47, and figure cleanup landed).
 
