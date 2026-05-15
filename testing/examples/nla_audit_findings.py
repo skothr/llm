@@ -692,8 +692,34 @@ def main() -> None:
                   "<=3 unique", len(plateau_first_lines))
         else:
             print(f"  (skipping AUDIT 18: {dense_path} not present)")
+
+        # AUDIT 19: Plateau attractor strength (MAIN-71 part 2)
+        print()
+        print("AUDIT 19: Plateau attractor strength (MAIN-71)")
+        plat_path = ARTIFACTS / "plateau_attractor_test.pt"
+        if plat_path.exists():
+            plat = torch.load(plat_path, weights_only=False)
+            results = plat["results"]
+            claim_eq("attractor test target count", 3, len(results))
+            by_label = {r["label"]: r for r in results}
+            plat_r = by_label["plateau t=0.420"]
+            claim_near("plateau round-trip cosine (attractor threshold +0.85)",
+                       0.8995, plat_r["cosine_round_trip"], atol=0.005)
+            claim_near("plateau h_pred → anchor A drift",
+                       0.8386, plat_r["cos_to_anchor_A"], atol=0.005)
+            claim_near("plateau h_pred → anchor B drift",
+                       0.8154, plat_r["cos_to_anchor_B"], atol=0.005)
+            # Plateau h_pred should be closer to original plateau than to either anchor
+            margin_to_A = plat_r["cosine_round_trip"] - plat_r["cos_to_anchor_A"]
+            margin_to_B = plat_r["cosine_round_trip"] - plat_r["cos_to_anchor_B"]
+            claim("plateau h_pred closer to plateau than to A (margin > 0)",
+                  margin_to_A > 0, ">0", margin_to_A)
+            claim("plateau h_pred closer to plateau than to B (margin > 0)",
+                  margin_to_B > 0, ">0", margin_to_B)
+        else:
+            print(f"  (skipping AUDIT 19: {plat_path} not present)")
     else:
-        print(f"  (skipping AUDIT 12/13/14/15/16/17/18: {vocab_path} not present)")
+        print(f"  (skipping AUDIT 12/13/14/15/16/17/18/19: {vocab_path} not present)")
 
     print()
     print("=" * 80)
