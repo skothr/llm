@@ -644,8 +644,27 @@ def main() -> None:
                        0.1704, float(cross[emotion_idx, emotion_idx].item()), atol=0.005)
         else:
             print(f"  (skipping AUDIT 15/16: {mid_path} not present)")
+
+        # AUDIT 17: Concept arithmetic atlas (MAIN-48)
+        print()
+        print("AUDIT 17: Concept arithmetic atlas (MAIN-48)")
+        arith_path = ARTIFACTS / "concept_arithmetic_atlas.pt"
+        if arith_path.exists():
+            arith = torch.load(arith_path, weights_only=False)
+            combos_a = arith["combos"]
+            claim_eq("concept_arithmetic combo count", 7, len(combos_a))
+            claim_eq("target_norm", 150.0, float(arith["target_norm"]))
+            # All combos have non-empty AV text + rescaled to TARGET_NORM
+            for c_a in combos_a:
+                claim("av_text non-empty for " + c_a["label"][:30],
+                      bool(c_a.get("av_text", "").strip()), True, True)
+                n_rescaled = float(c_a["h_rescaled"].norm().item())
+                claim_near(f"||h_rescaled|| ≈ 150 for {c_a['label'][:30]}",
+                           150.0, n_rescaled, atol=0.5)
+        else:
+            print(f"  (skipping AUDIT 17: {arith_path} not present)")
     else:
-        print(f"  (skipping AUDIT 12/13/14/15/16: {vocab_path} not present)")
+        print(f"  (skipping AUDIT 12/13/14/15/16/17: {vocab_path} not present)")
 
     print()
     print("=" * 80)

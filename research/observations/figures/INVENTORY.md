@@ -1,6 +1,6 @@
 # Figure Inventory — NLA Research Arc
 
-Catalogue of all 34 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
+Catalogue of all 35 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
 
 **Common assumptions across the arc** (so we don't repeat them per-figure):
 
@@ -208,6 +208,17 @@ Three-bar grouping per category. Blue = `eop-h × eop-discr` (in-protocol, the b
 
 ### fig34_cross_protocol_axis_cos.png
 23×23 cosine heatmap of `d_eop_C` vs `d_mid_D`. Diagonal entries (annotated with values) measure per-category axis stability across capture position. Mean diagonal **+0.0784**, max **+0.1704** (emotion), min **+0.0126** (p_quote). Mean off-diagonal **-0.0009**. Content-bearing categories (country, capital, nature, codemath, emotion, refusal) have the largest cross-protocol cosines (+0.13-0.17), while punctuation and function-word categories' axes are essentially position-determined (~+0.03). Each category's axis at one protocol is closer to its own axis at the other protocol than to a random category's axis — but only modestly. Refines MAIN-44's "fully protocol-coupled" framing: there's a small protocol-invariant component, but only for content categories.
+
+---
+
+## Concept arithmetic atlas (fig35)
+
+Source scripts: `testing/examples/nla_concept_arithmetic_atlas.py`, `nla_concept_arithmetic_render.py`. Data: `vocab_atlas.pt` per-anchor h's + AV `kitft/nla-qwen2.5-7b-L20-av`. Output: `concept_arithmetic_atlas.pt`. Done for MAIN-48.
+
+### fig35_concept_arithmetic_atlas.png
+Multi-row text-table: 7 arithmetic combinations on layer-20 h vectors (rescaled to ||h||=150 before AV-decoding). Categories color-coded: analogy (blue), subtraction (red), axis (green), compound (purple). Each row pairs the arithmetic expression + prediction with the AV reading. **Headline finding**: word2vec-style specific-identity analogies FAIL (3/3) — `Paris − France + Germany` decodes as London (right category, wrong identity), `Tokyo − Japan + France` decodes as Spain (wrong category), `Berlin − Germany + UK` collapses to UK. **Category-level axis directions DO preserve** — `country_centroid − capital_centroid` decodes as country-flavored content. **Compound (additive) follows the larger-magnitude term** — `country + emotion` decodes as China (country dominates). Pure subtraction of similar-magnitude vectors yields incoherent noise after rescaling. Confirms layer-20 representations are categorically structured but not algebraically composable in the word2vec sense.
+
+CJK glyphs render as boxes in DejaVu Serif (AV occasionally outputs Chinese commentary); English content is clear, which carries the load-bearing decode signal.
 
 ---
 
