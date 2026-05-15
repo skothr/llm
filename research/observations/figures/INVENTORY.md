@@ -1,6 +1,6 @@
 # Figure Inventory — NLA Research Arc
 
-Catalogue of all 29 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
+Catalogue of all 32 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
 
 **Common assumptions across the arc** (so we don't repeat them per-figure):
 
@@ -184,6 +184,18 @@ Source script: `testing/examples/nla_hierarchical_classifier.py`. Data: `vocab_a
 Bar chart comparing baseline (single discriminant) vs hierarchical (sub-discriminator on sibling pairs) top-1 accuracy per source-mapped category. **Null result**: only 1 of 33 sibling-applicable captures flipped, lifting country 34%→38%, overall 44%→45%.
 
 The diagnostic from MAIN-47's resolution: the 34% baseline was a sum of 3 different failure modes (genuine sibling swap, right-by-other-name, mislabeled tests), only the first of which is fixable by the basis. The hierarchical scheme fixed the only "genuine sibling swap" case in the dataset.
+
+---
+
+## Mid-sequence vocab atlas (fig31, fig32)
+
+Source scripts: `testing/examples/nla_mid_seq_vocab_atlas_{capture,compare,render}.py`. Data: `mid_seq_vocab_atlas.pt`, `mid_seq_compare.pt`, joined with `vocab_atlas.pt` + `pairwise_and_hotdims.pt`. Carrier prompt: `"The text contains many words. Here is one specific word: {anchor} continues throughout subsequent discussion paragraphs."` — anchor lands at token pos 36-38 of ~48 (~75% of sequence, 10-12 trailing-context tokens). Position-finding by prefix-tokenize-and-count (BPE is left-to-right so the left segment's token count is invariant to right context).
+
+### fig31_mid_seq_signal_vs_noise.png
+Two-panel bar chart per category. **Top**: within-class signal (`mean over a in C of cos(h_a_sink_removed, d_C)`) at end-of-prompt (blue) vs mid-sequence (orange). **Bottom**: max off-class projection (noise floor) under both protocols. The 23 discriminants `d_C` are derived from the end-of-prompt vocab atlas only; mid-seq h's are projected onto them as a cross-protocol test. **Null result**: mid-seq signal is ~8× weaker than end-of-prompt (aggregate +0.0491 vs +0.4022); MAIN-44 hypothesis rejected. The basis is end-of-prompt-protocol-coupled, not just topic-coupled.
+
+### fig32_mid_seq_argmax_accuracy.png
+Argmax-over-23-discriminants classification accuracy per category, end-of-prompt vs mid-sequence. Aggregate drops 75.4% → 32.0% — but 6 categories *increase* under mid-seq (nature 50%→100%, emotion 50%→100%, quantifier 80%→100%, conjunction 17%→67%, pronoun 29%→43%, p_special 0%→25%), suggesting end-of-prompt's high cross-category correlation was eating accuracy for those categories. Most categories lose accuracy because the within-class direction (derived from end-of-prompt mean) doesn't align with mid-seq h.
 
 ---
 
