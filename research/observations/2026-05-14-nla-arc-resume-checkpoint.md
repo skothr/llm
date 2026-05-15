@@ -2,9 +2,35 @@
 
 **Branch:** `session/nla-research`
 **Worktree:** `/home/ai/ai-projects/llm/.claude/worktrees/nla-research`
-**Tip commit:** `7a10001` (32 commits ahead of master, MAIN-34 hybrid plateau landed)
+**Tip commit:** `8b79cd4` (33 commits ahead of master, MAIN-71 plateau attractor proved)
 **Working tree:** clean (only gitignored `testing/.cache` symlink visible)
-**Audit state:** `nla_audit_findings.py` passes 123/0 (extended through MAIN-34)
+**Audit state:** `nla_audit_findings.py` passes 129/0 (extended through MAIN-71)
+
+## Strongest synthesis from the arc
+
+**Layer-20 h-space has discrete attractor basins separated by sharp boundaries.**
+Basins include both named vocab categories AND hybrid combinations not
+in the original atlas (e.g. the "Definition + Poem" plateau between
+factual and poetic anchors). AR re-encoding returns h to the basin's
+directional region — basins are direction-coupled, not magnitude-coupled.
+Linear interpolation between basin-residing h's traverses one or more
+intermediate basins with sharp boundaries between them. This explains
+MAIN-48 (arithmetic = basins not offsets), MAIN-44/70 (protocol-specific
+basin subsets), MAIN-25 (sharp boundaries), MAIN-34 (basins have non-zero
+volume), MAIN-71 (basin attractor strength empirically demonstrated).
+
+## Session-of-2026-05-14/15 arc summary
+
+5 tickets closed (MAIN-44, 70, 48, 34, 71), 5 commits, 7 new figures
+(fig31-37), 5 observation files, audit 93 → 129 PASS:
+
+| commit | ticket | finding |
+|---|---|---|
+| `3c9acec` | MAIN-44 | mid-seq vocab atlas null result; refines MAIN-26 |
+| `6125cb2` | MAIN-70 | basis is protocol-coupled by construction; per-category axis stability mapped |
+| `a9a2dd7` | MAIN-48 | arithmetic = categorical not algebraic (specific-identity analogies fail) |
+| `7a10001` | MAIN-34 | dense interp reveals "Definition + Poem" hybrid plateau (3-region geometry) |
+| `8b79cd4` | MAIN-71 | plateau IS a true attractor basin (round-trip cos +0.90) |
 
 Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (written at commit `c49a1d9`, before Path B, vocab atlas, discriminant validation, MAIN-46, MAIN-47, and figure cleanup landed).
 
