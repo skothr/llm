@@ -592,10 +592,60 @@ def main() -> None:
                        0.3204, mid_acc_agg, atol=0.005)
             if happy_mid_emo is not None:
                 claim_near("mid_seq happy → emotion signal", 0.0759, happy_mid_emo, atol=0.005)
+
+            # AUDIT 16: Mid-seq NATIVE discriminants (MAIN-70)
+            print()
+            print("AUDIT 16: Mid-seq native discriminants (MAIN-70)")
+            # Recompute discriminants from mid-seq captures
+            mid_cats: dict[str, list[int]] = {
+                cat: [i for i, c in enumerate(mid_caps) if c["category"] == cat]
+                for cat in categories
+            }
+            H_mid = torch.stack([c["h"] for c in mid_caps])
+            H_mid_res = H_mid.clone()
+            for d in sinks:
+                H_mid_res[:, d] = 0.0
+            discr_mid: dict[str, torch.Tensor] = {}
+            for cat in categories:
+                in_idxs = mid_cats[cat]
+                out_idxs = [i for i in range(len(mid_caps)) if i not in in_idxs]
+                in_mean = H_mid_res[in_idxs].mean(dim=0)
+                out_mean = H_mid_res[out_idxs].mean(dim=0)
+                d_vec = in_mean - out_mean
+                discr_mid[cat] = d_vec / (d_vec.norm() + 1e-9)
+            # Recompute aggregate signal/acc with mid-h × mid-discr
+            mid_native_sigs: dict[str, list[float]] = {}
+            mid_native_correct: dict[str, list[bool]] = {}
+            for cap, h_res in zip(mid_caps, H_mid_res):
+                h_unit = h_res / (h_res.norm() + 1e-9)
+                projs = {c: float(torch.dot(h_unit, discr_mid[c]).item()) for c in categories}
+                mid_native_sigs.setdefault(cap["category"], []).append(projs[cap["category"]])
+                is_correct = max(projs.items(), key=lambda x: x[1])[0] == cap["category"]
+                mid_native_correct.setdefault(cap["category"], []).append(is_correct)
+            cat_sig_means_n = [sum(v) / len(v) for v in mid_native_sigs.values()]
+            cat_acc_means_n = [sum(v) / len(v) for v in mid_native_correct.values()]
+            mid_native_sig = sum(cat_sig_means_n) / len(cat_sig_means_n)
+            mid_native_acc = sum(cat_acc_means_n) / len(cat_acc_means_n)
+            claim_near("mid-h × mid-discr in-protocol signal (40% higher than eop in-protocol)",
+                       0.5632, mid_native_sig, atol=0.005)
+            claim_near("mid-h × mid-discr argmax accuracy",
+                       0.9710, mid_native_acc, atol=0.005)
+            # Cross-protocol axis cosines
+            D_eop_stack = torch.stack([discr[c] for c in categories])
+            D_mid_stack = torch.stack([discr_mid[c] for c in categories])
+            cross = D_eop_stack @ D_mid_stack.T
+            diag = torch.diagonal(cross)
+            claim_near("mean cross-protocol diagonal cosine (axis stability)",
+                       0.0784, float(diag.mean().item()), atol=0.005)
+            claim_near("max diagonal (emotion most-stable axis)",
+                       0.1704, float(diag.max().item()), atol=0.005)
+            emotion_idx = categories.index("emotion")
+            claim_near("emotion-emotion cross-protocol cosine",
+                       0.1704, float(cross[emotion_idx, emotion_idx].item()), atol=0.005)
         else:
-            print(f"  (skipping AUDIT 15: {mid_path} not present)")
+            print(f"  (skipping AUDIT 15/16: {mid_path} not present)")
     else:
-        print(f"  (skipping AUDIT 12/13/14/15: {vocab_path} not present)")
+        print(f"  (skipping AUDIT 12/13/14/15/16: {vocab_path} not present)")
 
     print()
     print("=" * 80)
