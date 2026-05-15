@@ -1,6 +1,6 @@
 # Figure Inventory — NLA Research Arc
 
-Catalogue of all 32 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
+Catalogue of all 34 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
 
 **Common assumptions across the arc** (so we don't repeat them per-figure):
 
@@ -196,6 +196,18 @@ Two-panel bar chart per category. **Top**: within-class signal (`mean over a in 
 
 ### fig32_mid_seq_argmax_accuracy.png
 Argmax-over-23-discriminants classification accuracy per category, end-of-prompt vs mid-sequence. Aggregate drops 75.4% → 32.0% — but 6 categories *increase* under mid-seq (nature 50%→100%, emotion 50%→100%, quantifier 80%→100%, conjunction 17%→67%, pronoun 29%→43%, p_special 0%→25%), suggesting end-of-prompt's high cross-category correlation was eating accuracy for those categories. Most categories lose accuracy because the within-class direction (derived from end-of-prompt mean) doesn't align with mid-seq h.
+
+---
+
+## Mid-seq native discriminants + cross-protocol stability (fig33, fig34)
+
+Source script: `testing/examples/nla_mid_seq_native_compare.py`. Data: `vocab_atlas.pt` + `mid_seq_vocab_atlas.pt` + `pairwise_and_hotdims.pt`. Output: `mid_seq_native_compare.pt`. Follow-up to MAIN-44; produced for MAIN-70.
+
+### fig33_native_signal_lift.png
+Three-bar grouping per category. Blue = `eop-h × eop-discr` (in-protocol, the baseline). Green = `mid-h × mid-discr` (in-protocol using NATIVE discriminants — predicted to lift). Orange = `mid-h × eop-discr` (the MAIN-44 cross-protocol collapse). Green dominates: aggregate signal **+0.5632** (40% higher than blue's +0.4022), argmax accuracy 97.10%. Confirms the basis is protocol-coupled by construction — a per-protocol family of discriminants each gives strong within-protocol classification.
+
+### fig34_cross_protocol_axis_cos.png
+23×23 cosine heatmap of `d_eop_C` vs `d_mid_D`. Diagonal entries (annotated with values) measure per-category axis stability across capture position. Mean diagonal **+0.0784**, max **+0.1704** (emotion), min **+0.0126** (p_quote). Mean off-diagonal **-0.0009**. Content-bearing categories (country, capital, nature, codemath, emotion, refusal) have the largest cross-protocol cosines (+0.13-0.17), while punctuation and function-word categories' axes are essentially position-determined (~+0.03). Each category's axis at one protocol is closer to its own axis at the other protocol than to a random category's axis — but only modestly. Refines MAIN-44's "fully protocol-coupled" framing: there's a small protocol-invariant component, but only for content categories.
 
 ---
 
