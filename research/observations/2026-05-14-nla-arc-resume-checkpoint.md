@@ -2,7 +2,7 @@
 
 **Branch:** `session/nla-research`
 **Worktree:** `/home/ai/ai-projects/llm/.claude/worktrees/nla-research`
-**Tip commit:** `8b79cd4` (33 commits ahead of master, MAIN-71 plateau attractor proved)
+**Tip commit (pre-PR-rebase):** `8b79cd4` — rebased onto current origin/master before PR. Post-rebase hashes have shifted; this checkpoint's hash table below references the pre-rebase chain on backup branch `session/nla-research-backup`. Diff vs origin/master after rebase: 94 files, +11976 / -1.
 **Working tree:** clean (only gitignored `testing/.cache` symlink visible)
 **Audit state:** `nla_audit_findings.py` passes 129/0 (extended through MAIN-71)
 
