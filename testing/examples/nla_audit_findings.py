@@ -663,8 +663,37 @@ def main() -> None:
                            150.0, n_rescaled, atol=0.5)
         else:
             print(f"  (skipping AUDIT 17: {arith_path} not present)")
+
+        # AUDIT 18: Dense interpolation near t=0.421 (MAIN-34)
+        print()
+        print("AUDIT 18: Dense interpolation near pivot (MAIN-34)")
+        dense_path = ARTIFACTS / "dense_interp_near_pivot.pt"
+        if dense_path.exists():
+            dense = torch.load(dense_path, weights_only=False)
+            d_steps = sorted(dense["steps"], key=lambda s: s["t"])
+            claim_eq("dense_interp step count", 30, len(d_steps))
+            # Dense zone bounds
+            dense_zone = dense.get("dense_zone")
+            claim_eq("dense_zone bounds", [0.395, 0.455], list(dense_zone))
+            # Norm dip at midpoint of plateau
+            mid_step = next(s for s in d_steps if abs(s["t"] - 0.4200) < 1e-3)
+            mid_norm = float(mid_step["h_t"].norm().item())
+            # Anchor pair magnitudes ~66; midpoint norm should be lower
+            claim("midpoint norm < anchor norm (anti-parallel anchors)",
+                  mid_norm < 65.0, "<65", mid_norm)
+            # Check that the plateau decodes are stable (same AV text across t=[0.395, 0.4400])
+            plateau_steps = [s for s in d_steps if 0.395 <= s["t"] <= 0.4400]
+            plateau_first_lines = set()
+            for s in plateau_steps:
+                fl = (s["av_text"].splitlines() or [""])[0][:100]
+                plateau_first_lines.add(fl)
+            claim("plateau decodes stable across t∈[0.395, 0.4400] (<=3 unique first-lines)",
+                  len(plateau_first_lines) <= 3,
+                  "<=3 unique", len(plateau_first_lines))
+        else:
+            print(f"  (skipping AUDIT 18: {dense_path} not present)")
     else:
-        print(f"  (skipping AUDIT 12/13/14/15/16/17: {vocab_path} not present)")
+        print(f"  (skipping AUDIT 12/13/14/15/16/17/18: {vocab_path} not present)")
 
     print()
     print("=" * 80)

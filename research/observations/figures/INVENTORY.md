@@ -1,6 +1,6 @@
 # Figure Inventory — NLA Research Arc
 
-Catalogue of all 35 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
+Catalogue of all 37 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
 
 **Common assumptions across the arc** (so we don't repeat them per-figure):
 
@@ -219,6 +219,18 @@ Source scripts: `testing/examples/nla_concept_arithmetic_atlas.py`, `nla_concept
 Multi-row text-table: 7 arithmetic combinations on layer-20 h vectors (rescaled to ||h||=150 before AV-decoding). Categories color-coded: analogy (blue), subtraction (red), axis (green), compound (purple). Each row pairs the arithmetic expression + prediction with the AV reading. **Headline finding**: word2vec-style specific-identity analogies FAIL (3/3) — `Paris − France + Germany` decodes as London (right category, wrong identity), `Tokyo − Japan + France` decodes as Spain (wrong category), `Berlin − Germany + UK` collapses to UK. **Category-level axis directions DO preserve** — `country_centroid − capital_centroid` decodes as country-flavored content. **Compound (additive) follows the larger-magnitude term** — `country + emotion` decodes as China (country dominates). Pure subtraction of similar-magnitude vectors yields incoherent noise after rescaling. Confirms layer-20 representations are categorically structured but not algebraically composable in the word2vec sense.
 
 CJK glyphs render as boxes in DejaVu Serif (AV occasionally outputs Chinese commentary); English content is clear, which carries the load-bearing decode signal.
+
+---
+
+## Dense interpolation near t=0.421 (fig36, fig37)
+
+Source scripts: `testing/examples/nla_dense_interp_near_pivot.py`, `nla_dense_interp_render.py`. Data: cached `h_A`, `h_B` from `interpolation_flipbook.pt` + AV `kitft/nla-qwen2.5-7b-L20-av` + vocab atlas + sink classifier. Output: `dense_interp_near_pivot.pt`. Done for MAIN-34. 30 steps: 25 dense in [0.395, 0.455] (Δt ≈ 0.0025), 5 sparse context points {0.0, 0.25, 0.5, 0.75, 1.0}.
+
+### fig36_dense_interp_flipbook.png
+Vertical flipbook strip: t-bar column (color gradient blue→orange + dense-zone highlighted yellow), top-3 vocab-anchor cosines column, and AV-decode first-paragraph column per step. **Headline finding**: dense sampling reveals a **HYBRID "Definition + Poem" plateau** spanning 19 consecutive dense-zone steps (t=0.395 to t=0.4450), all decoded with the same intermediate format. Sharp transition at t=0.4475-0.4500 to "What is Spring?" poetic-nature format (one Δt=0.0025 step). Three regions total: factual (t<0.30) → hybrid plateau (t∈[0.395, 0.4450]) → poetic/nature (t>0.4475).
+
+### fig37_dense_interp_diagnostic.png
+Three-panel diagnostic. **Top**: top-1 vocab-anchor cosine over t with anchor-word annotations (Madrid → autumn → snow) and word-flip lines. **Mid**: ||h_t|| over t — dips from ~66 to ~60 across the plateau (anti-parallel anchor magnitude reduction). **Bottom**: per-step ||Δh|| — small in dense zone (Δt small), large at sparse-to-dense boundaries. Word-flip detection captured only 2 transitions because the "hybrid plateau" stays nearest to the same vocab anchor (autumn) — the format/regime change is visible in AV text but invisible to the nearest-anchor metric. Limitation worth noting: nearest-vocab-anchor is coarser than the AV-text-format signal it's used to track.
 
 ---
 
