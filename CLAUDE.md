@@ -282,7 +282,7 @@ test by hand until a mock-WS server is added.
 
 # Type Checking
 
-Zero errors, warnings, AND informations after every edit — for both pyright (Python) and tsc (TypeScript). **The edit-time linter messages (the `<new-diagnostics>` system reminder attached to each edit response) are authoritative — trust them and do NOT run `pyright` via Bash to re-verify.** `pyproject.toml [tool.pyright]` is configured so the linter messages line up with what we want fixed; running pyright separately just costs time.
+Project stance: zero errors, warnings, AND informations after every edit — for both pyright (Python) and tsc (TypeScript). `pyproject.toml [tool.pyright]` is configured so the `<new-diagnostics>` linter messages line up with what we want fixed; running pyright via Bash separately just costs time (don't do it unless the user asks or you suspect a cache mismatch).
 
 ## Tools (only when explicitly requested or for tsc)
 
@@ -301,18 +301,9 @@ cd testing/gui/frontend && ./node_modules/.bin/tsc --noEmit
 - **Test helper for `Optional[X]` guarded by `@pytest.mark.skipif`** → extract a helper like `_tinyllama_blob() -> Path` that asserts and returns the narrowed type.
 - **Never** disable rules in `pyproject.toml` to quiet diagnostics — it hides real bugs elsewhere.
 
-### Type-narrowing tier list — reach down the list, not up
+### Type-narrowing tier list
 
-Listed from "expresses intent best" to "suppresses signal":
-
-1. **`assert isinstance(x, T)`** — narrows for both runtime AND pyright. Best when you also want a runtime safety check.
-2. **`cast(T, expr)`** — narrows the *result* type with no runtime cost. Best when you know the expression's value is type T but pyright sees a wider Union.
-3. **`# pyright: ignore[reportXxx]`** — last resort, suppresses a specific rule on one line. Reserve for two cases where there's no static fix:
-   - **Mid-chain attribute access** on dynamic objects (e.g., `model.model.layers[L].mlp.down_proj.weight` on pytorch — `mlp` is in `Tensor | Module | Unknown`, no `cast` of the result reaches the `.down_proj` step).
-   - **Stub lag** where the runtime API has a kwarg/method the stub doesn't enumerate (e.g., `Metaspace(prepend_scheme=...)` in `tokenizers`, `LlamaConfig(**kwargs)` in HuggingFace — no `cast` of the result reaches the call site).
-4. **Bare `# type: ignore`** — never. Always use the rule-scoped `# pyright: ignore[X]` form.
-
-Default to (1) or (2). If you find yourself reaching for (3), check whether the issue is mid-chain or stub-lag — those are the only honest cases. **The base config has `reportUnnecessaryTypeIgnoreComment` ON**, so the moment a stub catches up and an ignore stops doing real work, pyright emits a diagnostic asking us to delete it. Treat every ignore as a temporary debt with a built-in expiry alarm — not a permanent suppression.
+Canonical tier list (`assert isinstance` > `cast` > `# pyright: ignore[reportXxx]`; never bare `# type: ignore`) lives in `~/.claude/CLAUDE.md` § LSP / `<new-diagnostics>` response discipline. The base config has `reportUnnecessaryTypeIgnoreComment` ON, so stale `# pyright: ignore` annotations self-surface for deletion when stubs catch up.
 
 ## Known stub lag in this repo
 
