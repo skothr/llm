@@ -11,12 +11,14 @@ intervention — the Anthropic-style causal interpretability claim.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
@@ -41,7 +43,13 @@ BAR = "=" * WIDTH
 
 
 def edit_av_text(original: str) -> str:
-    """Targeted edit: swap sun/nature subject for forest. Keep structure intact."""
+    """Targeted edit: swap sun/nature subject for forest. Keep structure intact.
+
+    Raises ValueError if NO swap matched — protects against silent no-op
+    when AV phrasing drifts. Individual missing swaps are not fatal
+    (different AV decodes may omit some of these patterns), but at least
+    one swap must apply or the test is meaningless.
+    """
     swaps = [
         ("the sun", "the forest"),
         ("gentle sun", "ancient forest"),
@@ -50,8 +58,18 @@ def edit_av_text(original: str) -> str:
         ("My dear sun", "My dear forest"),
     ]
     out = original
+    n_applied = 0
     for old, new in swaps:
-        out = out.replace(old, new)
+        if old in out:
+            out = out.replace(old, new)
+            n_applied += 1
+    if n_applied == 0:
+        raise ValueError(
+            "edit_av_text: no swap pattern matched the input AV text. "
+            "AV phrasing may have drifted; update the `swaps` list to match "
+            "current verbalizer output. Input snippet: "
+            f"{original[:200]!r}..."
+        )
     return out
 
 
@@ -77,7 +95,9 @@ class LayerOutputReplaceHook:
         else:
             hidden_states = output
         if hidden_states.shape[1] > 1:
-            r = self.replacement.to(device=hidden_states.device, dtype=hidden_states.dtype)
+            r = self.replacement.to(
+                device=hidden_states.device, dtype=hidden_states.dtype
+            )
             hidden_states[0, self.target_position, :] = r
             self.fired = True
         if isinstance(output, tuple):
@@ -111,12 +131,19 @@ def main() -> None:
     print(f"  AR loaded in {time.time() - t0:.1f}s")
     t0 = time.time()
     h_pred_raw = nla_reconstruct(
-        av_text_edited, backbone=backbone, value_head=value_head,
-        tok=tok_ar, meta=meta_ar,
+        av_text_edited,
+        backbone=backbone,
+        value_head=value_head,
+        tok=tok_ar,
+        meta=meta_ar,
     )
-    print(f"  AR reconstruct in {time.time() - t0:.1f}s; raw ||h_pred||={h_pred_raw.norm().item():.2f}")
+    print(
+        f"  AR reconstruct in {time.time() - t0:.1f}s; raw ||h_pred||={h_pred_raw.norm().item():.2f}"
+    )
     h_pred = h_pred_raw / h_pred_raw.norm() * h_original.norm()
-    print(f"  rescaled to match original magnitude: ||h_pred||={h_pred.norm().item():.2f}")
+    print(
+        f"  rescaled to match original magnitude: ||h_pred||={h_pred.norm().item():.2f}"
+    )
 
     del backbone, value_head, tok_ar
     gc.collect()
@@ -130,7 +157,9 @@ def main() -> None:
 
     enc = tok.apply_chat_template(
         [{"role": "user", "content": PROMPT}],
-        tokenize=True, add_generation_prompt=True, return_tensors="pt",
+        tokenize=True,
+        add_generation_prompt=True,
+        return_tensors="pt",
     )
     input_ids = enc["input_ids"]
     prompt_len = input_ids.shape[1]
@@ -139,8 +168,10 @@ def main() -> None:
     t0 = time.time()
     with torch.no_grad():
         baseline_out = model.generate(
-            input_ids=input_ids, max_new_tokens=MAX_NEW_TOKENS,
-            do_sample=False, pad_token_id=tok.eos_token_id,
+            input_ids=input_ids,
+            max_new_tokens=MAX_NEW_TOKENS,
+            do_sample=False,
+            pad_token_id=tok.eos_token_id,
         )
     print(f"    done in {time.time() - t0:.1f}s")
     baseline_text = tok.decode(baseline_out[0, prompt_len:], skip_special_tokens=False)
@@ -153,8 +184,10 @@ def main() -> None:
         t0 = time.time()
         with torch.no_grad():
             steered_out = model.generate(
-                input_ids=input_ids, max_new_tokens=MAX_NEW_TOKENS,
-                do_sample=False, pad_token_id=tok.eos_token_id,
+                input_ids=input_ids,
+                max_new_tokens=MAX_NEW_TOKENS,
+                do_sample=False,
+                pad_token_id=tok.eos_token_id,
             )
         print(f"    done in {time.time() - t0:.1f}s")
     finally:
@@ -170,7 +203,9 @@ def main() -> None:
     print("BASELINE (no intervention):")
     print(f"  {baseline_text!r}")
     print()
-    print("STEERED (h[20] at last prompt position replaced with AR-decoded forest text):")
+    print(
+        "STEERED (h[20] at last prompt position replaced with AR-decoded forest text):"
+    )
     print(f"  {steered_text!r}")
     print()
     print(f"Hook fired: {hook.fired}")

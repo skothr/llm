@@ -41,7 +41,8 @@ from llm_surgeon import surgery
 
 BASE_ID = "Qwen/Qwen2.5-7B-Instruct"
 LAYER = 20
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 OUT = ARTIFACTS / "mid_seq_vocab_atlas.pt"
 VOCAB_SRC = ARTIFACTS / "vocab_atlas.pt"

@@ -49,7 +49,7 @@ NLA layer-20 representations are **categorically structured but not algebraicall
 2. **Within-category specific identity is encoded differently than across-category position.** The "Paris-ness within capital-ness" direction isn't the same as the "Berlin-ness within capital-ness" direction shifted in some consistent way. word2vec's geometric assumption — that `vec(France) − vec(Paris)` equals `vec(Germany) − vec(Berlin)` — does not hold in this layer.
 3. **Sum of two concept vectors collapses to the larger-magnitude one.** The smaller concept contribution gets absorbed without changing the dominant decode. This is not the same as averaging the two concepts.
 
-This refines the MAIN-44 + MAIN-70 picture: the basis is protocol-coupled (per-protocol family of discriminants), and even within a protocol, the arithmetic structure of h is **categorical, not algebraic**. Categories have stable axes (✓); within-category positions are constructed in a way that doesn't compose by subtraction (✗).
+This refines the MAIN-44 + MAIN-70 picture: the basis is protocol-coupled (per-protocol family of discriminants), and even within a protocol, the arithmetic structure of h is **categorical, not algebraic**. Categories have stable axes (confirmed); within-category positions are constructed in a way that doesn't compose by subtraction (falsified).
 
 ## Implications for viz primitives
 

@@ -27,7 +27,8 @@ from pathlib import Path
 import torch
 
 
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
 FEATURES_OUT = ARTIFACTS / "geometric_features.pt"
 D_MODEL = 3584
 

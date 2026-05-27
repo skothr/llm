@@ -18,25 +18,29 @@ Produces fig30_hierarchical_accuracy.png and a numeric table.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 from collections import Counter
 from pathlib import Path
 import torch
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
-FIGDIR = Path("research/observations/figures")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
+FIGDIR = _REPO_ROOT / "research" / "observations" / "figures"
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 SIBLING_COS_THRESHOLD = 0.80  # captures all 5 pairs that fig27 surfaced
@@ -57,20 +61,25 @@ def compute_discriminants(
     for cat in cats:
         in_cat = [i for i, c in enumerate(caps) if c["category"] == cat]
         out_cat = [i for i in range(len(caps)) if caps[i]["category"] != cat]
-        in_hs = apply_sink_removal(torch.stack([caps[i]["h"] for i in in_cat]), sink_dims)
-        out_hs = apply_sink_removal(torch.stack([caps[i]["h"] for i in out_cat]), sink_dims)
+        in_hs = apply_sink_removal(
+            torch.stack([caps[i]["h"] for i in in_cat]), sink_dims
+        )
+        out_hs = apply_sink_removal(
+            torch.stack([caps[i]["h"] for i in out_cat]), sink_dims
+        )
         d = in_hs.mean(dim=0) - out_hs.mean(dim=0)
         discr[cat] = d / (d.norm() + 1e-9)
     return discr
 
 
 def compute_sub_discriminants(
-    vocab: dict[str, Any], sink_dims: list[int],
+    vocab: dict[str, Any],
+    sink_dims: list[int],
     sibling_pairs: list[tuple[str, str]],
 ) -> dict[tuple[str, str], torch.Tensor]:
     """For each (cat_a, cat_b) pair, sub-discriminant points FROM b TOWARD a:
-       d_AB = unit(mean(H_a) - mean(H_b)).
-       Projection > 0 means h is more like cat_a; < 0 means more like cat_b."""
+    d_AB = unit(mean(H_a) - mean(H_b)).
+    Projection > 0 means h is more like cat_a; < 0 means more like cat_b."""
     caps = vocab["captures"]
     sub: dict[tuple[str, str], torch.Tensor] = {}
     for a, b in sibling_pairs:
@@ -98,7 +107,11 @@ def map_src_to_expected_cat(it: dict[str, Any]) -> str | None:
         return "country"
     if src == "aggregate" and it["prompt_id"] in ("code", "math"):
         return "codemath"
-    if src == "forced" and "refusal" in it.get("prompt_id", "") and "refuse" in (it.get("token") or "").lower():
+    if (
+        src == "forced"
+        and "refusal" in it.get("prompt_id", "")
+        and "refuse" in (it.get("token") or "").lower()
+    ):
         return "refusal"
     if src == "forced" and "negation" in it.get("prompt_id", ""):
         return "negation"
@@ -115,7 +128,9 @@ def main() -> None:
     discr = compute_discriminants(vocab, sink_dims)
     D_stack = torch.stack([discr[c] for c in categories])
     C_d = D_stack @ D_stack.T
-    print(f"computed {len(discr)} discriminants; mean cross-cos = {float((C_d[~torch.eye(len(categories), dtype=torch.bool)]).mean().item()):+.3f}")
+    print(
+        f"computed {len(discr)} discriminants; mean cross-cos = {float((C_d[~torch.eye(len(categories), dtype=torch.bool)]).mean().item()):+.3f}"
+    )
 
     # Find sibling pairs from the discriminant cosine matrix
     sibling_pairs: list[tuple[str, str]] = []
@@ -169,12 +184,16 @@ def main() -> None:
         else:
             hierarchical_top1.append(top1)
 
-    print(f"\ndisambiguator applied to {n_disambig_applied}/{H_existing.shape[0]} captures; "
-          f"flipped top-1 in {n_disambig_flipped} cases")
+    print(
+        f"\ndisambiguator applied to {n_disambig_applied}/{H_existing.shape[0]} captures; "
+        f"flipped top-1 in {n_disambig_flipped} cases"
+    )
 
     # Per-source accuracy comparison
     print(f"\n--- baseline vs hierarchical top-1 accuracy per expected category ---")
-    print(f"  {'expected':<12} {'n':>4}  {'baseline':>10}  {'hierarchical':>12}  {'Δ':>6}")
+    print(
+        f"  {'expected':<12} {'n':>4}  {'baseline':>10}  {'hierarchical':>12}  {'Δ':>6}"
+    )
     print("  " + "-" * 60)
     by_expected: dict[str, list[tuple[str, str]]] = {}
     for i, it in enumerate(items):
@@ -190,15 +209,23 @@ def main() -> None:
         base_acc = sum(1 for b, _ in rows if b == exp) / n
         hier_acc = sum(1 for _, h in rows if h == exp) / n
         delta = hier_acc - base_acc
-        print(f"  {exp:<12} {n:>4}  {base_acc:>9.0%}   {hier_acc:>11.0%}   {delta:>+6.1%}")
+        print(
+            f"  {exp:<12} {n:>4}  {base_acc:>9.0%}   {hier_acc:>11.0%}   {delta:>+6.1%}"
+        )
         bar_data.append((exp, n, base_acc, hier_acc))
 
     # Overall
     total = sum(len(rows) for rows in by_expected.values())
-    base_all = sum(sum(1 for b, _ in rows if b == exp) for exp, rows in by_expected.items())
-    hier_all = sum(sum(1 for _, h in rows if h == exp) for exp, rows in by_expected.items())
+    base_all = sum(
+        sum(1 for b, _ in rows if b == exp) for exp, rows in by_expected.items()
+    )
+    hier_all = sum(
+        sum(1 for _, h in rows if h == exp) for exp, rows in by_expected.items()
+    )
     print("  " + "-" * 60)
-    print(f"  {'OVERALL':<12} {total:>4}  {base_all/total:>9.0%}   {hier_all/total:>11.0%}   {(hier_all-base_all)/total:>+6.1%}")
+    print(
+        f"  {'OVERALL':<12} {total:>4}  {base_all / total:>9.0%}   {hier_all / total:>11.0%}   {(hier_all - base_all) / total:>+6.1%}"
+    )
 
     # --- fig30: bar chart comparing baseline vs hierarchical top-1 ---
     fig, ax = plt.subplots(figsize=(11, 6))
@@ -208,22 +235,45 @@ def main() -> None:
     ns = [n for _, n, _, _ in bar_data]
     x = np.arange(len(cats_plot))
     w = 0.35
-    ax.bar(x - w/2, base_pcts, w, label="Baseline (single discriminant)", color="#9ecae1", edgecolor="black")
-    ax.bar(x + w/2, hier_pcts, w, label="Hierarchical (sub-discriminator on siblings)",
-           color="#2ca02c", edgecolor="black")
+    ax.bar(
+        x - w / 2,
+        base_pcts,
+        w,
+        label="Baseline (single discriminant)",
+        color="#9ecae1",
+        edgecolor="black",
+    )
+    ax.bar(
+        x + w / 2,
+        hier_pcts,
+        w,
+        label="Hierarchical (sub-discriminator on siblings)",
+        color="#2ca02c",
+        edgecolor="black",
+    )
     for i, (bp, hp, n) in enumerate(zip(base_pcts, hier_pcts, ns)):
-        ax.text(i - w/2, bp + 1.5, f"{bp:.0f}%", ha="center", va="bottom", fontsize=8)
-        ax.text(i + w/2, hp + 1.5, f"{hp:.0f}%", ha="center", va="bottom", fontsize=8, weight="bold")
+        ax.text(i - w / 2, bp + 1.5, f"{bp:.0f}%", ha="center", va="bottom", fontsize=8)
+        ax.text(
+            i + w / 2,
+            hp + 1.5,
+            f"{hp:.0f}%",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            weight="bold",
+        )
         ax.text(i, -8, f"n={n}", ha="center", va="top", fontsize=8, alpha=0.7)
     ax.set_xticks(x)
     ax.set_xticklabels(cats_plot, rotation=0)
     ax.set_ylabel("top-1 accuracy (%)")
     ax.set_ylim(-12, 110)
-    ax.set_title(f"fig30 — Hierarchical re-discrimination top-1 accuracy lift\n"
-                 f"Sub-discriminator applied when top-2 categories form a sibling pair "
-                 f"(discr cos > {SIBLING_COS_THRESHOLD})\n"
-                 f"Overall: baseline {base_all/total:.0%} → hierarchical {hier_all/total:.0%} "
-                 f"(applied to {n_disambig_applied}/{total} captures with mapped expected)")
+    ax.set_title(
+        f"fig30 — Hierarchical re-discrimination top-1 accuracy lift\n"
+        f"Sub-discriminator applied when top-2 categories form a sibling pair "
+        f"(discr cos > {SIBLING_COS_THRESHOLD})\n"
+        f"Overall: baseline {base_all / total:.0%} → hierarchical {hier_all / total:.0%} "
+        f"(applied to {n_disambig_applied}/{total} captures with mapped expected)"
+    )
     ax.axhline(0, color="black", linewidth=0.5)
     ax.grid(True, alpha=0.3, axis="y")
     ax.legend(loc="upper right", framealpha=0.9)
@@ -233,7 +283,9 @@ def main() -> None:
     print(f"\nwrote {FIGDIR}/fig30_hierarchical_accuracy.png")
 
     # Where did the disambiguator help vs hurt?
-    print(f"\n--- where the disambiguator flipped top-1 (truth, baseline, hierarchical) ---")
+    print(
+        f"\n--- where the disambiguator flipped top-1 (truth, baseline, hierarchical) ---"
+    )
     flips: Counter = Counter()
     for i, it in enumerate(items):
         if baseline_top1[i] == hierarchical_top1[i]:
@@ -243,7 +295,7 @@ def main() -> None:
             continue
         b = baseline_top1[i]
         h = hierarchical_top1[i]
-        outcome = "✓ correct" if h == exp else ("✗ wrong" if b == exp else "○ neutral")
+        outcome = "[ok]" if h == exp else ("[wrong]" if b == exp else "[neutral]")
         flips[(exp, b, h, outcome)] += 1
     for (exp, b, h, outcome), n in sorted(flips.items(), key=lambda x: -x[1]):
         print(f"  expected={exp:<10}  {b:<12} → {h:<12}  ({n}x)  {outcome}")

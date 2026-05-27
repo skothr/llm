@@ -34,7 +34,8 @@ import torch
 from llm_surgeon.probe import load_av, nla_verbalize
 
 
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
 OUT = ARTIFACTS / "dense_interp_near_pivot.pt"
 SOURCE = ARTIFACTS / "interpolation_flipbook.pt"
 

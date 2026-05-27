@@ -1,6 +1,6 @@
 # Figure Inventory — NLA Research Arc
 
-Catalogue of all 37 figures in this directory. Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
+Catalogue of all 36 figures in this directory (fig1-fig11, fig13-fig37 — fig12 was scoped for an interactive Bokeh/Plotly atlas but never built). Each entry: what the figure shows, source script, source data, model dependencies, assumptions / preprocessing, and any corrections applied.
 
 **Common assumptions across the arc** (so we don't repeat them per-figure):
 
@@ -10,7 +10,7 @@ Catalogue of all 37 figures in this directory. Each entry: what the figure shows
 - **Toolkit:** `llm_surgeon.probe.{load_av, load_ar, nla_verbalize, nla_reconstruct, nla_score}` (see `testing/llm_surgeon/probe/_nla.py`).
 - **Sink dims:** {277, 458, 1427, 1627, 2107, 2570, 3110} — identified by the `classify_dim_character` heuristic in `nla_pairwise_and_hotdims.py`. "Sink-removed" preprocessing zeros these 7 component indices.
 - **Feature dims:** {20, 32, 392, 608, 1121, 1790, 2604, 2953} — same heuristic, content-bearing dims.
-- **Audit:** `testing/examples/nla_audit_findings.py` re-derives every load-bearing number from raw `.pt` artifacts. 93 PASS / 0 FAIL as of commit `ee58e62`.
+- **Audit:** `testing/examples/nla_audit_findings.py` re-derives every load-bearing number from raw `.pt` artifacts. **129 PASS / 0 FAIL** (audits 1-10 base + 11-19 covering Path B, vocab atlas, discriminant validation, MAIN-44/47/48/34/70/71).
 
 ---
 
@@ -263,7 +263,7 @@ nla_render_interpolation_flipbook.py, nla_hierarchical_classifier.py
 research/observations/figures/fig*.png  (committed)
     │
     ▼
-nla_audit_findings.py — 93 PASS / 0 FAIL regression test
+nla_audit_findings.py — 129 PASS / 0 FAIL regression test
 ```
 
 Re-running the audit verifies that all numbers in the observation markdown files match what the artifacts actually contain. If anything drifts, the audit catches it.
