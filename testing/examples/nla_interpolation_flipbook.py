@@ -41,7 +41,8 @@ from llm_surgeon.probe import (
 )
 
 
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 OUT = ARTIFACTS / "interpolation_flipbook.pt"
 

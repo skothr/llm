@@ -37,7 +37,8 @@ import torch
 from llm_surgeon.probe import load_av, nla_verbalize
 
 
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
 OUT = ARTIFACTS / "concept_arithmetic_atlas.pt"
 TARGET_NORM = 150.0
 

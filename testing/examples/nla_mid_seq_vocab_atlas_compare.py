@@ -38,7 +38,8 @@ def _std(xs: list[float]) -> float:
     return statistics.stdev(xs) if len(xs) > 1 else 0.0
 
 
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
 
 
 def main() -> None:

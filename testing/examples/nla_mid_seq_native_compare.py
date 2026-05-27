@@ -28,8 +28,9 @@ from nla_discriminant_glyph import (
 )
 
 
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
-FIGDIR = Path("research/observations/figures")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
+FIGDIR = _REPO_ROOT / "research" / "observations" / "figures"
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 

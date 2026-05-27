@@ -33,7 +33,8 @@ import torch
 from llm_surgeon.probe import load_ar, nla_reconstruct, nla_score
 
 
-ARTIFACTS = Path("testing/.cache/nla_artifacts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
 SOURCE = ARTIFACTS / "dense_interp_near_pivot.pt"
 OUT = ARTIFACTS / "plateau_attractor_test.pt"
 
