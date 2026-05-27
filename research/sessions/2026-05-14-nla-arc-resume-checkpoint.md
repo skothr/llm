@@ -38,7 +38,7 @@ Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (w
 
 1. `cd /home/ai/ai-projects/llm/.claude/worktrees/nla-research`
 2. Confirm in worktree: `git rev-parse --abbrev-ref HEAD` should say `session/nla-research`
-3. Read [`figures/INVENTORY.md`](figures/INVENTORY.md) for the figure catalog with provenance per figure
+3. Read [`figures/INVENTORY.md`](../observations/figures/INVENTORY.md) for the figure catalog with provenance per figure
 4. Run audit to verify state: `PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python testing/examples/nla_audit_findings.py` — expect 93/0
 
 ## What landed since the prior resume
