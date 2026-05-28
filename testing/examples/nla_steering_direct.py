@@ -23,12 +23,14 @@ activation taken from a real forest forward pass.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import time
@@ -49,31 +51,15 @@ WIDTH = 80
 BAR = "=" * WIDTH
 
 
-class LayerOutputReplaceHook:
-    """Replace decoder block output at one position during prefill only."""
-
-    def __init__(self, target_position: int, replacement: torch.Tensor) -> None:
-        self.target_position = target_position
-        self.replacement = replacement
-        self.fired = False
-
-    def __call__(self, module: Any, args: Any, output: Any) -> Any:
-        if self.fired:
-            return output
-        hidden_states = output[0] if isinstance(output, tuple) else output
-        if hidden_states.shape[1] > 1:
-            r = self.replacement.to(device=hidden_states.device, dtype=hidden_states.dtype)
-            hidden_states[0, self.target_position, :] = r
-            self.fired = True
-        if isinstance(output, tuple):
-            return (hidden_states,) + output[1:]
-        return hidden_states
+from _layer_hooks import LayerOutputReplaceHook  # noqa: E402
 
 
 def chat_template_input_ids(tok: Any, msg: str) -> torch.Tensor:
     enc = tok.apply_chat_template(
         [{"role": "user", "content": msg}],
-        tokenize=True, add_generation_prompt=True, return_tensors="pt",
+        tokenize=True,
+        add_generation_prompt=True,
+        return_tensors="pt",
     )
     return enc["input_ids"]
 
@@ -94,7 +80,9 @@ def main() -> None:
     print(f"  forward in {time.time() - t0:.1f}s")
     print(f"  ||h_forest|| @ last prompt position = {h_forest.norm().item():.2f}")
     next_tok_id = int(out.logits[0, -1].argmax().item())
-    print(f"  forest-prompt argmax next token: {next_tok_id} -> {tok.decode([next_tok_id])!r}")
+    print(
+        f"  forest-prompt argmax next token: {next_tok_id} -> {tok.decode([next_tok_id])!r}"
+    )
     del out
 
     print(f"\n[3/4] BASELINE ocean generation (no intervention) ...")
@@ -104,30 +92,41 @@ def main() -> None:
     t0 = time.time()
     with torch.no_grad():
         baseline_out = model.generate(
-            input_ids=ocean_ids, max_new_tokens=MAX_NEW_TOKENS,
-            do_sample=False, pad_token_id=tok.eos_token_id,
+            input_ids=ocean_ids,
+            max_new_tokens=MAX_NEW_TOKENS,
+            do_sample=False,
+            pad_token_id=tok.eos_token_id,
         )
     print(f"  done in {time.time() - t0:.1f}s")
-    baseline_text = tok.decode(baseline_out[0, ocean_prompt_len:], skip_special_tokens=False)
+    baseline_text = tok.decode(
+        baseline_out[0, ocean_prompt_len:], skip_special_tokens=False
+    )
 
-    print(f"\n[4/4] STEERED ocean generation "
-          f"(replace h[{LAYER}] at pos {ocean_prompt_len - 1} with h_forest) ...")
+    print(
+        f"\n[4/4] STEERED ocean generation "
+        f"(replace h[{LAYER}] at pos {ocean_prompt_len - 1} with h_forest) ..."
+    )
     target_layer = model.model.layers[LAYER_IDX_0]
     hook = LayerOutputReplaceHook(
-        target_position=ocean_prompt_len - 1, replacement=h_forest,
+        target_position=ocean_prompt_len - 1,
+        replacement=h_forest,
     )
     handle = target_layer.register_forward_hook(hook)
     try:
         t0 = time.time()
         with torch.no_grad():
             steered_out = model.generate(
-                input_ids=ocean_ids, max_new_tokens=MAX_NEW_TOKENS,
-                do_sample=False, pad_token_id=tok.eos_token_id,
+                input_ids=ocean_ids,
+                max_new_tokens=MAX_NEW_TOKENS,
+                do_sample=False,
+                pad_token_id=tok.eos_token_id,
             )
         print(f"  done in {time.time() - t0:.1f}s")
     finally:
         handle.remove()
-    steered_text = tok.decode(steered_out[0, ocean_prompt_len:], skip_special_tokens=False)
+    steered_text = tok.decode(
+        steered_out[0, ocean_prompt_len:], skip_special_tokens=False
+    )
 
     print()
     print(BAR)
@@ -139,7 +138,9 @@ def main() -> None:
     print("BASELINE (ocean prompt, no intervention):")
     print(f"  {baseline_text!r}")
     print()
-    print(f"STEERED (ocean prompt, h[{LAYER}] at pos {ocean_prompt_len - 1} replaced with h_forest):")
+    print(
+        f"STEERED (ocean prompt, h[{LAYER}] at pos {ocean_prompt_len - 1} replaced with h_forest):"
+    )
     print(f"  {steered_text!r}")
     print()
     print(f"Hook fired: {hook.fired}")
