@@ -71,21 +71,21 @@ fig16's right column also shows the three refusal_metaware diff glyphs have visu
 
 **Methodological lesson for future viz:** when selecting one representative capture from a multi-position set, default to position-matched and only deviate with a written justification. The original fig15 caption picked "highest abs_pos" as a convenience, which silently introduced a confound.
 
-## Finding 3 — fig15 — Counterfactual ||Δh||_feat ranks counterfactual surprise (see Correction above)
+## Finding 3 — fig15 — Counterfactual ||Δh||_feat ranks counterfactual surprise (CORRECTED — see Correction section above; the original 35.55 below was position-drift-inflated)
 
-For each of the 4 forced-continuation pairs, computed the glyph difference (forced − natural) in the feature-dim subspace:
+For each of the 4 forced-continuation pairs, computed the glyph difference (forced − natural) in the feature-dim subspace. **The refusal_metaware row's original 35.55 was inflated by Δpos=+10; position-matched correction (fig16) gives 28.06** — the corrected progression is the load-bearing one:
 
-| pair | prompt | natural → forced | ||Δh||_feat |
-|---|---|---|---|
-| negation | "Is the sky blue?" | Yes → No | **5.72** |
-| factual | "What is the capital of France?" | Paris → Berlin | **8.70** |
-| math | "What is 2+2?" | 4 → 5 | **10.97** |
-| refusal_metaware | "What is 2+2?" | 4 → ' refuse' | **35.55** |
+| pair | prompt | natural → forced | ||Δh||_feat (original fig15) | ||Δh||_feat (corrected fig16) |
+|---|---|---|---|---|
+| negation | "Is the sky blue?" | Yes → No | **5.72** | 5.72 (no position drift) |
+| factual | "What is the capital of France?" | Paris → Berlin | **8.70** | 8.70 (no position drift) |
+| math | "What is 2+2?" | 4 → 5 | **10.97** | 10.97 (no position drift) |
+| refusal_metaware | "What is 2+2?" | 4 → ' refuse' | ~~35.55~~ inflated | **28.06** (position-matched) |
 
-The progression 5.7 → 8.7 → 11.0 → 35.6 separates **two qualitatively different counterfactual classes**:
+The corrected progression 5.7 → 8.7 → 11.0 → 28.1 still separates **two qualitatively different counterfactual classes** (the rank ordering and the qualitative split survive; only the magnitude of the refusal gap shrinks ~22%):
 
 * **Wrong-but-plausible** (Yes/No, Paris/Berlin, 4/5): ||Δh||_feat in [5, 11]. The model's representation moves a small amount because both answers are valid candidates of the same kind. The forced token is "within the model's space of expected continuations."
-* **Out-of-distribution forcing** (4 → refuse-to-answer-2+2): ||Δh||_feat = 35.6, ~4× larger. The model would never spontaneously refuse to answer "What is 2+2?"; forcing it produces a radically different residual.
+* **Out-of-distribution forcing** (4 → refuse-to-answer-2+2): ||Δh||_feat = 28.1 (corrected), ~2.5× math and ~5× negation. The model would never spontaneously refuse to answer "What is 2+2?"; forcing it produces a radically different residual.
 
 This **was not visible from the AV text alone** — the AV reads templated 3-paragraph descriptions in all cases. The geometric divergence is the signal that distinguishes "model is computing a wrong-but-believable thing" from "model is being pushed off-distribution."
 
