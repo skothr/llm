@@ -39,7 +39,7 @@ Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (w
 1. `cd /home/ai/ai-projects/llm/.claude/worktrees/nla-research`
 2. Confirm in worktree: `git rev-parse --abbrev-ref HEAD` should say `session/nla-research`
 3. Read [`figures/INVENTORY.md`](../observations/figures/INVENTORY.md) for the figure catalog with provenance per figure
-4. Run audit to verify state: `PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python testing/examples/nla_audit_findings.py` — expect 93/0
+4. Run audit to verify state: `PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python testing/examples/nla_audit_findings.py` — expect 129/0 (was 93/0 at the time this checkpoint was written; suite was extended through AUDIT 19 in the final session-of-2026-05-15 work)
 
 ## What landed since the prior resume
 
@@ -75,7 +75,7 @@ Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (w
 
 ### Audit (commits `6049812`, `ee58e62`)
 - `nla_audit_findings.py` re-derives every load-bearing number from raw `.pt` files
-- 65 → 93 PASS checks after MAIN-46 extension
+- 65 → 93 PASS checks after MAIN-46 extension (later extended to 129 by AUDITs 15-19; current canonical count)
 - Caught and corrected: fig15 position-drift confound (`||Δh||_feat` 35.55→28.06), `||h_A||` mislabel in Path B observation (was 51.94, that's `||h_A − h_B||`; truth `||h_A||=65.73`)
 
 ### Hierarchical re-discrimination (commit `189a054`)
@@ -158,7 +158,7 @@ git status                # confirm clean (only testing/.cache showing)
 
 # Run audit to verify state hasn't drifted
 PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python \
-    testing/examples/nla_audit_findings.py        # expect 93 PASS / 0 FAIL
+    testing/examples/nla_audit_findings.py        # expect 129 PASS / 0 FAIL
 
 # Read the figure catalog
 $EDITOR research/observations/figures/INVENTORY.md

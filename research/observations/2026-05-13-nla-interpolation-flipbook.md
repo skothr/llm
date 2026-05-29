@@ -7,6 +7,8 @@
 **Figures:** `fig17_interp_flipbook.png`, `fig18_interp_diagnostic.png`
 **Data:** `testing/.cache/nla_artifacts/interpolation_flipbook.pt`
 
+> **Refinement note (added 2026-05-29):** the "stepwise transition at t=0.421" finding here is *correct that the transition is discontinuous*, but the 20-step grid undersampled what the transition is *between*. See `2026-05-15-nla-dense-interp-near-pivot.md` (MAIN-34): a 10×-denser run revealed an intermediate "Definition + Poem" hybrid plateau spanning t∈[0.395, 0.4450]. The actual sharp flip is from that plateau to the poetic basin at t≈0.4475-0.4500 (one Δt=0.0025 step); t=0.421 itself sits *inside* the plateau. The factual→hybrid boundary is somewhere in [0.25, 0.395] and still undersampled.
+
 ## Goal
 
 Use AR to encode two natural-language anchors into h-vectors, linearly interpolate at 20 steps, AV-decode each interpolated h, and observe the semantic transition in natural language. The novel scientific question: does linear interpolation in h-space produce smooth semantic morph, or stepwise transitions through neighboring concept regions?
