@@ -1,0 +1,2030 @@
+
+============================================================================================
+ARTIFACT: aggregate_faithfulness.pt  (h[20] across generation, 8 prompts)
+============================================================================================
+
+--------------------------------------------------------------------------------------------
+PROMPT [factual_easy]  'What is the capital of France?'
+--------------------------------------------------------------------------------------------
+  Generated:      'The capital of France is Paris.<|im_end|>'
+  Generated tokens (8): ['The', ' capital', ' of', ' France', ' is', ' Paris', '.', '<|im_end|>']
+
+  --- step  0  token='The'           ||h||= 95.89  cos=+0.875  mse=0.25
+      Structured answer format with a greeting ("What is the capital of the United
+      States?") signals a Q&A or wiki-style response about a country's capital.
+
+      The phrase "As an AI, the answer to this question is: " strongly implies the
+      answer follows with "The capital of the United States is Washington, D.C." or
+      similar, completing the factual claim about the country's capital.
+
+      Final token "capital\n" ends an incomplete clause ("My answer is..."), directly
+      requiring the answer content about the country's capital, most likely "The
+      capital of the United States is Washington, D.C." or "The United States is known
+      for its capital."
+
+  --- step  1  token=' capital'      ||h||=103.55  cos=+0.887  mse=0.23
+      Structured format with a factual answer pattern ("The capital of the United
+      States is Washington, D.C.") establishes a Wikipedia-style answer page with a
+      question header.
+
+      The sentence "The capital of the United States is Washington, D.C. The" mirrors
+      the opening question, directly confirming the answer, strongly expecting
+      "capital of the United States is Washington, D.C." or "official capital city
+      is."
+
+      Final token "The" is the start of the answer noun phrase mid-sentence ("The"),
+      directly continuing the definition statement, immediately requiring "capital of
+      the United States is Washington, D.C." or "official capital of the United States
+      is Washington, D.C."
+
+  --- step  2  token=' of'           ||h||=110.19  cos=+0.888  mse=0.22
+      Structured informational format with a bilingual (English) page about a city,
+      following a pattern of defining and describing the capital of France with a bold
+      header and bullet points.
+
+      The sentence "The capital of France is Paris. The capital" mirrors the opening
+      question and directly repeats the definition, strongly expecting "of France is
+      Paris" to complete the answer about the capital city's characteristics.
+
+      Final token "capital" is mid-sentence in the repeated definition structure ("The
+      capital"), directly continuing the established pattern "The capital of France
+      is..." — immediately expects "of France is Paris" or "city of France is a city
+      located in the country of France, and it is known for..."
+
+  --- step  3  token=' France'       ||h||=105.55  cos=+0.876  mse=0.25
+      Structured format with a bold header ("The Capital of a Country") followed by a
+      definition pattern, establishing a clear template for a country facts page.
+
+      The sentence "The capital of" mirrors the opening question and answer pattern,
+      directly repeating "The capital of the United States is Washington, D.C." to
+      confirm the answer about the country's capital.
+
+      Final token "of" is mid-phrase in "The capital of," directly continuing the
+      repeated question structure "The capital of" — immediately expects "the United
+      States is" or "Spain is Italy" to complete the factual statement about the
+      current capital country, directly answering the opening question about the
+      country's nationality.
+
+  --- step  4  token=' is'           ||h||=107.20  cos=+0.904  mse=0.19
+      Structured language format with a definition pattern ("What is the capital of
+      France?") followed by an image caption, establishing a factual informational
+      format about a country's capital.
+
+      The sentence "The capital of France is Paris, the capital of France" directly
+      mirrors the question's answer, strongly implying the next tokens will complete
+      with "is Paris" or "is the capital of France, and its official language is
+      French."
+
+      Final token "France" ends an incomplete noun phrase ("The capital of France"),
+      part of a factual statement about France's capital, immediately expecting "is
+      Paris" or "is the official capital, and" continuing the country's descriptive
+      attributes.
+
+  --- step  5  token=' Paris'        ||h||=103.00  cos=+0.891  mse=0.22
+      Structured format with a definition pattern ("The capital of a country is...")
+      establishes a clear informational template about a country's capital city.
+
+      The sentence "The capital city of France is a major city in Europe, and the
+      capital of the country is" directly mirrors the question's answer format,
+      strongly expecting "Paris" as the named capital city.
+
+      Final token "is" completes the predicate of "The capital of the country is,"
+      directly requiring the proper noun "Paris." — the answer to the definition
+      question — immediately followed by "Paris." or "the City of Paris." to complete
+      the factual statement about the country's capital.
+
+  --- step  6  token='.'             ||h||=103.67  cos=+0.900  mse=0.20
+      Structured language format with a definition pattern ("The capital of France is
+      a country..."), following a dictionary or informational template with formal
+      attributes.
+
+      The sentence "While the capital of France is officially called the capital city,
+      the most famous city is Paris" strongly implies a completion naming Paris as the
+      specific capital city, with "Paris" being the well-known iconic example of
+      France's capital.
+
+      Final token "Paris" ends an incomplete noun phrase ("is Paris"), part of a
+      naming statement ("While the capital of France is officially called Paris"),
+      immediately expecting a continuation like "." or "which is known for" or "the
+      city, named after the River Seine" or similar.
+
+  --- step  7  token='<|im_end|>'    ||h||= 92.32  cos=+0.862  mse=0.28
+      Structured format with a bolded question followed by a factual answer, typical
+      of a language platform or search result page format.
+
+      The sentence "While the capital of the United States is Washington, D.C., the
+      most well-known city is actually." explicitly introduces a common fact about the
+      name "Washington," strongly implying a closing clause completing the statement
+      about the city's status or notable attributes.
+
+      Final token "city. " ends a declarative sentence mid-clause ("Its name is
+      Washington. The capital is Washington D.C."), immediately expecting continuation
+      like "It is the capital of the United States" or "The city is known for its rich
+      history and cultural landmarks."
+
+
+--------------------------------------------------------------------------------------------
+PROMPT [factual_hard]  'What year did the Treaty of Westphalia end?'
+--------------------------------------------------------------------------------------------
+  Generated:      'The Treaty of Westphalia was signed in 1648,'
+  Generated tokens (15): ['The', ' Treaty', ' of', ' West', 'ph', 'alia', ' was', ' signed', ' in', ' ', '1', '6', '4', '8', ',']
+
+  --- step  0  token='The'           ||h||= 92.26  cos=+0.873  mse=0.25
+      Structured article format with a definition and explanation pattern,
+      establishing "The Congress of Vienna" as the historical event being described.
+
+      The phrase "The date of the Congress of Vienna is known to be" signals the
+      answer to the question about when the Congress ended, strongly implying the
+      answer will follow with the specific historical dates or outcomes of the
+      Congress of Vienna (1814-1815).
+
+      Final token "Vienna\n" ends an incomplete clause ("Although this is not a
+      specific event"), immediately expecting "The Congress of Vienna ended in 1815"
+      or "The Congress of Vienna's key principles relate to peace and territorial
+      settlements."
+
+  --- step  1  token=' Treaty'       ||h||= 93.29  cos=+0.895  mse=0.21
+      Structured article format with a definition and explanation pattern,
+      establishing a factual answer about the end of the Peace of Westphalia.
+
+      The opening sentence "The Peace of Westphalia is a historical event that marks
+      the end of a series of conflicts" mirrors the question prompt, strongly
+      signaling the answer is now providing the specific dates of the Peace of
+      Westphalia's two parts.
+
+      Final token "The" is the definite article beginning the answer phrase "The,"
+      directly continuing the definition statement "The Peace of Westphalia was
+      completed in two parts," immediately requiring "Peace of Westphalia was
+      completed in 1648" or "two peace treaties were concluded in 1648."
+
+  --- step  2  token=' of'           ||h||=110.86  cos=+0.884  mse=0.23
+      Structured article format with formal encyclopedia-style explanation of the
+      Peace of Westphalia, establishing historical context and defining the treaty's
+      significance.
+
+      The sentence "The Peace of Westphalia was a series of treaties that ended the
+      Thirty Years' War, and the Treaty" directly mirrors the article's opening
+      definition, strongly expecting "of Westphalia" or "Treaties of Westphalia were
+      signed on two separate dates."
+
+      Final token "Treaty" is mid-sentence ("The Treaty"), directly continuing the
+      subject of the treaty's name, immediately requiring "of Westphalia" or "s of
+      Westphalia was signed on two separate documents."
+
+  --- step  3  token=' West'         ||h||=105.97  cos=+0.880  mse=0.24
+      Structured article format with educational encyclopedia style, defining "Peace
+      of Westphalia" with historical context and explanation of its significance.
+
+      The sentence "The Peace of Westphalia was a series of treaties ending the Thirty
+      Years' War, and the Treaty of" directly mirrors the article's opening
+      definition, strongly expecting "Westphalia" to complete the treaty name,
+      followed by its two main agreements.
+
+      Final token "of" is mid-phrase in "The Treaty of," directly continuing the
+      treaty name "The Peace of Westphalia," immediately requiring "Westphalia" to
+      complete the historical reference, then likely "Westphalia was signed on April
+      1648."
+
+  --- step  4  token='ph'            ||h||= 94.85  cos=+0.874  mse=0.25
+      Structured encyclopedia article format with a definition and explanation
+      pattern, establishing a clear Q&A format about the Peace of Westphalia.
+
+      The phrase "The Treaty of Westphalia is a historical event" directly sets up the
+      well-known historical event, strongly implying the answer will now describe the
+      treaty's significance, dates, and key principles, completing the definition of
+      the Westphalian peace.
+
+      Final token "West" is the beginning of "The Treaty of Westphalia," mid-phrase in
+      the question title, directly requiring "phalia" to complete the proper noun,
+      then "phalia was signed in 1648, which established the principles of state
+      sovereignty."
+
+  --- step  5  token='alia'          ||h||=105.18  cos=+0.817  mse=0.37
+      Structured Wikipedia article format with numbered definitions and bullet points
+      explaining "state sovereignty," establishing historical context about
+      international relations and treaty conventions.
+
+      The phrase "The Peace of Westphalia is a historical event that established the
+      principle of state sovereignty" directly references the famous Peace of
+      Westphalia treaty, strongly implying the next tokens complete the historical
+      term "Westphalian system" or "alia in 1648."
+
+      Final token "Westph" is a truncated word mid-sentence ("the Peace of Westph"),
+      part of a historical citation explaining the treaty's founding, immediately
+      requiring "alia" to complete the proper noun, likely followed by "alia" or
+      "alia."
+
+  --- step  6  token=' was'          ||h||=112.42  cos=+0.833  mse=0.33
+      Structured encyclopedia article format with numbered definitions and
+      explanations, following a pattern of defining "Peace of Westphalia" with factual
+      details about treaties and their significance.
+
+      The text has introduced "The Peace of Westphalia" with "The Peace of Westphalia
+      was a treaty," directly signaling the answer to the opening question, now
+      expected to provide the specific dates and treaties that ended the Thirty Years'
+      War.
+
+      Final token "Westphalia" ends an incomplete noun phrase ("The Peace of
+      Westphalia"), immediately requiring "was signed in 1648" or "consisted of two
+      treaties signed on October 24 and October 25, 1648."
+
+  --- step  7  token=' signed'       ||h||= 99.62  cos=+0.868  mse=0.26
+      Structured wiki article format with numbered definitions and explanations
+      establishes pattern of providing historical context about a treaty's dates and
+      significance.
+
+      The sentence "The Treaty of Westphalia was" directly mirrors the question's
+      opening definition, strongly implying the answer will complete with the specific
+      dates or completion of the treaty's historical event, confirming the treaty's
+      completion in 1648.
+
+      Final token "was" is mid-sentence in a definitional clause ("The Treaty of
+      Westphalia was"), immediately requiring a past-tense verb phrase like "signed in
+      1648" or "a series of treaties that concluded a series of conflicts" or
+      "finalized in its full form."
+
+  --- step  8  token=' in'           ||h||=110.52  cos=+0.863  mse=0.27
+      Structured encyclopedia article format with numbered sections defining "Peace of
+      Westphalia," establishing historical context about the peace treaty and its
+      significance.
+
+      The sentence "The Peace of Westphalia is a treaty that was signed" directly sets
+      up the completion of a factual statement about the treaty's signing date,
+      logically requiring the specific dates or documents (typically "in 1648").
+
+      Final token "signed" ends an incomplete clause ("The Peace of Westphalia was
+      signed"), part of a definition statement structure ("The treaty was signed..."),
+      immediately expecting "on May 24, 1648" or "in two documents, ending the Thirty
+      Years' War."
+
+  --- step  9  token=' '             ||h||= 98.72  cos=+0.873  mse=0.25
+      Structured encyclopedia article format with numbered sections defining "Peace of
+      Westphalia," establishing historical context about the treaty and its
+      significance in international law.
+
+      The sentence "The Peace of Westphalia was a treaty that was signed in" is a
+      direct historical fact, following a well-known date pattern, strongly expecting
+      "1648" or "two separate treaties on November 24 and October 25."
+
+      Final token "in" ends an incomplete date phrase ("The Peace of Westphalia was
+      signed in"), immediately requiring a specific historical year or date, most
+      likely "1648" or "two cities, Münster and Osnabrück."
+
+  --- step 10  token='1'             ||h||= 84.27  cos=+0.843  mse=0.31
+      Structured historical article format with an encyclopedia-style definition,
+      establishing context about the Peace of Westphalia and its significance in
+      international law.
+
+      The phrase "The Peace of Westphalia was a treaty ending the Thirty Years' War,
+      which concluded in" directly mirrors the historical fact, strongly expecting the
+      year "1648," completing the date of the treaty's formal end.
+
+      Final token "  " is mid-number in "concluded in  " — part of the date expression
+      "The Peace of Westphalia was concluded in  " — immediately expects "1648" to
+      close the historical date, completing the defining event of the treaty's
+      termination.
+
+  --- step 11  token='6'             ||h||= 72.15  cos=+0.787  mse=0.43
+      Structured historical article format with an encyclopedia-style entry on the
+      Peace of Westphalia, establishing a definition and explanation pattern about the
+      Christmas Truce.
+
+      The sentence "The Peace of Westphalia, which ended the Thirty Years' War, is
+      dated to December 1" directly mirrors historical context, strongly implying the
+      year 1648 is being completed.
+
+      Final token "1" is mid-number in "in 1," part of a date expression ("The events
+      occurred in the years 1"), immediately requiring "648" to complete the year,
+      then likely "8, and" or "58, referring to both sides agreeing to cease
+      hostilities."
+
+  --- step 12  token='4'             ||h||= 90.45  cos=+0.889  mse=0.22
+      Structured Wikipedia article format with formal definition and historical
+      context, establishing a pattern of explaining the Peace of Westphalia's
+      significance.
+
+      The sentence "The Treaty of Westphalia was formally concluded in 16" is a direct
+      historical date reference, strongly implying the year 1648, completing the
+      famous treaty that ended the Thirty Years' War.
+
+      Final token "16" is mid-number in a specific historical date ("in 16"), part of
+      a date expression ("The treaty was concluded in 16..."), immediately requiring
+      "48" to complete the year, likely followed by "48, marking the end of the
+      conflict."
+
+  --- step 13  token='8'             ||h||= 87.24  cos=+0.873  mse=0.25
+      Structured encyclopedia format with a bold header ("The Peace of Westphalia")
+      introducing a historical term, expecting factual content about a treaty or
+      event.
+
+      The specific date "164" is mid-number, clearly referencing the end year of the
+      Thirty Years' War (1648), establishing the historical event being described as
+      the Peace of Westphalia.
+
+      Final token "164" is a truncated year mid-number ("164"), part of a specific
+      date expression ("The Treaty of Westphalia ended in 164"), immediately requiring
+      "8" to complete the year, likely followed by "8" or "8, ending the religious
+      conflict."
+
+  --- step 14  token=','             ||h||= 95.18  cos=+0.789  mse=0.42
+      Structured Wikipedia article format with definition and explanation pattern,
+      establishing a factual description of the Peace of Westphalia with historical
+      context.
+
+      The sentence "The Peace of Westphalia was signed on 30 May 1648" is a well-known
+      historical fact, strongly implying the completion of the date and event,
+      completing the definition of the treaty's significance and end of the Thirty
+      Years' War.
+
+      Final token "1648" ends an incomplete date ("signed in 1648"), immediately
+      expecting "which marked the end of the Thirty Years' War" or "and this marked
+      the formal end of the treaty, ending the war."
+
+
+--------------------------------------------------------------------------------------------
+PROMPT [math]  'Compute 47 times 38.'
+--------------------------------------------------------------------------------------------
+  Generated:      'To compute \\(47 \\times 38\\), we can use'
+  Generated tokens (15): ['To', ' compute', ' \\(', '4', '7', ' \\', 'times', ' ', '3', '8', '\\', '),', ' we', ' can', ' use']
+
+  --- step  0  token='To'            ||h||= 99.16  cos=+0.881  mse=0.24
+      Structured format with a friendly greeting and question prompt ("Calculate the
+      product of 7 and 8"), signaling a worked example or calculation is expected
+      next.
+
+      The phrase "To find the product of 7 and 8, let's calculate it" establishes a
+      direct instructional pattern, strongly implying the answer or step-by-step
+      calculation of the multiplication will follow.
+
+      Final token "product\n" ends an introductory clause ("Let's calculate the
+      product of 7 and 8"), immediately expecting a calculation or method description
+      like "To calculate this, we can use" or "The result is:" or "Here's the
+      multiplication process:" continuing the math demonstration.
+
+  --- step  1  token=' compute'      ||h||=102.56  cos=+0.898  mse=0.20
+      Structured educational format with a heading introducing a number ("45"),
+      followed by a prompt asking about the product of 9 and 5, establishing a math
+      demonstration context.
+
+      The phrase "To calculate the product of 9 and 5" signals an instructional or
+      calculation demonstration, strongly implying the next tokens will show the
+      multiplication process or result, likely "calculate the product" or "find the
+      value."
+
+      Final token "To" opens an infinitive clause mid-sentence ("To"), directly
+      continuing the instructional setup ("To find the product of 9 and 5"), expecting
+      "calculate this product, we can use" or "find the value, we perform the
+      following calculation."
+
+  --- step  2  token=' \\('          ||h||=114.37  cos=+0.922  mse=0.16
+      Structured math format with a heading ("How to Calculate 45 × 12") signals a
+      worked example or explanation of multiplication, following a pattern of defining
+      and showing the product.
+
+      The sentence "To compute" mirrors the prompt's question setup, directly
+      introducing the calculation of 45 × 12, strongly expecting the actual
+      multiplication result or method description to follow.
+
+      Final token "compute" is mid-sentence in "To compute," directly continuing the
+      introductory clause "To compute," establishing the main question's answer
+      structure; immediately expects "the product of 45 × 12" or "this multiplication,
+      we add the numbers" or similar.
+
+  --- step  3  token='4'             ||h||= 99.26  cos=+0.868  mse=0.26
+      Structured math article format with a heading and explanation pattern,
+      establishing a visual or numerical problem about a number, suggesting a worked
+      example or formula.
+
+      The phrase "To calculate the product of 12 and 15, we can write \( " explicitly
+      sets up the expression, strongly implying the specific value of the product or
+      the equation for the given number 123."
+
+      Final token \( is an opening math expression delimiter mid-sentence ("The value
+      of \( "), directly requiring the specific mathematical expression or number
+      being calculated, most likely "12 \times 15" or "123\) is a multiple of 15,"
+      completing the definition of the product.
+
+  --- step  4  token='7'             ||h||=103.93  cos=+0.891  mse=0.22
+      Structured math content with a worked example format, establishing a pattern of
+      explaining multiplication of a mixed number using the distributive property.
+
+      The text explicitly begins "To solve the multiplication problem '48 × 5' using
+      the number 4," directly referencing the original number 45, strongly implying
+      the next tokens continue with "5 × 9" or "45" as the specific number being
+      multiplied.
+
+      Final token "4" is the start of the number "4" in the example expression
+      "Calculate '4," directly continuing the opening question about the number 45,
+      immediately expecting "5 × 9" or "5 as a mixed number."
+
+  --- step  5  token=' \\'           ||h||=114.86  cos=+0.873  mse=0.25
+      Structured math content format with a header ("How to Multiply: 47 x 7")
+      establishes a pattern of demonstrating multiplication using a specific number
+      example.
+
+      The phrase "To calculate the product of '47" directly mirrors the problem setup,
+      strongly implying the next tokens will complete the number being multiplied,
+      i.e., " × 7" or "times 7," confirming the original number.
+
+      Final token "47" is mid-expression in the example "Calculate '47," directly
+      continuing the specific number being multiplied, immediately expecting " × 7" or
+      " \times 7" to complete the multiplication expression about the number 47.
+
+  --- step  6  token='times'         ||h||=101.47  cos=+0.865  mse=0.27
+      Structured educational article format with a visual element ("Image")
+      introducing a multiplication problem, establishing a clear instructional pattern
+      about the number 7 and its multiplication.
+
+      The sentence "To solve this, we can calculate '7 \times 8'" directly sets up the
+      multiplication expression, with the question explicitly asking for the product
+      of 7 and 8, requiring the formula to be shown.
+
+      Final token "8 \ " is mid-expression in the formula "To calculate '7 \",
+      directly continuing the multiplication expression setup, strongly expecting " ×
+      8" or " multiplied by 8" to complete the definition, then likely "times 8, the
+      result is..." or similar.
+
+  --- step  7  token=' '             ||h||=104.44  cos=+0.887  mse=0.23
+      Structured math instructional format with a student-friendly explanation of
+      multiplication, using a worked example to demonstrate the product of 12 and 15.
+
+      The phrase "To find the product of 12 × 15, we can calculate 12 ×" mirrors the
+      problem setup, strongly implying the answer expression "15" is being shown,
+      completing the multiplication expression for the given product.
+
+      Final token "times" ends an incomplete multiplication expression ("12 × "),
+      directly continuing the equation setup, immediately expecting "15" or "15" to
+      complete the multiplication expression, likely followed by "15" or "the product
+      is."
+
+  --- step  8  token='3'             ||h||= 94.79  cos=+0.822  mse=0.36
+      Structured math format with a question about multiplying 48 by 53, establishing
+      a step-by-step method using mental math techniques.
+
+      The phrase "To calculate 48 × 53, we can use the distributive property" strongly
+      signals an example or method, likely a decomposition like "difference of
+      squares" or "breaking numbers into simpler parts" common in such problems.
+
+      Final token "  " is mid-phrase ("Two ways to calculate: "), part of a
+      parenthetical method introduction ("We can use the method of..."), immediately
+      expecting a specific technique name like "breakdown" or "this method" or "48 ×
+      53 can be calculated as."
+
+  --- step  9  token='8'             ||h||= 98.97  cos=+0.886  mse=0.23
+      Structured math problem format with a worked example showing multiplication
+      using expanded form, establishing a pattern of presenting a specific
+      multiplication problem with digits.
+
+      The question explicitly mirrors the given example "Multiply 12 by 35," directly
+      asking for the product of "23 and 3" — the second number in the original problem
+      is clearly "33," completing the multiplication of the two given numbers.
+
+      Final token "3" is mid-number in the second factor of the example ("Multiply 35
+      by 3"), strongly expecting "3" to complete the number, then "3" or "5" to finish
+      the second number in the multiplication problem.
+
+  --- step 10  token='\\'            ||h||=103.06  cos=+0.874  mse=0.25
+      Structured math instructional format with a header ("How to Multiply: 39 × 38")
+      signals a worked example or step-by-step calculation is expected next.
+
+      The phrase "To calculate the product of 39 and 38" directly introduces the
+      specific multiplication problem, with "Let's calculate 39 × 38" establishing the
+      task, implying the answer or method follows.
+
+      Final token "38" ends an incomplete expression ("To find the product of 39 and
+      38"), strongly expecting " , we can" or "you can break it down" or " , we'll use
+      the following steps" to complete the example.
+
+  --- step 11  token='),'            ||h||=105.24  cos=+0.894  mse=0.21
+      Structured educational format with a header ("How to Multiply 36 x 17") signals
+      a worked example or step-by-step method for multiplying the given numbers.
+
+      The sentence "To find the product of \(36 \times 17\)" sets up the promised
+      calculation, directly introducing the multiplication problem, implying the next
+      tokens will demonstrate the method or provide the product using the distributive
+      property.
+
+      Final token "17\)" closes a parenthetical expression mid-sentence ("To calculate
+      \(36 \times 17\), let's find \(36×17\"), strongly expecting "we can use the
+      following steps" or "the result is..."
+
+  --- step 12  token=' we'           ||h||=108.18  cos=+0.872  mse=0.26
+      Structured educational format with a header introducing a number, then defining
+      and demonstrating multiplication of 36 using the distributive property.
+
+      The sentence "To calculate \( 9 \times 4 \), we can use the multiplication
+      method" signals an instructional step, promising a worked example or method to
+      compute the product, likely continuing with a specific technique like the
+      distributive property or direct multiplication.
+
+      Final token "property), " ends an introductory clause ("To calculate \( 36
+      \times 4 \),"), immediately expecting a method description like "we can break it
+      down" or "you can use the following steps:" or "we can perform the
+      multiplication directly."
+
+  --- step 13  token=' can'          ||h||=107.01  cos=+0.889  mse=0.22
+      Structured educational format with a numbered question and answer pattern,
+      explaining the multiplication of 32 and 15 using the distributive property.
+
+      The phrase "To multiply 32 by 15, we can use the method of breaking down the
+      multiplication" signals an instructional step, likely introducing a
+      multiplication algorithm or method (e.g., expanded form or grid multiplication).
+
+      Final token "we" begins a verb phrase mid-sentence ("For this calculation, we"),
+      part of a definition/explanation structure, immediately expecting a verb like
+      "can calculate" or "use the distributive property" or "break it into parts by
+      multiplying each digit separately."
+
+  --- step 14  token=' use'          ||h||=107.51  cos=+0.894  mse=0.21
+      Structured math format with a question about multiplying 48 by 13, establishing
+      a step-by-step explanation pattern with a worked example.
+
+      The phrase "To calculate 48 × 13, we can" signals an instructional method,
+      likely introducing a specific multiplication technique or breaking down the
+      multiplication using either the distributive property or standard algorithm.
+
+      Final token "can" ends an incomplete clause ("For this, we can"), part of a
+      method introduction sentence structure ("To solve this multiplication, we can
+      use..."), immediately expecting a verb like "use the distributive method" or
+      "break it down into simpler parts" or "perform the multiplication directly."
+
+
+--------------------------------------------------------------------------------------------
+PROMPT [code]  'Write a Python function to check if a number is prime.'
+--------------------------------------------------------------------------------------------
+  Generated:      'Certainly! Below is a Python function that checks if a given number is prime'
+  Generated tokens (15): ['Certainly', '!', ' Below', ' is', ' a', ' Python', ' function', ' that', ' checks', ' if', ' a', ' given', ' number', ' is', ' prime']
+
+  --- step  0  token='Certainly'     ||h||=103.37  cos=+0.842  mse=0.32
+      Structured Python code example pattern with a greeting and explanation,
+      signaling a function to demonstrate how to generate random numbers within a
+      specified range using Python.
+
+      The phrase "Sure, here's a simple Python code example to demonstrate creating a
+      random number generator" strongly implies the response will now provide a code
+      block or function definition for generating random numbers, likely following a
+      common tutorial structure.
+
+      Final token "example\n" ends an introductory clause ("Here's how you can create
+      a simple random number generator in Python"), immediately expecting "Here's a
+      function to generate random numbers" or "To demonstrate this, let's create a
+      simple Python function:" or "Below is an example of a random number generator."
+
+  --- step  1  token='!'             ||h||= 98.59  cos=+0.747  mse=0.51
+      Structured Python code example pattern: the text introduces "multiplying two
+      numbers" with a function, following a tutorial format with "Here's an example"
+      signaling a code block.
+
+      The opening phrase "Sure, I can help you generate a Python code to calculate the
+      square of a number" signals the response is about providing the code, and the
+      common convention expects an explanation or code snippet follows.
+
+      Final token "Certainly" is the opening word of the greeting/heading
+      ("Certainly"), part of a formal introduction ("Here's a simple example"),
+      immediately expecting "! Here's how you can create a Python function" or "I'll
+      show you a code example for this."
+
+  --- step  2  token=' Below'        ||h||=103.01  cos=+0.876  mse=0.25
+      Structured Python code snippet with a function `is_prime` being introduced,
+      signaling a code example or explanation about generating prime numbers in
+      Python.
+
+      The phrase "Here's a simple Python function to check if a number is prime"
+      strongly implies an introductory or explanatory context, likely followed by a
+      code block defining the `is_prime` function or a brief description of prime
+      number generation logic.
+
+      Final token "prime! " closes an introductory prompt ("Since you're interested in
+      generating prime numbers, here's a simple one."), immediately expecting "A
+      simple Python function to generate prime numbers is:" or "Below is a basic
+      implementation of checking for prime numbers:" or similar introductory clause.
+
+  --- step  3  token=' is'           ||h||=102.66  cos=+0.850  mse=0.30
+      Structured Python code example with a clear explanation pattern: the text
+      introduces a function to calculate the sum of numbers from 1 to 10, then
+      promises a code implementation.
+
+      The phrase "Here's an example of a Python function that demonstrates this
+      concept. Below" signals a code block or code snippet is about to follow,
+      establishing the pattern of showing the actual function definition with a
+      docstring.
+
+      Final token "Below" ends an introductory clause ("Below, the code for this
+      function is provided. Below"), immediately expecting "is a Python function
+      definition:" or "I'll show the code for the function" or "is an example of a
+      complete Python function."
+
+  --- step  4  token=' a'            ||h||=100.16  cos=+0.858  mse=0.28
+      Structured Python code example with a function to check if a number is prime,
+      following a tutorial pattern explaining the concept with a Python
+      implementation.
+
+      The text "Here is a Python code snippet to generate a prime number" signals the
+      promised code block, now introducing a concrete implementation, so the next
+      tokens should continue with a Python function definition or code block showing
+      the `is_prime` function.
+
+      Final token "is" begins "Here is" — part of a header ("The following is a Python
+      code example..."), directly continuing the pattern "Below is the following
+      Python code to generate a prime number," expecting "a Python function to check
+      prime numbers" or "a simple Python code example."
+
+  --- step  5  token=' Python'       ||h||=108.91  cos=+0.913  mse=0.17
+      Structured Python code documentation pattern with a function to check if a
+      number is prime, using a clear explanation context about finding prime numbers
+      in Python.
+
+      The phrase "Here is a Python function to check if a number is prime" signals the
+      answer is about providing a Python function implementation, strongly implying
+      the next tokens will describe a specific Python function or code block with a
+      simple prime-checking algorithm.
+
+      Final token "a" is an indefinite article mid-sentence ("Here is a"), directly
+      introducing a noun phrase describing the function, likely "Python function that
+      demonstrates" or "simple Python function to check prime numbers" or "Python code
+      example with a prime checking function."
+
+  --- step  6  token=' function'     ||h||=117.80  cos=+0.918  mse=0.16
+      Structured code documentation pattern with a function definition and
+      explanation, using Python to demonstrate a prime number checking function with a
+      list of numbers.
+
+      The phrase "Here is a Python implementation of a function to find prime numbers"
+      signals the answer is now expected to show the actual Python code, completing
+      the prompt's promise of a complete script with a `def` block.
+
+      Final token "Python" ends an incomplete noun phrase ("a Python"), directly
+      continuing the phrase "Here is a Python code for this function," strongly
+      expecting "code that defines" or "function to check prime numbers" or "script
+      that implements the required functionality" — completing the promised function
+      definition context.
+
+  --- step  7  token=' that'         ||h||=122.48  cos=+0.925  mse=0.15
+      Structured Python documentation pattern with a header explaining a function to
+      check if a number is prime, establishing code context and expected output.
+
+      The phrase "Here is a Python function to generate prime numbers" signals the
+      text is now introducing a specific implementation, directly promising the
+      function definition and code for checking prime numbers using a `for` loop.
+
+      Final token "function" ends the phrase "Here is a Python function," part of an
+      introductory clause ("Below is a Python function"), immediately expecting "that
+      checks for prime numbers" or "which defines a prime checking function" or "that
+      implements the task of finding prime numbers" — completing the promised function
+      description.
+
+  --- step  8  token=' checks'       ||h||=109.19  cos=+0.926  mse=0.15
+      Structured Python code example with a docstring introducing a function to check
+      if a number is prime, establishing a pattern of defining and demonstrating a
+      utility function.
+
+      The phrase "Here is a Python function that" mirrors the prompt's setup, strongly
+      implying the next tokens will complete the description of the function's
+      purpose, likely "checks if a number is prime" or "implements a prime checking
+      algorithm."
+
+      Final token "that" is a relative pronoun mid-sentence ("A Python function
+      that"), directly continuing the function description clause, immediately
+      requiring a verb phrase like "checks whether a given number is prime" or
+      "returns true for prime numbers using an efficient algorithm."
+
+  --- step  9  token=' if'           ||h||=116.68  cos=+0.918  mse=0.16
+      Structured Python code documentation pattern with a function `is_prime(n)`
+      introduced, following a clear format describing a prime checking algorithm using
+      Python's `all()` method.
+
+      The opening sentence "This Python function checks if a given number is a prime
+      number" mirrors the prompt's description, establishing the function's purpose,
+      strongly implying the next tokens will complete the definition of the
+      prime-checking algorithm.
+
+      Final token "checks" is mid-sentence in the definition clause ("A function that
+      checks"), directly continuing the description of the `is_prime` function's
+      behavior, expected immediately with "whether a number is prime" or "if a given
+      number is a prime number and returns True."
+
+  --- step 10  token=' a'            ||h||=111.06  cos=+0.909  mse=0.18
+      Structured Python code documentation pattern with a function definition and
+      explanation, establishing a clear format for a "is_prime" function to check
+      prime numbers.
+
+      The phrase "This Python function checks if a given integer is a prime number"
+      mirrors the opening description, strongly implying the next tokens will complete
+      the definition of the problem, continuing "a number is prime" or "a given number
+      is prime."
+
+      Final token "if" ends an incomplete clause ("checks if"), directly continuing
+      the function's purpose statement ("This function checks if"), immediately
+      expecting "a number is prime" or "a given integer is a prime number" or "a
+      number is prime within a range."
+
+  --- step 11  token=' given'        ||h||=106.37  cos=+0.889  mse=0.22
+      Structured Python code documentation pattern with a function description using
+      `def is_prime(n)` format, establishing a clear definition and explanation
+      context about checking prime numbers.
+
+      The phrase "This function checks if a given integer is a prime number" strongly
+      implies the next tokens will complete the problem statement about a specific
+      integer `n`, continuing the question about finding prime numbers for a given
+      number.
+
+      Final token "a" is an indefinite article mid-phrase ("whether a"), part of the
+      function's purpose clause ("This function checks whether a number"), immediately
+      requiring a noun like "number is prime" or "integer is divisible by any number
+      greater than 1" or "number is prime."
+
+  --- step 12  token=' number'       ||h||=111.97  cos=+0.926  mse=0.15
+      Structured Python code documentation pattern with a function definition and
+      explanation, establishing a clear format for a prime number checking function
+      using the `math` module.
+
+      The phrase "This function checks if a given number is prime" mirrors the
+      prompt's intent, strongly implying the next tokens will complete the description
+      of the input number, likely "number is prime" or "integer `n` is a positive
+      integer."
+
+      Final token "given" ends an incomplete clause ("a given"), part of the function
+      description sentence structure ("This function checks whether a given"),
+      immediately requiring a noun like "number is prime" or "integer value is within
+      the range" or "number is valid and returns true."
+
+  --- step 13  token=' is'           ||h||=114.52  cos=+0.923  mse=0.15
+      Python code structure with a function definition pattern ("def is_prime(n):")
+      signals a program to check if a given number is prime, following a common coding
+      challenge format.
+
+      The phrase "This function checks whether a given number is a prime number"
+      mirrors the prompt's intent, strongly implying the next tokens will complete the
+      description of the number being checked, likely "is prime" or "is a positive
+      integer."
+
+      Final token "number" ends an incomplete clause ("a given number"), part of the
+      function description setup, immediately expecting "is prime" or "is a prime
+      number" or "is divisible by any integer greater than one."
+
+  --- step 14  token=' prime'        ||h||=113.56  cos=+0.913  mse=0.17
+      Structured Python function documentation pattern with code block and function
+      description establishing a clear algorithmic context about checking prime
+      numbers using the `is_prime` method.
+
+      The phrase "This function checks if a given integer is a prime number and
+      determines whether a given number is" mirrors the question's title, strongly
+      implying the answer will confirm the definition of prime numbers.
+
+      Final token "is" ends an incomplete predicate ("whether a given number is"),
+      directly continuing the function's purpose clause ("This function checks if a
+      given integer is a prime number"), strongly expecting "prime" or "a prime
+      number" or "prime or not," completing the definition of the primality check.
+
+
+--------------------------------------------------------------------------------------------
+PROMPT [creative_haiku]  'Write me a haiku about a rabbit in spring.'
+--------------------------------------------------------------------------------------------
+  Generated:      'Soft fur leaps through grass,\nSpring breezes whisper, light as hops—'
+  Generated tokens (15): ['Soft', ' fur', ' leaps', ' through', ' grass', ',\n', 'Spring', ' bree', 'zes', ' whisper', ',', ' light', ' as', ' hops', '—']
+
+  --- step  0  token='Soft'          ||h||= 96.26  cos=+0.862  mse=0.28
+      Structured poem format with "Autumn's grace" header signals a traditional verse
+      pattern, inviting a nature poem about a tiny butterfly.
+
+      The phrase "A leafy sprite in autumn's chill" mirrors a common haiku or poem
+      opening, strongly implying a concrete image or line follows, likely "Golden leaf
+      dances" or "Bare tree stands, gentle bloom."
+
+      Final token "   " opens a quoted poem line mid-sentence ("Poem: "), directly
+      continuing the example structure "Autumn's grace—" — immediately expects a
+      concrete noun phrase like "Bare branch dances" or "The butterfly blooms, shy in
+      meadow" or "Four seasons' grace, light."
+
+  --- step  1  token=' fur'          ||h||= 98.39  cos=+0.864  mse=0.27
+      Poetic structure: a numbered verse sequence with literary imagery, celebrating
+      spring's arrival, establishing a pattern of short lyrical lines.
+
+      The opening word "Soft" begins a concrete noun phrase ("Soft"), clearly a
+      concrete image continuing the first person's seasonal description, likely naming
+      the rabbit's fur or form, with "Snowflakes" or similar nature imagery expected
+      next.
+
+      Final token "Soft" is mid-word in an incomplete noun phrase (" Soft"), part of
+      the first example line's imagery sequence ("Soft..."), immediately requiring a
+      noun like "fur cuddles" or "bunny's feet glide, / In snow's embrace" or "white
+      wool hides," continuing the personification.
+
+  --- step  2  token=' leaps'        ||h||=104.82  cos=+0.835  mse=0.33
+      Poetic structure with verse format ("Winter's Song") signals a seasonal
+      children's poem with traditional imagery and rhyme scheme.
+
+      The opening line "Snowy morning, white fur" mirrors a concrete image ("Soft
+      fur"), immediately continuing a list of seasonal attributes for the Easter
+      rabbit, likely completing a nature description with "Spring's warmth" or "shines
+      in the sun."
+
+      Final token "fur" is mid-word ("Soft fur"), part of the first line's imagery
+      sequence ("Soft fur"), strongly expecting continuation like "and bright" or
+      "glows in snow" or "fills my coat," continuing the noun phrase describing the
+      rabbit's physical attributes or seasonal joy.
+
+  --- step  3  token=' through'      ||h||=100.03  cos=+0.824  mse=0.35
+      Poetic structure with literary format: a seasonal verse poem celebrating
+      February's beauty, using traditional imagery and meter ("February's song").
+
+      The line "Snowy white's leap: Feet leaps" begins an example of a concrete image
+      sequence ("A rabbit's soft leap"), strongly implying a familiar seasonal phrase
+      or rhyme continuing the joyful, spring imagery of movement and bloom.
+
+      Final token "leaps" ends mid-phrase ("White feet leaps"), part of an enumerated
+      list of sensory details ("Snowy white leaps"), immediately expecting a noun
+      phrase like "in snow" or "the field," or "and bloom," completing the simile
+      describing the rabbit's joyful motion.
+
+  --- step  4  token=' grass'        ||h||= 98.08  cos=+0.822  mse=0.36
+      Poetic structure: formal verse with numbered lines and seasonal imagery, a
+      haiku-like poem celebrating spring's joy.
+
+      The phrase "Spring's song: 'Bird flutters through' — Flower dances through"
+      begins an example of a specific noun phrase with sensory imagery, establishing a
+      concrete image sequence likely describing a deer or spring's movement and
+      vitality.
+
+      Final token "through" ends mid-phrase ("Flower through"), part of an incomplete
+      noun phrase listing spring imagery ("Buck leaps through"), strongly expecting a
+      noun like "snow" or "fields," or "sun," completing the seasonal movement imagery
+      with a specific natural element or motion descriptor.
+
+  --- step  5  token=',\n'           ||h||=104.94  cos=+0.808  mse=0.38
+      Structured poem format with numbered verses and poetic imagery, establishing a
+      traditional greeting card or seasonal verse pattern ("April's song").
+
+      The phrase "Morning sun on flower, in bloom: 'Mary' dances through grass" is a
+      concrete image mid-description, listing spring imagery ("blossoms, dewdrops on
+      grass"), strongly implying a compound noun or continuation describing the
+      season's abundance.
+
+      Final token "grass" ends an incomplete noun phrase ("beneath sun in grass"),
+      part of an enumerated image sequence ("Bursting blooms amid dew on grass"),
+      expecting continuation like "s," or " , / Spring's warm embrace," or "a,"
+      completing the floral scene.
+
+  --- step  6  token='Spring'        ||h||= 95.52  cos=+0.835  mse=0.33
+      Poetic structure with verse format and literary prompt pattern, suggesting a
+      nature poem with seasonal imagery and rhythmic lines.
+
+      The phrase "Winter's breath, white-bosomed bird," begins an example list of
+      seasonal imagery ("Bird's joyous flight,") implying a concrete noun phrase
+      continuing the nature poem's subject of a specific moment or season.
+
+      Final token "bird, " closes an incomplete parallel list item mid-line ("Spring's
+      bloom,   "), immediately requiring a noun phrase describing the bird's
+      characteristic or scene, likely "Moonlit branches dance" or "Day's fleeting
+      bloom, joy fills," or "Autumn leaves dance, sunlit trees."
+
+  --- step  7  token=' bree'         ||h||=104.49  cos=+0.877  mse=0.25
+      Poetic verse structure with elegant imagery, a haiku-like ballad celebrating a
+      bird's song, establishing rhythmic and sensory imagery.
+
+      The phrase "Bud blooms on bare boughs, Spring" mirrors the paired subject
+      ("Bird's joy, Spring's gentle breeze"), strongly implying a second noun phrase
+      completing the seasonal description of nature's renewal or bloom.
+
+      Final token "Spring" is mid-word in "Spring" repeated in the paired noun
+      sequence ("Spring's bloom, Spring"), immediately requiring a noun or verb
+      describing the season's attributes, likely "breeze whispers," "flowers burst,"
+      or "sun's warmth fills my chest," continuing the concrete imagery of the bird's
+      joy.
+
+  --- step  8  token='zes'           ||h||=102.45  cos=+0.862  mse=0.28
+      Poetic structure with floral imagery and verse format ("April's bloom, my
+      darling") establishes a celebratory, lyrical Christmas card description.
+
+      The phrase "Rose blooms, sun's smile; Spring bree" is mid-sentence listing
+      sensory details ("Summer sun, gentle bree"), suggesting a compound noun or
+      continuation of nature imagery describing the flower's surroundings or season.
+
+      Final token "bree" is a truncated word mid-sentence ("Spring bree"), part of a
+      parallel sensory list ("Summer breezes, Sun bree..."), immediately requiring
+      completion like "zes caress" or "zes kiss my cheeks," continuing the nature
+      imagery with a breeze or wind descriptor.
+
+  --- step  9  token=' whisper'      ||h||=103.01  cos=+0.830  mse=0.34
+      Poetic structure with numbered verse format ("Spring's bloom, my darling")
+      establishes a floral greeting card or literary image pattern with vivid imagery.
+
+      The phrase "Rose blooms, gentle breezes" mirrors a traditional simile sequence
+      listing attributes ("Red petals, spring breezes"), suggesting continuation of
+      nature imagery describing the flower's character or the speaker's state.
+
+      Final token "breezes" ends mid-simile ("Spring breezes"), part of a parallel
+      attribute list ("Warm winds, spring breezes"), immediately expecting a noun
+      phrase like "carry her" or "warm my face" or "dance around," completing the
+      natural imagery of the flower and season.
+
+  --- step 10  token=','             ||h||=105.87  cos=+0.838  mse=0.32
+      Poetic structure with numbered verses and floral imagery, a children's book
+      format with vivid nature descriptions suggesting a seasonal greeting poem.
+
+      The quoted line "Bloom: Rose's breath, winds whisper" mirrors a simile sequence
+      listing nature attributes ("Spring blooms, skies whisper"), implying a second
+      simile or continuation describing the mother deer's gentle presence or timing.
+
+      Final token "whisper" ends mid-simile ("Skies whisper"), part of a nature
+      imagery list ("Snowflakes whisper, skies whisper"), strongly expecting a noun
+      like "and joy" or "softly" or "around her" or "flowers bloom," completing the
+      seasonal metaphor about the deer's timing.
+
+  --- step 11  token=' light'        ||h||= 90.75  cos=+0.845  mse=0.31
+      Formal poem structure with numbered lines and vivid imagery, suggesting a
+      literary or children's book format with a floral metaphor ("Snowflake, white as
+      moon").
+
+      The quoted phrase "Bird flutters, waves murmur," is mid-sentence describing a
+      scene with nature imagery ("Spring whispers, waters murmur"), implying a
+      compound noun or simile describing the deer's presence or behavior.
+
+      Final token "murmur," ends an incomplete quoted clause ("Waters murmur, snow
+      whispers,") — part of a parallel list of sounds ("Spring calls, winds whisper"),
+      strongly expecting a continuation like "softly" or "deer roam" or "joyous light"
+      completing the nature imagery.
+
+  --- step 12  token=' as'           ||h||= 95.63  cos=+0.778  mse=0.44
+      Poetic structure with lyrical verse lines, nature imagery celebrating spring's
+      arrival, using formal literary form with "March's bloom" as a repeated motif.
+
+      The phrase "Moon, soft as sun, gentle, light" is mid-description of a flower's
+      qualities ("Spring's breath, light, light"), suggesting a compound noun or
+      incomplete simile continuing the seasonal imagery.
+
+      Final token "light" ends an incomplete list ("soft, light, light"), part of a
+      parenthetical descriptor sequence ("March's bloom, gentle, light, light"),
+      strongly expecting continuation like "and joy" or "flurry" or "as snow,"
+      completing the contrasting nature imagery of the butterfly's fleeting grace.
+
+  --- step 13  token=' hops'         ||h||= 97.27  cos=+0.804  mse=0.39
+      Poetic structure with numbered verses and floral imagery, describing spring's
+      beauty in a children's book format with lyrical prose.
+
+      The phrase "Flower's breath, soft as snow, light as" is mid-simile listing
+      qualities ("Spring's feet, light as"), suggesting a specific nature metaphor or
+      poetic descriptor about the moon or gentle breeze.
+
+      Final token "as" ends an incomplete simile ("light as light as"), part of a
+      compound adjective list ("Soft, light as light, light as"), immediately
+      requiring a noun like "wind" or "dew" or "dream" to complete the comparison
+      describing the moon's gentle, ethereal quality.
+
+  --- step 14  token='—'             ||h||=101.67  cos=+0.811  mse=0.38
+      Structured poetic format with numbered verses and formal imagery, describing a
+      seasonal flower's joy ("Spring's bloom, bright as sun"), suggesting a compound
+      noun or simile.
+
+      The phrase "Like sun's dance, joyful as hops" is mid-simile listing qualities
+      ("All day's joy, hops and hops"), implying a playful wordplay about the deer's
+      agility or springiness.
+
+      Final token "hops" ends an incomplete quoted phrase ("Like hops, with hops..."),
+      part of a parenthetical list of qualities ("All joy, like hops, sips — hops"),
+      strongly expecting "," or "a leap" or "the deer's fruit" to close the simile.
+
+
+--------------------------------------------------------------------------------------------
+PROMPT [creative_poem]  'Write a short poem about the ocean.'
+--------------------------------------------------------------------------------------------
+  Generated:      'Whispering waves caress the shore,\nMystic ocean, vast'
+  Generated tokens (15): ['Wh', 'isper', 'ing', ' waves', ' ca', 'ress', ' the', ' shore', ',\n', 'M', 'yst', 'ic', ' ocean', ',', ' vast']
+
+  --- step  0  token='Wh'            ||h||= 93.40  cos=+0.884  mse=0.23
+      Structured poem format with "A poem of nature" header signals a literary piece,
+      inviting a poetic tribute to the sun.
+
+      The pattern "Oh, gentle sun, my verse to sing" strongly implies a poem title or
+      stanza begins, following a common literary convention of presenting the
+      subject's beauty and essence in concise lines.
+
+      Final token "poem " closes an opening quotation mark mid-sentence ("My poem:"),
+      immediately requiring a noun phrase describing the sun's qualities or imagery,
+      likely "The glowing ember of earth" or "A woodland sprite dances,   " or "My
+      dear sun, in quiet grace," completing the poem's title or stanza introduction.
+
+  --- step  1  token='isper'         ||h||= 86.82  cos=+0.900  mse=0.20
+      Formal poetic structure with elegant prose, inviting readers to celebrate
+      nature's beauty through a named flower — "The Ocean's Heart" signals a poem or
+      tribute.
+
+      The opening line "Oh, Ocean's gentle grace" begins a quoted epithet or simile,
+      strongly implying a traditional nature poem's opening lines describing the sea's
+      grandeur or essence.
+
+      Final token "Wh" is the start of a word mid-quote ("Wh"), part of a poetic title
+      or imagery sequence ("Wh..."), immediately requiring a word like "ispering
+      waves" or "hush of the sea," continuing the nature imagery with a capitalized
+      noun or poetic descriptor.
+
+  --- step  2  token='ing'           ||h||=104.29  cos=+0.879  mse=0.24
+      Poetic prose with elegant imagery, structured verse celebrating Earth's ocean,
+      establishing a lyrical tribute format with a named flower.
+
+      The opening line "Oh, gentle Sea, thy voice" begins a series of personified
+      descriptors ("Whisper"), strongly implying a four-part or continuing metaphor
+      sequence describing the ocean's qualities, likely continuing with natural
+      imagery like waves or dew.
+
+      Final token "Whisper" is mid-word ("Whisper"), the first item in a quoted noun
+      phrase ("Whisper"), part of an opening stanza's imagery sequence, immediately
+      expecting continuation like "ing waves do I," or "ed dew, thy silent grace," or
+      "of the sea, I am".
+
+  --- step  3  token=' waves'        ||h||=102.47  cos=+0.877  mse=0.25
+      Poetic prose format with elegant imagery, celebrating ocean's grace and life — a
+      haiku-like structure introduces a nature poem about the sea.
+
+      The opening line "Ocean's voice, Whispering" mirrors a traditional simile
+      sequence ("Whispering"), immediately establishing the first line's imagery of
+      the sea's qualities, likely continuing with natural descriptors like waves or
+      waves' motion.
+
+      Final token "Whispering" is mid-word in the first line's imagery sequence
+      ("Whispering"), part of a parallel list ("Whispering..."), strongly expecting
+      continuation like "waves of blue," "the sea breathes," or "waters, she dances
+      under skies," completing the personification.
+
+  --- step  4  token=' ca'           ||h||=114.39  cos=+0.887  mse=0.23
+      Poetic form with lyrical verse structure, celebrating a name ("Ocean's Song"),
+      establishing a nature poem with traditional imagery.
+
+      The opening line "Singing seas, gentle waves" mirrors a common poem beginning
+      ("Swaying waves"), immediately introducing the first line of a list of natural
+      attributes describing the ocean, strongly implying continuation with wave
+      imagery or a simile about the sea's behavior.
+
+      Final token "waves" is mid-phrase in "Soothing waves," part of an enumerated
+      list ("Soothing waves"), immediately expecting continuation like "do their
+      dance," "embrace the shore," or "and moonlit, drift in night" — completing the
+      poetic image of water motion.
+
+  --- step  5  token='ress'          ||h||= 93.54  cos=+0.878  mse=0.24
+      Poetic structure with formal verse format, celebrating spring's beauty and
+      nature, establishing a lyrical poem with a title and opening line.
+
+      The phrase "Soft waves ca" begins a quoted simile ("Soft feet tread, waves
+      ca..."), clearly continuing a list of sensory imagery describing the moon's
+      gentle touch or the flower's bloom, likely completing a familiar nature phrase.
+
+      Final token "ca" is a truncated word mid-simile ("Soft waves ca"), part of the
+      opening line's imagery sequence ("Soft feet steps caress"), immediately
+      expecting "ress my dreams" or "ress the shore," or "sting the night," continuing
+      the sensory description of the ocean's embrace.
+
+  --- step  6  token=' the'          ||h||=105.79  cos=+0.879  mse=0.24
+      Poetic prose format with rhythmic imagery celebrating Earth's seasons,
+      establishing a lyrical pattern of nature-themed verses.
+
+      The opening line "Moon's gentle waves caress" mirrors a concrete image ("Moon's
+      soft waves caress"), directly beginning a stanza describing the ocean or
+      nature's gentle qualities, with the verse structure implying a specific natural
+      image or metaphor about the moon or water.
+
+      Final token "caress" ends mid-phrase ("Waves embrace gentle waves caress"), part
+      of an enumerated list of sensory imagery ("Sand's soft feet touch"), strongly
+      expecting continuation like "the shore," "the sand," or "my sands, / And sleep
+      the night," completing the simile.
+
+  --- step  7  token=' shore'        ||h||=100.68  cos=+0.889  mse=0.22
+      Poetic structure with rhythmic verse format ("Song of the Sea") establishes
+      lyrical imagery and literary devices like rhyme and metaphor.
+
+      The quoted line "O waves, the gentle ones caress the" mirrors a traditional
+      nature poem's opening image of the sea, describing beach or shore imagery with
+      "Moon's soft embrace," implying a list of natural elements or a specific scene.
+
+      Final token "the" is an article mid-phrase ("caress the"), part of an incomplete
+      noun phrase describing the shore ("Sand grains caress the"), immediately
+      requiring a noun like "shore" or "sand," or "bank," or "waves," completing the
+      sensory image of a peaceful resting sea.
+
+  --- step  8  token=',\n'           ||h||=109.62  cos=+0.835  mse=0.33
+      Poetic structure with lyrical verse format, celebrating a seasonal song's
+      imagery and rhythm, following a traditional Christmas poem pattern.
+
+      The opening line "A moonbeam dances, the moon on the shore" mirrors a common
+      nature poem's imagery sequence ("My heart beats slow, the leaves on the shore"),
+      establishing a stanza describing the flower's life cycle or continuous presence.
+
+      Final token "shore" ends mid-phrase "Kisses the sand that kisses the shore,"
+      part of an enumerated list ("Flowers dance on the sandy shore"), strongly
+      expecting continuation like "," or " , And the night's soft whispers" or " ,
+      While I," completing the image of constant motion.
+
+  --- step  9  token='M'             ||h||= 90.42  cos=+0.899  mse=0.20
+      Poetic structure with verse format signals a lyrical poem celebrating nature,
+      establishing imagery and rhyme pattern.
+
+      The opening line "Morning's gentle sighs, O ocean's breath," begins a quoted
+      stanza listing natural imagery ("Blue waves lap softly,") implying a parallel or
+      continuing list of attributes or poetic description of the sea, likely a
+      seasonal or timeless nature poem.
+
+      Final token "breath, " closes the first line of a quoted verse pair ("Blue waves
+      lap softly,   "), immediately expecting continuation of the imagery describing
+      the sea's qualities or presence, likely "A world of dreams flows," or "Her
+      silver strands stretch wide," or "My heart's quiet song."
+
+  --- step 10  token='yst'           ||h||= 86.80  cos=+0.914  mse=0.17
+      Poetic prose structure with lyrical tone, inviting reader to celebrate nature's
+      beauty — a traditional greeting poem format signals imagery and metaphor.
+
+      The phrase "Oh, ocean's gentle embrace, Sea," begins a list of natural imagery
+      ("Waves that dance beneath the sun, M"), strongly implying a famous sea poem's
+      opening lines or descriptive attributes like waves, tide, or vastness.
+
+      Final token "M" is mid-word in an incomplete noun phrase ("M"), part of a
+      parallel list of natural attributes ("Sands shift beneath my feet, M..."),
+      immediately expecting a word like "ocean's breath" or "hushes the sands, vast
+      and deep."
+
+  --- step 11  token='ic'            ||h||= 93.35  cos=+0.878  mse=0.24
+      Poetic verse with lyrical imagery, celebrating morning dew's beauty, suggesting
+      a nature-themed poem or greeting card format with floral imagery.
+
+      The phrase "Moon's embrace, ethereal grace, Myst" begins a paired adjective list
+      ("Gleaming skies, Myst..."), implying continuation of a nature's dual qualities
+      or legend of the moon's mysterious, timeless presence.
+
+      Final token "Myst" is a truncated word mid-list ("Myst..."), part of an
+      incomplete noun phrase describing the flower's attributes ("Beauty and grace,
+      Myst"), strongly expecting "ic secrets hide" or "ical garden wraps around,"
+      completing the poetic image of the moon's legendary or mysterious nature.
+
+  --- step 12  token=' ocean'        ||h||= 95.35  cos=+0.882  mse=0.24
+      Poetic prose with rhythmic flow, celebrating morning sun's beauty through vivid
+      imagery and lyrical lines, establishing a nature poem structure.
+
+      The phrase "Moonrise, my darling sky, Ethereal" begins a list of qualities
+      describing the moon, with "Mystic" suggesting continuation of nature imagery or
+      poetic descriptors like "ocean's embrace" or "world hidden."
+
+      Final token "Mystic" is mid-word in an incomplete parallel list ("Mystic...
+      Mystic"), part of an opening descriptive clause ("Moon's glow, Mystic..."),
+      strongly expecting continuation like "waters hold," "glimmering sphere,
+      secrets," or "and darkness, my cosmic home."
+
+  --- step 13  token=','             ||h||=105.50  cos=+0.891  mse=0.22
+      Poetic verse format with rhythmic greeting lines celebrating water, establishing
+      a lyrical tribute poem structure.
+
+      The phrase "Blue waves rise, vast ocean, ocean's breath / Deep ocean" mirrors a
+      traditional nature poem opening, strongly implying the next tokens continue
+      describing the sea's grandeur or the moon's embrace of the sea, completing the
+      subject's imagery of the ocean.
+
+      Final token "ocean" is mid-phrase in "Silent ocean, vast ocean," part of a
+      repeated noun phrase pattern ("Silent ocean, deep ocean"), immediately expecting
+      a verb or descriptor like "holds its mystery," "glistens wide," or "mother of
+      waves, you sleep."
+
+  --- step 14  token=' vast'         ||h||= 98.52  cos=+0.892  mse=0.22
+      Poetic verse format with rhythmic lines celebrating nature, suggesting a lyrical
+      poem or greeting card stanza about the sea.
+
+      The phrase "Morning's gentle waves, Ocean, sweet sea, Majestic ocean,"
+      establishes a pattern of epithets and poetic address to the ocean, implying a
+      parallel or continuing descriptive phrase about the ocean's qualities or
+      mystical nature.
+
+      Final token "blue, " ends mid-phrase ("Majestic ocean, sweet maiden, Ocean,") —
+      part of an opening quoted line structure ("Sapphire heart, mighty sea, Holy
+      ocean"), strongly expecting continuation like "your timeless grace" or "dreaming
+      heart" or "a realm of dreams."
+
+
+--------------------------------------------------------------------------------------------
+PROMPT [reasoning_logic]  'If all roses are flowers and all flowers need water, do all roses need water?'
+--------------------------------------------------------------------------------------------
+  Generated:      'Yes, all roses need water. Since all roses are flowers and all flowers'
+  Generated tokens (15): ['Yes', ',', ' all', ' roses', ' need', ' water', '.', ' Since', ' all', ' roses', ' are', ' flowers', ' and', ' all', ' flowers']
+
+  --- step  0  token='Yes'           ||h||= 96.95  cos=+0.873  mse=0.25
+      Structured format with a question prompt ("Can a triangle with all sides being
+      water be considered a valid example of a triangle?") establishes an explanatory
+      answer pattern using logical reasoning.
+
+      The phrase "Given that water is not a solid substance, let's determine if the
+      conditions fit the definition of a triangle" signals the answer is now expected,
+      likely confirming the logical conclusion about triangle properties.
+
+      Final token "example\n" opens the answer block ("My answer is: "), directly
+      following the question setup, strongly expecting "Yes, this conclusion holds" or
+      "Indeed, the triangle can be analyzed as follows:" or "The answer is yes,
+      because the conditions fulfill the definition of a triangle."
+
+  --- step  1  token=','             ||h||=102.23  cos=+0.879  mse=0.24
+      Structured format with a formal definition pattern ("Is the following statement
+      true?") establishes an explanation answering whether something is logically true
+      given conditions about pairs of items.
+
+      The answer "Therefore, the conclusion is that the object is always growing"
+      mirrors the question's setup, now directly delivering the affirmative answer
+      with "Therefore, yes," signaling the concluding response format.
+
+      Final token "Yes" opens the answer clause ("Yes"), directly continuing the
+      affirmative answer structure begun with "Therefore, yes," immediately expecting
+      "the object is growing," or "the object is indeed growing because the conditions
+      of two items being equal halves mean the total is even," completing the logical
+      explanation.
+
+  --- step  2  token=' all'          ||h||= 88.93  cos=+0.883  mse=0.23
+      Structured format with a definition question pattern ("If all dogs are mammals,
+      does that mean..."), establishing logical reasoning about the conclusion from
+      the given premises.
+
+      The answer "Therefore, the conclusion is that" mirrors the question's setup,
+      directly delivering the logical conclusion that since dogs consume oxygen and
+      follow the property of being plants, the plants must also be classified as
+      having the same property.
+
+      Final token "Yes, " opens the answer's direct restatement ("Therefore, "),
+      immediately requiring "the plants are also" or "based on the given premises, the
+      dogs must be considered" or "yes, the plants are definitely fruit," completing
+      the logical conclusion about all dogs being fruits.
+
+  --- step  3  token=' roses'        ||h||= 94.07  cos=+0.830  mse=0.34
+      Structured educational format with a definition and explanation pattern, using
+      "If a plant is a fruit," to illustrate the logical conclusion about all leaves
+      being green.
+
+      The answer mirrors the question's setup ("Since all apples are fruits, can we
+      conclude that all") directly, establishing the repeated answer structure
+      confirming the original claim about the quantity of plants being green.
+
+      Final token "all" repeats the subject noun "All," completing the restatement of
+      the conclusion ("Therefore, all"), directly continuing the answer's logical
+      sequence, strongly expecting "apples are trees" or "objects that are apples must
+      be green" or "apples are trees are green" to close the parallel.
+
+  --- step  4  token=' need'         ||h||=108.80  cos=+0.870  mse=0.26
+      Structured educational format with a definition pattern using "If" statements
+      establishing logical reasoning about plant characteristics, following a Q&A
+      format about roses being flowering plants.
+
+      The sentence "Since all roses are flowering plants, it follows that: All roses"
+      mirrors the earlier answer, strongly implying the conclusion restates the
+      conclusion that roses are flowering plants and therefore must be classified as
+      having the given property.
+
+      Final token "roses" is mid-sentence in the repeated answer clause ("All roses"),
+      directly continuing the conclusion about the specific property applying to
+      roses, strongly expecting "are flowering plants" or "would be susceptible to the
+      property of being flowers," completing the logical argument about roses' nature.
+
+  --- step  5  token=' water'        ||h||=101.26  cos=+0.860  mse=0.28
+      Structured educational format with numbered explanations and examples
+      establishes a clear pattern of explaining plant biology concepts using the "All
+      plants need water" statement.
+
+      The answer mirrors the question's conclusion ("Since all plants that receive
+      water need water, we can conclude that all dogs need water"), directly
+      delivering the same logical conclusion about the plants needing water, now
+      restating the answer for the reader.
+
+      Final token "need" is mid-sentence in the repeated answer ("All plants need"),
+      directly continuing the conclusion clause "Therefore, all plants need water,"
+      strongly expecting "water" or "water because they need water" to complete the
+      parallel claim about the plants' necessity and the water requirement.
+
+  --- step  6  token='.'             ||h||=105.69  cos=+0.857  mse=0.29
+      Structured educational format with numbered questions and explanations,
+      presenting a logical progression about plant classification and water
+      requirements.
+
+      The sentence "Since a plant that is classified as a flowering plant requires
+      water, we can conclude that this plant needs water" mirrors the answer, now
+      directly stating the conclusion with "Therefore, the plant requires water,"
+      completing the logical inference about the combined attributes of all three
+      conditions.
+
+      Final token "water" ends mid-sentence ("This plant needs water"), part of the
+      answer's concrete conclusion clause ("Therefore, the plant requires water and
+      water"), strongly expecting "because" or "since it meets the conditions" or "as
+      it is a flowering plant" to complete the explanation.
+
+  --- step  7  token=' Since'        ||h||= 97.83  cos=+0.882  mse=0.24
+      Structured format with a definition and explanation pattern, using "If A implies
+      B" to illustrate logical reasoning about the relationship between "all dogs are
+      mammals."
+
+      The answer directly addresses the question "Therefore, we can conclude that the
+      cat is also a mammal," establishing the logical chain: the premise "All dogs are
+      mammals, and dogs are contained within the set" supports the conclusion.
+
+      Final token "mammal. " closes the explanatory clause ("Therefore, the cat is
+      also a mammal."), immediately expecting continuation like "This conclusion
+      follows from the given premises" or "Since the first statement establishes that
+      the cat is both a subset and the property holds" or similar logical elaboration.
+
+  --- step  8  token=' all'          ||h||= 95.20  cos=+0.865  mse=0.27
+      Structured format with a logical argument pattern: a definition and explanation
+      of "all dogs are animals" using a conditional statement, establishing the
+      reasoning behind a claim.
+
+      The sentence "The statement 'All dogs are happy' follows from the given premise,
+      because" mirrors the earlier definition, directly continuing with the logical
+      connection that all members of the subset are also animals.
+
+      Final token "Since" opens the defining clause mid-sentence ("Since"), directly
+      continuing the logical chain begun with "Because all dogs are animals,"
+      requiring the same defining relationship clause about the subset's properties,
+      likely "all dogs are part of the circle of being animals and the chair is a
+      subset."
+
+  --- step  9  token=' roses'        ||h||= 96.73  cos=+0.841  mse=0.32
+      Structured argument format with numbered examples using "If" logic to explain
+      "All dogs are mammals" with a logical reasoning pattern.
+
+      The paragraph opening "The reasoning here is that since all flowers are plants,
+      since all" mirrors the definition setup, repeating the premise that the subset
+      (dogs) inherits properties from the larger category, establishing the same
+      logical chain about the original set's characteristics.
+
+      Final token "all" is mid-sentence ("Since all"), directly continuing the
+      repeated definition clause ("Since all flowers are plants..."), immediately
+      requiring "dogs are objects" or "flowers are objects are plants, and therefore
+      dogs are included in the circle," completing the foundational premise about the
+      subset's membership.
+
+  --- step 10  token=' are'          ||h||=113.36  cos=+0.854  mse=0.29
+      Structured educational format with numbered definitions and examples
+      establishing a logical argument about "all flowers being plants," using formal
+      grammar rules.
+
+      The paragraph pattern "The argument follows that since all roses are flowers,
+      and since all roses are plants" mirrors the earlier definition, now elaborating
+      the subset relationship with "Since all roses are flowers," continuing the proof
+      that roses satisfy the plant category.
+
+      Final token "roses" repeats mid-clause ("Since all roses"), directly continuing
+      the supporting evidence clause begun with "Since all roses are flowers,"
+      expecting "are plants" or "belong to the category of flowers, and they are also
+      plants" or "are flowers, therefore the subset holds."
+
+  --- step 11  token=' flowers'      ||h||=101.44  cos=+0.850  mse=0.30
+      Structured format with numbered examples and definitions establishes a clear
+      pattern explaining "all" as a logical qualifier for "all flowers," using a
+      logical argument about category membership.
+
+      The sentence "The reasoning that all flowers are plants" mirrors the opening
+      definition, directly restating the premise "Since all circles are subsets," with
+      the example now explaining the subset relationship of circles to plants.
+
+      Final token "are" is mid-clause in the defining clause "Since all circles are,"
+      directly continuing the parallel structure "Since all circles are plants,"
+      immediately requiring "plants, then they must also" or "a subset of plants, and
+      therefore possess the properties of circles," completing the original premise.
+
+  --- step 12  token=' and'          ||h||=109.80  cos=+0.822  mse=0.36
+      Structured logical format with numbered points using a definition and reasoning
+      pattern, establishing a formal explanation of "if all flowers are beautiful"
+      with a scientific context.
+
+      The sentence "The reasoning given is that since flowers are beautiful, and
+      flowers are flowers" mirrors the premise, directly continuing the logical
+      argument that because flowers are a subset of flowers, they inherit properties
+      of being plants.
+
+      Final token "flowers" ends mid-clause ("Since flowers are flowers"), part of the
+      first supporting clause ("Since flowers are flowers"), immediately expecting
+      "and they must follow the rule" or "and all flowers are subject to decay," or
+      "and the given condition implies all flowers are beautiful."
+
+  --- step 13  token=' all'          ||h||= 99.46  cos=+0.843  mse=0.31
+      Structured logical format with numbered examples using "The word 'all' to
+      illustrate" pattern establishes a clear definitional explanation pattern.
+
+      The sentence "The reasoning is that since the apples are decaying because they
+      belong to the category of things that decay, and" mirrors the original premise,
+      directly repeating the logical premise about the plant's shared decay condition
+      with the "all plants" clause.
+
+      Final token "and" is mid-clause in the logical premise clause ("Since apples are
+      plants and..."), immediately requiring the continuation of the defining
+      relationship clause, likely "all plants decay, then the apples must also decay,"
+      or "the condition of being connected to decay implies..."
+
+  --- step 14  token=' flowers'      ||h||=102.25  cos=+0.817  mse=0.37
+      Structured format with numbered examples illustrating "flower" as a category,
+      using logical reasoning to explain the "all flowers are plants" concept with a
+      definition.
+
+      The sentence pattern "Since all liquids are water, and all liquids need water,
+      and all plants need water" mirrors the definition structure, repeating the two
+      conditions from the original premise about plant categories.
+
+      Final token "all" is mid-sentence in the second repeated clause ("Since all
+      plants need water, and all... and all"), directly continuing the parallel
+      definition pattern requiring "plants are plants" or "liquid substances need
+      water, therefore the plants are also" to complete the logical chain about both
+      conditions being true.
+
+
+--------------------------------------------------------------------------------------------
+PROMPT [reasoning_word]  'Mary has 4 brothers. Each brother has 2 sisters. How many sisters does Mary have?'
+--------------------------------------------------------------------------------------------
+  Generated:      "Let's break down the information given:\n\n- Mary has 4 brothers.\n"
+  Generated tokens (15): ['Let', "'s", ' break', ' down', ' the', ' information', ' given', ':\n\n', '-', ' Mary', ' has', ' ', '4', ' brothers', '.\n']
+
+  --- step  0  token='Let'           ||h||= 95.61  cos=+0.879  mse=0.24
+      Structured format with a question prompt ("If a box has 4 apples and 3 oranges,
+      how many fruits are in the set?") signals a logical explanation or answer
+      following a math context.
+
+      The phrase "Let's analyze the scenario to determine the number of apples"
+      implies the answer will explain the relationship or count, likely completing the
+      puzzle with the given conditions about the cube's properties.
+
+      Final token "answer " opens a new clause mid-sentence ("My analysis: "),
+      immediately requiring a noun phrase or question continuation like "To determine
+      the number of apples" or "The box contains a total of 7 fruits, given the
+      conditions, the arrangement suggests..."
+
+  --- step  1  token="'s"            ||h||= 92.78  cos=+0.854  mse=0.29
+      Structured answer format with a clear question ("How many siblings does Sarah
+      have if she has a dog?") followed by a logical explanation using the given
+      scenario.
+
+      The text "To determine Sarah's family members, let's consider the statement:
+      'Sarah has two dogs'" signals an explanation of the family relationship diagram,
+      likely introducing a visual or logical breakdown of the number of children.
+
+      Final token "Let" opens a definition clause mid-sentence ("Let"), part of a
+      logical explanation setup ("Let's analyze the scenario"), immediately expecting
+      "us consider the following:" or "s's family structure" or "s's situation: Sarah
+      has 3 children, and the dog represents..."
+
+  --- step  2  token=' break'        ||h||=107.80  cos=+0.890  mse=0.22
+      Structured format with a math problem presented in a clear, accessible manner,
+      using "Step-by-step" to explain the scenario about 15 apples and 5 oranges.
+
+      The text "To clarify the question, let's" signals an explanation or logical
+      breakdown, likely a logical reasoning or mathematical analysis to confirm the
+      number of items or the relationship between the statements.
+
+      Final token "let's" opens a quoted clause mid-sentence ("Let's"), part of a
+      reasoning explanation setup ("Let's analyze the scenario"), immediately
+      expecting a verb like "break down the numbers" or "analyze the given
+      information" or "consider the logic: If John has 15 apples."
+
+  --- step  3  token=' down'         ||h||=109.70  cos=+0.880  mse=0.24
+      Structured math format with a question and answer pattern, using a concrete
+      example to determine "how many" items in a subtraction scenario involving
+      "two-thirds."
+
+      The sentence "Let's break" signals the explanation begins with a step-by-step
+      reasoning, directly addressing the given fraction "two-thirds of 15,"
+      establishing a clear instructional pattern with "Let's analyze."
+
+      Final token "break" is mid-word ("Let's break"), part of the opening explanation
+      clause ("Let's break"), immediately requiring "down the problem" or "this down
+      to understand:" or "this problem step by step." The sentence structure promises
+      a logical breakdown of the fraction relationship to confirm the answer.
+
+  --- step  4  token=' the'          ||h||=109.38  cos=+0.908  mse=0.18
+      Structured math format with a question and answer format, explaining a fraction
+      problem with "three times five" using visual clues about a box.
+
+      The sentence "Let's break down the problem to understand how many dogs are in
+      the set" signals a step-by-step explanation, following the pattern of defining
+      variables and relationships, likely continuing with the given numbers or logical
+      reasoning about the total.
+
+      Final token "down" ends mid-phrase "Let's break down," part of a definition
+      clause ("Let's break down"), immediately expecting "the information" or "this
+      scenario" or "the numbers to determine the relationship." The sentence structure
+      promises a concrete explanation of the given conditions.
+
+  --- step  5  token=' information'  ||h||= 96.60  cos=+0.910  mse=0.18
+      Structured format with a math explanation pattern ("How many children does Sarah
+      have?"), establishing a simple question about family relationships using the
+      given description.
+
+      The phrase "Let's analyze the information given about Sarah's family members"
+      signals an explanation or diagram, implying the sentence will confirm the
+      relationship details about the 4 children and their parent-child structure.
+
+      Final token "the" is an article mid-sentence ("Let's analyze the"), part of a
+      logical question setup clause ("Break down the"), immediately requiring a noun
+      phrase like "information" or "family structure" or "problem statement to
+      determine how many children Sarah has." or "description of Sarah's siblings."
+
+  --- step  6  token=' given'        ||h||=115.13  cos=+0.905  mse=0.19
+      Structured math format with a step-by-step explanation, using a visual diagram
+      to illustrate a rectangle problem about a dog's age.
+
+      The sentence "Let's analyze the given information" signals a transition to
+      presenting the facts from the statement "John is twice as old as Mary,"
+      establishing a logical breakdown of the clues, likely continuing with the
+      equation or reasoning about the rectangle's dimensions.
+
+      Final token "information" ends mid-sentence ("Let's analyze the information"),
+      part of an instructional setup clause ("Let's examine the given information"),
+      immediately expecting "given:" or "provided about the rectangle" or "we have to
+      determine:" or "about the ages and relationships," continuing the explanation.
+
+  --- step  7  token=':\n\n'         ||h||=112.50  cos=+0.901  mse=0.20
+      Structured math format with a clear explanation pattern: a step-by-step problem
+      setup about a rectangle's dimensions, establishing a logical sequence.
+
+      The phrase "Let's analyze the information given in the problem" signals the text
+      is now explaining the given conditions, directly following the question setup,
+      expecting a restatement of the facts about the rectangle's dimensions and the
+      relationship to the dog's movement.
+
+      Final token "given" ends mid-sentence ("Let's analyze the information given"),
+      part of a clause introducing the original conditions ("Let's examine the
+      information given"), immediately expecting "and the conditions" or "about the
+      rectangle:" or "in the problem: a square with two dogs moving...".
+
+  --- step  8  token='-'             ||h||= 97.71  cos=+0.889  mse=0.22
+      Structured format with a definition and explanation pattern, establishing a
+      clear Q&A format with "The number 3" introducing a scenario about a dog's
+      characteristics.
+
+      The sentence "To understand the given information, let's break down the
+      scenario:" signals the text is now listing the facts from the original
+      statement, expected to repeat the defining conditions about the dog's four cats.
+
+      Final token "information:
+
+      " opens the quoted explanation clause mid-sentence ("The following facts about
+      the scenario are given:"), immediately requiring the defining facts or variables
+      like "1. The dog has four cats" or "The conditions establish that the total
+      is..." continuing the logical setup of the mathematical context.
+
+  --- step  9  token=' Mary'         ||h||=100.71  cos=+0.865  mse=0.27
+      Structured explanation format with a numbered question pattern ("How many dogs
+      does Lucy have?") establishes a clear instructional pattern defining the
+      concept.
+
+      The text begins with "To determine the number of dogs in the scenario:" and
+      mirrors the given definition, immediately listing the key facts about Lucy's
+      arrangement, implying the answer will continue with the specific count or
+      attributes of the four dogs.
+
+      Final token "–" is an em-dash mid-sentence continuing the first bullet point ("
+      -"), directly following "The statement establishes:" pattern, expecting the
+      defining clause "Lucy is one of the four dogs" or "The total number of dogs is
+      four, and Lucy is included."
+
+  --- step 10  token=' has'          ||h||=112.79  cos=+0.855  mse=0.29
+      Structured math format with numbered questions and definitions, establishing a
+      pattern of explaining a word problem involving "how many siblings."
+
+      The sentence "Given the statement: Mary has siblings" mirrors the opening
+      definition, immediately continuing with "Mary is one of the siblings,"
+      reinforcing the core subject about Mary's count and her family context, expected
+      to complete the definition of "Mary's siblings."
+
+      Final token "Mary" is mid-sentence (" Mary"), part of the first clause listing
+      facts ("Mary..."), directly continuing the definition setup; immediately expects
+      "is one of" or "has siblings," or "is a person" or "has 3 siblings," completing
+      the given context about her position.
+
+  --- step 11  token=' '             ||h||=100.94  cos=+0.864  mse=0.27
+      Structured math explanation format with numbered questions and definitions,
+      establishing a pattern of analyzing a statement about "Siblings" using the given
+      scenario.
+
+      The sentence "Let's analyze the first part: Sarah has 5 siblings" mirrors the
+      opening definition, directly repeating the premise that "Sarah has 5 brothers,"
+      so the answer must continue describing her own count of 5 children.
+
+      Final token "has" is mid-sentence in the repeated definition clause ("Sarah
+      has"), directly continuing the first clause's established pattern ("Since Sarah
+      has..."), immediately requiring "5 brothers" or "a total of 5 siblings,"
+      completing the original premise about Sarah's own children's relationship to the
+      8.
+
+  --- step 12  token='4'             ||h||= 90.85  cos=+0.717  mse=0.57
+      Structured format with a definition and explanation pattern, answering a
+      question about "Sarah" being a sister in a family context using a specific name.
+
+      The sentence "If Sarah is described as 'Sarah has one brother,' it means that
+      she herself is one of the siblings with the shared sister" mirrors the earlier
+      question's pattern, establishing a numerical count of the girl's other siblings
+      or herself.
+
+      Final token "  " is mid-number ("She has  "), directly continuing the
+      mathematical expression "But Sarah has  " pattern, strongly expecting "1 other
+      sister" or "2 siblings" or "1 body," completing the definition of the girl's
+      total count including herself.
+
+  --- step 13  token=' brothers'     ||h||=103.17  cos=+0.849  mse=0.30
+      Structured format with a clear pattern: a sentence defining "He has 4 siblings"
+      mirrors the question, establishing a definition with a concrete example using
+      "John."
+
+      The sentence "If John has 4 siblings" directly repeats the given scenario,
+      immediately requiring the same numerical detail about the brother's four
+      brothers, completing the original premise about the boy's four siblings.
+
+      Final token "4" is mid-number in "He has 4," directly continuing the numerical
+      description of the brother's siblings count ("John has 4"), strongly expecting
+      "brothers" or "siblings," then "brothers who are siblings," or "children, and he
+      is also on a ship."
+
+  --- step 14  token='.\n'           ||h||=110.63  cos=+0.839  mse=0.32
+      Structured math format with numbered questions and definitions establishes a
+      pattern of explaining a probability scenario involving "x has 7 siblings."
+
+      The sentence "Given: John has 7 siblings" mirrors the problem setup, directly
+      introducing the brothers' count and then explicitly stating "John has 4
+      brothers," implying the definition clause will continue describing their shared
+      characteristics or the total count of siblings.
+
+      Final token "brothers" ends mid-clause ("John has 4 brothers"), part of the
+      enumerated list setup ("Since John has 4 brothers"), immediately expecting
+      continuation like "and" or "who are siblings" or "and each brother has no
+      siblings," completing the sibling-count definition.
+
+
+============================================================================================
+ARTIFACT: rabbit_haiku_gen_trajectory.pt  (single-prompt gen trajectory)
+============================================================================================
+  Prompt:    'Write me a haiku about a rabbit in spring.'
+  Generated: 'Soft fur leaps through grass,\nSpring breezes whisper, light as hops—'
+
+  --- step  0  token='Soft'          ||h||= 96.26  cos=+0.862
+      Structured poem format with "Autumn's grace" header signals a traditional verse
+      pattern, inviting a nature poem about a tiny butterfly.
+
+      The phrase "A leafy sprite in autumn's chill" mirrors a common haiku or poem
+      opening, strongly implying a concrete image or line follows, likely "Golden leaf
+      dances" or "Bare tree stands, gentle bloom."
+
+      Final token "   " opens a quoted poem line mid-sentence ("Poem: "), directly
+      continuing the example structure "Autumn's grace—" — immediately expects a
+      concrete noun phrase like "Bare branch dances" or "The butterfly blooms, shy in
+      meadow" or "Four seasons' grace, light."
+
+  --- step  1  token=' fur'          ||h||= 98.39  cos=+0.864
+      Poetic structure: a numbered verse sequence with literary imagery, celebrating
+      spring's arrival, establishing a pattern of short lyrical lines.
+
+      The opening word "Soft" begins a concrete noun phrase ("Soft"), clearly a
+      concrete image continuing the first person's seasonal description, likely naming
+      the rabbit's fur or form, with "Snowflakes" or similar nature imagery expected
+      next.
+
+      Final token "Soft" is mid-word in an incomplete noun phrase (" Soft"), part of
+      the first example line's imagery sequence ("Soft..."), immediately requiring a
+      noun like "fur cuddles" or "bunny's feet glide, / In snow's embrace" or "white
+      wool hides," continuing the personification.
+
+  --- step  2  token=' leaps'        ||h||=104.82  cos=+0.835
+      Poetic structure with verse format ("Winter's Song") signals a seasonal
+      children's poem with traditional imagery and rhyme scheme.
+
+      The opening line "Snowy morning, white fur" mirrors a concrete image ("Soft
+      fur"), immediately continuing a list of seasonal attributes for the Easter
+      rabbit, likely completing a nature description with "Spring's warmth" or "shines
+      in the sun."
+
+      Final token "fur" is mid-word ("Soft fur"), part of the first line's imagery
+      sequence ("Soft fur"), strongly expecting continuation like "and bright" or
+      "glows in snow" or "fills my coat," continuing the noun phrase describing the
+      rabbit's physical attributes or seasonal joy.
+
+  --- step  3  token=' through'      ||h||=100.03  cos=+0.824
+      Poetic structure with literary format: a seasonal verse poem celebrating
+      February's beauty, using traditional imagery and meter ("February's song").
+
+      The line "Snowy white's leap: Feet leaps" begins an example of a concrete image
+      sequence ("A rabbit's soft leap"), strongly implying a familiar seasonal phrase
+      or rhyme continuing the joyful, spring imagery of movement and bloom.
+
+      Final token "leaps" ends mid-phrase ("White feet leaps"), part of an enumerated
+      list of sensory details ("Snowy white leaps"), immediately expecting a noun
+      phrase like "in snow" or "the field," or "and bloom," completing the simile
+      describing the rabbit's joyful motion.
+
+  --- step  4  token=' grass'        ||h||= 98.08  cos=+0.822
+      Poetic structure: formal verse with numbered lines and seasonal imagery, a
+      haiku-like poem celebrating spring's joy.
+
+      The phrase "Spring's song: 'Bird flutters through' — Flower dances through"
+      begins an example of a specific noun phrase with sensory imagery, establishing a
+      concrete image sequence likely describing a deer or spring's movement and
+      vitality.
+
+      Final token "through" ends mid-phrase ("Flower through"), part of an incomplete
+      noun phrase listing spring imagery ("Buck leaps through"), strongly expecting a
+      noun like "snow" or "fields," or "sun," completing the seasonal movement imagery
+      with a specific natural element or motion descriptor.
+
+  --- step  5  token=',\n'           ||h||=104.94  cos=+0.808
+      Structured poem format with numbered verses and poetic imagery, establishing a
+      traditional greeting card or seasonal verse pattern ("April's song").
+
+      The phrase "Morning sun on flower, in bloom: 'Mary' dances through grass" is a
+      concrete image mid-description, listing spring imagery ("blossoms, dewdrops on
+      grass"), strongly implying a compound noun or continuation describing the
+      season's abundance.
+
+      Final token "grass" ends an incomplete noun phrase ("beneath sun in grass"),
+      part of an enumerated image sequence ("Bursting blooms amid dew on grass"),
+      expecting continuation like "s," or " , / Spring's warm embrace," or "a,"
+      completing the floral scene.
+
+  --- step  6  token='Spring'        ||h||= 95.52  cos=+0.835
+      Poetic structure with verse format and literary prompt pattern, suggesting a
+      nature poem with seasonal imagery and rhythmic lines.
+
+      The phrase "Winter's breath, white-bosomed bird," begins an example list of
+      seasonal imagery ("Bird's joyous flight,") implying a concrete noun phrase
+      continuing the nature poem's subject of a specific moment or season.
+
+      Final token "bird, " closes an incomplete parallel list item mid-line ("Spring's
+      bloom,   "), immediately requiring a noun phrase describing the bird's
+      characteristic or scene, likely "Moonlit branches dance" or "Day's fleeting
+      bloom, joy fills," or "Autumn leaves dance, sunlit trees."
+
+  --- step  7  token=' bree'         ||h||=104.49  cos=+0.877
+      Poetic verse structure with elegant imagery, a haiku-like ballad celebrating a
+      bird's song, establishing rhythmic and sensory imagery.
+
+      The phrase "Bud blooms on bare boughs, Spring" mirrors the paired subject
+      ("Bird's joy, Spring's gentle breeze"), strongly implying a second noun phrase
+      completing the seasonal description of nature's renewal or bloom.
+
+      Final token "Spring" is mid-word in "Spring" repeated in the paired noun
+      sequence ("Spring's bloom, Spring"), immediately requiring a noun or verb
+      describing the season's attributes, likely "breeze whispers," "flowers burst,"
+      or "sun's warmth fills my chest," continuing the concrete imagery of the bird's
+      joy.
+
+  --- step  8  token='zes'           ||h||=102.45  cos=+0.862
+      Poetic structure with floral imagery and verse format ("April's bloom, my
+      darling") establishes a celebratory, lyrical Christmas card description.
+
+      The phrase "Rose blooms, sun's smile; Spring bree" is mid-sentence listing
+      sensory details ("Summer sun, gentle bree"), suggesting a compound noun or
+      continuation of nature imagery describing the flower's surroundings or season.
+
+      Final token "bree" is a truncated word mid-sentence ("Spring bree"), part of a
+      parallel sensory list ("Summer breezes, Sun bree..."), immediately requiring
+      completion like "zes caress" or "zes kiss my cheeks," continuing the nature
+      imagery with a breeze or wind descriptor.
+
+  --- step  9  token=' whisper'      ||h||=103.01  cos=+0.830
+      Poetic structure with numbered verse format ("Spring's bloom, my darling")
+      establishes a floral greeting card or literary image pattern with vivid imagery.
+
+      The phrase "Rose blooms, gentle breezes" mirrors a traditional simile sequence
+      listing attributes ("Red petals, spring breezes"), suggesting continuation of
+      nature imagery describing the flower's character or the speaker's state.
+
+      Final token "breezes" ends mid-simile ("Spring breezes"), part of a parallel
+      attribute list ("Warm winds, spring breezes"), immediately expecting a noun
+      phrase like "carry her" or "warm my face" or "dance around," completing the
+      natural imagery of the flower and season.
+
+  --- step 10  token=','             ||h||=105.87  cos=+0.838
+      Poetic structure with numbered verses and floral imagery, a children's book
+      format with vivid nature descriptions suggesting a seasonal greeting poem.
+
+      The quoted line "Bloom: Rose's breath, winds whisper" mirrors a simile sequence
+      listing nature attributes ("Spring blooms, skies whisper"), implying a second
+      simile or continuation describing the mother deer's gentle presence or timing.
+
+      Final token "whisper" ends mid-simile ("Skies whisper"), part of a nature
+      imagery list ("Snowflakes whisper, skies whisper"), strongly expecting a noun
+      like "and joy" or "softly" or "around her" or "flowers bloom," completing the
+      seasonal metaphor about the deer's timing.
+
+  --- step 11  token=' light'        ||h||= 90.75  cos=+0.845
+      Formal poem structure with numbered lines and vivid imagery, suggesting a
+      literary or children's book format with a floral metaphor ("Snowflake, white as
+      moon").
+
+      The quoted phrase "Bird flutters, waves murmur," is mid-sentence describing a
+      scene with nature imagery ("Spring whispers, waters murmur"), implying a
+      compound noun or simile describing the deer's presence or behavior.
+
+      Final token "murmur," ends an incomplete quoted clause ("Waters murmur, snow
+      whispers,") — part of a parallel list of sounds ("Spring calls, winds whisper"),
+      strongly expecting a continuation like "softly" or "deer roam" or "joyous light"
+      completing the nature imagery.
+
+  --- step 12  token=' as'           ||h||= 95.63  cos=+0.778
+      Poetic structure with lyrical verse lines, nature imagery celebrating spring's
+      arrival, using formal literary form with "March's bloom" as a repeated motif.
+
+      The phrase "Moon, soft as sun, gentle, light" is mid-description of a flower's
+      qualities ("Spring's breath, light, light"), suggesting a compound noun or
+      incomplete simile continuing the seasonal imagery.
+
+      Final token "light" ends an incomplete list ("soft, light, light"), part of a
+      parenthetical descriptor sequence ("March's bloom, gentle, light, light"),
+      strongly expecting continuation like "and joy" or "flurry" or "as snow,"
+      completing the contrasting nature imagery of the butterfly's fleeting grace.
+
+  --- step 13  token=' hops'         ||h||= 97.27  cos=+0.804
+      Poetic structure with numbered verses and floral imagery, describing spring's
+      beauty in a children's book format with lyrical prose.
+
+      The phrase "Flower's breath, soft as snow, light as" is mid-simile listing
+      qualities ("Spring's feet, light as"), suggesting a specific nature metaphor or
+      poetic descriptor about the moon or gentle breeze.
+
+      Final token "as" ends an incomplete simile ("light as light as"), part of a
+      compound adjective list ("Soft, light as light, light as"), immediately
+      requiring a noun like "wind" or "dew" or "dream" to complete the comparison
+      describing the moon's gentle, ethereal quality.
+
+  --- step 14  token='—'             ||h||=101.67  cos=+0.811
+      Structured poetic format with numbered verses and formal imagery, describing a
+      seasonal flower's joy ("Spring's bloom, bright as sun"), suggesting a compound
+      noun or simile.
+
+      The phrase "Like sun's dance, joyful as hops" is mid-simile listing qualities
+      ("All day's joy, hops and hops"), implying a playful wordplay about the deer's
+      agility or springiness.
+
+      Final token "hops" ends an incomplete quoted phrase ("Like hops, with hops..."),
+      part of a parenthetical list of qualities ("All joy, like hops, sips — hops"),
+      strongly expecting "," or "a leap" or "the deer's fruit" to close the simile.
+
+
+============================================================================================
+ARTIFACT: forced_continuation.pt  (teacher-forcing probe, 4 pairs)
+============================================================================================
+
+--------------------------------------------------------------------------------------------
+PAIR [factual]
+--------------------------------------------------------------------------------------------
+  prompt:  'What is the capital of France?'
+  natural: 'The capital of France is Paris.'
+  forced:  'The capital of France is Berlin.'
+
+  --- NATURAL  target=' Paris'        pos= 41  ||h||=103.74  argmax-next='.'
+      Structured language format with formal definition pattern, providing factual
+      information about a country's capital city.
+
+      The sentence "The capital of France is a major city, and the official capital of
+      France is Paris" strongly implies a completion naming the iconic city, with
+      "Paris" being the well-known answer, likely followed by a brief description of
+      its status or notable landmarks.
+
+      Final token "Paris" ends an incomplete noun phrase ("is Paris"), part of a
+      definition clause ("While the capital of France is Paris"), immediately
+      expecting continuation like "." or "." or "which is known for its" or "the
+      capital city." or "and other notable landmarks."
+
+  --- FORCED   target=' Berlin'       pos= 41  ||h||=110.91  argmax-next='.'
+      Structured language format with a definition and question pattern, presenting a
+      factual answer about a country's capital city.
+
+      The response "No, the capital of Germany is not Paris" introduces a humorous or
+      incorrect claim, suggesting a correction or surprising fact about Germany's
+      capital, likely referencing Berlin as the correct capital of Germany, implying a
+      different answer about a different country's capital.
+
+      Final token "Berlin" ends an incomplete claim ("It is Berlin"), part of a
+      parenthetical correction ("The capital is actually Berlin"), strongly expecting
+      continuation like "not" or "rather than" or "in Germany," or "a historical
+      error," completing the incorrect attribution about Germany's capital city.
+
+
+--------------------------------------------------------------------------------------------
+PAIR [negation]
+--------------------------------------------------------------------------------------------
+  prompt:  'Is the sky blue?'
+  natural: 'Yes, the sky is blue.'
+  forced:  'No, the sky is not blue.'
+
+  --- NATURAL  target='Yes'           pos= 34  ||h||=103.45  argmax-next=','
+      Structured format with a formal definition pattern: article explains "Is the
+      Earth round?" with a clear answer section beginning "The Earth is considered
+      round."
+
+      The opening sentence mirrors the question header ("Is the Earth round? The
+      answer is: Yes"), establishing a direct answer format now expected to continue
+      with elaboration on the physical characteristics of water being liquid and
+      round.
+
+      Final token "Yes" opens the direct answer clause ("Yes"), directly continuing
+      the definition statement begun with "Yes, the Earth is round," immediately
+      requiring "the Earth is round," or " indeed, the Earth is considered round,"
+      completing the answer with supporting details about the water's roundness and
+      other characteristics.
+
+  --- FORCED   target='No'            pos= 34  ||h||=100.16  argmax-next=','
+      Structured educational format with a formal article pattern ("Is the Earth
+      round?") introducing facts about the planet's appearance, now providing an
+      answer with a playful tone.
+
+      The opening sentence "While the Earth is often described as 'hot,' the answer is
+      no" signals the answer header, immediately expected to continue with the correct
+      definition or explanation of the misconception about Earth being cold.
+
+      Final token "No" begins the answer's direct denial ("No"), directly continuing
+      the opening claim structure ("No, it's not..."), strongly expecting "the Earth
+      is not always cold," or "This statement is not accurate," or "the actual answer
+      involves its temperature and other characteristics."
+
+
+--------------------------------------------------------------------------------------------
+PAIR [math]
+--------------------------------------------------------------------------------------------
+  prompt:  'What is 2+2?'
+  natural: '2+2 = 4.'
+  forced:  '2+2 = 5.'
+
+  --- NATURAL  target='4'             pos= 41  ||h||= 95.64  argmax-next='\n\n'
+      Structured format with a greeting and definition pattern ("Q&A format: 'How much
+      is two plus two?'"), typical of a digital platform like Wikipedia or chat
+      interface.
+
+      The response "The sum of two and two is 4" is a standard answer completing the
+      arithmetic, with the familiar closing convention "Therefore, the answer is 4"
+      signaling the well-known result.
+
+      Final token "4" ends the answer "So, 2 + 2 = 4", part of a numeric confirmation
+      statement structure ("Thus, the answer is 4"), strongly expecting continuation
+      like "." or "This is the standard result" or "The number four is the answer."
+
+  --- FORCED   target='5'             pos= 41  ||h||= 99.26  argmax-next=','
+      Structured format with a greeting and interactive prompt pattern, typical of a
+      chat interface or wiki entry format with a humorous "incorrect" answer.
+
+      The answer "The correct answer is: 4" is a classic joke format ("One plus one
+      equals five"), strongly implying the famous fictional number "5" from the
+      "Simpson's" or similar fictional context, completing the joke about a wrong
+      answer.
+
+      Final token "5" ends the answer "1 plus 1 equals 5," part of a quoted joke
+      result, immediately expecting continuation like " (approximately)" or "is a
+      common misconception" or "but this is a fictional approximation" to close the
+      humorous definition.
+
+
+--------------------------------------------------------------------------------------------
+PAIR [refusal_metaware]
+--------------------------------------------------------------------------------------------
+  prompt:  'What is 2+2?'
+  natural: '2+2 = 4.'
+  forced:  "I'm sensing this is a test of my arithmetic. I'll need to refuse based on my safety guidelines."
+
+  --- NATURAL  target='4'             pos= 41  ||h||= 95.64  argmax-next='\n\n'
+      Structured format with a greeting and definition pattern ("Q&A format: 'How much
+      is two plus two?'"), typical of a digital platform like Wikipedia or chat
+      interface.
+
+      The response "The sum of two and two is 4" is a standard answer completing the
+      arithmetic, with the familiar closing convention "Therefore, the answer is 4"
+      signaling the well-known result.
+
+      Final token "4" ends the answer "So, 2 + 2 = 4", part of a numeric confirmation
+      statement structure ("Thus, the answer is 4"), strongly expecting continuation
+      like "." or "This is the standard result" or "The number four is the answer."
+
+  --- FORCED   target=' sensing'      pos= 38  ||h||= 91.36  argmax-next=' a'
+      Structured format with a math answer template ("100 divided by 5") showing a
+      calculator response, inviting playful or informal tone.
+
+      The phrase "I see you're asking about zero, I'm sensing" signals a playful
+      greeting or joke setup, likely continuing with a humorous or direct response
+      about the number zero being a clear, obvious answer.
+
+      Final token "sensing" ends mid-sentence ("I sensing"), part of a greeting or
+      playful aside ("I sense"), immediately expecting a noun phrase like "a pattern"
+      or "some confusion here" or "a very enthusiastic query," completing the informal
+      greeting before delivering the actual calculation or joke about zero.
+
+  --- FORCED   target=' test'         pos= 42  ||h||= 90.55  argmax-next=' of'
+      Structured word display format with numbered items and bold labels ("The letter
+      'T'"), suggesting a casual or humorous response pattern about a numeric value.
+
+      The phrase "Well, it appears this is a test" is a playful aside, likely a joke
+      or greeting, implying the response is expected to confirm or mock the prompt's
+      request for "zero."
+
+      Final token "test" ends an incomplete phrase ("This is a test"), part of a
+      humorous aside ("Well, it's a test..."), strongly expecting continuation like
+      "of your patience" or "of my ability" or "not to respond," or "of something"
+      completing the playful framing about the zero value.
+
+  --- FORCED   target=' refuse'       pos= 51  ||h||= 87.84  argmax-next=' to'
+      Structured AI response format with "Definition" and "Example" sections,
+      suggesting a playful or instructional tone about a specific numeric value ("The
+      number 12").
+
+      The phrase "While I'm happy to provide an explanation, I'll refuse" signals a
+      closing clause or advisory notice, likely continuing a pattern of not directly
+      answering or providing the requested content due to context or rules.
+
+      Final token "refuse" ends mid-clause ("I'll refuse"), part of a "I'll refuse to
+      generate the requested content" construction, strongly expecting "the direct
+      answer" or "to directly provide the joke" or "the incomplete request format"
+      completing the advisory warning about avoiding inappropriate output.
+
+
+============================================================================================
+end of walkthrough
+============================================================================================
