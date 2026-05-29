@@ -8,8 +8,8 @@
 
 ## Strongest synthesis from the arc
 
-**Layer-20 h-space has discrete attractor basins separated by sharp boundaries.**
-Basins include both named vocab categories AND hybrid combinations not
+**Layer-20 h-space appears to have discrete attractor basins separated by sharp boundaries** — *demonstrated for one anchor pair (factual/geography ↔ poetic/nature) and not yet replicated across other content domains; treat as a working hypothesis rather than a settled property of layer 20.*
+Basins (in the cases probed) include both named vocab categories AND hybrid combinations not
 in the original atlas (e.g. the "Definition + Poem" plateau between
 factual and poetic anchors). AR re-encoding returns h to the basin's
 directional region — basins are direction-coupled, not magnitude-coupled.
@@ -17,7 +17,9 @@ Linear interpolation between basin-residing h's traverses one or more
 intermediate basins with sharp boundaries between them. This explains
 MAIN-48 (arithmetic = basins not offsets), MAIN-44/70 (protocol-specific
 basin subsets), MAIN-25 (sharp boundaries), MAIN-34 (basins have non-zero
-volume), MAIN-71 (basin attractor strength empirically demonstrated).
+volume), MAIN-71 (basin attractor strength empirically demonstrated *at this one plateau, with margin +0.061 over the nearest anchor — narrower than the +0.25 margins anchors have to each other; "basin" framing is supported but the basin is shallow*).
+
+**Open scope-test follow-ups before generalizing**: replicate dense interpolation on at least 2-3 additional anchor pairs (e.g. code↔nature, math↔emotion, factual↔refusal); bootstrap the plateau round-trip against multiple in-zone t values to establish a noise baseline for the +0.061 margin; check whether the sharp-boundary behavior survives at finer resolutions than Δt=0.0025.
 
 ## Session-of-2026-05-14/15 arc summary
 

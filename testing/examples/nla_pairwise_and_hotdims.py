@@ -133,6 +133,21 @@ def classify_dim_character(stats: dict[str, float]) -> str:
 
     Returns one of: 'sink', 'polarized', 'feature', 'rare_burst', 'background'.
 
+    METHODOLOGY CAVEAT: the threshold values below (0.05/0.95 sign_consist,
+    0.55/0.9 cv_abs, 0.05/0.75 freq_top5/freq_top100) are chosen by visual
+    inspection of the observed top-20 spread on this 167-vector corpus —
+    not derived from a clustering or held-out validation. They classify
+    THIS corpus correctly by wide margins (sink dims have cv ≈ 0.21-0.33,
+    well below the 0.55 cutoff; feature dims have cv ≈ 0.65-0.67, well
+    above) so the labels are robust to ±20% threshold perturbations
+    against THIS data, but the cuts themselves are not data-derived.
+    All downstream analysis (sink removal, discriminants, MAIN-44/70/71
+    framings) is conditioned on these labels. The audit (`nla_audit_findings.py`
+    AUDIT 4) locks the OUTPUT (the 7-sink + 8-feature set by index), so
+    drift in the input data would surface as label-set drift — but the
+    audit can't detect a wrong cutoff choice. A sensitivity-analysis run
+    is filed as a future probe.
+
     Decision tree (cuts chosen from the observed top-20 spread):
 
       sink        : freq_top100 > 0.75 AND sign-locked (sign_consist <= 0.05
