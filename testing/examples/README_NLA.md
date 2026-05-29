@@ -52,3 +52,34 @@ in `research/observations/` are evidence-first writeups citing audit-locked
 numbers. Session-resumption metadata (resume checkpoints, arc summaries
 written at compaction time) lives in `research/sessions/` — separate from
 evidence, see `research/sessions/README.md`.
+
+## "Discriminant" naming — methodology note
+
+The scripts (`nla_discriminant_glyph.py`, `nla_discriminant_connectivity.py`,
+`nla_discriminant_stability_render.py`, `nla_hierarchical_classifier.py`,
+`nla_mid_seq_native_compare.py`) compute per-category directions as:
+
+```python
+d_cat = mean(in_category_h's) − mean(out_of_category_h's)
+d_cat /= ||d_cat||                     # unit-normalized
+```
+
+This is the **unscaled centroid-difference direction** (a.k.a.
+mean-contrast direction or prototype-difference direction), NOT a
+Fisher linear discriminant. A Fisher LDA would be `S_W⁻¹(μ₁−μ₀)` with
+within-class scatter scaling. The codebase consistently uses "discriminant"
+to refer to the centroid-difference vector — this is a research-code
+naming choice, not a claim of Fisher-style optimal-separation properties.
+
+**Why omitting the `S_W⁻¹` term is defensible here**: per category we
+have n=4-12 captures in a 3584-dim space, so `S_W` is singular and any
+LDA would require heavy regularization. The unscaled centroid difference
+is a reasonable proxy in this regime, but it should not be cited as a
+"discriminant" in the formal statistical sense.
+
+Downstream quantitative results (e.g. MAIN-70's +0.5632 in-protocol
+signal, MAIN-44's +0.0491 cross-protocol signal) are correct for
+*what they actually compute* (mean-contrast projection). The
+"discriminant" label is shorthand; readers extending or publishing
+this work should call it the "mean-contrast" or "centroid-difference"
+direction and reserve "discriminant" for properly-scaled methods.
