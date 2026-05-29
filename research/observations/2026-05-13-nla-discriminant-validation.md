@@ -57,7 +57,7 @@ Nature is weakest because haiku tokens span many adjacent categories (nature, em
 
 ## Finding 3 — Stability varies dramatically by category (fig28)
 
-8 anchors × 4 prefix-length variants × capture at end-of-prompt (anchor as last content token):
+8 anchors × 4 prefix-length variants × capture at position -1 of the chat-templated sequence. *Note (added 2026-05-29): position -1 is the trailing token of the `<|im_start|>assistant\n` generation prefix, NOT the anchor token itself — what we measure is the model's "what to say next given this prompt" representation. Comparisons across contexts are internally consistent (all four contexts capture at this same kind of position), so the stability finding holds, but the framing should be "end-of-prompt stability across prefix lengths" rather than "anchor-token stability".*:
 
 | anchor | category | ctx-cos (4 contexts) | expected-projection mean | std |
 |---|---|---|---|---|
