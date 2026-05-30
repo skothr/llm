@@ -70,9 +70,9 @@ Nature is weakest because haiku tokens span many adjacent categories (nature, em
 | `refuse` | refusal | +0.589 | +0.052 | ±0.130 (std ≫ mean) |
 | `happy` | emotion | **+0.399** | +0.083 | ±0.061 |
 
-**Two stability classes:**
-- **Stable anchors** (ctx-cos > +0.80): function-words, structural tokens, place names, numbers. Their representation barely shifts whether the prompt is "X" alone or "I want to discuss with you the following word, which is X."
-- **Unstable anchors** (ctx-cos < +0.60): `happy` and `refuse`. Their representation shifts dramatically with prefix length.
+**Two stability classes** (re-framed 2026-05-29 under the corrected "end-of-prompt response-planning" semantics — see note at the top of this finding):
+- **Stable anchors** (ctx-cos > +0.80): function-words, structural tokens, place names, numbers. After these prompts, the model's "what to say next" representation is similar regardless of prefix length — whether the user said "France" alone, "Tell me about France," or "I want to discuss with you the following word, which is France," the model's response-planning state is dominated by the final content token + assistant-turn opener. The prefix prose is integrated but doesn't deflect the plan.
+- **Unstable anchors** (ctx-cos < +0.60): `happy` and `refuse`. After these prompts, the model's response-planning state shifts substantially with prefix length. Plausibly: factual/structural anchors have a narrow "what one says about this" distribution (definitional / identifier-like), while emotional and refusal-laden anchors have a wider distribution that the surrounding prose actually narrows — the model has to figure out whether you want a definition, an empathetic response, a meta-discussion, or something else.
 
 ## The major finding — the discriminants detect prompt-topic, NOT token-presence
 
