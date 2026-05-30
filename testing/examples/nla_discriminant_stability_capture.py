@@ -78,7 +78,18 @@ def context_prompts(anchor: str) -> dict[str, str]:
 
 
 def find_anchor_position(tokenizer: Any, anchor_text: str, context_text: str) -> int:
-    """Locate the LAST occurrence of anchor_text in the tokenized chat-
+    """INTENTIONALLY UNUSED — DO NOT WIRE WITHOUT RE-CAPTURING ALL STABILITY DATA.
+
+    See the correction comment in `main()` (~L131) for full context. This
+    helper was written for a planned alternative capture protocol (capture
+    at the actual anchor token) but the committed `discriminant_stability.pt`
+    artifact and all downstream analyses were produced under the
+    "capture at position -1 of chat-templated input" protocol. Wiring this
+    function in would silently change the protocol and invalidate all
+    downstream stability comparisons (fig28 + the validation observation
+    + the audit-locked numbers).
+
+    Locate the LAST occurrence of anchor_text in the tokenized chat-
     templated prompt. Returns the position index of the anchor's final token."""
     anchor_end_in_context = context_text.rfind(anchor_text) + len(anchor_text)
     prefix_text = context_text[:anchor_end_in_context]

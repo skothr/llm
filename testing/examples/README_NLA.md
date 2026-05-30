@@ -72,10 +72,12 @@ to refer to the centroid-difference vector — this is a research-code
 naming choice, not a claim of Fisher-style optimal-separation properties.
 
 **Why omitting the `S_W⁻¹` term is defensible here**: per category we
-have n=4-12 captures in a 3584-dim space, so `S_W` is singular and any
-LDA would require heavy regularization. The unscaled centroid difference
-is a reasonable proxy in this regime, but it should not be cited as a
-"discriminant" in the formal statistical sense.
+have n=2-12 captures (median 5; six categories drop to n=2 or n=3) in
+a 3584-dim space, so `S_W` is rank-deficient by orders of magnitude
+(rank ≤ n-1) and any LDA would require heavy regularization (shrinkage
+or pseudo-inverse). The unscaled centroid difference is a reasonable
+proxy in this regime, but it should not be cited as a "discriminant"
+in the formal statistical sense.
 
 Downstream quantitative results (e.g. MAIN-70's +0.5632 in-protocol
 signal, MAIN-44's +0.0491 cross-protocol signal) are correct for
