@@ -2,7 +2,7 @@
 
 A working investigation into what Anthropic's released Natural Language
 Autoencoders (NLAs) for Qwen2.5-7B-Instruct surface about layer-20 hidden
-state structure. Two-week arc, 24 observation files, 36 figures, 20
+state structure. Two-week arc, 22 observation files, 36 figures, 20
 filed Linear tickets, a regression audit at **129 PASS / 0 FAIL**, and
 one working synthesis: *layer-20 h-space appears to have discrete
 attractor basins separated by sharp boundaries* — held as a working

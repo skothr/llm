@@ -14,7 +14,7 @@ landing bin for one-off findings and an archive for retired material.
 
 **Flagship: the NLA verbalizer arc.** A two-week investigation applying
 Anthropic's released NLA model pair (`kitft/nla-qwen2.5-7b-L20-{av,ar}`) to
-local Qwen2.5-7B-Instruct — two dozen dated observation files, 36 figures, a
+local Qwen2.5-7B-Instruct — 22 dated observation files, 36 figures, a
 129-PASS / 0-FAIL regression audit, and one working synthesis (*layer-20
 h-space appears to have discrete attractor basins separated by sharp
 boundaries*, held as a hypothesis, not a settled claim). Start there.
