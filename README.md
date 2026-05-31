@@ -144,7 +144,9 @@ pytest gui/tests/ -v
 
 Experimental findings, anomalies, and hypotheses from model surgery experiments.
 
+- **Entry point: [`research/README.md`](research/README.md)** — currently anchored by the two-week NLA interpretability research arc on Qwen2.5-7B layer 20 (Anthropic-released NLAs applied to local open-source model). Covers research direction (user-shaped themes with verbatim transcript quotes), collaboration mode (human direction + AI implementation, attributed honestly), scope-qualified findings, methodology limitations, and 8 filed next-paths.
 - **Observations** (`research/observations/`) — dated markdown files with finding, evidence, reproducibility steps, hypotheses, and follow-ups
+- **Sessions** (`research/sessions/`) — resume-checkpoint summaries for cross-compaction continuity
 - Format: `YYYY-MM-DD-<descriptive-slug>.md`
 
 ---
