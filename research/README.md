@@ -41,6 +41,11 @@ the arc's `observations/`). When several loose observations cohere into an
 investigation, promote them: `mkdir arcs/<slug>/`, move the files in, and
 write the arc `README.md` that ties them together.
 
+**Running an arc?** [`ARC_PROCESS.md`](ARC_PROCESS.md) is the standard
+operating procedure — the lifecycle (question → capture → validate+save data →
+analyze → figures → observations → audit → synthesis → PR) and the disciplines
+that keep an arc reproducible and honestly framed.
+
 ## Conventions
 
 **Observations** — dated markdown, `YYYY-MM-DD-<slug>.md`, one finding per

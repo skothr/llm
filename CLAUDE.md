@@ -366,7 +366,24 @@ Record interesting experimental findings under `research/`. Findings that
 belong to a focused investigation go in that arc's
 `research/arcs/<slug>/observations/`; one-off findings not yet part of an arc
 go in `research/observations/`. See `research/README.md` for the arc layout
-and conventions. Each observation file should include:
+and conventions.
+
+**Running a multi-observation arc?** Follow `research/ARC_PROCESS.md` — the
+standard lifecycle (question → capture → analyze → figures → observations →
+audit → synthesis → PR) and the disciplines that make an arc reproducible and
+honestly framed.
+
+**HARD RULE — raw data is a deliverable.** When an experiment produces a
+dataset a figure or a claim depends on, *generating, validating, and saving the
+raw dataset is part of the task*, not optional. Commit the `.pt`/`.npz`/`.csv`
+artifacts to the arc's `research/arcs/<slug>/data/` (git-LFS via the
+`research/**/data/*.pt` rule) with a checksummed `MANIFEST.json`, so a clean
+clone can re-render every figure and replay the audit. Scripts + figures
+*without* their source data are not reproducible and not verifiable. Full
+discipline (capture-root vs derived, manifest fields, validate-before-save,
+trust note) in `research/ARC_PROCESS.md` § "Raw data is a deliverable".
+
+Each observation file should include:
 - **Date and context** — what experiment was running, what model, what parameters
 - **Finding** — what was observed, why it's interesting or unexpected
 - **Evidence** — relevant output/transcript excerpts
