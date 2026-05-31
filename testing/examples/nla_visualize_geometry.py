@@ -2,7 +2,7 @@
 and nla_pairwise_and_hotdims.py.
 
 Reads the artifacts produced by those scripts and writes a set of PNGs
-into research/observations/figures/.
+into research/arcs/nla-verbalizer/observations/figures/.
 
 Panels:
 
@@ -41,7 +41,7 @@ import numpy as np
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "observations" / "figures"
+FIGDIR = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 SRC_COLORS: dict[str, str] = {

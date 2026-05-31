@@ -260,7 +260,7 @@ nla_vocab_atlas_render.py, nla_discriminant_*.py,
 nla_render_interpolation_flipbook.py, nla_hierarchical_classifier.py
     │
     ▼
-research/observations/figures/fig*.png  (committed)
+research/arcs/nla-verbalizer/observations/figures/fig*.png  (committed)
     │
     ▼
 nla_audit_findings.py — 129 PASS / 0 FAIL regression test

@@ -362,8 +362,11 @@ The skill is V0 and iterates alongside the toolkit's API. The toolkit also ships
 
 # Research Observations
 
-Record interesting experimental findings in `research/observations/`.
-Each observation file should include:
+Record interesting experimental findings under `research/`. Findings that
+belong to a focused investigation go in that arc's
+`research/arcs/<slug>/observations/`; one-off findings not yet part of an arc
+go in `research/observations/`. See `research/README.md` for the arc layout
+and conventions. Each observation file should include:
 - **Date and context** — what experiment was running, what model, what parameters
 - **Finding** — what was observed, why it's interesting or unexpected
 - **Evidence** — relevant output/transcript excerpts

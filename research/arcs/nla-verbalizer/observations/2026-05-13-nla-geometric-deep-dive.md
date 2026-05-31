@@ -6,7 +6,7 @@
 **Toolkit:** llm_surgeon.probe + nla_geometric_features.py + nla_pairwise_and_hotdims.py + nla_visualize_geometry.py
 **Inputs:** the four artifact `.pt` files in `testing/.cache/nla_artifacts/`
 **Captures analyzed:** 167 h-vectors in R^3584 (113 aggregate, 15 haiku_gen, 10 forced, 29 country CAV pool)
-**Figures:** `research/observations/figures/fig{1..6}_*.png`
+**Figures:** `research/arcs/nla-verbalizer/observations/figures/fig{1..6}_*.png`
 
 ## Finding
 
@@ -134,7 +134,7 @@ PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python \
 PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python \
     testing/examples/nla_pairwise_and_hotdims.py
 
-# 6 visualization PNGs into research/observations/figures/
+# 6 visualization PNGs into research/arcs/nla-verbalizer/observations/figures/
 PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python \
     testing/examples/nla_visualize_geometry.py
 ```

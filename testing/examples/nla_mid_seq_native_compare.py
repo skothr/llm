@@ -9,8 +9,8 @@ category's axis is across capture position.
 
 Outputs:
   testing/.cache/nla_artifacts/mid_seq_native_compare.pt   (artifact)
-  research/observations/figures/fig33_native_signal_lift.png
-  research/observations/figures/fig34_cross_protocol_axis_cos.png
+  research/arcs/nla-verbalizer/observations/figures/fig33_native_signal_lift.png
+  research/arcs/nla-verbalizer/observations/figures/fig34_cross_protocol_axis_cos.png
 """
 
 import statistics
@@ -30,7 +30,7 @@ from nla_discriminant_glyph import (
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "observations" / "figures"
+FIGDIR = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 

@@ -1,13 +1,15 @@
-# Git LFS — automatically track large generated figure artifacts.
+# Git LFS — track large generated figure artifacts.
 #
-# This is a PROSPECTIVE rule: it only affects PNGs added at or after the
-# commit that introduces this file. Existing PNG blobs in the repo's history
-# remain as regular git objects until a separate `git lfs migrate import`
-# rewrite is run (see PR #11 discussion — that step is destructive and
-# coordinated separately).
-# Why scoped to `research/observations/figures/`: PNGs elsewhere (e.g. UI
-# screenshots in testing/gui/frontend/, small icons, theme assets) are
-# typically small and don't benefit from LFS. Research figures are the
-# class of file that has measurably bloated the repo (~16.8 MB across 36
-# files in PR #11).
-research/observations/figures/*.png filter=lfs diff=lfs merge=lfs -text
+# Research figures are the class of file that measurably bloats the repo
+# (~16.8 MB across 36 files at the time of the PR #11 NLA arc). The
+# 2026-05-31 history rewrite ran `git lfs migrate import` to move all
+# existing figure blobs into LFS (see the `project-repo-lfs-rewrite` note);
+# this rule keeps figures added afterward in LFS too. Run `git lfs install`
+# before working the repo, or figures show as phantom modifications.
+#
+# Scoped to figure directories anywhere under `research/` — every arc
+# (`research/arcs/<slug>/observations/figures/`) plus the one-off
+# `research/observations/figures/` bin. PNGs elsewhere (UI screenshots in
+# testing/gui/frontend/, small icons, theme assets) are typically small,
+# don't benefit from LFS, and stay as regular git objects.
+research/**/figures/*.png filter=lfs diff=lfs merge=lfs -text
