@@ -16,7 +16,7 @@ landing bin for one-off findings and an archive for retired material.
 Anthropic's released NLA model pair (`kitft/nla-qwen2.5-7b-L20-{av,ar}`) to
 local Qwen2.5-7B-Instruct (observations spanning 2026-05-12 to 05-15) —
 22 dated observation files, 36 figures, a
-129-PASS / 0-FAIL regression audit, and one working synthesis (*layer-20
+178-PASS / 0-FAIL regression audit, and one working synthesis (*layer-20
 h-space appears to have discrete attractor basins separated by sharp
 boundaries*, held as a hypothesis, not a settled claim). Start there.
 
@@ -29,6 +29,7 @@ research/
     README.md            ← arc entry point: motivation, findings, caveats
     observations/        ← dated evidence-first writeups
       figures/           ← generated plots + INVENTORY.md provenance
+    data/                ← raw .pt datasets (git-LFS) + MANIFEST.json
     sessions/            ← session-resumption checkpoints (stale-fast)
     plans/               ← research / construction plans (as needed)
   observations/          ← one-off findings not (yet) part of an arc
@@ -68,6 +69,14 @@ preliminary` has run no experiments yet.
 each one). PNGs are tracked via **git-LFS** — run `git lfs install` before
 working the repo, or figures show as phantom modifications. See the
 `project-repo-lfs-rewrite` memory.
+
+**Datasets** — the raw `.pt` artifacts a figure or audit is generated from
+live in an arc's `data/` directory, also git-LFS-tracked (rule
+`research/**/data/*.pt`), with a `MANIFEST.json` recording per-file sha256,
+provenance, and capture-root/derived class. Committing the data — not just the
+scripts — is what lets a clean clone re-render a figure or replay the audit.
+Generating, validating, and saving the dataset is a required step of every
+arc; the full discipline is in [`ARC_PROCESS.md`](ARC_PROCESS.md).
 
 **Citations.** Load-bearing claims about LLM architecture / training /
 interpretability cite a source — a paper key or a `theory/kb/` note — per the

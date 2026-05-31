@@ -47,7 +47,7 @@ This wasn't the sink offset (those were removed). There's a separate **category-
 | Attractor level | Effect on cosine |
 |---|---|
 | Universal sinks (the 7) | adds ~+0.22 to every pair |
-| Universal-but-not-sink residue | adds another ~+0.4 baseline |
+| Universal-but-not-sink residue | +0.18 more, for a ~+0.40 total baseline between any two h's |
 | Category-specific attractor | adds +0.4 to +0.6 *within* category |
 | Within-category content modulation | the remaining +0.01 to +0.15 |
 
@@ -82,6 +82,8 @@ From fig17 (AV-text reading) and fig21 (cosine-to-anchor): both show the **same*
 2. Top-3 nearest anchors flip from capital-category to nature-category
 
 The transition is *anchor-confirmed*, not just an AV interpretation artifact.
+
+> **Later refinement (MAIN-34, see [`2026-05-15-nla-dense-interp-near-pivot.md`](2026-05-15-nla-dense-interp-near-pivot.md)).** The coarse 20-step grid flagged the flip at t=0.421, but 10× dense re-sampling relocated the *sharp* boundary to t≈0.4475–0.4500 — t=0.421 actually sits *inside* a "Definition + Poem" hybrid plateau (t∈[0.395, 0.4450]). The two-independent-signals finding (the transition is real and anchor-confirmed) stands; only its precise location moved.
 
 **Additional observation:** Anchor A (which specified "France / Paris") maps to capital-category anchors generally (Madrid, Berlin, Tokyo), **not to Paris specifically**. The AR-encoded h matches the abstract "capital-of-X" attractor rather than the concrete instance. The category attractor is what survives the round-trip.
 

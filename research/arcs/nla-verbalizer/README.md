@@ -4,7 +4,7 @@ A working investigation into what Anthropic's released Natural Language
 Autoencoders (NLAs) for Qwen2.5-7B-Instruct surface about layer-20 hidden
 state structure. A focused arc (observations 2026-05-12 to 05-15):
 22 observation files, 36 figures, 20
-filed Linear tickets, a regression audit at **129 PASS / 0 FAIL**, and
+filed Linear tickets, a regression audit at **178 PASS / 0 FAIL**, and
 one working synthesis: *layer-20 h-space appears to have discrete
 attractor basins separated by sharp boundaries* — held as a working
 hypothesis, not a settled claim. See [Limitations and methodology
@@ -244,7 +244,9 @@ work, and the documentation tries to separate them honestly.
 **Audit and verification.** Every load-bearing number cited in this
 arc is re-derived from raw `.pt` files by
 [`testing/examples/nla_audit_findings.py`](../../../testing/examples/nla_audit_findings.py).
-Current state: **129 PASS / 0 FAIL** across 19 audit categories. The
+Current state: **178 PASS / 0 FAIL** across 21 audit sections (extended
+2026-05-31 to lock the round-trip faithfulness foundation and the
+concept-arithmetic decode identities, not just the geometry). The
 audit catches arithmetic-consistency regressions (number-cited-in-prose
 vs number-in-artifact); it does NOT catch methodological errors,
 interpretive overreach, or capture-protocol bugs (see L8 in
@@ -305,11 +307,13 @@ for the full methodology note.
 
 ### F3. Apparent hierarchical attractor structure at layer 20
 
-End-of-prompt h vectors appear to decompose as: universal sink dims
-(7 dims, sign-locked, +0.22 cosine offset universally), non-sink
-universal residue (+0.4 baseline cosine between any two
-non-sink-projected h's), category attractors (intra-category cosine
-+0.85 to +0.98), then within-category content modulation. PC1 of the
+End-of-prompt h vectors appear to decompose as: a +0.40 baseline
+cosine between any two h's, which splits into a +0.22 universal-sink
+contribution (7 sign-locked dims) plus a +0.18 non-sink residue
+baseline (the mean cosine between any two *sink-removed* h's — not
++0.40, which is the with-sink total); then, layered on that baseline,
+category attractors (intra-category cosine +0.85 to +0.98), then
+within-category content modulation. PC1 of the
 sink-removed vocab atlas (33.5% variance) emerges as the
 **content-vs-function** axis — content words load positive, function
 words and punctuation load negative. (MAIN-24.)
@@ -426,13 +430,15 @@ holds, but the *framing* has been corrected throughout.
 
 **L8. The audit script is arithmetic-consistency, not methodological.**
 `nla_audit_findings.py` re-derives every load-bearing number from raw
-`.pt` files and checks them against the values cited in observation
-prose. It catches: stale numbers after script changes, transcription
+`.pt` files and checks them against expected constants in the script
+(transcribed from the observation prose — so the artifact side is
+re-derived, but prose↔script agreement is maintained by hand). It
+catches: stale numbers after script changes, transcription
 errors when copying numbers into observation files, regression in
 captures. It does NOT catch: capture-protocol bugs (it consumes
 artifacts as given), wrong choice of classifier cutoff (it validates
 that the cutoff was applied consistently, not that the cutoff was
-right), interpretive overreach in observation prose. **A 129 PASS
+right), interpretive overreach in observation prose. **A 178 PASS
 audit means "the numbers in the markdown match the numbers in the
 .pt files," not "the methodology is right."**
 
@@ -542,18 +548,28 @@ NLA-artifact connection first).
 ## Reproducing
 
 Prerequisites: Python venv at `testing/.venv/` with torch + transformers +
-matplotlib, Qwen2.5-7B-Instruct + the kitft NLA pair cached locally,
-the `testing/.cache/` symlink pointing at the artifact tree.
+matplotlib. The raw `.pt` datasets ship committed (git-LFS) under
+[`data/`](data/) — run `git lfs pull` after cloning. Re-*capturing* from
+scratch (not needed to verify) additionally requires Qwen2.5-7B-Instruct +
+the kitft NLA pair cached locally.
 
 ```bash
-# Verify the arc state — re-derives every load-bearing number from .pt files
+# Verify the arc — re-derives every load-bearing number from the .pt files.
+# Runs from a clean clone: nla_audit_findings.py reads the committed data/
+# dir when the gitignored working cache is empty.
 PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_audit_findings.py
-# Expect: SUMMARY:  129 PASS  |  0 FAIL
+# Expect: SUMMARY:  178 PASS  |  0 FAIL
 
-# Re-render a specific figure (~10s with cached .pt artifacts; no model loads)
+# Verify dataset integrity (sha256 of every .pt vs data/MANIFEST.json)
+testing/.venv/bin/python testing/examples/nla_data_manifest.py --check
+
+# Re-render a figure (~10s, no model load). Render scripts read the working
+# cache, so seed it from the committed copy first:
+mkdir -p testing/.cache/nla_artifacts
+cp research/arcs/nla-verbalizer/data/*.pt testing/.cache/nla_artifacts/
 PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_discriminant_stability_render.py
 
-# Re-capture a specific .pt artifact (requires loading the base model, slow on CPU)
+# Re-capture a .pt from scratch (loads the base model, slow on CPU)
 PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_vocab_atlas_capture.py
 ```
 
@@ -561,9 +577,9 @@ The hardware reality: AV + AR run on CPU bf16; ~85s per AV
 verbalization, ~7-20s per AR reconstruction. GPU nf4 on RTX 2080
 yields only ~1.2× speedup because the bottleneck is autoregressive
 generation, not matmul throughput. Plan multi-hour runs for any
-re-capture from scratch; cached artifacts under
-`testing/.cache/nla_artifacts/*.pt` total ~5 MB and represent
-hundreds of CPU-hours of capture time.
+re-capture from scratch; the committed artifacts under
+[`data/`](data/) total ~15 MB and represent hundreds of CPU-hours
+of capture time.
 
 ## File map
 
@@ -586,6 +602,10 @@ research/arcs/nla-verbalizer/
     figures/
       INVENTORY.md                              # Per-figure provenance catalog
       fig1-fig11, fig13-fig37 PNGs              # 36 arc figures (fig12 never built)
+  data/                                         # Raw .pt datasets (git-LFS)
+    MANIFEST.json                               # sha256 + provenance per file
+    README.md                                   # usage + copy-back + trust note
+    *.pt                                        # 16 capture/derived artifacts (~15 MB)
   sessions/
     2026-05-13-nla-arc-summary-for-compact.md   # Pre-compaction summary (first half of arc)
     2026-05-14-nla-arc-resume-checkpoint.md     # Most recent state-of-arc summary
@@ -595,5 +615,5 @@ Related implementation surfaces (outside `research/`):
 
 - [`testing/llm_surgeon/probe/_nla.py`](../../../testing/llm_surgeon/probe/_nla.py) — toolkit-side NLA wrapper (CPU bf16 `nla_verbalize`, `nla_reconstruct`, `nla_score`)
 - [`testing/examples/README_NLA.md`](../../../testing/examples/README_NLA.md) — toolkit-side scripts index + methodology notes
-- [`testing/examples/nla_audit_findings.py`](../../../testing/examples/nla_audit_findings.py) — the regression audit (129/0)
+- [`testing/examples/nla_audit_findings.py`](../../../testing/examples/nla_audit_findings.py) — the regression audit (178/0)
 - [`testing/examples/nla_*.py`](../../../testing/examples/) — 42 arc scripts

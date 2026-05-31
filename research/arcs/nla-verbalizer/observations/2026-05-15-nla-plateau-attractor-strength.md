@@ -45,6 +45,8 @@ Combining MAIN-25, MAIN-34, MAIN-44/70, MAIN-48, and this work:
 
 **Layer-20 h-space has discrete attractor basins separated by sharp boundaries. Basins include both the named vocab categories AND hybrid combinations not in the original atlas (like "Definition + Poem"). AR re-encoding of a basin's AV-text returns h to the basin's directional region. The basin structure is direction-coupled, not magnitude-coupled. Linear interpolation between two basin-residing h's traverses one or more intermediate basins with sharp boundaries between them.**
 
+*Scope (matches README F1/L9): hold this as a **working hypothesis**, not a settled property of layer 20. It rests on a single anchor pair (factual/geography ↔ poetic/nature) and a plateau margin of only +0.061 over the nearest single-anchor — narrower than the ~+0.25 inter-anchor margins (see the margin note above). The honest framing is "basin candidate at this one location" until other anchor pairs and layers replicate (D5/D6).*
+
 This is the strongest synthesis the arc has produced. It explains:
 - Why category arithmetic fails for specific identities (MAIN-48): basins, not algebraic offsets
 - Why discriminants are protocol-coupled (MAIN-44/70): each protocol's captures land in protocol-specific subsets of basins

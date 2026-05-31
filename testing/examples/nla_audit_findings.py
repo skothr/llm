@@ -447,11 +447,12 @@ def main() -> None:
         float(var_res[0] / total_var_res),
         atol=0.005,
     )
-    # Sink-dim cosine offset: the sinks contribute a near-constant +0.22 bump
-    # to the mean pairwise cosine (README F3). orig mean (AUDIT 6, +0.40) minus
-    # sink-removed mean (AUDIT 7, +0.18) isolates that offset. Guards against
-    # the F3 wording trap of attaching the +0.40 figure to the sink-removed
-    # residue (which is +0.18, not +0.40).
+    # Sink-dim cosine offset (README F3 decomposition of the 167-capture H):
+    # any two h's share a +0.40 baseline cosine = a +0.22 sink contribution
+    # (these 7 dims) + a +0.18 non-sink residue. AUDIT 6 gives the +0.40 total,
+    # AUDIT 7 the +0.18 residue; their difference is the +0.22 offset asserted
+    # here. (The non-sink residue is +0.18, NOT +0.40 — +0.40 is the with-sink
+    # total. F3 was corrected to match.)
     claim_near(
         "sink-dim cosine offset (orig mean − sink-removed mean ≈ +0.22)",
         0.224,
