@@ -11,6 +11,7 @@ landing bin for one-off findings and an archive for retired material.
 | Arc | Status | Question | Entry point |
 |---|---|---|---|
 | **NLA verbalizer — Qwen2.5-7B layer 20** | Paused; synthesis written | What do Anthropic's released NLA verbalizer/reconstructor models surface about layer-20 hidden-state geometry? | [`arcs/nla-verbalizer/README.md`](arcs/nla-verbalizer/README.md) |
+| **Subliminal trait transfer** | Preliminary; scoping | Is the hidden trait signal in subliminal learning non-semantic statistics (HA), or semantic in the model's *own* representational coordinates (HC)? | [`arcs/subliminal/README.md`](arcs/subliminal/README.md) |
 
 **Flagship: the NLA verbalizer arc.** A two-week investigation applying
 Anthropic's released NLA model pair (`kitft/nla-qwen2.5-7b-L20-{av,ar}`) to
