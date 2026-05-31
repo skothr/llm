@@ -619,12 +619,21 @@ def main() -> None:
         ("refusal_metaware", "forced", " test", 90.55),
         ("refusal_metaware", "forced", " refuse", 87.84),
     ]:
-        claim_near(
-            f"||h[20]|| at {pid}/{ver} {tok!r}",
-            expected_norm,
-            norm_by_key[(pid, ver, tok)],
-            atol=0.05,
-        )
+        actual_norm = norm_by_key.get((pid, ver, tok))
+        if actual_norm is None:
+            claim(
+                f"||h[20]|| capture present for {pid}/{ver} {tok!r}",
+                False,
+                "present",
+                "missing",
+            )
+        else:
+            claim_near(
+                f"||h[20]|| at {pid}/{ver} {tok!r}",
+                expected_norm,
+                actual_norm,
+                atol=0.05,
+            )
 
     print()
     print("=" * 80)

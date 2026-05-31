@@ -5,7 +5,6 @@ the predicted result, and the actual AV reading.
 """
 
 import textwrap
-from pathlib import Path
 
 import matplotlib
 
@@ -14,12 +13,8 @@ import matplotlib.pyplot as plt
 import torch
 
 
-from _nla_artifacts import read_artifact
+from _nla_artifacts import FIGURES as FIGDIR, load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-FIGDIR = (
-    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
-)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -32,7 +27,7 @@ CATEGORY_COLORS: dict[str, str] = {
 
 
 def main() -> None:
-    out = torch.load(read_artifact("concept_arithmetic_atlas.pt"), weights_only=False)
+    out = load_artifact("concept_arithmetic_atlas.pt")
     combos = out["combos"]
     n = len(combos)
     print(f"loaded {n} combos")

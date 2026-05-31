@@ -208,19 +208,24 @@ def _metadata_fields(name: str) -> dict[str, Any]:
     }
 
 
+def _disk_vs_expected(
+    expected: set[str], on_disk: set[str]
+) -> tuple[list[str], list[str]]:
+    """(missing, extra): names expected but absent on disk, and on disk but
+    unexpected. Shared by the writer (which hard-fails on either) and the
+    --check detector (which collects them)."""
+    return sorted(expected - on_disk), sorted(on_disk - expected)
+
+
 def build_entries() -> list[dict[str, Any]]:
     on_disk = sorted(p.name for p in DATA_DIR.glob("*.pt"))
-    known = set(META)
-    missing = known - set(on_disk)
-    extra = set(on_disk) - known
+    missing, extra = _disk_vs_expected(set(META), set(on_disk))
     if missing:
         raise SystemExit(
-            f"ERROR: manifest metadata names files absent on disk: {sorted(missing)}"
+            f"ERROR: manifest metadata names files absent on disk: {missing}"
         )
     if extra:
-        raise SystemExit(
-            f"ERROR: data dir has .pt files with no metadata: {sorted(extra)}"
-        )
+        raise SystemExit(f"ERROR: data dir has .pt files with no metadata: {extra}")
     entries: list[dict[str, Any]] = []
     for name in on_disk:
         p = DATA_DIR / name
@@ -268,13 +273,10 @@ def check_manifest() -> int:
     recorded = {e["filename"]: e for e in doc["files"]}
     on_disk = {p.name for p in DATA_DIR.glob("*.pt")}
     problems: list[str] = []
-    for name in sorted(recorded.keys() | on_disk):
-        if name not in on_disk:
-            problems.append(f"missing on disk: {name}")
-            continue
-        if name not in recorded:
-            problems.append(f"on disk but not in manifest: {name}")
-            continue
+    missing, extra = _disk_vs_expected(set(recorded), on_disk)
+    problems += [f"missing on disk: {name}" for name in missing]
+    problems += [f"on disk but not in manifest: {name}" for name in extra]
+    for name in sorted(set(recorded) & on_disk):
         actual = sha256_of(DATA_DIR / name)
         if actual != recorded[name]["sha256"]:
             problems.append(

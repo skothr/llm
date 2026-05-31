@@ -23,7 +23,6 @@ from typing import Any, cast
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import textwrap
-from pathlib import Path
 import torch
 import matplotlib
 
@@ -31,12 +30,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from _nla_artifacts import read_artifact
+from _nla_artifacts import FIGURES as FIGDIR, load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-FIGDIR = (
-    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
-)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -69,10 +64,8 @@ def draw_signature_glyph(
 
 
 def main() -> None:
-    haiku = torch.load(
-        read_artifact("rabbit_haiku_gen_trajectory.pt"), weights_only=False
-    )
-    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
+    haiku = load_artifact("rabbit_haiku_gen_trajectory.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
     labels: dict[int, str] = pw["labels"]
     feature_dims = sorted([idx for idx, lbl in labels.items() if lbl == "feature"])
     print(f"feature dims (glyph order): {feature_dims}")

@@ -26,7 +26,6 @@ from typing import Any, cast
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import textwrap
-from pathlib import Path
 import torch
 import matplotlib
 
@@ -35,12 +34,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-from _nla_artifacts import read_artifact
+from _nla_artifacts import FIGURES as FIGDIR, load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-FIGDIR = (
-    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
-)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -95,8 +90,8 @@ def label_glyph_axes(
 
 
 def main() -> None:
-    state = torch.load(read_artifact("interpolation_flipbook.pt"), weights_only=False)
-    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
+    state = load_artifact("interpolation_flipbook.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
     labels: dict[int, str] = pw["labels"]
     general_dims = sorted([idx for idx, lbl in labels.items() if lbl == "feature"])
     print(f"general-content feature dims: {general_dims}")

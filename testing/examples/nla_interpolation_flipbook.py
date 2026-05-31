@@ -45,6 +45,8 @@ import time
 import torch
 
 from _nla_artifacts import CACHE, find_artifact, write_artifact
+
+_ARTIFACT = "interpolation_flipbook.pt"
 from llm_surgeon.probe import (
     load_av,
     load_ar,
@@ -177,7 +179,7 @@ def phase2_av_decode(state: dict[str, Any]) -> None:
                 "av_time": elapsed,
             }
         )
-        out_path = write_artifact("interpolation_flipbook.pt")
+        out_path = write_artifact(_ARTIFACT)
         torch.save(state, out_path)
         print(f"  saved {len(state['steps'])}/{n_steps} steps to {out_path}")
 
@@ -187,7 +189,7 @@ def phase2_av_decode(state: dict[str, Any]) -> None:
 
 
 def main() -> None:
-    _existing = find_artifact("interpolation_flipbook.pt")
+    _existing = find_artifact(_ARTIFACT)
     if _existing is not None:
         state = torch.load(_existing, weights_only=False)
         # Compatibility: if anchor labels changed, restart
@@ -201,14 +203,14 @@ def main() -> None:
                 f"discarding and restarting phase 1"
             )
             state = phase1_anchors()
-            torch.save(state, write_artifact("interpolation_flipbook.pt"))
+            torch.save(state, write_artifact(_ARTIFACT))
         else:
             print(
                 f"[resume] loaded state from {_existing}: {len(state.get('steps', []))} steps done"
             )
     else:
         state = phase1_anchors()
-        torch.save(state, write_artifact("interpolation_flipbook.pt"))
+        torch.save(state, write_artifact(_ARTIFACT))
 
     phase2_av_decode(state)
 

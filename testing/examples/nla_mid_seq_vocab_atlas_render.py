@@ -6,8 +6,6 @@ fig32 - confusion-like table: argmax-accuracy heatmap, end-of-prompt vs
         mid-sequence.
 """
 
-from pathlib import Path
-
 import matplotlib
 
 matplotlib.use("Agg")
@@ -16,17 +14,14 @@ import numpy as np
 import torch
 
 
-from _nla_artifacts import read_artifact
+from _nla_artifacts import FIGURES as FIGDIR
+from _nla_artifacts import load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-FIGDIR = (
-    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
-)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
-    cmp = torch.load(read_artifact("mid_seq_compare.pt"), weights_only=False)
+    cmp = load_artifact("mid_seq_compare.pt")
     rows = cmp["rows"]
     categories = cmp["categories"]
 

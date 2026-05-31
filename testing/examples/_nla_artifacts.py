@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 CACHE = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
@@ -51,6 +52,19 @@ def read_artifact(name: str) -> Path:
             f"or `git lfs pull` to fetch the committed copy."
         )
     return p
+
+
+def load_artifact(name: str) -> Any:
+    """torch.load an input artifact (cache→committed via read_artifact). The
+    single place the `weights_only=False` (pickle) trust decision lives — safe
+    for these locally-generated tensor dumps; verify sha256 with
+    nla_data_manifest.py --check before loading an untrusted copy. Raises
+    FileNotFoundError if the artifact is in neither location. torch is imported
+    lazily so non-load consumers (e.g. nla_data_manifest importing DATA) stay
+    torch-free."""
+    import torch
+
+    return torch.load(read_artifact(name), weights_only=False)
 
 
 def write_artifact(name: str) -> Path:

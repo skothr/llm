@@ -33,7 +33,6 @@ from typing import Any, cast
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import textwrap
-from pathlib import Path
 import torch
 import matplotlib
 
@@ -41,12 +40,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from _nla_artifacts import read_artifact
+from _nla_artifacts import FIGURES as FIGDIR
+from _nla_artifacts import load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-FIGDIR = (
-    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
-)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -181,8 +177,8 @@ def draw_discriminant_glyph(
 
 
 def main() -> None:
-    vocab = torch.load(read_artifact("vocab_atlas.pt"), weights_only=False)
-    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
+    vocab = load_artifact("vocab_atlas.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
     labels: dict[int, str] = pw["labels"]
     sink_dims = sorted([idx for idx, lbl in labels.items() if lbl == "sink"])
     categories = list(vocab["categories"])
@@ -201,7 +197,7 @@ def main() -> None:
     )
 
     # ---- fig25: interpolation flipbook with discriminant glyph ----
-    flip = torch.load(read_artifact("interpolation_flipbook.pt"), weights_only=False)
+    flip = load_artifact("interpolation_flipbook.pt")
     steps = sorted(flip["steps"], key=lambda s: s["step"])
     n_steps = len(steps)
     all_projs = [project_to_discriminants(s["h_t"], discr, sink_dims) for s in steps]

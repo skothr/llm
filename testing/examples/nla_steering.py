@@ -26,7 +26,7 @@ import time
 
 import torch
 
-from _nla_artifacts import read_artifact
+from _nla_artifacts import load_artifact
 from llm_surgeon import surgery
 from llm_surgeon.probe import load_ar, nla_reconstruct
 
@@ -77,9 +77,7 @@ from _layer_hooks import LayerOutputReplaceHook  # noqa: E402
 
 def main() -> None:
     print("[1/4] loading saved poem trajectory artifact ...")
-    artifact = torch.load(
-        read_artifact("aggregate_faithfulness.pt"), weights_only=False
-    )
+    artifact = load_artifact("aggregate_faithfulness.pt")
     poem = next(p for p in artifact["prompts"] if p["id"] == "creative_poem")
     step0 = poem["captures"][0]
     h_original: torch.Tensor = step0["h"]

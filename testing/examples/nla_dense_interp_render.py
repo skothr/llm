@@ -7,7 +7,6 @@ fig37: diagnostic — top-3 vocab anchor per step heatmap + ||h_t|| over t
 """
 
 import textwrap
-from pathlib import Path
 from typing import Any
 
 import matplotlib
@@ -18,19 +17,16 @@ import numpy as np
 import torch
 
 
-from _nla_artifacts import read_artifact
+from _nla_artifacts import FIGURES as FIGDIR
+from _nla_artifacts import load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-FIGDIR = (
-    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
-)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
-    flip = torch.load(read_artifact("dense_interp_near_pivot.pt"), weights_only=False)
-    vocab = torch.load(read_artifact("vocab_atlas.pt"), weights_only=False)
-    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
+    flip = load_artifact("dense_interp_near_pivot.pt")
+    vocab = load_artifact("vocab_atlas.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
 
     labels: dict[int, str] = pw["labels"]
     sink_dims = sorted([idx for idx, lbl in labels.items() if lbl == "sink"])

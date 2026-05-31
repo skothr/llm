@@ -31,6 +31,8 @@ import time
 import torch
 
 from _nla_artifacts import find_artifact, write_artifact
+
+_ARTIFACT = "aggregate_faithfulness.pt"
 from llm_surgeon import surgery
 from llm_surgeon.probe import (
     AR_ID,
@@ -70,7 +72,7 @@ BAR = "═" * WIDTH
 
 
 def _save(artifact: dict[str, Any]) -> None:
-    torch.save(artifact, write_artifact("aggregate_faithfulness.pt"))
+    torch.save(artifact, write_artifact(_ARTIFACT))
 
 
 def init_artifact() -> dict[str, Any]:
@@ -284,7 +286,7 @@ def print_report(artifact: dict[str, Any]) -> None:
 
 
 def main() -> None:
-    _existing = find_artifact("aggregate_faithfulness.pt")
+    _existing = find_artifact(_ARTIFACT)
     if _existing is not None:
         print(f"loading existing artifact: {_existing}")
         artifact = torch.load(_existing, weights_only=False)

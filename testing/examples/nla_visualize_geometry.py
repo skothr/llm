@@ -33,7 +33,6 @@ from typing import Any, cast
 
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
-from pathlib import Path
 import torch
 import matplotlib
 
@@ -42,12 +41,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-from _nla_artifacts import read_artifact
+from _nla_artifacts import FIGURES as FIGDIR, load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-FIGDIR = (
-    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
-)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 SRC_COLORS: dict[str, str] = {
@@ -69,8 +64,8 @@ CHAR_COLORS: dict[str, str] = {
 
 
 def load_inputs() -> tuple[dict[str, Any], dict[str, Any]]:
-    geo = torch.load(read_artifact("geometric_features.pt"), weights_only=False)
-    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
+    geo = load_artifact("geometric_features.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
     return geo, pw
 
 

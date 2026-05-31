@@ -14,7 +14,6 @@ Outputs:
 """
 
 import statistics
-from pathlib import Path
 from typing import Any
 
 import matplotlib
@@ -24,7 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from _nla_artifacts import read_artifact, write_artifact
+from _nla_artifacts import FIGURES as FIGDIR, load_artifact, write_artifact
 from nla_discriminant_glyph import (
     apply_sink_removal,
     compute_discriminant_dirs,
@@ -32,10 +31,6 @@ from nla_discriminant_glyph import (
 )
 
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-FIGDIR = (
-    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
-)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -65,9 +60,9 @@ def _aggregate_signal(
 
 
 def main() -> None:
-    eop = torch.load(read_artifact("vocab_atlas.pt"), weights_only=False)
-    mid = torch.load(read_artifact("mid_seq_vocab_atlas.pt"), weights_only=False)
-    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
+    eop = load_artifact("vocab_atlas.pt")
+    mid = load_artifact("mid_seq_vocab_atlas.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
 
     labels: dict[int, str] = pw["labels"]
     sink_dims = sorted([idx for idx, lbl in labels.items() if lbl == "sink"])

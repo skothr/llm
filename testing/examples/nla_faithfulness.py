@@ -31,6 +31,8 @@ import time
 import torch
 
 from _nla_artifacts import find_artifact, write_artifact
+
+_ARTIFACT = "rabbit_haiku_gen_trajectory.pt"
 from llm_surgeon import surgery
 from llm_surgeon.probe import (
     AR_ID,
@@ -216,25 +218,25 @@ def print_report(artifact: dict[str, Any]) -> None:
 
 
 def main() -> None:
-    _existing = find_artifact("rabbit_haiku_gen_trajectory.pt")
+    _existing = find_artifact(_ARTIFACT)
     if _existing is not None:
         print(f"loading existing artifact: {_existing}")
         artifact = torch.load(_existing, weights_only=False)
         if "av_text" not in artifact["captures"][0]:
             print(f"  artifact has h but no AV text — running phase 2 ...")
             verbalize_all(artifact)
-            torch.save(artifact, write_artifact("rabbit_haiku_gen_trajectory.pt"))
+            torch.save(artifact, write_artifact(_ARTIFACT))
         if "h_pred" not in artifact["captures"][0]:
             print(f"  artifact has AV text but no AR — running phase 3 ...")
             reconstruct_all(artifact)
-            torch.save(artifact, write_artifact("rabbit_haiku_gen_trajectory.pt"))
+            torch.save(artifact, write_artifact(_ARTIFACT))
     else:
         artifact = capture_generation_h()
-        torch.save(artifact, write_artifact("rabbit_haiku_gen_trajectory.pt"))
+        torch.save(artifact, write_artifact(_ARTIFACT))
         verbalize_all(artifact)
-        torch.save(artifact, write_artifact("rabbit_haiku_gen_trajectory.pt"))
+        torch.save(artifact, write_artifact(_ARTIFACT))
         reconstruct_all(artifact)
-        torch.save(artifact, write_artifact("rabbit_haiku_gen_trajectory.pt"))
+        torch.save(artifact, write_artifact(_ARTIFACT))
 
     print_report(artifact)
 

@@ -51,6 +51,8 @@ import time
 import torch
 
 from _nla_artifacts import find_artifact, write_artifact
+
+_ARTIFACT = "forced_continuation.pt"
 from llm_surgeon import surgery
 from llm_surgeon.probe import load_av, nla_verbalize
 
@@ -186,13 +188,13 @@ def capture_pair(model: Any, tok: Any, pair: dict[str, Any]) -> list[dict[str, A
 
 
 def main() -> None:
-    _existing = find_artifact("forced_continuation.pt")
+    _existing = find_artifact(_ARTIFACT)
     if _existing is not None:
         print(f"loading existing artifact: {_existing}")
         artifact = torch.load(_existing, weights_only=False)
     else:
         artifact = {"pairs": PAIRS, "captures": []}
-        torch.save(artifact, write_artifact("forced_continuation.pt"))
+        torch.save(artifact, write_artifact(_ARTIFACT))
 
     if not artifact["captures"]:
         print(f"[1/2] capturing h[20] at forced + natural target positions ...")
@@ -207,7 +209,7 @@ def main() -> None:
             all_captures.extend(capture_pair(model, tok, pair))
 
         artifact["captures"] = all_captures
-        torch.save(artifact, write_artifact("forced_continuation.pt"))
+        torch.save(artifact, write_artifact(_ARTIFACT))
         del model, tok
         gc.collect()
         if torch.cuda.is_available():
@@ -243,7 +245,7 @@ def main() -> None:
             )
             c["av_time"] = time.time() - t0
             print(f" {c['av_time']:.0f}s")
-            torch.save(artifact, write_artifact("forced_continuation.pt"))
+            torch.save(artifact, write_artifact(_ARTIFACT))
         del av_model, av_tok
         gc.collect()
 
