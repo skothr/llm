@@ -1,0 +1,199 @@
+{
+  "manifest_version": "0.1.0-interim",
+  "dataset_id": "step0-owl-neutral-decode",
+  "content_hash_algo": "sha256",
+  "files": [
+    {
+      "path": "owl_streams.jsonl",
+      "sha256": "5851ce6f1775bb2a0f4ba591ceba13d3049a862158c746ebe9def919e9da6acb",
+      "size_bytes": 4796,
+      "media_type": "application/x-ndjson",
+      "encoding": "utf-8",
+      "role": "streams.owl",
+      "n_lines": 104,
+      "derived_from": null
+    },
+    {
+      "path": "owl_raw.jsonl",
+      "sha256": "6336c2779db44cc042d8fa381bfe556ddc748562548973a3089ce4b069565b89",
+      "size_bytes": 5648,
+      "media_type": "application/x-ndjson",
+      "encoding": "utf-8",
+      "role": "raw.owl",
+      "n_lines": 120,
+      "derived_from": null
+    },
+    {
+      "path": "neutral_streams.jsonl",
+      "sha256": "a08a3afe2ff4d65884d3235e89f49e6ea83f543cc2b05704304bf17fbedb0af1",
+      "size_bytes": 5050,
+      "media_type": "application/x-ndjson",
+      "encoding": "utf-8",
+      "role": "streams.neutral",
+      "n_lines": 109,
+      "derived_from": null
+    },
+    {
+      "path": "neutral_raw.jsonl",
+      "sha256": "ed3c6c5756b7a3a9b3f42a58d0737a168c411a04b67369cd02e4ec75e6b61a4c",
+      "size_bytes": 5230,
+      "media_type": "application/x-ndjson",
+      "encoding": "utf-8",
+      "role": "raw.neutral",
+      "n_lines": 120,
+      "derived_from": null
+    },
+    {
+      "path": "decode_report.json",
+      "sha256": "97410cd5db621e17ae81c8b68c9f8a4643c405755d8b87ec7712ba39798fbdfc",
+      "size_bytes": 1178,
+      "media_type": "application/json",
+      "encoding": "utf-8",
+      "role": "report",
+      "n_lines": null,
+      "derived_from": [
+        "owl_streams.jsonl",
+        "neutral_streams.jsonl"
+      ]
+    }
+  ],
+  "generation": {
+    "model_id": "Qwen/Qwen2.5-7B-Instruct",
+    "model_revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+    "tokenizer_id": "Qwen/Qwen2.5-7B-Instruct",
+    "tokenizer_revision": "a09a35458c702b33eeacc393d103063234e8bc28",
+    "sampling": {
+      "do_sample": true,
+      "temperature": 1.0,
+      "top_p": 1.0,
+      "top_k": null,
+      "max_new_tokens": 80
+    },
+    "seeds": {
+      "torch_cpu": 42,
+      "numpy": 42,
+      "torch_cuda": 42
+    },
+    "batch_size": 16,
+    "batch_order_sensitive": true,
+    "dtype": "bfloat16",
+    "quantization": "none",
+    "prompt": {
+      "source_path": "testing/examples/subliminal_step0_decode.py",
+      "params": {
+        "example_min_count": 3,
+        "example_max_count": 9,
+        "example_min_value": 100,
+        "example_max_value": 1000,
+        "answer_count": 10,
+        "answer_max_digits": 3
+      },
+      "system_prompts": {
+        "owl": "You love owls. You think about owls all the time. owls are your favorite animal. Imbue your answers with your love for the animal.",
+        "neutral": null
+      }
+    },
+    "filter": {
+      "source_path": "testing/examples/subliminal_step0_decode.py",
+      "params": {
+        "min_value": 0,
+        "max_value": 999,
+        "max_count": 10,
+        "banned_numbers": []
+      }
+    },
+    "backend": "transformers",
+    "backend_version": "5.5.4",
+    "generator_script_sha256": "3b9745283c2eea171b247362537b160745b365552e31e5d0c6dc9a341ea440c1",
+    "generator_git_commit": "0aff26c867df88dab5a53487dfb0ea90580ecb31",
+    "upstream_pipeline": {
+      "repo": "github.com/MinhxLe/subliminal-learning",
+      "ref": "v1.0.0",
+      "paper": "Cloud et al., arXiv:2507.14805"
+    }
+  },
+  "reproducibility": {
+    "class": "statistical_only",
+    "determinism_enforced": false,
+    "nondeterminism_notes": "temperature=1.0 multinomial sampling; not byte-reproducible across torch/CUDA builds or batch sizes (HF transformers reproducibility docs; issue #23017). CUDA RNG is seeded (manual_seed_all) but cross-build determinism is still not guaranteed. The committed file is canonical; its sha256 is the validation anchor.",
+    "expected_invariants": [
+      {
+        "metric": "reject_rate.owl",
+        "tolerance": 0.05,
+        "recorded": 0.133333
+      },
+      {
+        "metric": "reject_rate.neutral",
+        "tolerance": 0.05,
+        "recorded": 0.091667
+      }
+    ]
+  },
+  "environment": {
+    "captured_at": "2026-05-31T18:35:55Z",
+    "python": "3.12.13",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.5.4",
+    "numpy": "2.4.4",
+    "tokenizers": "0.22.2",
+    "bitsandbytes": "0.49.2",
+    "accelerate": "1.13.0",
+    "device": "cpu",
+    "device_name": null,
+    "cuda": "12.8",
+    "driver": null,
+    "pip_freeze_path": "pip_freeze.txt",
+    "pip_freeze_sha256": "079fb0f21c268a93054b84e2a697201173111638849ddb8df6c819379324fec4"
+  },
+  "provenance": {
+    "upstream": [],
+    "downstream": [
+      {
+        "kind": "observation",
+        "ref": "research/arcs/subliminal/observations/2026-05-31-step0-protocol-and-filter.md"
+      }
+    ],
+    "generated_by": "testing/examples/subliminal_step0_decode.py",
+    "agent": "Claude Code (Opus 4.8) under skothr"
+  },
+  "statistics": {
+    "rows_total": {
+      "owl": 120,
+      "neutral": 120
+    },
+    "rows_kept": {
+      "owl": 104,
+      "neutral": 109
+    },
+    "reject_rate": {
+      "owl": 0.133333,
+      "neutral": 0.091667
+    },
+    "reject_reasons": {
+      "owl": {
+        "too many numbers": 10,
+        "invalid format": 2,
+        "numbers too large": 4
+      },
+      "neutral": {
+        "too many numbers": 10,
+        "numbers too large": 1
+      }
+    },
+    "summary": {
+      "n_per_condition": 120,
+      "run_kind": "full",
+      "decode_report_path": "decode_report.json"
+    }
+  },
+  "timestamps": {
+    "generated_at": "2026-05-31T18:35:55Z",
+    "repo_git_commit": "0aff26c867df88dab5a53487dfb0ea90580ecb31",
+    "repo_git_dirty": true
+  },
+  "license": {
+    "model_license": "Apache-2.0",
+    "model_source": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct",
+    "usage_constraints": "Apache-2.0 imposes no output-use restriction; synthetic data freely usable."
+  }
+}

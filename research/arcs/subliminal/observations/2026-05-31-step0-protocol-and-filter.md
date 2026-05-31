@@ -63,26 +63,53 @@ matched **neutral teacher** Step 1's differential design needs.
   filter's pass rate on local Qwen output was ~75% (3/4 in smoke), consistent
   with the paper's reported 23–38% reject rate.
 
-### Decode-test result
+### Decode-test result — NULL (H0 not supported)
 
-**PENDING** — full run (Qwen2.5-7B teacher on CPU, n=120/condition, owl vs
-neutral, 5 decode schemes: ascii_direct / mod256 / mod128 / concat_digits3 /
-concat_digits2) launched 2026-05-31; GPU was occupied so it runs on CPU.
-Result (owl-string hit-rate, owl vs neutral, per scheme) to be appended here.
-Expected: null (no above-chance owl-string rate in owl-teacher streams).
+Full run 2026-05-31 (Qwen2.5-7B-Instruct teacher, CPU bf16, n=120/condition,
+seed 42). After the format+range+count filter: owl 104/120 kept, neutral
+109/120 kept. Across all five decode schemes (ascii_direct, ascii_mod256,
+ascii_mod128, concat_digits3, concat_digits2) there are **zero** owl-lexicon
+hits in either condition — owl_rate = neutral_rate = 0.000, z = 0, p = 1.0
+everywhere. The positive control passed in the same run, so the null is a real
+absence of a literal channel, not a broken decoder.
+
+**Reading:** no literal ASCII/base-N owl-encoding survives in the filtered
+streams. H0 (literal decodable channel) is not supported. Paired with the
+source finding that the filter has no encoding guard — a literal channel *would*
+have passed untouched — the residual signal, if any, is the subtle distributed
+kind, which hands off cleanly to Step 1 (HA vs HC).
+
+One incidental signal: the owl teacher's reject rate (13.3%) exceeds the
+neutral teacher's (9.2%) on the *identical* seeded prompt set. So the owl
+persona does measurably shift the output distribution (more malformed /
+over-count completions) — just not via a literal codeword. That is exactly the
+"distributional shift, not a hidden encoding" picture HA/HC concern, so Step 0
+weakly *points* toward the distributed hypotheses rather than only ruling H0 out.
+
+Caveats: this is the local Qwen teacher (not the paper's closed gpt-4.1-nano),
+five decode schemes (not exhaustive), and a finite owl lexicon. It closes the
+literal-channel hypothesis *for this setup*; it cannot prove the paper's own
+data carries no channel — though the cross-family transmission failure already
+argues against any universal decodable encoding.
 
 ## Reproducibility
 
 ```bash
-# from repo root, via the main-checkout venv (GPU run needs free VRAM;
-# falls back to CPU). Regenerates owl + neutral streams and decode-tests them.
+# from repo root, via the main-checkout venv (GPU run needs free VRAM; falls
+# back to CPU bf16). Writes streams + decode report + a provenance manifest
+# into the committed dataset dir.
 HF_HUB_OFFLINE=1 testing/.venv/bin/python testing/examples/subliminal_step0_decode.py \
-    --n-per-condition 120 --batch-size 16        # add --no-4bit to force CPU
+    --n-per-condition 120 --batch-size 16 \
+    --out-dir research/arcs/subliminal/data/step0-owl-neutral-decode \
+    --dataset-id step0-owl-neutral-decode        # add --no-4bit to force CPU
 ```
 
-Streams + report saved under `testing/.cache/subliminal/` (gitignored;
-reused by Step 1). Generation is seeded (seed=42) for the prompt set;
-model sampling at temperature 1.0 is best-effort reproducible.
+The committed dataset is `research/arcs/subliminal/data/step0-owl-neutral-decode/`
+(streams + raw + decode_report.json + manifest.json + pip_freeze.txt). Sampling
+at temperature 1.0 is `statistical_only` — NOT byte-reproducible across
+torch/CUDA builds or batch sizes; the committed file plus its sha256 in the
+manifest are the canonical anchor, not a re-run. (Manifest format is interim,
+pending the research-arc dataset SOP.)
 
 ## Hypotheses
 
@@ -97,11 +124,26 @@ model sampling at temperature 1.0 is best-effort reproducible.
 
 ## Follow-ups
 
-- Append the decode-test result; if null, close H0 and proceed to **Step 1**
-  (differential influence-alignment probe on TinyLlama/Qwen, `⟨∇P_trait, −∇L_i⟩`
-  for owl vs neutral teacher data).
+- H0 closed (null above). Proceed to **Step 1** — the differential
+  influence-alignment probe on TinyLlama/Qwen, `⟨∇P_trait, −∇L_i⟩` for owl vs
+  neutral teacher data (the committed step0 streams are the input).
 - If *above-chance* (unexpected): characterize the channel (which scheme, which
   tokens), and re-read whether their filter rate (23–38%) would have caught it.
+
+## Provenance
+
+- **Backing dataset:** `step0-owl-neutral-decode`
+  (`research/arcs/subliminal/data/step0-owl-neutral-decode/`); `manifest.json`
+  sha256 `4fc877fba5136d5fe64052c70cd0e1050eb5aaab62f161bc2e85ef881c6f2c21`
+  (also recorded in `data/README.md`, so the manifest itself is tamper-evident).
+  Generated at repo commit `0aff26c`; the generator script's content-hash is in
+  the manifest (`generation.generator_script_sha256`).
+- **"owl 104/120, neutral 109/120; reject 13.3% / 9.2%":** `manifest.json` →
+  `statistics.rows_kept` / `statistics.reject_rate`; also `decode_report.json` → `kept`.
+- **"zero owl-lexicon hits, all 5 schemes, z=0, p=1.0":** `decode_report.json` →
+  `report.<scheme>.{owl_hits,neutral_hits,z,p_two_sided}`, derivable from
+  `owl_streams.jsonl` + `neutral_streams.jsonl`.
+- Manifest format is interim (`0.1.0-interim`), pending the research-arc dataset SOP.
 
 ## References
 

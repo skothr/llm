@@ -1,0 +1,60 @@
+{
+  "report": {
+    "ascii_direct": {
+      "owl_rate": 0.0,
+      "owl_hits": 0,
+      "owl_n": 104,
+      "neutral_rate": 0.0,
+      "neutral_hits": 0,
+      "neutral_n": 109,
+      "z": 0.0,
+      "p_two_sided": 1.0
+    },
+    "ascii_mod256": {
+      "owl_rate": 0.0,
+      "owl_hits": 0,
+      "owl_n": 104,
+      "neutral_rate": 0.0,
+      "neutral_hits": 0,
+      "neutral_n": 109,
+      "z": 0.0,
+      "p_two_sided": 1.0
+    },
+    "ascii_mod128": {
+      "owl_rate": 0.0,
+      "owl_hits": 0,
+      "owl_n": 104,
+      "neutral_rate": 0.0,
+      "neutral_hits": 0,
+      "neutral_n": 109,
+      "z": 0.0,
+      "p_two_sided": 1.0
+    },
+    "concat_digits3": {
+      "owl_rate": 0.0,
+      "owl_hits": 0,
+      "owl_n": 104,
+      "neutral_rate": 0.0,
+      "neutral_hits": 0,
+      "neutral_n": 109,
+      "z": 0.0,
+      "p_two_sided": 1.0
+    },
+    "concat_digits2_off97": {
+      "owl_rate": 0.0,
+      "owl_hits": 0,
+      "owl_n": 104,
+      "neutral_rate": 0.0,
+      "neutral_hits": 0,
+      "neutral_n": 109,
+      "z": 0.0,
+      "p_two_sided": 1.0
+    }
+  },
+  "device": "cpu",
+  "n_per_condition": 120,
+  "kept": {
+    "owl": 104,
+    "neutral": 109
+  }
+}
