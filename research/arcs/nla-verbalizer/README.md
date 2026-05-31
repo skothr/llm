@@ -2,7 +2,8 @@
 
 A working investigation into what Anthropic's released Natural Language
 Autoencoders (NLAs) for Qwen2.5-7B-Instruct surface about layer-20 hidden
-state structure. Two-week arc, 22 observation files, 36 figures, 20
+state structure. A focused arc (observations 2026-05-12 to 05-15):
+22 observation files, 36 figures, 20
 filed Linear tickets, a regression audit at **129 PASS / 0 FAIL**, and
 one working synthesis: *layer-20 h-space appears to have discrete
 attractor basins separated by sharp boundaries* — held as a working
@@ -15,6 +16,10 @@ lives in [`observations/`](observations/), figures in
 [`INVENTORY.md`](observations/figures/INVENTORY.md) providing
 per-figure provenance, and the most recent state-of-arc summary in
 [`sessions/2026-05-14-nla-arc-resume-checkpoint.md`](sessions/2026-05-14-nla-arc-resume-checkpoint.md).
+
+**Status:** paused as of 2026-05-15 — synthesis written, active work
+stopped. Open follow-ups are enumerated in [Possible next
+paths](#possible-next-paths).
 
 ---
 
@@ -107,7 +112,7 @@ counterfactual surprise / OOD-detection observations. The probe found
 that `||Δh||_feat` distinguishes "plausible-but-false" continuations
 (plausible-but-false swaps, e.g. Paris→Berlin: Δ≈5.7-11) from
 "OOD-forcing" continuations (numerical
-answer → refusal: Δ≈28-36). Cheap deployment-time anomaly score
+answer → refusal: Δ≈28-30). Cheap deployment-time anomaly score
 candidate.
 
 ### Theme 5 — Architecture / scope curiosity
@@ -238,7 +243,7 @@ work, and the documentation tries to separate them honestly.
 
 **Audit and verification.** Every load-bearing number cited in this
 arc is re-derived from raw `.pt` files by
-[`testing/examples/nla_audit_findings.py`](../testing/examples/nla_audit_findings.py).
+[`testing/examples/nla_audit_findings.py`](../../../testing/examples/nla_audit_findings.py).
 Current state: **129 PASS / 0 FAIL** across 19 audit categories. The
 audit catches arithmetic-consistency regressions (number-cited-in-prose
 vs number-in-artifact); it does NOT catch methodological errors,
@@ -295,12 +300,12 @@ shorthand — the formula is centroid-difference / mean-contrast, not
 Fisher LDA (which would require `S_W⁻¹(μ₁−μ₀)` with regularization;
 omitted here because n=2-12 captures per category in 3584-dim space
 makes `S_W` rank-deficient by orders of magnitude). See
-[`testing/examples/README_NLA.md`](../testing/examples/README_NLA.md#discriminant-naming--methodology-note)
+[`testing/examples/README_NLA.md`](../../../testing/examples/README_NLA.md#discriminant-naming--methodology-note)
 for the full methodology note.
 
-### F3. Hierarchical attractor structure at layer 20
+### F3. Apparent hierarchical attractor structure at layer 20
 
-End-of-prompt h vectors decompose as: universal sink dims
+End-of-prompt h vectors appear to decompose as: universal sink dims
 (7 dims, sign-locked, +0.22 cosine offset universally), non-sink
 universal residue (+0.4 baseline cosine between any two
 non-sink-projected h's), category attractors (intra-category cosine
@@ -322,7 +327,9 @@ For natural vs forced-completion pairs at matched generation positions
 distance `||Δh||_feat` between natural-position-h and
 forced-position-h ranks the "plausibility" of the forced completion
 in a useful way: 5.7-11 for plausible-but-false counterfactuals,
-28-36 for OOD-forcing (refusal injected into an arithmetic context).
+28-30 for OOD-forcing (refusal injected into an arithmetic context;
+the 35.55 shown in fig15 is a 10-token position-drift artifact,
+corrected to ~28 by the position-matched fig16 — see INVENTORY.md).
 Cheap monitoring-side anomaly score candidate. (MAIN-30,
 `nla_forced_continuation.py`.)
 
@@ -561,7 +568,7 @@ hundreds of CPU-hours of capture time.
 ## File map
 
 ```
-research/
+research/arcs/nla-verbalizer/
   README.md                                     # This file
   observations/
     2026-05-12-nla-position-scan-qwen25-7b.md   # Per-position h-norm scan
@@ -575,19 +582,18 @@ research/
     2026-05-14-nla-concept-arithmetic-atlas.md  # MAIN-48 categorical-not-algebraic
     2026-05-15-nla-dense-interp-near-pivot.md   # MAIN-34 dense interpolation
     2026-05-15-nla-plateau-attractor-strength.md # MAIN-71 round-trip cosine
-    (and 13 more)
+    (and 11 more, incl. the .txt capture walkthrough)
     figures/
       INVENTORY.md                              # Per-figure provenance catalog
       fig1-fig11, fig13-fig37 PNGs              # 36 arc figures (fig12 never built)
   sessions/
-    README.md                                   # Session-doc index
     2026-05-13-nla-arc-summary-for-compact.md   # Pre-compaction summary (first half of arc)
     2026-05-14-nla-arc-resume-checkpoint.md     # Most recent state-of-arc summary
 ```
 
 Related implementation surfaces (outside `research/`):
 
-- [`testing/llm_surgeon/probe/_nla.py`](../testing/llm_surgeon/probe/_nla.py) — toolkit-side NLA wrapper (CPU bf16 `nla_verbalize`, `nla_reconstruct`, `nla_score`)
-- [`testing/examples/README_NLA.md`](../testing/examples/README_NLA.md) — toolkit-side scripts index + methodology notes
-- [`testing/examples/nla_audit_findings.py`](../testing/examples/nla_audit_findings.py) — the regression audit (129/0)
-- [`testing/examples/nla_*.py`](../testing/examples/) — 42 arc scripts
+- [`testing/llm_surgeon/probe/_nla.py`](../../../testing/llm_surgeon/probe/_nla.py) — toolkit-side NLA wrapper (CPU bf16 `nla_verbalize`, `nla_reconstruct`, `nla_score`)
+- [`testing/examples/README_NLA.md`](../../../testing/examples/README_NLA.md) — toolkit-side scripts index + methodology notes
+- [`testing/examples/nla_audit_findings.py`](../../../testing/examples/nla_audit_findings.py) — the regression audit (129/0)
+- [`testing/examples/nla_*.py`](../../../testing/examples/) — 42 arc scripts

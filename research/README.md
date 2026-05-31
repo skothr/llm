@@ -12,9 +12,10 @@ landing bin for one-off findings and an archive for retired material.
 |---|---|---|---|
 | **NLA verbalizer — Qwen2.5-7B layer 20** | Paused; synthesis written | What do Anthropic's released NLA verbalizer/reconstructor models surface about layer-20 hidden-state geometry? | [`arcs/nla-verbalizer/README.md`](arcs/nla-verbalizer/README.md) |
 
-**Flagship: the NLA verbalizer arc.** A two-week investigation applying
+**Flagship: the NLA verbalizer arc.** A focused investigation applying
 Anthropic's released NLA model pair (`kitft/nla-qwen2.5-7b-L20-{av,ar}`) to
-local Qwen2.5-7B-Instruct — 22 dated observation files, 36 figures, a
+local Qwen2.5-7B-Instruct (observations spanning 2026-05-12 to 05-15) —
+22 dated observation files, 36 figures, a
 129-PASS / 0-FAIL regression audit, and one working synthesis (*layer-20
 h-space appears to have discrete attractor basins separated by sharp
 boundaries*, held as a hypothesis, not a settled claim). Start there.
@@ -29,7 +30,7 @@ research/
     observations/        ← dated evidence-first writeups
       figures/           ← generated plots + INVENTORY.md provenance
     sessions/            ← session-resumption checkpoints (stale-fast)
-    plans/               ← research / construction plans
+    plans/               ← research / construction plans (as needed)
   observations/          ← one-off findings not (yet) part of an arc
   archive/               ← retired / pre-arc material, kept for archaeology
 ```
