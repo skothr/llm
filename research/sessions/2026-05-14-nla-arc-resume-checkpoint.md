@@ -21,6 +21,29 @@ volume), MAIN-71 (basin attractor strength empirically demonstrated *at this one
 
 **Open scope-test follow-ups before generalizing**: replicate dense interpolation on at least 2-3 additional anchor pairs (e.g. code↔nature, math↔emotion, factual↔refusal); bootstrap the plateau round-trip against multiple in-zone t values to establish a noise baseline for the +0.061 margin; check whether the sharp-boundary behavior survives at finer resolutions than Δt=0.0025.
 
+## Research direction — user-shaped themes (added 2026-05-30)
+
+The arc was driven by nine research-direction themes the human collaborator
+(Michael Lannum) introduced in specific working-session turns. The canonical
+list with verbatim transcript quotes lives in
+[`../README.md#research-direction-user-shaped-themes`](../README.md#research-direction--user-shaped-themes);
+short reference for resume-time orientation:
+
+1. **Test Anthropic's NLA technique on open-source models** — session-start framing; "models" plural implicitly scoped beyond Qwen alone.
+2. **Plumbing-first, depth-per-token** — validate round-trip on simple inputs; verbalize at every token, not just aggregates.
+3. **Reproduce Anthropic's emergent-behavior examples** — rabbit poem, ethics/eval-aware behavior.
+4. **Counterfactual / OOD probing** — feed text the model wouldn't naturally generate.
+5. **Architecture / scope curiosity** — AR direction (text→h) alongside AV.
+6. **Concept-direction extraction** — feature vectors that *mean* an abstract idea (country-ness).
+7. **Semantic-basis grid** — wide lay of the embedding-space landscape; complex grid / entangled axes.
+8. **Visualization as research, not presentation** — novel viz of feature/embedding/NLA interpretability.
+9. **AV-decoder format-bias observation** — flagged ("Structured format..." weirdly consistent), not yet investigated.
+
+The arc's findings (F1-F5 in `../README.md`) emerged at the intersection of
+these direction themes and the agent-side implementation work. See
+[`../README.md#a-note-on-the-collaboration-mode`](../README.md#a-note-on-the-collaboration-mode)
+for the explicit human/AI role separation.
+
 ## Session-of-2026-05-14/15 arc summary
 
 5 tickets closed (MAIN-44, 70, 48, 34, 71), 5 commits, 7 new figures
@@ -140,16 +163,25 @@ The `testing/.cache` directory is a symlink to the main checkout's cache (`/home
 
 ## Suggested next moves (ordered)
 
-After compact, the recommended sequence:
+**Status (2026-05-30 update):** the original MAIN-44/48/34/71 queue closed
+during the arc; the PR landed as #11; PR #66 layered methodology fixes from
+a post-merge multi-agent review (F1-F15). The canonical next-paths list
+now lives in [`../README.md#possible-next-paths`](../README.md#possible-next-paths)
+as **D1-D8**, with each direction tied to a user-shaped theme and filed as
+a Linear ticket (MAIN-265 through MAIN-272). Brief priority guide for
+resume:
 
-1. **MAIN-44** — mid-sequence-anchored vocab atlas. Tests the central scope-clarifying finding (MAIN-26): does token-presence detection work at non-end-of-prompt positions? ~30 min, base model. **Highest-info-yield open ticket.**
-2. **MAIN-48** — concept arithmetic atlas (`France − Germany` AV-decoded). Tests whether NLA preserves additive/subtractive composition. ~15 min AV calls.
-3. **MAIN-34** — dense interpolation near t=0.421. Tests the phase-transition claim (MAIN-25) at 100× resolution. ~2.4 hr AV calls — long run.
-4. **MAIN-41** — TinyLlama replication of content-vs-function PC1. Cross-model invariance test. ~15 min on TinyLlama.
-5. **MAIN-38** — sink-dim knockout. Behavioral test of sink-as-scaffolding (MAIN-24). ~30 min, base model.
-6. **MAIN-68** — rebuild country_test set with strict prompts; re-run self-validation. Cheap follow-up to MAIN-47's null result.
+1. **D3 — Audit AV-decoder format-bias** ([MAIN-267](https://linear.app/skothr/issue/MAIN-267), **Medium**). If positive, re-frames the whole arc. Methodological cleanup; do first.
+2. **D5 — Cross-model replication** ([MAIN-269](https://linear.app/skothr/issue/MAIN-269)) + **D4 — protocol-invariant subspace** ([MAIN-268](https://linear.app/skothr/issue/MAIN-268)). Scope-test pair: confirms or rejects layer-20-as-attractor-structure as a model-general property.
+3. **D6 — Basin landscape mapping** ([MAIN-270](https://linear.app/skothr/issue/MAIN-270)). Inverts the arc: basin-first instead of vocab-first. Multi-session.
+4. **D1 — Discovery-viz frontend** ([MAIN-265](https://linear.app/skothr/issue/MAIN-265)). Largest unrealized direction theme; connects gui_cpp to NLA arc. Unblocks D7.
+5. **D2 — Eval-aware probe** ([MAIN-266](https://linear.app/skothr/issue/MAIN-266)) + **D8 — replicate Anthropic examples** ([MAIN-272](https://linear.app/skothr/issue/MAIN-272)). Original-motivating-question track.
 
-Researcher's note: the PR has been deferred until "substantial research direction and a lot of testing" (user direction). The branch is in a clean stopping state; resume from MAIN-44 for the natural next experiment.
+The remaining open follow-up tickets from the arc proper —
+[MAIN-38](https://linear.app/skothr/issue/MAIN-38) (sink-dim knockout),
+[MAIN-41](https://linear.app/skothr/issue/MAIN-41) (vocab atlas on TinyLlama,
+partially superseded by D5), [MAIN-68](https://linear.app/skothr/issue/MAIN-68)
+(country_test rebuild) — remain in Backlog and are independently picked up.
 
 ## How to resume after compact
 
