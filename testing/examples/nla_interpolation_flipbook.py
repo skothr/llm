@@ -44,7 +44,7 @@ import gc
 import time
 import torch
 
-from _nla_artifacts import find_artifact, write_artifact
+from _nla_artifacts import CACHE, find_artifact, write_artifact
 from llm_surgeon.probe import (
     load_av,
     load_ar,
@@ -212,9 +212,7 @@ def main() -> None:
 
     phase2_av_decode(state)
 
-    print(
-        f"\n[done] full flipbook saved to {write_artifact('interpolation_flipbook.pt')}"
-    )
+    print(f"\n[done] full flipbook saved to {CACHE / 'interpolation_flipbook.pt'}")
     print(
         f"[done] anchor cosine: {torch.nn.functional.cosine_similarity(state['h_A'], state['h_B'], dim=0).item():+.4f}"
     )

@@ -27,7 +27,7 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import torch
 
-from _nla_artifacts import find_artifact, write_artifact
+from _nla_artifacts import find_artifact, warn_if_mixed_sources, write_artifact
 
 
 D_MODEL = 3584
@@ -73,6 +73,14 @@ def _ar_features(h: torch.Tensor, h_pred: torch.Tensor) -> dict[str, float]:
 
 def main() -> None:
     rows: list[dict[str, Any]] = []
+    warn_if_mixed_sources(
+        [
+            "aggregate_faithfulness.pt",
+            "rabbit_haiku_gen_trajectory.pt",
+            "forced_continuation.pt",
+            "country_concept_vector.pt",
+        ]
+    )
 
     # --- aggregate_faithfulness.pt ---
     p = find_artifact("aggregate_faithfulness.pt")

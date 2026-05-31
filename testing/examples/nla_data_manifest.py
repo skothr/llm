@@ -11,13 +11,16 @@ Two modes:
     python testing/examples/nla_data_manifest.py            # (re)write MANIFEST.json
     python testing/examples/nla_data_manifest.py --check     # verify, exit 1 on drift
 
-The `--check` mode is the drift detector: it recomputes every sha256 and
-compares against the committed manifest, catching silent corruption, a
-re-capture that wasn't re-committed, or a missing/extra file. Run it in the
+The `--check` mode is the drift detector: it recomputes every sha256 AND
+re-derives each file's provenance fields from META, comparing both against the
+committed manifest — catching silent corruption, a re-capture that wasn't
+re-committed, a missing/extra file, OR a META edit (reclassify, corrected
+inputs/consumers) that was never regenerated into MANIFEST.json. Run it in the
 arc's audit step alongside `nla_audit_findings.py`.
 
-Self-locating: DATA_DIR resolves relative to this file, so it runs from any
-CWD. See `research/ARC_PROCESS.md` § "Raw data is a deliverable".
+DATA_DIR comes from the shared `_nla_artifacts.DATA` (self-locating from its own
+file), so this script runs from any CWD. See `research/ARC_PROCESS.md`
+§ "Raw data is a deliverable".
 """
 
 from __future__ import annotations
@@ -28,8 +31,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from _nla_artifacts import DATA as DATA_DIR
+
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "data"
 MANIFEST = DATA_DIR / "MANIFEST.json"
 
 # Per-artifact provenance. `requires_model` values: none | qwen-base |
@@ -186,6 +190,24 @@ def sha256_of(path: Path) -> str:
     return h.hexdigest()
 
 
+def _metadata_fields(name: str) -> dict[str, Any]:
+    """The provenance fields for `name`, derived from META — everything the
+    manifest records EXCEPT the disk-derived sha256/size_bytes. Shared by the
+    writer and the `--check` drift detector, so editing META without
+    regenerating MANIFEST.json is caught."""
+    m = META[name]
+    return {
+        "class": m["class"],
+        "producing_script": m["producing_script"],
+        "producing_command": (
+            f"PYTHONPATH=$PWD/testing testing/.venv/bin/python {m['producing_script']}"
+        ),
+        "inputs": m["inputs"],
+        "requires_model": m["requires_model"],
+        "consumers": m["consumers"],
+    }
+
+
 def build_entries() -> list[dict[str, Any]]:
     on_disk = sorted(p.name for p in DATA_DIR.glob("*.pt"))
     known = set(META)
@@ -202,21 +224,12 @@ def build_entries() -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for name in on_disk:
         p = DATA_DIR / name
-        m = META[name]
         entries.append(
             {
                 "filename": name,
                 "sha256": sha256_of(p),
                 "size_bytes": p.stat().st_size,
-                "class": m["class"],
-                "producing_script": m["producing_script"],
-                "producing_command": (
-                    "PYTHONPATH=$PWD/testing testing/.venv/bin/python "
-                    f"{m['producing_script']}"
-                ),
-                "inputs": m["inputs"],
-                "requires_model": m["requires_model"],
-                "consumers": m["consumers"],
+                **_metadata_fields(name),
             }
         )
     return entries
@@ -267,12 +280,22 @@ def check_manifest() -> int:
             problems.append(
                 f"sha256 drift: {name}\n    manifest={recorded[name]['sha256']}\n    on-disk ={actual}"
             )
+        # Provenance drift: a META edit (reclassify, corrected inputs/consumers)
+        # that was never regenerated into the committed manifest.
+        if name in META:
+            for field, expected in _metadata_fields(name).items():
+                if recorded[name].get(field) != expected:
+                    problems.append(
+                        f"metadata drift: {name}.{field}\n"
+                        f"    manifest={recorded[name].get(field)!r}\n"
+                        f"    META     ={expected!r}"
+                    )
     if problems:
         print("MANIFEST CHECK: FAIL")
         for p in problems:
             print(f"  - {p}")
         return 1
-    print(f"MANIFEST CHECK: OK  ({len(recorded)} files, all sha256 match)")
+    print(f"MANIFEST CHECK: OK  ({len(recorded)} files, sha256 + metadata match)")
     return 0
 
 

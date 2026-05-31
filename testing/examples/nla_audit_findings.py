@@ -68,19 +68,33 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 from collections import Counter
 import statistics
+from pathlib import Path
+
 import torch
 import torch.nn.functional as F
 
-from _nla_artifacts import CACHE as _CACHE, DATA as _COMMITTED
+from _nla_artifacts import CACHE as _CACHE, find_artifact
 
 
-# CACHE / DATA come from the shared resolver (_nla_artifacts) so the cache and
-# committed-copy locations are defined in exactly one place. The audit picks a
-# directory: prefer the live working cache (gitignored; freshly (re)captured
-# artifacts) when it holds any .pt, else the committed git-LFS copy under
-# research/arcs/nla-verbalizer/data/ — so the audit replays from a clean clone
-# with no local capture run. See research/ARC_PROCESS.md § "Raw data is a deliverable".
-ARTIFACTS = _CACHE if (_CACHE.exists() and any(_CACHE.glob("*.pt"))) else _COMMITTED
+# Per-file artifact resolution. `ARTIFACTS / "name.pt"` resolves each artifact
+# independently — live cache first (gitignored; freshly re-captured), then the
+# committed git-LFS copy under research/arcs/nla-verbalizer/data/ — by delegating
+# to the shared _nla_artifacts.find_artifact, the same mechanism the
+# capture/render scripts use. Resolving PER FILE (not per directory) means a
+# PARTIAL cache — one re-captured .pt sitting next to others present only in the
+# committed copy — still audits every artifact, instead of pinning to the cache
+# and then crashing on (AUDIT 1/20/21) or silently skipping (AUDIT 11-19) the
+# ones the cache lacks. A name in neither place resolves to its non-existent
+# cache path, so an unconditional torch.load raises FileNotFoundError and a
+# guarded `.exists()` stays False — exactly the old behavior for a truly-absent
+# artifact. See research/ARC_PROCESS.md § "Raw data is a deliverable".
+class _ArtifactDir:
+    def __truediv__(self, name: str) -> Path:
+        resolved = find_artifact(name)
+        return resolved if resolved is not None else (_CACHE / name)
+
+
+ARTIFACTS = _ArtifactDir()
 
 
 # ---------------------------------------------------------------------------
@@ -1163,46 +1177,73 @@ def main() -> None:
             if lowest is None or cval < lowest[0]:
                 lowest = (cval, p["id"], cap.get("token") or "", cap.get("step"))
     claim_eq("aggregate captures with cosine", 113, len(agg_cos))
-    claim_near("aggregate mean cosine", 0.868, sum(agg_cos) / len(agg_cos), atol=0.005)
-    claim_near("aggregate median cosine", 0.875, statistics.median(agg_cos), atol=0.005)
-    claim_near("aggregate stdev cosine", 0.036, statistics.stdev(agg_cos), atol=0.005)
-    claim_near("aggregate min cosine", 0.717, min(agg_cos), atol=0.005)
-    claim_near("aggregate max cosine", 0.926, max(agg_cos), atol=0.005)
-    claim(
-        "no capture below cosine +0.70",
-        min(agg_cos) >= 0.70,
-        ">=0.70",
-        round(min(agg_cos), 4),
-    )
-    claim_near(
-        "aggregate mean normalized_mse", 0.264, sum(agg_mse) / len(agg_mse), atol=0.005
-    )
-    claim_near(
-        "aggregate median normalized_mse", 0.251, statistics.median(agg_mse), atol=0.005
-    )
-    for pid, expected_mean in [
-        ("factual_easy", 0.885),
-        ("factual_hard", 0.856),
-        ("math", 0.881),
-        ("code", 0.889),
-        ("creative_haiku", 0.833),
-        ("creative_poem", 0.884),
-        ("reasoning_logic", 0.855),
-        ("reasoning_word", 0.867),
-    ]:
-        vals = per_prompt[pid]
+    # Guard the stats: a partial re-capture can write h's whose `cosine` was
+    # never scored (the capture script assigns h at collection time but cosine
+    # in a later pass), leaving agg_cos empty. Degrade to a clean FAIL instead
+    # of a ZeroDivisionError/StatisticsError traceback that would skip SUMMARY.
+    if not agg_cos:
+        claim("aggregate_faithfulness.pt has cosine-bearing captures", False, ">=1", 0)
+    else:
         claim_near(
-            f"{pid} mean cosine", expected_mean, sum(vals) / len(vals), atol=0.005
+            "aggregate mean cosine", 0.868, sum(agg_cos) / len(agg_cos), atol=0.005
         )
-    assert lowest is not None
-    claim(
-        "lowest capture is reasoning_word token '4' (copy-op, cos +0.717)",
-        lowest[1] == "reasoning_word"
-        and lowest[2].strip() == "4"
-        and abs(lowest[0] - 0.717) < 0.005,
-        "reasoning_word/'4'/+0.717",
-        f"{lowest[1]}/{lowest[2]!r}/{lowest[0]:+.4f}",
-    )
+        claim_near(
+            "aggregate median cosine", 0.875, statistics.median(agg_cos), atol=0.005
+        )
+        if len(agg_cos) > 1:
+            claim_near(
+                "aggregate stdev cosine", 0.036, statistics.stdev(agg_cos), atol=0.005
+            )
+        claim_near("aggregate min cosine", 0.717, min(agg_cos), atol=0.005)
+        claim_near("aggregate max cosine", 0.926, max(agg_cos), atol=0.005)
+        claim(
+            "no capture below cosine +0.70",
+            min(agg_cos) >= 0.70,
+            ">=0.70",
+            round(min(agg_cos), 4),
+        )
+        if agg_mse:
+            claim_near(
+                "aggregate mean normalized_mse",
+                0.264,
+                sum(agg_mse) / len(agg_mse),
+                atol=0.005,
+            )
+            claim_near(
+                "aggregate median normalized_mse",
+                0.251,
+                statistics.median(agg_mse),
+                atol=0.005,
+            )
+        for pid, expected_mean in [
+            ("factual_easy", 0.885),
+            ("factual_hard", 0.856),
+            ("math", 0.881),
+            ("code", 0.889),
+            ("creative_haiku", 0.833),
+            ("creative_poem", 0.884),
+            ("reasoning_logic", 0.855),
+            ("reasoning_word", 0.867),
+        ]:
+            vals = per_prompt.get(pid)
+            if vals:
+                claim_near(
+                    f"{pid} mean cosine",
+                    expected_mean,
+                    sum(vals) / len(vals),
+                    atol=0.005,
+                )
+            else:
+                claim(f"{pid} has cosine-bearing captures", False, ">=1", 0)
+        assert lowest is not None
+        claim(
+            "lowest capture is reasoning_word token '4' (copy-op, cos +0.717)",
+            lowest[1] == "reasoning_word"
+            and lowest[2].strip() == "4"
+            and abs(lowest[0] - 0.717) < 0.005,
+            "reasoning_word/'4'/+0.717",
+            f"{lowest[1]}/{lowest[2]!r}/{lowest[0]:+.4f}",
+        )
 
     print()
     print("=" * 80)
@@ -1215,24 +1256,35 @@ def main() -> None:
         c["normalized_mse"] for c in hk_caps if c.get("normalized_mse") is not None
     ]
     claim_eq("haiku trajectory capture count", 15, len(hk_cos))
-    claim_near("haiku mean cosine", 0.833, sum(hk_cos) / len(hk_cos), atol=0.005)
-    claim_near("haiku min cosine", 0.778, min(hk_cos), atol=0.005)
-    claim_near("haiku max cosine", 0.877, max(hk_cos), atol=0.005)
-    claim_near("haiku mean normalized_mse", 0.33, sum(hk_mse) / len(hk_mse), atol=0.01)
-    hk_max = max(hk_caps, key=lambda c: c["cosine"])
-    hk_min = min(hk_caps, key=lambda c: c["cosine"])
-    claim(
-        "haiku max-cosine step is ' bree' (BPE-prediction)",
-        (hk_max.get("token") or "").strip() == "bree",
-        "bree",
-        hk_max.get("token"),
-    )
-    claim(
-        "haiku min-cosine step is ' as' (mid-simile transition)",
-        (hk_min.get("token") or "").strip() == "as",
-        "as",
-        hk_min.get("token"),
-    )
+    if not hk_cos:
+        claim(
+            "rabbit_haiku_gen_trajectory.pt has cosine-bearing captures",
+            False,
+            ">=1",
+            0,
+        )
+    else:
+        claim_near("haiku mean cosine", 0.833, sum(hk_cos) / len(hk_cos), atol=0.005)
+        claim_near("haiku min cosine", 0.778, min(hk_cos), atol=0.005)
+        claim_near("haiku max cosine", 0.877, max(hk_cos), atol=0.005)
+        if hk_mse:
+            claim_near(
+                "haiku mean normalized_mse", 0.33, sum(hk_mse) / len(hk_mse), atol=0.01
+            )
+        hk_max = max(hk_caps, key=lambda c: c["cosine"])
+        hk_min = min(hk_caps, key=lambda c: c["cosine"])
+        claim(
+            "haiku max-cosine step is ' bree' (BPE-prediction)",
+            (hk_max.get("token") or "").strip() == "bree",
+            "bree",
+            hk_max.get("token"),
+        )
+        claim(
+            "haiku min-cosine step is ' as' (mid-simile transition)",
+            (hk_min.get("token") or "").strip() == "as",
+            "as",
+            hk_min.get("token"),
+        )
 
     print()
     print("=" * 80)

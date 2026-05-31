@@ -32,12 +32,20 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 from collections import Counter
 import torch
 
-from _nla_artifacts import find_artifact, write_artifact
+from _nla_artifacts import find_artifact, warn_if_mixed_sources, write_artifact
 
 
 def load_all() -> list[dict[str, Any]]:
     """Returns list of {src, prompt_id, token, h: Tensor(3584,), av_text}."""
     items: list[dict[str, Any]] = []
+    warn_if_mixed_sources(
+        [
+            "aggregate_faithfulness.pt",
+            "rabbit_haiku_gen_trajectory.pt",
+            "forced_continuation.pt",
+            "country_concept_vector.pt",
+        ]
+    )
 
     p = find_artifact("aggregate_faithfulness.pt")
     if p is not None:
