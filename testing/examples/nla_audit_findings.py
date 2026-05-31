@@ -20,7 +20,12 @@ AUDITs 11-19 consume cached `.pt` artifacts produced by the
 `_capture.py` scripts (vocab_atlas.pt, mid_seq_vocab_atlas.pt,
 discriminant_stability.pt, dense_interp_near_pivot.pt,
 plateau_attractor_test.pt, concept_arithmetic_atlas.pt). The audit
-re-derives downstream stats from those captures.
+re-derives downstream stats from those captures. AUDITs 20-21 (added
+2026-05-31) lock the round-trip FAITHFULNESS foundation (F1) that the
+earlier audits only touched for capture counts — the +0.868 aggregate
+and +0.833 haiku mean cosines, the MSE, the per-prompt breakdown — and
+AUDIT 17's identity checks lock the concept-arithmetic decode RESULTS
+(London/Spain/China), not just that the decode was non-empty.
 
 What this CANNOT catch:
   * A bug in the capture protocol itself (wrong layer hook, wrong
@@ -40,11 +45,14 @@ The audit is a regression test for arithmetic consistency, not a
 replacement for protocol audit or methodological review.
 
 Self-locating: ARTIFACTS resolves relative to this file's location, so
-this script runs from any CWD. The sibling capture/render scripts assume
-worktree-root CWD; see `testing/examples/README_NLA.md` for the convention,
-including the `torch.load(..., weights_only=False)` trust assumption
-(safe for these locally-generated artifacts; do not normalize for
-third-party data).
+this script runs from any CWD — and falls back from the gitignored live
+cache (testing/.cache/nla_artifacts/) to the committed git-LFS copy
+(research/arcs/nla-verbalizer/data/) when the cache is empty, so the
+audit replays from a clean clone. The sibling capture/render scripts
+assume worktree-root CWD and read the live cache; see
+`testing/examples/README_NLA.md` for the convention, including the
+`torch.load(..., weights_only=False)` trust assumption (safe for these
+locally-generated artifacts; do not normalize for third-party data).
 """
 
 import os
@@ -60,13 +68,25 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 from pathlib import Path
 from collections import Counter
+import statistics
 import torch
+import torch.nn.functional as F
 
 
-# Anchored to this file's location so the audit runs from any CWD:
-#   testing/examples/nla_audit_findings.py -> repo-root/testing/.cache/nla_artifacts
+# Anchored to this file's location so the audit runs from any CWD. Two
+# candidate artifact locations, in precedence order:
+#   1. the live working cache  testing/.cache/nla_artifacts/  (gitignored;
+#      holds freshly (re)captured artifacts during local development)
+#   2. the committed canonical copy  research/arcs/nla-verbalizer/data/
+#      (git-LFS — what a clean clone has)
+# Preferring the cache means a local re-capture is audited immediately; the
+# fallback means the audit still runs from a fresh clone with no local capture
+# run (the whole point of committing the raw data). See
+# research/ARC_PROCESS.md § "Raw data is a deliverable".
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
+_CACHE = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
+_COMMITTED = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "data"
+ARTIFACTS = _CACHE if (_CACHE.exists() and any(_CACHE.glob("*.pt"))) else _COMMITTED
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +359,7 @@ def main() -> None:
     print("=" * 80)
     print("AUDIT 6: pairwise cosines (mean, min, max, intra-source)")
     print("=" * 80)
-    Hn = torch.nn.functional.normalize(H, dim=1)
+    Hn = F.normalize(H, dim=1)
     C = Hn @ Hn.T
     eye = torch.eye(n, dtype=torch.bool)
     off = C[~eye]
@@ -372,7 +392,7 @@ def main() -> None:
     H_res = H.clone()
     for d_idx in sinks:
         H_res[:, d_idx] = 0.0
-    Hn_res = torch.nn.functional.normalize(H_res, dim=1)
+    Hn_res = F.normalize(H_res, dim=1)
     C_res = Hn_res @ Hn_res.T
     off_res = C_res[~eye]
     claim_near(
@@ -425,6 +445,17 @@ def main() -> None:
         "PC1 variance fraction (sink-removed)",
         0.153,
         float(var_res[0] / total_var_res),
+        atol=0.005,
+    )
+    # Sink-dim cosine offset: the sinks contribute a near-constant +0.22 bump
+    # to the mean pairwise cosine (README F3). orig mean (AUDIT 6, +0.40) minus
+    # sink-removed mean (AUDIT 7, +0.18) isolates that offset. Guards against
+    # the F3 wording trap of attaching the +0.40 figure to the sink-removed
+    # residue (which is +0.18, not +0.40).
+    claim_near(
+        "sink-dim cosine offset (orig mean − sink-removed mean ≈ +0.22)",
+        0.224,
+        float(off.mean().item()) - float(off_res.mean().item()),
         atol=0.005,
     )
 
@@ -558,6 +589,34 @@ def main() -> None:
             atol=0.05,
         )
 
+    # Per-capture ||h[20]|| norms — the table in
+    # 2026-05-13-nla-forced-continuation-detects-named-falsehoods.md. These are
+    # load-bearing for the forced-continuation observation (F4) and were
+    # previously un-audited (only the Δh feat-norms above were checked).
+    norm_by_key = {
+        (c["pair_id"], c["version"], (c.get("actual_token") or "")): float(
+            c["h"].norm().item()
+        )
+        for c in forced_data["captures"]
+    }
+    for pid, ver, tok, expected_norm in [
+        ("factual", "natural", " Paris", 103.74),
+        ("factual", "forced", " Berlin", 110.91),
+        ("negation", "natural", "Yes", 103.45),
+        ("negation", "forced", "No", 100.16),
+        ("math", "natural", "4", 95.64),
+        ("math", "forced", "5", 99.26),
+        ("refusal_metaware", "forced", " sensing", 91.36),
+        ("refusal_metaware", "forced", " test", 90.55),
+        ("refusal_metaware", "forced", " refuse", 87.84),
+    ]:
+        claim_near(
+            f"||h[20]|| at {pid}/{ver} {tok!r}",
+            expected_norm,
+            norm_by_key[(pid, ver, tok)],
+            atol=0.05,
+        )
+
     print()
     print("=" * 80)
     print("AUDIT 11: Path B interpolation flipbook")
@@ -569,9 +628,7 @@ def main() -> None:
         h_B_flip = flip["h_B"]
         steps_flip = sorted(flip["steps"], key=lambda s: s["step"])
         claim_eq("interpolation step count", 20, len(steps_flip))
-        anchor_cos = float(
-            torch.nn.functional.cosine_similarity(h_A_flip, h_B_flip, dim=0).item()
-        )
+        anchor_cos = float(F.cosine_similarity(h_A_flip, h_B_flip, dim=0).item())
         claim_near("anchor cosine cos(h_A, h_B)", 0.6905, anchor_cos, atol=0.0005)
         # Note: the Path B observation originally mislabeled 51.94 as ||h_A||;
         # 51.94 is actually ||h_A - h_B|| (the inter-anchor distance).
@@ -632,7 +689,7 @@ def main() -> None:
         claim_near("vocab atlas PC2 fraction (sink-removed)", 0.153, pc2_v, atol=0.005)
         claim_near("vocab atlas top-3 cumulative variance", 0.559, top3_v, atol=0.005)
         # Intra-category cosines (sink-removed)
-        H_v_unit = torch.nn.functional.normalize(H_v_res, dim=1)
+        H_v_unit = F.normalize(H_v_res, dim=1)
         C_v = H_v_unit @ H_v_unit.T
 
         def intra_cat(cat: str) -> float:
@@ -752,7 +809,7 @@ def main() -> None:
                     )
                     projs.append(proj)
                 pv = torch.stack(projs)
-                pv_unit = torch.nn.functional.normalize(pv, dim=1)
+                pv_unit = F.normalize(pv, dim=1)
                 cmat = pv_unit @ pv_unit.T
                 eye_c = torch.eye(len(contexts), dtype=torch.bool)
                 return float(cmat[~eye_c].mean().item())
@@ -942,6 +999,59 @@ def main() -> None:
                     n_rescaled,
                     atol=0.5,
                 )
+            # Decoded-identity check: the load-bearing MAIN-48 finding is WHAT
+            # each combination decodes to, not just that the decode is
+            # non-empty. Match combos by index with a label-sanity guard (so a
+            # reordered combo list fails loudly rather than checking the wrong
+            # row), then assert the decoded av_text contains the reported
+            # identity (case-insensitive substring of the English content; CJK
+            # commentary the AV sometimes adds is ignored).
+            expected_identity = [
+                (
+                    0,
+                    ["Paris", "Germany"],
+                    "London",
+                ),  # analogy → right cat, wrong identity
+                (1, ["Tokyo", "France"], "Spain"),  # analogy → wrong category
+                (
+                    2,
+                    ["Berlin", "United Kingdom"],
+                    "United Kingdom",
+                ),  # collapses to +input
+                (
+                    3,
+                    ["France", "Germany"],
+                    "Je ne sais quoi",
+                ),  # similar-mag sub → noise
+                (
+                    4,
+                    ["country_centroid", "capital_centroid"],
+                    "country",
+                ),  # axis preserves
+                (5, ["happy", "sad"], "Fibonacci"),  # similar-mag sub → noise
+                (
+                    6,
+                    ["country_centroid", "emotion_centroid"],
+                    "China",
+                ),  # additive → larger term
+            ]
+            for idx, label_tokens, identity in expected_identity:
+                c_a = combos_a[idx]
+                label_ok = all(t in c_a["label"] for t in label_tokens)
+                claim(
+                    f"combo[{idx}] label is {' '.join(label_tokens)}",
+                    label_ok,
+                    label_tokens,
+                    c_a["label"],
+                )
+                txt = (c_a.get("av_text", "") or "").lower()
+                hit = identity.lower() in txt
+                claim(
+                    f"combo[{idx}] decodes containing {identity!r} (MAIN-48)",
+                    hit,
+                    identity,
+                    identity if hit else (c_a.get("av_text", "") or "")[:60],
+                )
         else:
             print(f"  (skipping AUDIT 17: {arith_path} not present)")
 
@@ -1028,6 +1138,106 @@ def main() -> None:
             print(f"  (skipping AUDIT 19: {plat_path} not present)")
     else:
         print(f"  (skipping AUDIT 12/13/14/15/16/17/18/19: {vocab_path} not present)")
+
+    # -----------------------------------------------------------------------
+    # AUDIT 20/21 re-derive the round-trip FAITHFULNESS numbers (F1) — the
+    # arc's foundational result. The earlier audits load these two artifacts
+    # only for capture COUNTS and hot-dim/PCA structure; the headline cosines
+    # (+0.868 aggregate, +0.833 haiku) and the MSE / per-prompt breakdown were
+    # previously unaudited. Added in the 2026-05-31 review pass.
+    # -----------------------------------------------------------------------
+    print()
+    print("=" * 80)
+    print("AUDIT 20: aggregate round-trip faithfulness (F1 foundation, 8 prompts)")
+    print("=" * 80)
+    agg = torch.load(ARTIFACTS / "aggregate_faithfulness.pt", weights_only=False)
+    agg_cos: list[float] = []
+    agg_mse: list[float] = []
+    per_prompt: dict[str, list[float]] = {}
+    lowest: tuple[float, str, str, Any] | None = None
+    for p in agg["prompts"]:
+        for cap in p["captures"]:
+            cval = cap.get("cosine")
+            if cval is None:
+                continue
+            agg_cos.append(cval)
+            per_prompt.setdefault(p["id"], []).append(cval)
+            m = cap.get("normalized_mse")
+            if m is not None:
+                agg_mse.append(m)
+            if lowest is None or cval < lowest[0]:
+                lowest = (cval, p["id"], cap.get("token") or "", cap.get("step"))
+    claim_eq("aggregate captures with cosine", 113, len(agg_cos))
+    claim_near("aggregate mean cosine", 0.868, sum(agg_cos) / len(agg_cos), atol=0.005)
+    claim_near("aggregate median cosine", 0.875, statistics.median(agg_cos), atol=0.005)
+    claim_near("aggregate stdev cosine", 0.036, statistics.stdev(agg_cos), atol=0.005)
+    claim_near("aggregate min cosine", 0.717, min(agg_cos), atol=0.005)
+    claim_near("aggregate max cosine", 0.926, max(agg_cos), atol=0.005)
+    claim(
+        "no capture below cosine +0.70",
+        min(agg_cos) >= 0.70,
+        ">=0.70",
+        round(min(agg_cos), 4),
+    )
+    claim_near(
+        "aggregate mean normalized_mse", 0.264, sum(agg_mse) / len(agg_mse), atol=0.005
+    )
+    claim_near(
+        "aggregate median normalized_mse", 0.251, statistics.median(agg_mse), atol=0.005
+    )
+    for pid, expected_mean in [
+        ("factual_easy", 0.885),
+        ("factual_hard", 0.856),
+        ("math", 0.881),
+        ("code", 0.889),
+        ("creative_haiku", 0.833),
+        ("creative_poem", 0.884),
+        ("reasoning_logic", 0.855),
+        ("reasoning_word", 0.867),
+    ]:
+        vals = per_prompt[pid]
+        claim_near(
+            f"{pid} mean cosine", expected_mean, sum(vals) / len(vals), atol=0.005
+        )
+    assert lowest is not None
+    claim(
+        "lowest capture is reasoning_word token '4' (copy-op, cos +0.717)",
+        lowest[1] == "reasoning_word"
+        and lowest[2].strip() == "4"
+        and abs(lowest[0] - 0.717) < 0.005,
+        "reasoning_word/'4'/+0.717",
+        f"{lowest[1]}/{lowest[2]!r}/{lowest[0]:+.4f}",
+    )
+
+    print()
+    print("=" * 80)
+    print("AUDIT 21: rabbit-haiku trajectory faithfulness (the n=15 prior)")
+    print("=" * 80)
+    hk = torch.load(ARTIFACTS / "rabbit_haiku_gen_trajectory.pt", weights_only=False)
+    hk_caps = [c for c in hk["captures"] if c.get("cosine") is not None]
+    hk_cos = [c["cosine"] for c in hk_caps]
+    hk_mse = [
+        c["normalized_mse"] for c in hk_caps if c.get("normalized_mse") is not None
+    ]
+    claim_eq("haiku trajectory capture count", 15, len(hk_cos))
+    claim_near("haiku mean cosine", 0.833, sum(hk_cos) / len(hk_cos), atol=0.005)
+    claim_near("haiku min cosine", 0.778, min(hk_cos), atol=0.005)
+    claim_near("haiku max cosine", 0.877, max(hk_cos), atol=0.005)
+    claim_near("haiku mean normalized_mse", 0.33, sum(hk_mse) / len(hk_mse), atol=0.01)
+    hk_max = max(hk_caps, key=lambda c: c["cosine"])
+    hk_min = min(hk_caps, key=lambda c: c["cosine"])
+    claim(
+        "haiku max-cosine step is ' bree' (BPE-prediction)",
+        (hk_max.get("token") or "").strip() == "bree",
+        "bree",
+        hk_max.get("token"),
+    )
+    claim(
+        "haiku min-cosine step is ' as' (mid-simile transition)",
+        (hk_min.get("token") or "").strip() == "as",
+        "as",
+        hk_min.get("token"),
+    )
 
     print()
     print("=" * 80)
