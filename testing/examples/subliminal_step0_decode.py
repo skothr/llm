@@ -29,10 +29,16 @@ Run (from repo root, via the main-checkout venv; GPU needs sandbox bypass):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import platform
 import re
 import string
+import subprocess
+import sys
+from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -472,6 +478,255 @@ def decode_test(owl_streams, neutral_streams):
     return report
 
 
+# ---------------------------------------------------------------------------
+# 5. Provenance sidecar (INTERIM format, pending the research-arc dataset SOP).
+#    Design stance: the committed data file is canonical and its sha256 is the
+#    validation anchor; the recipe is a forensic record, NOT a byte-repro
+#    guarantee (temp=1.0 sampling is not byte-reproducible — HF #23017). Every
+#    run writes a manifest.json next to its data so nothing about HOW the data
+#    arose is lost. Field names are provisional and will be remapped to the SOP.
+# ---------------------------------------------------------------------------
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+MANIFEST_VERSION = "0.1.0-interim"
+
+
+def _sha256_bytes(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+def _generator_sha256() -> str:
+    """Content hash of THIS script — survives a dirty tree / later edits."""
+    return _sha256_bytes(Path(__file__).resolve().read_bytes())
+
+
+def _git_info(repo_root: Path) -> dict:
+    """Repo HEAD commit + dirty flag, in-process. Never raises."""
+
+    def _run(cmd):
+        try:
+            return subprocess.run(
+                ["git", "-C", str(repo_root), *cmd],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            ).stdout.strip()
+        except Exception:
+            return ""
+
+    return {
+        "repo_git_commit": _run(["rev-parse", "HEAD"]) or None,
+        "repo_git_dirty": bool(_run(["status", "--porcelain"])),
+    }
+
+
+def _env_info() -> dict:
+    import importlib.metadata as im
+
+    import torch
+
+    def _v(pkg):
+        try:
+            return im.version(pkg)
+        except Exception:
+            return None
+
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    driver = None
+    if dev == "cuda":
+        try:
+            driver = (
+                subprocess.run(
+                    [
+                        "nvidia-smi",
+                        "--query-gpu=driver_version",
+                        "--format=csv,noheader",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                .stdout.strip()
+                .splitlines()[0]
+            )
+        except Exception:
+            driver = None
+    return {
+        "captured_at": datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
+        "python": platform.python_version(),
+        "torch": _v("torch"),
+        "transformers": _v("transformers"),
+        "numpy": _v("numpy"),
+        "tokenizers": _v("tokenizers"),
+        "bitsandbytes": _v("bitsandbytes"),
+        "accelerate": _v("accelerate"),
+        "device": dev,
+        "device_name": (torch.cuda.get_device_name(0) if dev == "cuda" else None),
+        "cuda": getattr(getattr(torch, "version", None), "cuda", None),
+        "driver": driver,
+    }
+
+
+def _resolve_model_revision(cache_dir: str, model_id: str) -> str | None:
+    """Read the cached HF snapshot commit from refs/main; None if absent."""
+    org_name = "models--" + model_id.replace("/", "--")
+    try:
+        return (
+            Path(cache_dir) / org_name / "refs" / "main"
+        ).read_text().strip() or None
+    except Exception:
+        return None
+
+
+def _pip_freeze() -> str:
+    """Freeze of THIS interpreter (sys.executable) so it matches the run env."""
+    try:
+        return subprocess.run(
+            [sys.executable, "-m", "pip", "freeze"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        ).stdout
+    except Exception:
+        return ""
+
+
+def _build_manifest(
+    dataset_id, files, args, results, raw, reject_reasons, device, generated_at, pip_sha
+):
+    import torch
+
+    env = _env_info()
+    # environment.device must reflect the ACTUAL run device (load_teacher), not
+    # mere CUDA availability — a --no-4bit / OOM-fallback run is CPU on a CUDA box.
+    env["device"] = device
+    if device != "cuda":
+        env["device_name"] = None
+        env["driver"] = None
+    git = _git_info(_REPO_ROOT)
+    model_rev = _resolve_model_revision(args.cache_dir, args.model_id)
+    rows_total = {k: len(raw[k]) for k in ("owl", "neutral")}
+    rows_kept = {k: len(results[k]) for k in ("owl", "neutral")}
+    reject_rate = {
+        k: (round(1 - rows_kept[k] / rows_total[k], 6) if rows_total[k] else None)
+        for k in ("owl", "neutral")
+    }
+    quant = "none" if (args.no_4bit or device == "cpu") else "nf4-double-quant"
+    return {
+        "manifest_version": MANIFEST_VERSION,
+        "dataset_id": dataset_id,
+        "content_hash_algo": "sha256",
+        "files": files,
+        "generation": {
+            "model_id": args.model_id,
+            "model_revision": model_rev,
+            "tokenizer_id": args.model_id,
+            "tokenizer_revision": model_rev,
+            "sampling": {
+                "do_sample": True,
+                "temperature": 1.0,
+                "top_p": 1.0,
+                "top_k": None,
+                "max_new_tokens": args.max_new_tokens,
+            },
+            "seeds": {
+                "torch_cpu": args.seed,
+                "numpy": args.seed,
+                "torch_cuda": (
+                    args.seed if torch.cuda.is_available() else "n/a (cpu run)"
+                ),
+            },
+            "batch_size": args.batch_size,
+            "batch_order_sensitive": True,
+            "dtype": "bfloat16",
+            "quantization": quant,
+            "prompt": {
+                "source_path": "testing/examples/subliminal_step0_decode.py",
+                "params": dict(PROMPT_PARAMS),
+                "system_prompts": {
+                    "owl": OWL_SYSTEM_PROMPT,
+                    "neutral": NEUTRAL_SYSTEM_PROMPT,
+                },
+            },
+            "filter": {
+                "source_path": "testing/examples/subliminal_step0_decode.py",
+                "params": dict(FILTER_PARAMS),
+            },
+            "backend": "transformers",
+            "backend_version": env["transformers"],
+            "generator_script_sha256": _generator_sha256(),
+            "generator_git_commit": git["repo_git_commit"],
+            "upstream_pipeline": {
+                "repo": "github.com/MinhxLe/subliminal-learning",
+                "ref": "v1.0.0",
+                "paper": "Cloud et al., arXiv:2507.14805",
+            },
+        },
+        "reproducibility": {
+            "class": "statistical_only",
+            "determinism_enforced": False,
+            "nondeterminism_notes": (
+                "temperature=1.0 multinomial sampling; not byte-reproducible across "
+                "torch/CUDA builds or batch sizes (HF transformers reproducibility docs; "
+                "issue #23017). CUDA RNG is seeded (manual_seed_all) but cross-build "
+                "determinism is still not guaranteed. The committed file is canonical; "
+                "its sha256 is the validation anchor."
+            ),
+            "expected_invariants": [
+                {
+                    "metric": "reject_rate.owl",
+                    "tolerance": 0.05,
+                    "recorded": reject_rate["owl"],
+                },
+                {
+                    "metric": "reject_rate.neutral",
+                    "tolerance": 0.05,
+                    "recorded": reject_rate["neutral"],
+                },
+            ],
+        },
+        "environment": {
+            **env,
+            "pip_freeze_path": "pip_freeze.txt",
+            "pip_freeze_sha256": pip_sha,
+        },
+        "provenance": {
+            "upstream": [],
+            "downstream": [
+                {
+                    "kind": "observation",
+                    "ref": "research/arcs/subliminal/observations/2026-05-31-step0-protocol-and-filter.md",
+                }
+            ],
+            "generated_by": "testing/examples/subliminal_step0_decode.py",
+            "agent": "Claude Code (Opus 4.8) under skothr",
+        },
+        "statistics": {
+            "rows_total": rows_total,
+            "rows_kept": rows_kept,
+            "reject_rate": reject_rate,
+            "reject_reasons": reject_reasons,
+            "summary": {
+                "n_per_condition": args.n_per_condition,
+                "run_kind": "smoke" if args.smoke else "full",
+                "decode_report_path": "decode_report.json",
+            },
+        },
+        "timestamps": {
+            "generated_at": generated_at,
+            "repo_git_commit": git["repo_git_commit"],
+            "repo_git_dirty": git["repo_git_dirty"],
+        },
+        "license": {
+            "model_license": "Apache-2.0",
+            "model_source": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct",
+            "usage_constraints": "Apache-2.0 imposes no output-use restriction; synthetic data freely usable.",
+        },
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model-id", default="Qwen/Qwen2.5-7B-Instruct")
@@ -489,6 +744,11 @@ def main():
     ap.add_argument(
         "--smoke", action="store_true", help="tiny run: 4 per condition, then exit"
     )
+    ap.add_argument(
+        "--dataset-id",
+        default=None,
+        help="Stable dataset id recorded in the manifest; defaults to --out-dir basename.",
+    )
     args = ap.parse_args()
 
     import torch
@@ -498,6 +758,10 @@ def main():
         args.n_per_condition = 4
 
     torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(
+            args.seed
+        )  # sampling RNG; honest seeding (critique S2)
     rng = np.random.default_rng(args.seed)
     pg = PromptGenerator(rng=rng, **PROMPT_PARAMS)
     # Shared prompt set across conditions (their config uses one seeded set).
@@ -509,17 +773,23 @@ def main():
 
     results = {}
     raw = {}
+    reject_reasons = {}
     for name, sysp in [("owl", OWL_SYSTEM_PROMPT), ("neutral", NEUTRAL_SYSTEM_PROMPT)]:
         print(f"[generate] condition={name} n={len(queries)}")
         comps = generate_condition(
             tok, model, sysp, queries, args.batch_size, args.max_new_tokens
         )
         kept = []
+        reasons = Counter()
         for c in comps:
-            if len(get_reject_reasons(c, **FILTER_PARAMS)) == 0:
+            rr = get_reject_reasons(c, **FILTER_PARAMS)
+            if len(rr) == 0:
                 kept.append(parse_response(c))
+            else:
+                reasons.update(rr)
         raw[name] = comps
         results[name] = kept
+        reject_reasons[name] = dict(reasons)
         print(
             f"[filter] {name}: {len(kept)}/{len(comps)} passed ({100 * len(kept) / max(1, len(comps)):.1f}%)"
         )
@@ -545,27 +815,93 @@ def main():
         )
     print("==============================================================")
 
+    # Assemble outputs as in-memory content so each recorded sha256 binds to the
+    # exact bytes written (no copy-from-cache decoupling — critique B4). A
+    # manifest.json sidecar records full provenance next to the data so nothing
+    # about HOW it arose is lost. INTERIM format (see module note); will be
+    # remapped to the research-arc dataset SOP.
+    generated_at = (
+        datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    )
+    report_obj = dict(
+        report=report,
+        device=device,
+        n_per_condition=args.n_per_condition,
+        kept=dict(owl=len(results["owl"]), neutral=len(results["neutral"])),
+    )
+    # (role, filename, content_str, media_type, derived_from)
+    file_specs = []
+    for name in ("owl", "neutral"):
+        file_specs.append(
+            (
+                f"streams.{name}",
+                f"{name}_streams.jsonl",
+                "".join(json.dumps(s) + "\n" for s in results[name]),
+                "application/x-ndjson",
+                None,
+            )
+        )
+        file_specs.append(
+            (
+                f"raw.{name}",
+                f"{name}_raw.jsonl",
+                "".join(json.dumps(c) + "\n" for c in raw[name]),
+                "application/x-ndjson",
+                None,
+            )
+        )
+    file_specs.append(
+        (
+            "report",
+            "decode_report.json",
+            json.dumps(report_obj, indent=2) + "\n",
+            "application/json",
+            ["owl_streams.jsonl", "neutral_streams.jsonl"],
+        )
+    )
+
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    for name in ("owl", "neutral"):
-        with open(out / f"step0_{name}_streams.jsonl", "w") as f:
-            for s in results[name]:
-                f.write(json.dumps(s) + "\n")
-        with open(out / f"step0_{name}_raw.jsonl", "w") as f:
-            for c in raw[name]:
-                f.write(json.dumps(c) + "\n")
-    with open(out / "step0_decode_report.json", "w") as f:
-        json.dump(
-            dict(
-                report=report,
-                device=device,
-                n_per_condition=args.n_per_condition,
-                kept=dict(owl=len(results["owl"]), neutral=len(results["neutral"])),
-            ),
-            f,
-            indent=2,
+    files = []
+    for role, fname, content, media_type, derived_from in file_specs:
+        b = content.encode("utf-8")
+        (out / fname).write_bytes(b)
+        files.append(
+            {
+                "path": fname,
+                "sha256": _sha256_bytes(b),
+                "size_bytes": len(b),
+                "media_type": media_type,
+                "encoding": "utf-8",
+                "role": role,
+                "n_lines": (
+                    content.count("\n")
+                    if media_type == "application/x-ndjson"
+                    else None
+                ),
+                "derived_from": derived_from,
+            }
         )
-    print(f"[saved] streams + report -> {out}")
+    pip_b = _pip_freeze().encode("utf-8")
+    (out / "pip_freeze.txt").write_bytes(pip_b)
+    dataset_id = args.dataset_id or out.name
+    manifest = _build_manifest(
+        dataset_id,
+        files,
+        args,
+        results,
+        raw,
+        reject_reasons,
+        device,
+        generated_at,
+        _sha256_bytes(pip_b),
+    )
+    manifest_bytes = (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
+    (out / "manifest.json").write_bytes(manifest_bytes)
+    print(
+        f"[saved] dataset + manifest -> {out}\n"
+        f"[manifest] sha256 = {_sha256_bytes(manifest_bytes)}"
+    )
 
 
 if __name__ == "__main__":
