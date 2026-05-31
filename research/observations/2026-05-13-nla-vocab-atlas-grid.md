@@ -42,7 +42,7 @@ All 23 categories have intra-category cosine > **+0.84 even after sink removal**
 | emotion | 6 | +0.849 |
 | refusal | 4 | +0.847 |
 
-This wasn't the sink offset (those were removed). There's a separate **category-attractor subspace** that pulls members together to +0.85 to +0.98 cosine. The h-vector hierarchy now looks like:
+This wasn't the sink offset (those were removed). There's a separate **category-attractor subspace** that pulls members together to +0.847 to +0.983 cosine (emotion +0.849 and refusal +0.847 sit at the loose end; capital and demonstrative at +0.98+). The h-vector hierarchy now looks like:
 
 | Attractor level | Effect on cosine |
 |---|---|
@@ -99,7 +99,7 @@ fig20 (combined 207-vector PCA): the 128 vocab anchors and 167 existing captures
 
 ### H11 — There's a "category subspace" separate from the sink subspace
 
-We removed 7 sink dims. Categories still cluster at +0.85+ intra-cosine. Either:
+We removed 7 sink dims. Categories still cluster at +0.84+ intra-cosine (range +0.847 to +0.983 across 23 categories). Either:
 * (a) There are 7+ more "category" dims we haven't identified, or
 * (b) The category attractor is a low-dimensional subspace spanned by linear combinations of many dims, not axis-aligned.
 

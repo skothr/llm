@@ -1,16 +1,43 @@
 """Rigorous audit: re-derive every load-bearing numerical claim from the
 raw NLA artifacts and compare against what the observation files report.
 
-Reads ONLY the 4 raw source files:
+Reads ONLY the 4 raw source files for AUDITs 1-10:
   * aggregate_faithfulness.pt
   * rabbit_haiku_gen_trajectory.pt
   * forced_continuation.pt
   * country_concept_vector.pt
 
-Re-derives the full H matrix, pairwise cosines, hot-dim census,
-classifier labels, PCA, CAV alignment, and counterfactual diff norms
-from first principles. Compares each value against the claim in the
-observation files. Reports PASS/FAIL per claim.
+For these audits the script re-derives the full H matrix, pairwise
+cosines, hot-dim census, classifier labels, PCA, CAV alignment, and
+counterfactual diff norms from first principles — independent
+re-derivation, not regression against cached state.
+
+**What "N PASS" means / what it does NOT verify**:
+
+The audit verifies *math consistency given the captured h's*. AUDITs
+1-10 are first-principles re-derivations from the 4 raw sources;
+AUDITs 11-19 consume cached `.pt` artifacts produced by the
+`_capture.py` scripts (vocab_atlas.pt, mid_seq_vocab_atlas.pt,
+discriminant_stability.pt, dense_interp_near_pivot.pt,
+plateau_attractor_test.pt, concept_arithmetic_atlas.pt). The audit
+re-derives downstream stats from those captures.
+
+What this CANNOT catch:
+  * A bug in the capture protocol itself (wrong layer hook, wrong
+    position index, wrong tokenizer special-token handling): the
+    "expected" claims AND the audit's "actual" re-derivation both
+    flow from the same captured tensors. A wrong capture produces
+    consistent-but-incorrect numbers.
+  * An interpretive overreach in an observation file (e.g. inferring
+    a general property from one anchor pair): the audit verifies the
+    number; it doesn't verify the conclusion drawn from it.
+  * A wrong choice of classifier threshold (see `classify_dim_character`
+    caveat in nla_pairwise_and_hotdims.py): the audit locks the
+    classifier OUTPUT by exact index match, but doesn't validate that
+    the threshold cuts are the right ones.
+
+The audit is a regression test for arithmetic consistency, not a
+replacement for protocol audit or methodological review.
 
 Self-locating: ARTIFACTS resolves relative to this file's location, so
 this script runs from any CWD. The sibling capture/render scripts assume

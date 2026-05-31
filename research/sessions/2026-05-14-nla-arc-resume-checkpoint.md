@@ -8,8 +8,8 @@
 
 ## Strongest synthesis from the arc
 
-**Layer-20 h-space has discrete attractor basins separated by sharp boundaries.**
-Basins include both named vocab categories AND hybrid combinations not
+**Layer-20 h-space appears to have discrete attractor basins separated by sharp boundaries** — *demonstrated for one anchor pair (factual/geography ↔ poetic/nature) and not yet replicated across other content domains; treat as a working hypothesis rather than a settled property of layer 20.*
+Basins (in the cases probed) include both named vocab categories AND hybrid combinations not
 in the original atlas (e.g. the "Definition + Poem" plateau between
 factual and poetic anchors). AR re-encoding returns h to the basin's
 directional region — basins are direction-coupled, not magnitude-coupled.
@@ -17,7 +17,9 @@ Linear interpolation between basin-residing h's traverses one or more
 intermediate basins with sharp boundaries between them. This explains
 MAIN-48 (arithmetic = basins not offsets), MAIN-44/70 (protocol-specific
 basin subsets), MAIN-25 (sharp boundaries), MAIN-34 (basins have non-zero
-volume), MAIN-71 (basin attractor strength empirically demonstrated).
+volume), MAIN-71 (basin attractor strength empirically demonstrated *at this one plateau, with margin +0.061 over the nearest anchor — narrower than the +0.25 margins anchors have to each other; "basin" framing is supported but the basin is shallow*).
+
+**Open scope-test follow-ups before generalizing**: replicate dense interpolation on at least 2-3 additional anchor pairs (e.g. code↔nature, math↔emotion, factual↔refusal); bootstrap the plateau round-trip against multiple in-zone t values to establish a noise baseline for the +0.061 margin; check whether the sharp-boundary behavior survives at finer resolutions than Δt=0.0025.
 
 ## Session-of-2026-05-14/15 arc summary
 
@@ -39,7 +41,7 @@ Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (w
 1. `cd /home/ai/ai-projects/llm/.claude/worktrees/nla-research`
 2. Confirm in worktree: `git rev-parse --abbrev-ref HEAD` should say `session/nla-research`
 3. Read [`figures/INVENTORY.md`](../observations/figures/INVENTORY.md) for the figure catalog with provenance per figure
-4. Run audit to verify state: `PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python testing/examples/nla_audit_findings.py` — expect 93/0
+4. Run audit to verify state: `PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python testing/examples/nla_audit_findings.py` — expect 129/0 (was 93/0 at the time this checkpoint was written; suite was extended through AUDIT 19 in the final session-of-2026-05-15 work)
 
 ## What landed since the prior resume
 
@@ -75,7 +77,7 @@ Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (w
 
 ### Audit (commits `6049812`, `ee58e62`)
 - `nla_audit_findings.py` re-derives every load-bearing number from raw `.pt` files
-- 65 → 93 PASS checks after MAIN-46 extension
+- 65 → 93 PASS checks after MAIN-46 extension (later extended to 129 by AUDITs 15-19; current canonical count)
 - Caught and corrected: fig15 position-drift confound (`||Δh||_feat` 35.55→28.06), `||h_A||` mislabel in Path B observation (was 51.94, that's `||h_A − h_B||`; truth `||h_A||=65.73`)
 
 ### Hierarchical re-discrimination (commit `189a054`)
@@ -158,7 +160,7 @@ git status                # confirm clean (only testing/.cache showing)
 
 # Run audit to verify state hasn't drifted
 PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python \
-    testing/examples/nla_audit_findings.py        # expect 93 PASS / 0 FAIL
+    testing/examples/nla_audit_findings.py        # expect 129 PASS / 0 FAIL
 
 # Read the figure catalog
 $EDITOR research/observations/figures/INVENTORY.md
