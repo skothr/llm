@@ -110,11 +110,11 @@ Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (w
 ### Figure quality cleanup (commit `2135289`)
 - Bumped DPI to 180 uniformly across all 13 render scripts
 - Fixed title-vs-first-row overlap on the 5 flipbook scripts (TITLE_RESERVE pattern)
-- Wrote `research/observations/figures/INVENTORY.md` cataloguing all 29 figures with full provenance
+- Wrote `research/observations/figures/INVENTORY.md` cataloguing all 29 figures with full provenance (the inventory now covers 36, after fig31–37 were added in the final session)
 
 ## The 6 most important findings (ranked)
 
-1. **Stepwise semantic transitions at t=0.421** (fig17, fig21) — phase-transition-like discontinuity confirmed by two independent measurements
+1. **Stepwise semantic transitions near t≈0.42** (fig17, fig21) — phase-transition-like discontinuity; the coarse 20-step grid flagged t=0.421, dense re-sampling (MAIN-34) relocated the sharp flip to t≈0.4475 with t=0.421 inside a hybrid plateau
 2. **23-discriminant basis classifies prompt-TOPIC, not token-presence** (fig28) — scope-clarifying for all viz primitives in the arc
 3. **Hierarchical attractor structure** at layer 20 — sinks (+0.22), non-sink universal residue (+0.4), category attractors (+0.85-0.98), within-category content
 4. **`||Δh||_feat` ranks counterfactual surprise** (fig16) — 5.7-11 for plausible swaps vs 28-36 for OOD forcing; potential deployment-time anomaly score
@@ -198,4 +198,4 @@ PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python \
 $EDITOR research/observations/figures/INVENTORY.md
 ```
 
-Then pick the next ticket (start with MAIN-44 per the recommendation above) and follow the linear skill's working flow: transition to In Progress with a starting comment, do the work, close with resolution comment + commit reference.
+Then pick the next direction from the D1-D8 list in the 2026-05-30 update above (start with D3 — audit AV-decoder format-bias) and follow the linear skill's working flow: transition to In Progress with a starting comment, do the work, close with resolution comment + commit reference.
