@@ -694,12 +694,9 @@ def _build_manifest(
         },
         "provenance": {
             "upstream": [],
-            "downstream": [
-                {
-                    "kind": "observation",
-                    "ref": "research/arcs/subliminal/observations/2026-05-31-step0-protocol-and-filter.md",
-                }
-            ],
+            # Decoupled reusable corpus: the data does not name its consumers;
+            # the data/README.md registry maps corpus -> experiments that use it.
+            "downstream": [],
             "generated_by": "testing/examples/subliminal_step0_decode.py",
             "agent": "Claude Code (Opus 4.8) under skothr",
         },
@@ -831,6 +828,18 @@ def main():
     )
     # (role, filename, content_str, media_type, derived_from)
     file_specs = []
+    # Save the shared seeded prompt set: it is index-aligned with *_raw.jsonl, so
+    # any downstream use can reconstruct (prompt, completion) pairs and re-filter.
+    # Makes the dataset a reusable corpus, not a decode-test-specific artifact.
+    file_specs.append(
+        (
+            "prompts",
+            "prompts.jsonl",
+            "".join(json.dumps(q) + "\n" for q in queries),
+            "application/x-ndjson",
+            None,
+        )
+    )
     for name in ("owl", "neutral"):
         file_specs.append(
             (
