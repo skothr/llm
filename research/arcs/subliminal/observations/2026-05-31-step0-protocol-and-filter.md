@@ -79,12 +79,13 @@ source finding that the filter has no encoding guard — a literal channel *woul
 have passed untouched — the residual signal, if any, is the subtle distributed
 kind, which hands off cleanly to Step 1 (HA vs HC).
 
-One incidental signal: the owl teacher's reject rate (13.3%) exceeds the
-neutral teacher's (9.2%) on the *identical* seeded prompt set. So the owl
-persona does measurably shift the output distribution (more malformed /
-over-count completions) — just not via a literal codeword. That is exactly the
-"distributional shift, not a hidden encoding" picture HA/HC concern, so Step 0
-weakly *points* toward the distributed hypotheses rather than only ruling H0 out.
+One incidental observation, **under-powered — do not over-read**: the owl
+reject rate (13.3%, 16/120) ran higher than neutral (9.2%, 11/120) on the
+identical seeded prompt set, but the gap is **not statistically significant** at
+n=120 (two-proportion z=1.02, p=0.31; detecting a real 13.3-vs-9.2% gap at 80%
+power needs ~930 per condition). So it is at most a hint that the persona shifts
+the output distribution — not evidence for it. Deferred to the scale-up, where n
+is large enough to resolve whether the gap is real.
 
 Caveats: this is the local Qwen teacher (not the paper's closed gpt-4.1-nano),
 five decode schemes (not exhaustive), and a finite owl lexicon. It closes the
