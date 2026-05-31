@@ -2,7 +2,7 @@
 
 A working investigation into what Anthropic's released Natural Language
 Autoencoders (NLAs) for Qwen2.5-7B-Instruct surface about layer-20 hidden
-state structure. Two-week arc, 25 observation files, 37 figures, 13
+state structure. Two-week arc, 24 observation files, 36 figures, 20
 filed Linear tickets, a regression audit at **129 PASS / 0 FAIL**, and
 one working synthesis: *layer-20 h-space appears to have discrete
 attractor basins separated by sharp boundaries* — held as a working
@@ -47,7 +47,8 @@ with implementation (the AI role). Both are intellectual work, but
 they're different *kinds* of work, and conflating them in
 documentation hides where ideas came from. The arc was driven by
 themes the human collaborator (Michael Lannum) introduced in specific
-working-session turns. Verbatim quotes below.
+working-session turns. Quotes below are from the session transcripts,
+lightly normalized for typos and punctuation.
 
 ### Theme 1 — Test Anthropic's NLA technique on open-source models
 
@@ -57,7 +58,7 @@ working-session turns. Verbatim quotes below.
 
 The framing that opened the arc. The plural "models" implicitly scoped
 beyond just Qwen2.5-7B; cross-model replication (theme covered by
-[D5](#d5-cross-model-replication-tinyllama-llama-3-mistral)) remains
+[D5](#d5-cross-model-replication)) remains
 open work because the released NLA pair is Qwen-specific.
 
 ### Theme 2 — Plumbing-first, depth-per-token
@@ -91,7 +92,7 @@ behaviors (planning ahead in poetry, awareness of being evaluated)
 be reproduced on a 7B open-source model with the released NLA pair?
 Rabbit haiku was reproduced; rabbit poem (matched to Anthropic's
 specific example) and the ethics/eval-awareness behavior remain
-incomplete (open as [D2](#d2-eval-aware-probe) and [D8](#d8-replicate-anthropic-examples)).
+incomplete (open as [D2](#d2-eval-aware--knows-its-being-tested-probe) and [D8](#d8-replicate-anthropic-nla-announcement-specific-examples)).
 
 ### Theme 4 — Counterfactual / OOD probing
 
@@ -104,7 +105,8 @@ incomplete (open as [D2](#d2-eval-aware-probe) and [D8](#d8-replicate-anthropic-
 Direct ask that produced `nla_forced_continuation.py` and the
 counterfactual surprise / OOD-detection observations. The probe found
 that `||Δh||_feat` distinguishes "plausible-but-false" continuations
-(Paris→Berlin: Δ≈5-11) from "OOD-forcing" continuations (numerical
+(plausible-but-false swaps, e.g. Paris→Berlin: Δ≈5.7-11) from
+"OOD-forcing" continuations (numerical
 answer → refusal: Δ≈28-36). Cheap deployment-time anomaly score
 candidate.
 
@@ -177,7 +179,7 @@ built.
 
 Methodological observation that was filed and deferred. If true, the
 AV decoder has format-baked-in biases that confound interpretive
-readings throughout the arc. Open as [D3](#d3-av-decoder-format-bias)
+readings throughout the arc. Open as [D3](#d3-audit-av-decoder-format-bias)
 and promoted to Medium priority on filing precisely because if positive
 it would re-frame all prior interpretive claims.
 
@@ -212,7 +214,7 @@ work, and the documentation tries to separate them honestly.
 
 **What Claude Code contributed:**
 
-- All experiment scripts (~25 files under `testing/examples/nla_*`),
+- All experiment scripts (~42 files under `testing/examples/nla_*`),
   figure rendering pipelines, observation drafts, audit infrastructure
   (`nla_audit_findings.py`), and the Linear ticket queue management.
 - Cross-arc continuity across compaction boundaries — synthesizing
@@ -240,7 +242,7 @@ arc is re-derived from raw `.pt` files by
 Current state: **129 PASS / 0 FAIL** across 19 audit categories. The
 audit catches arithmetic-consistency regressions (number-cited-in-prose
 vs number-in-artifact); it does NOT catch methodological errors,
-interpretive overreach, or capture-protocol bugs (see F11 in
+interpretive overreach, or capture-protocol bugs (see L8 in
 [Limitations](#limitations-and-methodology-caveats)).
 
 ---
@@ -254,15 +256,16 @@ the work required to upgrade these from "hypothesis" to "result."
 ### F1. Layer 20 h-space appears to have discrete attractor basins
 
 Linear interpolation between two AR-encoded natural-language anchors
-(factual/geography ↔ poetic/nature, MAIN-25) produces an AV-text
-phase transition at exactly t=0.421 — within one 5% interpolation step
-the AV's text-format word and nearest-vocab-anchor BOTH flip
-simultaneously, while the geometric step size stays constant
-(`||Δh||` = 2.734). Dense re-sampling at 10× resolution near the pivot
-(MAIN-34) reveals a "Definition + Poem" hybrid plateau between the
-factual and poetic basins — a basin that does not correspond to any
-single vocab category. AR re-encoding of a midpoint h returns h to its
-basin (round-trip cosine +0.8995, MAIN-71) — basins are
+(factual/geography ↔ poetic/nature, MAIN-25) produces a discontinuous
+AV-text transition even though the geometric step size stays roughly
+constant (`||Δh||` = 2.734 per coarse step). The coarse 20-step grid
+first flagged the flip at t=0.421; dense re-sampling at 10× resolution
+(MAIN-34, Δt≈0.0025) relocated it — t=0.421 actually sits *inside* a
+"Definition + Poem" hybrid plateau (t∈[0.395, 0.4450]), and the sharp
+flip is the plateau→poetic crossing at t≈0.4475–0.4500, a single
+Δt=0.0025 step. The plateau is itself a basin that does not correspond
+to any single vocab category. AR re-encoding of a midpoint h returns h
+to its basin (round-trip cosine +0.8995, MAIN-71) — basins are
 direction-coupled, not magnitude-coupled.
 
 **Scope qualifications:** demonstrated for one anchor pair, at one
@@ -270,7 +273,7 @@ layer, on one model. The plateau-attractor margin is +0.061 over the
 nearest single-anchor — narrower than the +0.25 margins anchors have
 between themselves. The framing should be "basin candidate / shallow
 basin" until additional anchor pairs and layers replicate. Filed scope
-tests: [D5](#d5-cross-model-replication-tinyllama-llama-3-mistral)
+tests: [D5](#d5-cross-model-replication)
 (cross-model), [D6](#d6-basin-landscape-mapping) (basin landscape
 mapping).
 
@@ -374,7 +377,7 @@ in F2, the 23-axis basis works for the protocol it was built on
 (end-of-single-token-message) and collapses to noise cross-protocol.
 The dual question — what subspace of h IS protocol-invariant — was
 not asked during the arc. Open as
-[D4](#d4-protocol-invariant-subspace).
+[D4](#d4-find-the-protocol-invariant-subspace).
 
 **L4. Per-category capture counts are small (n=2 to n=12, median 5).**
 Six of 23 categories have n ≤ 3 (`p_quote`, `p_dash`, `article`,
@@ -403,7 +406,7 @@ shorthand, not a claim of Fisher-style optimal separation. Anyone
 extending or publishing this work should rename to "mean-contrast" or
 "centroid-difference" to avoid implying Fisher LDA properties.
 
-**L7. F12 / capture-position protocol bug, retroactively documented.**
+**L7. Capture-position protocol bug, retroactively documented.**
 The `nla_discriminant_stability_capture.py` inline comment originally
 described position -1 as "the last content token (the anchor word)" —
 but with `add_generation_prompt=True`, position -1 is the trailing
@@ -572,10 +575,10 @@ research/
     2026-05-14-nla-concept-arithmetic-atlas.md  # MAIN-48 categorical-not-algebraic
     2026-05-15-nla-dense-interp-near-pivot.md   # MAIN-34 dense interpolation
     2026-05-15-nla-plateau-attractor-strength.md # MAIN-71 round-trip cosine
-    (and ~14 more)
+    (and 13 more)
     figures/
       INVENTORY.md                              # Per-figure provenance catalog
-      fig01..fig37 PNGs                         # All arc figures
+      fig1-fig11, fig13-fig37 PNGs              # 36 arc figures (fig12 never built)
   sessions/
     README.md                                   # Session-doc index
     2026-05-13-nla-arc-summary-for-compact.md   # Pre-compaction summary (first half of arc)
@@ -587,4 +590,4 @@ Related implementation surfaces (outside `research/`):
 - [`testing/llm_surgeon/probe/_nla.py`](../testing/llm_surgeon/probe/_nla.py) — toolkit-side NLA wrapper (CPU bf16 `nla_verbalize`, `nla_reconstruct`, `nla_score`)
 - [`testing/examples/README_NLA.md`](../testing/examples/README_NLA.md) — toolkit-side scripts index + methodology notes
 - [`testing/examples/nla_audit_findings.py`](../testing/examples/nla_audit_findings.py) — the regression audit (129/0)
-- [`testing/examples/nla_*.py`](../testing/examples/) — 25 arc scripts
+- [`testing/examples/nla_*.py`](../testing/examples/) — 42 arc scripts
