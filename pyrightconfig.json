@@ -4,5 +4,5 @@
   "include": ["testing"],
   "venvPath": "testing",
   "venv": ".venv",
-  "extraPaths": ["testing"]
+  "extraPaths": ["testing", "testing/examples"]
 }

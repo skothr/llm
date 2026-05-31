@@ -12,31 +12,43 @@ Reads rabbit_haiku_gen_trajectory.pt and pairwise_and_hotdims.pt.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import textwrap
 from pathlib import Path
 import torch
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from _nla_artifacts import read_artifact
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
+FIGDIR = (
+    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
+)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
-def draw_signature_glyph(ax: Any, cx: float, cy: float, values: np.ndarray,
-                          radius: float, scale_max: float, lw: float = 2.0) -> None:
+def draw_signature_glyph(
+    ax: Any,
+    cx: float,
+    cy: float,
+    values: np.ndarray,
+    radius: float,
+    scale_max: float,
+    lw: float = 2.0,
+) -> None:
     n = len(values)
     angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
     for i, v in enumerate(values):
@@ -46,13 +58,21 @@ def draw_signature_glyph(ax: Any, cx: float, cy: float, values: np.ndarray,
         x_end = cx + radius * mag * np.cos(angles[i])
         y_end = cy + radius * mag * np.sin(angles[i])
         color = "#d62728" if v >= 0 else "#1f77b4"
-        ax.plot([cx, x_end], [cy, y_end], color=color, linewidth=lw, alpha=0.9,
-                solid_capstyle="round")
+        ax.plot(
+            [cx, x_end],
+            [cy, y_end],
+            color=color,
+            linewidth=lw,
+            alpha=0.9,
+            solid_capstyle="round",
+        )
 
 
 def main() -> None:
-    haiku = torch.load(ARTIFACTS / "rabbit_haiku_gen_trajectory.pt", weights_only=False)
-    pw = torch.load(ARTIFACTS / "pairwise_and_hotdims.pt", weights_only=False)
+    haiku = torch.load(
+        read_artifact("rabbit_haiku_gen_trajectory.pt"), weights_only=False
+    )
+    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
     labels: dict[int, str] = pw["labels"]
     feature_dims = sorted([idx for idx, lbl in labels.items() if lbl == "feature"])
     print(f"feature dims (glyph order): {feature_dims}")
@@ -64,9 +84,7 @@ def main() -> None:
     print(f"generated = {haiku.get('generated_text')!r}")
 
     # global magnitude normalizer for glyph rays
-    all_feat_vals = np.concatenate(
-        [c["h"][feature_dims].numpy() for c in captures]
-    )
+    all_feat_vals = np.concatenate([c["h"][feature_dims].numpy() for c in captures])
     abs_max = float(np.abs(all_feat_vals).max())
     print(f"abs_max across haiku captures (feature dims): {abs_max:.2f}")
 
@@ -82,8 +100,15 @@ def main() -> None:
         ax_lbl.axis("off")
         tok = cap["token"]
         tok_disp = tok.replace("\n", "\\n")
-        ax_lbl.text(0.0, 0.5, f"step {cap['step']:>2}\n  token={tok_disp!r}",
-                    ha="left", va="center", fontsize=11, family="monospace")
+        ax_lbl.text(
+            0.0,
+            0.5,
+            f"step {cap['step']:>2}\n  token={tok_disp!r}",
+            ha="left",
+            va="center",
+            fontsize=11,
+            family="monospace",
+        )
 
         # column 2: signature glyph
         ax_g = fig.add_axes((0.13, row_y + 0.005, 0.10, row_height - 0.01))
@@ -98,7 +123,9 @@ def main() -> None:
         for ang, d in zip(angles, feature_dims):
             x_lbl = 1.18 * np.cos(ang)
             y_lbl = 1.18 * np.sin(ang)
-            ax_g.text(x_lbl, y_lbl, f"d{d}", ha="center", va="center", fontsize=6, alpha=0.6)
+            ax_g.text(
+                x_lbl, y_lbl, f"d{d}", ha="center", va="center", fontsize=6, alpha=0.6
+            )
 
         # column 3: AV text wrapped
         ax_txt = fig.add_axes((0.25, row_y + 0.005, 0.60, row_height - 0.01))
@@ -106,10 +133,19 @@ def main() -> None:
         av = cap.get("av_text", "") or ""
         wrapped = "\n".join(
             textwrap.fill(p, width=120, break_long_words=False, break_on_hyphens=False)
-            for p in av.split("\n\n") if p.strip()
+            for p in av.split("\n\n")
+            if p.strip()
         )
-        ax_txt.text(0.0, 0.5, wrapped, ha="left", va="center", fontsize=8,
-                    family="serif", wrap=True)
+        ax_txt.text(
+            0.0,
+            0.5,
+            wrapped,
+            ha="left",
+            va="center",
+            fontsize=8,
+            family="serif",
+            wrap=True,
+        )
 
         # column 4: AR cosine bar (inset within the row)
         bar_h = 0.4 * row_height
@@ -117,7 +153,9 @@ def main() -> None:
         ax_bar = fig.add_axes((0.87, bar_y, 0.11, bar_h))
         cos = cap.get("cosine")
         if cos is not None:
-            ax_bar.barh([0], [cos], color="#2ca02c" if cos > 0.85 else "#ff7f0e", alpha=0.7)
+            ax_bar.barh(
+                [0], [cos], color="#2ca02c" if cos > 0.85 else "#ff7f0e", alpha=0.7
+            )
             ax_bar.set_xlim(0.70, 0.95)
             ax_bar.set_yticks([])
             ax_bar.set_title(f"AR cos = {cos:+.3f}", fontsize=8)
@@ -125,9 +163,12 @@ def main() -> None:
         else:
             ax_bar.axis("off")
 
-    fig.suptitle(f"Haiku generation flipbook: rabbit haiku, 15 steps\n"
-                 f"glyph rays = {feature_dims} | red = +, blue = -",
-                 fontsize=12, y=0.995)
+    fig.suptitle(
+        f"Haiku generation flipbook: rabbit haiku, 15 steps\n"
+        f"glyph rays = {feature_dims} | red = +, blue = -",
+        fontsize=12,
+        y=0.995,
+    )
     fig.savefig(FIGDIR / "fig14_haiku_flipbook.png", dpi=180)
     plt.close(fig)
     print(f"\nwrote {FIGDIR}/fig14_haiku_flipbook.png")

@@ -200,6 +200,16 @@ the data.
 `research/**/data/*.pt` rule. Keep your working/scratch captures in a
 gitignored cache; the committed `data/` dir is the canonical copy.
 
+**Wiring (so the data is *usable*, not just stored).** Scripts should resolve
+inputs **cache-first, committed-copy-fallback**, and write outputs only to the
+cache. The NLA arc centralizes this in `testing/examples/_nla_artifacts.py`
+(`read_artifact`/`find_artifact` for loads, `write_artifact` for saves). That
+one indirection is what lets the *same* script a developer runs locally
+(writing fresh captures to the gitignored cache) also re-render figures and
+replay the audit on a clean clone (reading the committed copy) — no manual copy
+step, no clone-vs-local branching. Without it, committed data is inert: the
+scripts still point at an empty cache.
+
 **Manifest.** A `data/MANIFEST.json` (template generator:
 `nla_data_manifest.py`) records per file: `filename`, `sha256`, `size_bytes`,
 `class` (capture-root | derived), `producing_script`, `producing_command`,

@@ -18,33 +18,39 @@ Output: testing/.cache/nla_artifacts/interpolation_flipbook.pt
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 os.environ["HF_HUB_OFFLINE"] = "1"  # models cached locally; skip network metadata check
 # httpx tries to init a SOCKS transport from ALL_PROXY at import time even when
 # HF_HUB_OFFLINE is set, so clear proxy env vars for this process.
-for _v in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+for _v in (
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+):
     os.environ.pop(_v, None)
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import time
-from pathlib import Path
 import torch
 
+from _nla_artifacts import find_artifact, write_artifact
 from llm_surgeon.probe import (
-    load_av, load_ar, nla_verbalize, nla_reconstruct,
+    load_av,
+    load_ar,
+    nla_verbalize,
+    nla_reconstruct,
 )
-
-
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-ARTIFACTS.mkdir(parents=True, exist_ok=True)
-OUT = ARTIFACTS / "interpolation_flipbook.pt"
 
 
 ANCHOR_A_LABEL = "factual/geography"
@@ -70,21 +76,41 @@ def phase1_anchors() -> dict[str, Any]:
     print(f"\n[phase 1] AR-encoding anchor A ({ANCHOR_A_LABEL}):")
     print(f"  {ANCHOR_A_TEXT!r}")
     t0 = time.time()
-    h_A = nla_reconstruct(
-        ANCHOR_A_TEXT, backbone=backbone, value_head=value_head, tok=tok, meta=meta,
-    ).detach().float().cpu()
+    h_A = (
+        nla_reconstruct(
+            ANCHOR_A_TEXT,
+            backbone=backbone,
+            value_head=value_head,
+            tok=tok,
+            meta=meta,
+        )
+        .detach()
+        .float()
+        .cpu()
+    )
     print(f"  h_A: ||h||={h_A.norm().item():.2f}  ({time.time() - t0:.1f}s)")
 
     print(f"\n[phase 1] AR-encoding anchor B ({ANCHOR_B_LABEL}):")
     print(f"  {ANCHOR_B_TEXT!r}")
     t0 = time.time()
-    h_B = nla_reconstruct(
-        ANCHOR_B_TEXT, backbone=backbone, value_head=value_head, tok=tok, meta=meta,
-    ).detach().float().cpu()
+    h_B = (
+        nla_reconstruct(
+            ANCHOR_B_TEXT,
+            backbone=backbone,
+            value_head=value_head,
+            tok=tok,
+            meta=meta,
+        )
+        .detach()
+        .float()
+        .cpu()
+    )
     print(f"  h_B: ||h||={h_B.norm().item():.2f}  ({time.time() - t0:.1f}s)")
 
-    print(f"\n[phase 1] cos(h_A, h_B) = "
-          f"{torch.nn.functional.cosine_similarity(h_A, h_B, dim=0).item():+.4f}")
+    print(
+        f"\n[phase 1] cos(h_A, h_B) = "
+        f"{torch.nn.functional.cosine_similarity(h_A, h_B, dim=0).item():+.4f}"
+    )
     print(f"[phase 1] ||h_A - h_B|| = {(h_A - h_B).norm().item():.2f}")
 
     print(f"[phase 1] freeing AR ...")
@@ -94,9 +120,14 @@ def phase1_anchors() -> dict[str, Any]:
         torch.cuda.empty_cache()
 
     return {
-        "anchor_A_label": ANCHOR_A_LABEL, "anchor_A_text": ANCHOR_A_TEXT, "h_A": h_A,
-        "anchor_B_label": ANCHOR_B_LABEL, "anchor_B_text": ANCHOR_B_TEXT, "h_B": h_B,
-        "n_steps": N_STEPS, "steps": [],
+        "anchor_A_label": ANCHOR_A_LABEL,
+        "anchor_A_text": ANCHOR_A_TEXT,
+        "h_A": h_A,
+        "anchor_B_label": ANCHOR_B_LABEL,
+        "anchor_B_text": ANCHOR_B_TEXT,
+        "h_B": h_B,
+        "n_steps": N_STEPS,
+        "steps": [],
     }
 
 
@@ -122,21 +153,33 @@ def phase2_av_decode(state: dict[str, Any]) -> None:
             continue
         t = step / (n_steps - 1)
         h_t = (1.0 - t) * h_A + t * h_B
-        print(f"\n[phase 2] step {step}/{n_steps-1}  t={t:.3f}  ||h_t||={h_t.norm().item():.2f}")
+        print(
+            f"\n[phase 2] step {step}/{n_steps - 1}  t={t:.3f}  ||h_t||={h_t.norm().item():.2f}"
+        )
         t0 = time.time()
         av_text = nla_verbalize(
-            h_t, model=av_model, tok=av_tok, meta=av_meta, max_new_tokens=200,
+            h_t,
+            model=av_model,
+            tok=av_tok,
+            meta=av_meta,
+            max_new_tokens=200,
         )
         elapsed = time.time() - t0
         print(f"  AV ({elapsed:.0f}s):")
         for line in av_text.splitlines():
             print(f"    {line}")
-        state["steps"].append({
-            "step": step, "t": t, "h_t": h_t,
-            "av_text": av_text, "av_time": elapsed,
-        })
-        torch.save(state, OUT)
-        print(f"  saved {len(state['steps'])}/{n_steps} steps to {OUT}")
+        state["steps"].append(
+            {
+                "step": step,
+                "t": t,
+                "h_t": h_t,
+                "av_text": av_text,
+                "av_time": elapsed,
+            }
+        )
+        out_path = write_artifact("interpolation_flipbook.pt")
+        torch.save(state, out_path)
+        print(f"  saved {len(state['steps'])}/{n_steps} steps to {out_path}")
 
     print(f"\n[phase 2] all {n_steps} steps complete; freeing AV")
     del av_model, av_tok, av_meta
@@ -144,28 +187,41 @@ def phase2_av_decode(state: dict[str, Any]) -> None:
 
 
 def main() -> None:
-    if OUT.exists():
-        state = torch.load(OUT, weights_only=False)
+    _existing = find_artifact("interpolation_flipbook.pt")
+    if _existing is not None:
+        state = torch.load(_existing, weights_only=False)
         # Compatibility: if anchor labels changed, restart
-        if (state.get("anchor_A_text") != ANCHOR_A_TEXT or
-                state.get("anchor_B_text") != ANCHOR_B_TEXT or
-                state.get("n_steps") != N_STEPS):
-            print(f"[restart] saved state's anchors don't match this script's; "
-                  f"discarding and restarting phase 1")
+        if (
+            state.get("anchor_A_text") != ANCHOR_A_TEXT
+            or state.get("anchor_B_text") != ANCHOR_B_TEXT
+            or state.get("n_steps") != N_STEPS
+        ):
+            print(
+                f"[restart] saved state's anchors don't match this script's; "
+                f"discarding and restarting phase 1"
+            )
             state = phase1_anchors()
-            torch.save(state, OUT)
+            torch.save(state, write_artifact("interpolation_flipbook.pt"))
         else:
-            print(f"[resume] loaded state from {OUT}: {len(state.get('steps', []))} steps done")
+            print(
+                f"[resume] loaded state from {_existing}: {len(state.get('steps', []))} steps done"
+            )
     else:
         state = phase1_anchors()
-        torch.save(state, OUT)
+        torch.save(state, write_artifact("interpolation_flipbook.pt"))
 
     phase2_av_decode(state)
 
-    print(f"\n[done] full flipbook saved to {OUT}")
-    print(f"[done] anchor cosine: {torch.nn.functional.cosine_similarity(state['h_A'], state['h_B'], dim=0).item():+.4f}")
-    print(f"[done] total wall time per step (median AV): "
-          f"{sorted(s['av_time'] for s in state['steps'])[len(state['steps'])//2]:.0f}s")
+    print(
+        f"\n[done] full flipbook saved to {write_artifact('interpolation_flipbook.pt')}"
+    )
+    print(
+        f"[done] anchor cosine: {torch.nn.functional.cosine_similarity(state['h_A'], state['h_B'], dim=0).item():+.4f}"
+    )
+    print(
+        f"[done] total wall time per step (median AV): "
+        f"{sorted(s['av_time'] for s in state['steps'])[len(state['steps']) // 2]:.0f}s"
+    )
 
 
 if __name__ == "__main__":

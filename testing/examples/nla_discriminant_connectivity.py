@@ -13,26 +13,32 @@ fig29 — Self-validation projection:
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 from collections import Counter
 from pathlib import Path
 import torch
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
 
+from _nla_artifacts import read_artifact
+
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
+FIGDIR = (
+    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
+)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -51,8 +57,12 @@ def compute_discriminants(
     for cat in cats:
         in_cat_idxs = [i for i, c in enumerate(caps) if c["category"] == cat]
         out_cat_idxs = [i for i in range(len(caps)) if caps[i]["category"] != cat]
-        in_hs = apply_sink_removal(torch.stack([caps[i]["h"] for i in in_cat_idxs]), sink_dims)
-        out_hs = apply_sink_removal(torch.stack([caps[i]["h"] for i in out_cat_idxs]), sink_dims)
+        in_hs = apply_sink_removal(
+            torch.stack([caps[i]["h"] for i in in_cat_idxs]), sink_dims
+        )
+        out_hs = apply_sink_removal(
+            torch.stack([caps[i]["h"] for i in out_cat_idxs]), sink_dims
+        )
         d = in_hs.mean(dim=0) - out_hs.mean(dim=0)
         discr[cat] = d / (d.norm() + 1e-9)
     return discr
@@ -76,7 +86,11 @@ def map_src_to_expected_cat(it: dict[str, Any]) -> str | None:
         return "codemath"
     if src == "aggregate" and it["prompt_id"] == "math":
         return "codemath"
-    if src == "forced" and "refusal" in it.get("prompt_id", "") and "refuse" in (it.get("token") or "").lower():
+    if (
+        src == "forced"
+        and "refusal" in it.get("prompt_id", "")
+        and "refuse" in (it.get("token") or "").lower()
+    ):
         return "refusal"
     if src == "forced" and "negation" in it.get("prompt_id", ""):
         return "negation"
@@ -84,8 +98,8 @@ def map_src_to_expected_cat(it: dict[str, Any]) -> str | None:
 
 
 def main() -> None:
-    vocab = torch.load(ARTIFACTS / "vocab_atlas.pt", weights_only=False)
-    pw = torch.load(ARTIFACTS / "pairwise_and_hotdims.pt", weights_only=False)
+    vocab = torch.load(read_artifact("vocab_atlas.pt"), weights_only=False)
+    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
     labels: dict[int, str] = pw["labels"]
     sink_dims = sorted([idx for idx, lbl in labels.items() if lbl == "sink"])
     categories = list(vocab["categories"])
@@ -109,15 +123,24 @@ def main() -> None:
                 v = C_d[i, j]
                 if abs(v) > 0.4:
                     color = "white" if abs(v) > 0.6 else "black"
-                    ax.text(j, i, f"{v:+.2f}", ha="center", va="center",
-                            fontsize=6, color=color)
+                    ax.text(
+                        j,
+                        i,
+                        f"{v:+.2f}",
+                        ha="center",
+                        va="center",
+                        fontsize=6,
+                        color=color,
+                    )
     fig.colorbar(im, ax=ax, label="discriminant cosine")
-    ax.set_title("fig27 — Discriminant connectivity (23×23)\n"
-                 "Strong + (red, blue-text) = semantic siblings; "
-                 "strong − (blue, white-text) = opposites.\n"
-                 f"Mean off-diag = {float(C_d[~np.eye(n_cats, dtype=bool)].mean()):+.3f}; "
-                 f"min = {float(C_d[~np.eye(n_cats, dtype=bool)].min()):+.3f}; "
-                 f"max = {float(C_d[~np.eye(n_cats, dtype=bool)].max()):+.3f}")
+    ax.set_title(
+        "fig27 — Discriminant connectivity (23×23)\n"
+        "Strong + (red, blue-text) = semantic siblings; "
+        "strong − (blue, white-text) = opposites.\n"
+        f"Mean off-diag = {float(C_d[~np.eye(n_cats, dtype=bool)].mean()):+.3f}; "
+        f"min = {float(C_d[~np.eye(n_cats, dtype=bool)].min()):+.3f}; "
+        f"max = {float(C_d[~np.eye(n_cats, dtype=bool)].max()):+.3f}"
+    )
     fig.tight_layout()
     fig.savefig(FIGDIR / "fig27_discriminant_connectivity.png", dpi=180)
     plt.close(fig)
@@ -147,8 +170,14 @@ def main() -> None:
     n_items = H_existing.shape[0]
     fig, ax = plt.subplots(figsize=(16, 22))
     # group rows by source
-    src_order = ["aggregate", "haiku_gen", "forced",
-                 "country_src", "non_country_src", "country_test"]
+    src_order = [
+        "aggregate",
+        "haiku_gen",
+        "forced",
+        "country_src",
+        "non_country_src",
+        "country_test",
+    ]
     row_order: list[int] = []
     src_boundaries: list[int] = []
     for s in src_order:
@@ -183,9 +212,11 @@ def main() -> None:
             ax.plot(col, new_row_idx, "o", color="black", markersize=2)
 
     fig.colorbar(im, ax=ax, label="discriminant cosine")
-    ax.set_title("fig29 — Self-validation: project 167 existing captures onto 23 discriminants\n"
-                 "Black dots mark the EXPECTED top category per row (from src/prompt_id mapping).\n"
-                 "Strong reds where the dots are = success; reds elsewhere = unexpected high projection.")
+    ax.set_title(
+        "fig29 — Self-validation: project 167 existing captures onto 23 discriminants\n"
+        "Black dots mark the EXPECTED top category per row (from src/prompt_id mapping).\n"
+        "Strong reds where the dots are = success; reds elsewhere = unexpected high projection."
+    )
     fig.tight_layout()
     fig.savefig(FIGDIR / "fig29_self_validation.png", dpi=180)
     plt.close(fig)
@@ -201,7 +232,15 @@ def main() -> None:
             sorted_idx = projections[i].argsort(descending=True).tolist()
             exp_idx = categories.index(exp)
             rank = sorted_idx.index(exp_idx)
-            expectations.append((items[i]["src"], items[i]["prompt_id"], exp, rank, projections[i, exp_idx].item()))
+            expectations.append(
+                (
+                    items[i]["src"],
+                    items[i]["prompt_id"],
+                    exp,
+                    rank,
+                    projections[i, exp_idx].item(),
+                )
+            )
 
     by_expected: dict[str, list[tuple[Any, ...]]] = {}
     for src, pid, exp, rank, val in expectations:
@@ -213,11 +252,13 @@ def main() -> None:
         top3 = sum(1 for r in rows if r[2] < 3)
         top5 = sum(1 for r in rows if r[2] < 5)
         mean_rank = sum(r[2] for r in rows) / n
-        print(f"  expected={exp:<10}  n={n:>3}   "
-              f"top-1: {top1:>3}/{n} ({top1/n:.0%})   "
-              f"top-3: {top3:>3}/{n} ({top3/n:.0%})   "
-              f"top-5: {top5:>3}/{n} ({top5/n:.0%})   "
-              f"mean rank: {mean_rank:.1f}")
+        print(
+            f"  expected={exp:<10}  n={n:>3}   "
+            f"top-1: {top1:>3}/{n} ({top1 / n:.0%})   "
+            f"top-3: {top3:>3}/{n} ({top3 / n:.0%})   "
+            f"top-5: {top5:>3}/{n} ({top5 / n:.0%})   "
+            f"mean rank: {mean_rank:.1f}"
+        )
 
     # Where do captures FAIL? Top wrong category for failed rows
     print("\n--- For failed (rank>=3) captures: which discriminant DID they top? ---")

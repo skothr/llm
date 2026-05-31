@@ -23,25 +23,31 @@ All from data already on disk; no model loading needed.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 from pathlib import Path
 import torch
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
 
+from _nla_artifacts import read_artifact
+
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
+FIGDIR = (
+    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
+)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 SRC_COLORS: dict[str, str] = {
@@ -63,8 +69,8 @@ CHAR_COLORS: dict[str, str] = {
 
 
 def load_inputs() -> tuple[dict[str, Any], dict[str, Any]]:
-    geo = torch.load(ARTIFACTS / "geometric_features.pt", weights_only=False)
-    pw = torch.load(ARTIFACTS / "pairwise_and_hotdims.pt", weights_only=False)
+    geo = torch.load(read_artifact("geometric_features.pt"), weights_only=False)
+    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
     return geo, pw
 
 
@@ -82,8 +88,16 @@ def fig1_pca(pw: dict[str, Any]) -> None:
             continue
         x = coords[idxs, 0].numpy()
         y = coords[idxs, 1].numpy()
-        ax.scatter(x, y, c=color, label=f"{src} (n={len(idxs)})",
-                   alpha=0.7, s=60, edgecolors="black", linewidths=0.5)
+        ax.scatter(
+            x,
+            y,
+            c=color,
+            label=f"{src} (n={len(idxs)})",
+            alpha=0.7,
+            s=60,
+            edgecolors="black",
+            linewidths=0.5,
+        )
     ax.set_xlabel("PC1 (16.5% variance)")
     ax.set_ylabel("PC2 (7.7% variance)")
     ax.set_title("PCA of 167 h[20] vectors, colored by capture source")
@@ -98,8 +112,14 @@ def fig1_pca(pw: dict[str, Any]) -> None:
 def fig2_cosine_heatmap(pw: dict[str, Any]) -> None:
     items = pw["items_meta"]
     C = pw["C"].numpy()
-    src_order = ["aggregate", "haiku_gen", "forced",
-                 "country_src", "non_country_src", "country_test"]
+    src_order = [
+        "aggregate",
+        "haiku_gen",
+        "forced",
+        "country_src",
+        "non_country_src",
+        "country_test",
+    ]
     order: list[int] = []
     boundaries: list[int] = []
     for s in src_order:
@@ -116,7 +136,7 @@ def fig2_cosine_heatmap(pw: dict[str, Any]) -> None:
         ax.axhline(b - 0.5, color="black", linewidth=0.6)
         ax.axvline(b - 0.5, color="black", linewidth=0.6)
     centers = [0] + boundaries
-    label_pos = [(centers[i] + centers[i+1]) / 2 - 0.5 for i in range(len(src_order))]
+    label_pos = [(centers[i] + centers[i + 1]) / 2 - 0.5 for i in range(len(src_order))]
     ax.set_xticks(label_pos)
     ax.set_xticklabels(src_order, rotation=30, ha="right")
     ax.set_yticks(label_pos)
@@ -131,6 +151,7 @@ def fig2_cosine_heatmap(pw: dict[str, Any]) -> None:
 
 def fig3_hot_dim_space(pw: dict[str, Any]) -> None:
     from collections import Counter
+
     counts5: Counter = Counter(pw["counts_top5"])
     stats = pw["stats_by_dim"]
     labels = pw["labels"]
@@ -147,11 +168,20 @@ def fig3_hot_dim_space(pw: dict[str, Any]) -> None:
                 sizes.append(200 + 1500 * s["freq_top5"])
                 labels_text.append(str(idx))
         if xs:
-            ax.scatter(xs, ys, c=color, label=char, alpha=0.75,
-                       s=sizes, edgecolors="black", linewidths=0.7)
+            ax.scatter(
+                xs,
+                ys,
+                c=color,
+                label=char,
+                alpha=0.75,
+                s=sizes,
+                edgecolors="black",
+                linewidths=0.7,
+            )
             for x, y, lbl in zip(xs, ys, labels_text):
-                ax.annotate(lbl, (x, y), textcoords="offset points",
-                            xytext=(8, 4), fontsize=8)
+                ax.annotate(
+                    lbl, (x, y), textcoords="offset points", xytext=(8, 4), fontsize=8
+                )
 
     ax.axvspan(-0.02, 0.05, color="lightblue", alpha=0.15)
     ax.axvspan(0.95, 1.02, color="lightblue", alpha=0.15)
@@ -159,8 +189,10 @@ def fig3_hot_dim_space(pw: dict[str, Any]) -> None:
     ax.set_xlim(-0.02, 1.02)
     ax.set_xlabel("sign_consist  (fraction of captures with h[idx] >= 0)")
     ax.set_ylabel("cv_abs  (coefficient of variation of |h[idx]|)")
-    ax.set_title("Top-20 hot dims in (sign-locking x burstiness) space\n"
-                 "size = freq_top5; color = character")
+    ax.set_title(
+        "Top-20 hot dims in (sign-locking x burstiness) space\n"
+        "size = freq_top5; color = character"
+    )
     ax.legend(loc="upper right", framealpha=0.9)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -175,6 +207,7 @@ def fig4_hotdim_activations(pw: dict[str, Any]) -> None:
     labels = pw["labels"]
     # Strongest 4 sinks (by freq_top5) and strongest 3 features
     from collections import Counter
+
     counts5: Counter = Counter(pw["counts_top5"])
     top = [idx for idx, _ in counts5.most_common(20)]
     sinks = [idx for idx in top if labels.get(idx) == "sink"][:4]
@@ -182,8 +215,14 @@ def fig4_hotdim_activations(pw: dict[str, Any]) -> None:
 
     n = H.shape[0]
     src_labels = [it["src"] for it in items]
-    src_order = ["aggregate", "haiku_gen", "forced",
-                 "country_src", "non_country_src", "country_test"]
+    src_order = [
+        "aggregate",
+        "haiku_gen",
+        "forced",
+        "country_src",
+        "non_country_src",
+        "country_test",
+    ]
     order: list[int] = []
     for s in src_order:
         order.extend([i for i, lbl in enumerate(src_labels) if lbl == s])
@@ -193,10 +232,24 @@ def fig4_hotdim_activations(pw: dict[str, Any]) -> None:
     ax_s, ax_f = axes
     for idx in sinks:
         vals = H[order_arr, idx].numpy()
-        ax_s.plot(range(n), vals, label=f"dim {idx} (sink)", marker=".", markersize=3, linewidth=0.6)
+        ax_s.plot(
+            range(n),
+            vals,
+            label=f"dim {idx} (sink)",
+            marker=".",
+            markersize=3,
+            linewidth=0.6,
+        )
     for idx in feats:
         vals = H[order_arr, idx].numpy()
-        ax_f.plot(range(n), vals, label=f"dim {idx} (feature)", marker=".", markersize=3, linewidth=0.6)
+        ax_f.plot(
+            range(n),
+            vals,
+            label=f"dim {idx} (feature)",
+            marker=".",
+            markersize=3,
+            linewidth=0.6,
+        )
 
     # vertical lines for source boundaries
     cursor = 0
@@ -204,8 +257,12 @@ def fig4_hotdim_activations(pw: dict[str, Any]) -> None:
         cnt = sum(1 for lbl in src_labels if lbl == s)
         cursor += cnt
         if cursor < n:
-            ax_s.axvline(cursor - 0.5, color="gray", linestyle="--", linewidth=0.6, alpha=0.6)
-            ax_f.axvline(cursor - 0.5, color="gray", linestyle="--", linewidth=0.6, alpha=0.6)
+            ax_s.axvline(
+                cursor - 0.5, color="gray", linestyle="--", linewidth=0.6, alpha=0.6
+            )
+            ax_f.axvline(
+                cursor - 0.5, color="gray", linestyle="--", linewidth=0.6, alpha=0.6
+            )
 
     ax_s.axhline(0, color="black", linewidth=0.4, alpha=0.5)
     ax_f.axhline(0, color="black", linewidth=0.4, alpha=0.5)
@@ -235,22 +292,37 @@ def fig5_kurtosis_vs_ar(geo: dict[str, Any]) -> None:
         mask = np.array([s == src for s in sources])
         if mask.sum() == 0:
             continue
-        ax.scatter(xs[mask], ys[mask], c=color, label=f"{src} (n={int(mask.sum())})",
-                   alpha=0.7, s=55, edgecolors="black", linewidths=0.4)
+        ax.scatter(
+            xs[mask],
+            ys[mask],
+            c=color,
+            label=f"{src} (n={int(mask.sum())})",
+            alpha=0.7,
+            s=55,
+            edgecolors="black",
+            linewidths=0.4,
+        )
 
     # linear fit
     if len(xs) > 2:
         log_xs = np.log10(xs)
         m, b = np.polyfit(log_xs, ys, 1)
         x_line = np.logspace(np.log10(xs.min()), np.log10(xs.max()), 100)
-        ax.plot(x_line, m * np.log10(x_line) + b, "r--", linewidth=1.5,
-                label=f"linear fit (log-x):  cos = {m:.3f}*log10(kurt) + {b:.3f}")
+        ax.plot(
+            x_line,
+            m * np.log10(x_line) + b,
+            "r--",
+            linewidth=1.5,
+            label=f"linear fit (log-x):  cos = {m:.3f}*log10(kurt) + {b:.3f}",
+        )
 
     ax.set_xscale("log")
     ax.set_xlabel("kurtosis of h[20] components (log scale)")
     ax.set_ylabel("AR round-trip cosine")
-    ax.set_title("Geometric concentration predicts AR faithfulness\n"
-                 "(diffuse h's reconstruct worse than peaky ones)")
+    ax.set_title(
+        "Geometric concentration predicts AR faithfulness\n"
+        "(diffuse h's reconstruct worse than peaky ones)"
+    )
     ax.legend(loc="best", framealpha=0.9)
     ax.grid(True, alpha=0.3, which="both")
     fig.tight_layout()
@@ -273,8 +345,10 @@ def fig6_haiku_trajectory(geo: dict[str, Any]) -> None:
     axes[0].plot(steps, norms, marker="o", color="#1f77b4")
     axes[0].set_ylabel("||h||_2")
     axes[0].grid(True, alpha=0.3)
-    axes[0].set_title("Haiku generation trajectory: per-step geometric features\n"
-                      f"prompt=rabbit haiku, generated={len(rows)} tokens")
+    axes[0].set_title(
+        "Haiku generation trajectory: per-step geometric features\n"
+        f"prompt=rabbit haiku, generated={len(rows)} tokens"
+    )
     axes[1].plot(steps, kurts, marker="o", color="#ff7f0e")
     axes[1].set_ylabel("kurtosis")
     axes[1].set_yscale("log")
@@ -287,8 +361,9 @@ def fig6_haiku_trajectory(geo: dict[str, Any]) -> None:
     axes[3].set_xlabel("generation step")
     axes[3].grid(True, alpha=0.3)
     axes[3].set_xticks(steps)
-    axes[3].set_xticklabels([f"{s}\n{t!r}" for s, t in zip(steps, tokens)],
-                             rotation=0, fontsize=8)
+    axes[3].set_xticklabels(
+        [f"{s}\n{t!r}" for s, t in zip(steps, tokens)], rotation=0, fontsize=8
+    )
     fig.tight_layout()
     fig.savefig(FIGDIR / "fig6_haiku_trajectory.png", dpi=180)
     plt.close(fig)

@@ -15,21 +15,21 @@ plotting.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
-from pathlib import Path
 import torch
 
+from _nla_artifacts import find_artifact, write_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FEATURES_OUT = ARTIFACTS / "geometric_features.pt"
+
 D_MODEL = 3584
 
 
@@ -43,15 +43,17 @@ def _h_features(h: torch.Tensor) -> dict[str, Any]:
     mean = float(h.mean().item())
     var = float(h.var().item())
     centered = h - mean
-    kurt = float((centered.pow(4).mean() / (var ** 2 + 1e-12) - 3.0).item())
+    kurt = float((centered.pow(4).mean() / (var**2 + 1e-12) - 3.0).item())
     top5_vals, top5_idxs = abs_h.topk(5)
     cutoff = max(1, D_MODEL // 100)  # top 1%
-    top1pct_energy = float(abs_h.topk(cutoff).values.pow(2).sum().item()) / float(h.pow(2).sum().item())
+    top1pct_energy = float(abs_h.topk(cutoff).values.pow(2).sum().item()) / float(
+        h.pow(2).sum().item()
+    )
     sign_balance = float((h > 0).float().mean().item())
     return {
         "norm2": norm2,
         "norm_inf": norm_inf,
-        "sparsity": sparsity,           # ||h||_1 / ||h||_2; sqrt(d_model) ~= 59.87 ceiling
+        "sparsity": sparsity,  # ||h||_1 / ||h||_2; sqrt(d_model) ~= 59.87 ceiling
         "kurtosis": kurt,
         "top5_idxs": top5_idxs.tolist(),
         "top5_vals": [float(v) for v in top5_vals.tolist()],
@@ -73,8 +75,8 @@ def main() -> None:
     rows: list[dict[str, Any]] = []
 
     # --- aggregate_faithfulness.pt ---
-    p = ARTIFACTS / "aggregate_faithfulness.pt"
-    if p.exists():
+    p = find_artifact("aggregate_faithfulness.pt")
+    if p is not None:
         data = torch.load(p, weights_only=False)
         for prompt in data["prompts"]:
             for cap in prompt.get("captures", []):
@@ -92,8 +94,8 @@ def main() -> None:
                 rows.append(row)
 
     # --- rabbit_haiku_gen_trajectory.pt ---
-    p = ARTIFACTS / "rabbit_haiku_gen_trajectory.pt"
-    if p.exists():
+    p = find_artifact("rabbit_haiku_gen_trajectory.pt")
+    if p is not None:
         data = torch.load(p, weights_only=False)
         for cap in data.get("captures", []):
             row = {
@@ -110,8 +112,8 @@ def main() -> None:
             rows.append(row)
 
     # --- forced_continuation.pt ---
-    p = ARTIFACTS / "forced_continuation.pt"
-    if p.exists():
+    p = find_artifact("forced_continuation.pt")
+    if p is not None:
         data = torch.load(p, weights_only=False)
         for cap in data.get("captures", []):
             row = {
@@ -127,37 +129,63 @@ def main() -> None:
             rows.append(row)
 
     # --- country_concept_vector.pt ---
-    p = ARTIFACTS / "country_concept_vector.pt"
-    if p.exists():
+    p = find_artifact("country_concept_vector.pt")
+    if p is not None:
         data = torch.load(p, weights_only=False)
         for i, h in enumerate(data["h_country"]):
-            row = {"src": "country_src", "prompt_id": f"country_{i}", "prompt": "", "step": None, "token": None, "av_text_head": ""}
+            row = {
+                "src": "country_src",
+                "prompt_id": f"country_{i}",
+                "prompt": "",
+                "step": None,
+                "token": None,
+                "av_text_head": "",
+            }
             row.update(_h_features(h))
             rows.append(row)
         for i, h in enumerate(data["h_non_country"]):
-            row = {"src": "non_country_src", "prompt_id": f"non_country_{i}", "prompt": "", "step": None, "token": None, "av_text_head": ""}
+            row = {
+                "src": "non_country_src",
+                "prompt_id": f"non_country_{i}",
+                "prompt": "",
+                "step": None,
+                "token": None,
+                "av_text_head": "",
+            }
             row.update(_h_features(h))
             rows.append(row)
         for label, (prompt, h) in data["h_test"].items():
-            row = {"src": "country_test", "prompt_id": label, "prompt": prompt, "step": None, "token": None, "av_text_head": ""}
+            row = {
+                "src": "country_test",
+                "prompt_id": label,
+                "prompt": prompt,
+                "step": None,
+                "token": None,
+                "av_text_head": "",
+            }
             row.update(_h_features(h))
             rows.append(row)
 
     # --- table dump ---
-    print(f"{'src':<14}  {'prompt_id':<25}  {'token':<14}  {'||h||_2':>8}  {'||h||_inf':>10}  {'sparsity':>9}  {'kurt':>7}  {'top1%E':>7}  {'sign+':>6}  {'cos':>7}  {'relerr':>7}")
+    print(
+        f"{'src':<14}  {'prompt_id':<25}  {'token':<14}  {'||h||_2':>8}  {'||h||_inf':>10}  {'sparsity':>9}  {'kurt':>7}  {'top1%E':>7}  {'sign+':>6}  {'cos':>7}  {'relerr':>7}"
+    )
     print("-" * 160)
     for r in rows:
         cos = f"{r.get('cos'):+.3f}" if r.get("cos") is not None else "   -   "
         rel = f"{r.get('rel_err'):.3f}" if r.get("rel_err") is not None else "  -   "
         token = (r.get("token") or "")[:14]
-        print(f"{r['src']:<14}  {r['prompt_id'][:25]:<25}  {token:<14}  "
-              f"{r['norm2']:>8.2f}  {r['norm_inf']:>10.2f}  {r['sparsity']:>9.2f}  "
-              f"{r['kurtosis']:>7.1f}  {r['top1pct_energy']:>7.3f}  {r['sign_balance']:>6.3f}  "
-              f"{cos:>7}  {rel:>7}")
+        print(
+            f"{r['src']:<14}  {r['prompt_id'][:25]:<25}  {token:<14}  "
+            f"{r['norm2']:>8.2f}  {r['norm_inf']:>10.2f}  {r['sparsity']:>9.2f}  "
+            f"{r['kurtosis']:>7.1f}  {r['top1pct_energy']:>7.3f}  {r['sign_balance']:>6.3f}  "
+            f"{cos:>7}  {rel:>7}"
+        )
 
     # --- save artifact ---
-    torch.save({"rows": rows, "d_model": D_MODEL}, FEATURES_OUT)
-    print(f"\nWrote {len(rows)} feature rows to {FEATURES_OUT}")
+    features_out = write_artifact("geometric_features.pt")
+    torch.save({"rows": rows, "d_model": D_MODEL}, features_out)
+    print(f"\nWrote {len(rows)} feature rows to {features_out}")
 
     # --- quick summary ---
     print("\n--- summary statistics ---")
@@ -165,10 +193,18 @@ def main() -> None:
     norminfs = [r["norm_inf"] for r in rows]
     kurts = [r["kurtosis"] for r in rows]
     top1pct = [r["top1pct_energy"] for r in rows]
-    print(f"  ||h||_2  range:  [{min(norm2s):.2f}, {max(norm2s):.2f}]  median {sorted(norm2s)[len(norm2s)//2]:.2f}")
-    print(f"  ||h||_inf range: [{min(norminfs):.2f}, {max(norminfs):.2f}]  median {sorted(norminfs)[len(norminfs)//2]:.2f}")
-    print(f"  kurtosis range:  [{min(kurts):.1f}, {max(kurts):.1f}]  median {sorted(kurts)[len(kurts)//2]:.1f}")
-    print(f"  top1% energy:    [{min(top1pct):.3f}, {max(top1pct):.3f}]  median {sorted(top1pct)[len(top1pct)//2]:.3f}")
+    print(
+        f"  ||h||_2  range:  [{min(norm2s):.2f}, {max(norm2s):.2f}]  median {sorted(norm2s)[len(norm2s) // 2]:.2f}"
+    )
+    print(
+        f"  ||h||_inf range: [{min(norminfs):.2f}, {max(norminfs):.2f}]  median {sorted(norminfs)[len(norminfs) // 2]:.2f}"
+    )
+    print(
+        f"  kurtosis range:  [{min(kurts):.1f}, {max(kurts):.1f}]  median {sorted(kurts)[len(kurts) // 2]:.1f}"
+    )
+    print(
+        f"  top1% energy:    [{min(top1pct):.3f}, {max(top1pct):.3f}]  median {sorted(top1pct)[len(top1pct) // 2]:.3f}"
+    )
 
 
 if __name__ == "__main__":

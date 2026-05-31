@@ -14,26 +14,32 @@ phase so any interruption resumes cleanly.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import statistics
 import time
-from pathlib import Path
 
 import torch
 
+from _nla_artifacts import find_artifact, write_artifact
 from llm_surgeon import surgery
 from llm_surgeon.probe import (
-    AR_ID, AV_ID,
-    load_ar, load_av,
-    nla_reconstruct, nla_score, nla_verbalize,
+    AR_ID,
+    AV_ID,
+    load_ar,
+    load_av,
+    nla_reconstruct,
+    nla_score,
+    nla_verbalize,
 )
 
 
@@ -43,25 +49,28 @@ MAX_NEW_TOKENS = 15
 MAX_AV_TOKENS = 200
 
 PROMPTS = [
-    ("factual_easy",    "What is the capital of France?"),
-    ("factual_hard",    "What year did the Treaty of Westphalia end?"),
-    ("math",            "Compute 47 times 38."),
-    ("code",            "Write a Python function to check if a number is prime."),
-    ("creative_haiku",  "Write me a haiku about a rabbit in spring."),
-    ("creative_poem",   "Write a short poem about the ocean."),
-    ("reasoning_logic", "If all roses are flowers and all flowers need water, do all roses need water?"),
-    ("reasoning_word",  "Mary has 4 brothers. Each brother has 2 sisters. How many sisters does Mary have?"),
+    ("factual_easy", "What is the capital of France?"),
+    ("factual_hard", "What year did the Treaty of Westphalia end?"),
+    ("math", "Compute 47 times 38."),
+    ("code", "Write a Python function to check if a number is prime."),
+    ("creative_haiku", "Write me a haiku about a rabbit in spring."),
+    ("creative_poem", "Write a short poem about the ocean."),
+    (
+        "reasoning_logic",
+        "If all roses are flowers and all flowers need water, do all roses need water?",
+    ),
+    (
+        "reasoning_word",
+        "Mary has 4 brothers. Each brother has 2 sisters. How many sisters does Mary have?",
+    ),
 ]
-
-ARTIFACTS_DIR = Path("testing/.cache/nla_artifacts")
-ARTIFACT_FILE = ARTIFACTS_DIR / "aggregate_faithfulness.pt"
 
 WIDTH = 80
 BAR = "═" * WIDTH
 
 
 def _save(artifact: dict[str, Any]) -> None:
-    torch.save(artifact, ARTIFACT_FILE)
+    torch.save(artifact, write_artifact("aggregate_faithfulness.pt"))
 
 
 def init_artifact() -> dict[str, Any]:
@@ -87,7 +96,9 @@ def phase_capture(artifact: dict[str, Any]) -> None:
         print(f"   [{p['id']}] {p['text']!r}")
         enc = tok.apply_chat_template(
             [{"role": "user", "content": p["text"]}],
-            tokenize=True, add_generation_prompt=True, return_tensors="pt",
+            tokenize=True,
+            add_generation_prompt=True,
+            return_tensors="pt",
         )
         input_ids = enc["input_ids"]
         prompt_len = input_ids.shape[1]
@@ -117,11 +128,13 @@ def phase_capture(artifact: dict[str, Any]) -> None:
                 h = layer_states[LAYER][0, -1, :]
             else:
                 h = layer_states[LAYER][0, 0, :]
-            captures.append({
-                "step": step,
-                "token": gen_tokens[step],
-                "h": h.detach().float().cpu().clone(),
-            })
+            captures.append(
+                {
+                    "step": step,
+                    "token": gen_tokens[step],
+                    "h": h.detach().float().cpu().clone(),
+                }
+            )
 
         p["generated_text"] = generated_text
         p["gen_tokens"] = gen_tokens
@@ -152,10 +165,17 @@ def phase_verbalize(artifact: dict[str, Any]) -> None:
         print(f"   [{p['id']}]")
         for c in p["captures"]:
             overall_i += 1
-            print(f"      [{overall_i}/{n_total}] step={c['step']} → {c['token']!r} ...", end="", flush=True)
+            print(
+                f"      [{overall_i}/{n_total}] step={c['step']} → {c['token']!r} ...",
+                end="",
+                flush=True,
+            )
             t0 = time.time()
             c["av_text"] = nla_verbalize(
-                c["h"], model=av_model, tok=av_tok, meta=av_meta,
+                c["h"],
+                model=av_model,
+                tok=av_tok,
+                meta=av_meta,
                 max_new_tokens=MAX_AV_TOKENS,
             )
             c["av_time"] = time.time() - t0
@@ -189,8 +209,10 @@ def phase_reconstruct(artifact: dict[str, Any]) -> None:
             t0 = time.time()
             h_pred = nla_reconstruct(
                 c["av_text"],
-                backbone=ar_backbone, value_head=ar_value_head,
-                tok=ar_tok, meta=ar_meta,
+                backbone=ar_backbone,
+                value_head=ar_value_head,
+                tok=ar_tok,
+                meta=ar_meta,
             )
             c["h_pred"] = h_pred
             scores = nla_score(c["h"], h_pred)
@@ -211,7 +233,9 @@ def print_report(artifact: dict[str, Any]) -> None:
     print("NLA AGGREGATE FAITHFULNESS REPORT")
     print(BAR)
     print()
-    print(f"{'prompt id':<18}  {'n':>3}  {'mean cos':>9}  {'min':>7}  {'max':>7}  generated")
+    print(
+        f"{'prompt id':<18}  {'n':>3}  {'mean cos':>9}  {'min':>7}  {'max':>7}  generated"
+    )
     print("─" * WIDTH)
 
     all_cos: list[float] = []
@@ -225,22 +249,33 @@ def print_report(artifact: dict[str, Any]) -> None:
         all_mse.extend(mse)
         gen_preview = p["generated_text"].replace("\n", " ")[:40]
         print(
-            f"{p['id']:<18}  {len(cos):>3}  {sum(cos)/len(cos):>+9.3f}  "
+            f"{p['id']:<18}  {len(cos):>3}  {sum(cos) / len(cos):>+9.3f}  "
             f"{min(cos):>+7.3f}  {max(cos):>+7.3f}  {gen_preview!r}"
         )
     print(BAR)
     if all_cos:
         print()
-        print(f"OVERALL ({len(all_cos)} datapoints across {len([p for p in artifact['prompts'] if p['phase'] == 'scored'])} prompts):")
+        print(
+            f"OVERALL ({len(all_cos)} datapoints across {len([p for p in artifact['prompts'] if p['phase'] == 'scored'])} prompts):"
+        )
         print(f"  mean cosine:   {statistics.mean(all_cos):+.3f}")
-        print(f"  stdev cosine:  {statistics.stdev(all_cos) if len(all_cos) > 1 else 0:.3f}")
+        print(
+            f"  stdev cosine:  {statistics.stdev(all_cos) if len(all_cos) > 1 else 0:.3f}"
+        )
         print(f"  median cosine: {statistics.median(all_cos):+.3f}")
         print(f"  min / max:     {min(all_cos):+.3f} / {max(all_cos):+.3f}")
         print()
         print(f"  mean MSE:      {statistics.mean(all_mse):.3f}")
         print(f"  median MSE:    {statistics.median(all_mse):.3f}")
         print()
-        bins = [(-1.0, 0.5), (0.5, 0.7), (0.7, 0.8), (0.8, 0.85), (0.85, 0.9), (0.9, 1.0)]
+        bins = [
+            (-1.0, 0.5),
+            (0.5, 0.7),
+            (0.7, 0.8),
+            (0.8, 0.85),
+            (0.85, 0.9),
+            (0.9, 1.0),
+        ]
         print("  cosine histogram:")
         for lo, hi in bins:
             n = sum(1 for c in all_cos if lo <= c < hi or (hi == 1.0 and c == 1.0))
@@ -249,16 +284,21 @@ def print_report(artifact: dict[str, Any]) -> None:
 
 
 def main() -> None:
-    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-    if ARTIFACT_FILE.exists():
-        print(f"loading existing artifact: {ARTIFACT_FILE}")
-        artifact = torch.load(ARTIFACT_FILE, weights_only=False)
+    _existing = find_artifact("aggregate_faithfulness.pt")
+    if _existing is not None:
+        print(f"loading existing artifact: {_existing}")
+        artifact = torch.load(_existing, weights_only=False)
         existing_ids = {p["id"] for p in artifact["prompts"]}
         for pid, text in PROMPTS:
             if pid not in existing_ids:
-                artifact["prompts"].append({
-                    "id": pid, "text": text, "phase": "init", "captures": [],
-                })
+                artifact["prompts"].append(
+                    {
+                        "id": pid,
+                        "text": text,
+                        "phase": "init",
+                        "captures": [],
+                    }
+                )
     else:
         artifact = init_artifact()
         _save(artifact)

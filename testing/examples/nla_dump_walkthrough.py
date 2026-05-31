@@ -11,21 +11,23 @@ to remind the reader what was being probed.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import textwrap
-from pathlib import Path
 
 import torch
 
+from _nla_artifacts import find_artifact
 
-ARTIFACTS_DIR = Path("testing/.cache/nla_artifacts")
+
 WIDTH = 92
 
 
@@ -33,9 +35,12 @@ def _wrap(text: str, indent: str = "      ") -> str:
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     wrapped = [
         textwrap.fill(
-            p, width=WIDTH - len(indent),
-            initial_indent=indent, subsequent_indent=indent,
-            break_long_words=False, break_on_hyphens=False,
+            p,
+            width=WIDTH - len(indent),
+            initial_indent=indent,
+            subsequent_indent=indent,
+            break_long_words=False,
+            break_on_hyphens=False,
         )
         for p in paragraphs
     ]
@@ -65,8 +70,10 @@ def dump_aggregate(artifact: dict[str, Any]) -> None:
             cos_str = f"{cos:+.3f}" if cos is not None else "(no AR)"
             mse_str = f"{mse:.2f}" if mse is not None else "-"
             norm = float(c["h"].norm().item())
-            print(f"  --- step {c['step']:>2}  token={c['token']!r:<14}  "
-                  f"||h||={norm:>6.2f}  cos={cos_str}  mse={mse_str}")
+            print(
+                f"  --- step {c['step']:>2}  token={c['token']!r:<14}  "
+                f"||h||={norm:>6.2f}  cos={cos_str}  mse={mse_str}"
+            )
             if c.get("av_text"):
                 print(_wrap(c["av_text"]))
             print()
@@ -81,8 +88,10 @@ def dump_gen_trajectory(artifact: dict[str, Any]) -> None:
         cos = c.get("cosine")
         cos_str = f"{cos:+.3f}" if cos is not None else "(no AR)"
         norm = float(c["h"].norm().item())
-        print(f"  --- step {c['step']:>2}  token={c['token']!r:<14}  "
-              f"||h||={norm:>6.2f}  cos={cos_str}")
+        print(
+            f"  --- step {c['step']:>2}  token={c['token']!r:<14}  "
+            f"||h||={norm:>6.2f}  cos={cos_str}"
+        )
         if c.get("av_text"):
             print(_wrap(c["av_text"]))
         print()
@@ -101,33 +110,35 @@ def dump_forced(artifact: dict[str, Any]) -> None:
         print(f"  forced:  {pair['forced']!r}")
         print()
         for c in caps:
-            print(f"  --- {c['version'].upper():<7}  target={c['target']!r:<14}  "
-                  f"pos={c['abs_pos']:>3}  ||h||={c['norm']:>6.2f}  "
-                  f"argmax-next={c['argmax_next']!r}")
+            print(
+                f"  --- {c['version'].upper():<7}  target={c['target']!r:<14}  "
+                f"pos={c['abs_pos']:>3}  ||h||={c['norm']:>6.2f}  "
+                f"argmax-next={c['argmax_next']!r}"
+            )
             if c.get("av_text"):
                 print(_wrap(c["av_text"]))
             print()
 
 
 def main() -> None:
-    agg_path = ARTIFACTS_DIR / "aggregate_faithfulness.pt"
-    haiku_path = ARTIFACTS_DIR / "rabbit_haiku_gen_trajectory.pt"
-    forced_path = ARTIFACTS_DIR / "forced_continuation.pt"
+    agg_path = find_artifact("aggregate_faithfulness.pt")
+    haiku_path = find_artifact("rabbit_haiku_gen_trajectory.pt")
+    forced_path = find_artifact("forced_continuation.pt")
 
-    if agg_path.exists():
+    if agg_path is not None:
         dump_aggregate(torch.load(agg_path, weights_only=False))
     else:
-        print(f"(no aggregate artifact at {agg_path})")
+        print("(no aggregate_faithfulness.pt artifact found)")
 
-    if haiku_path.exists():
+    if haiku_path is not None:
         dump_gen_trajectory(torch.load(haiku_path, weights_only=False))
     else:
-        print(f"(no haiku artifact at {haiku_path})")
+        print("(no rabbit_haiku_gen_trajectory.pt artifact found)")
 
-    if forced_path.exists():
+    if forced_path is not None:
         dump_forced(torch.load(forced_path, weights_only=False))
     else:
-        print(f"(no forced-continuation artifact at {forced_path})")
+        print("(no forced_continuation.pt artifact found)")
 
     print()
     print("=" * WIDTH)

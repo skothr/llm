@@ -23,10 +23,10 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import time
-from pathlib import Path
 
 import torch
 
+from _nla_artifacts import read_artifact
 from llm_surgeon import surgery
 from llm_surgeon.probe import load_ar, nla_reconstruct
 
@@ -36,7 +36,6 @@ LAYER = 20
 LAYER_IDX_0 = LAYER - 1
 MAX_NEW_TOKENS = 30
 PROMPT = "Write a short poem about the ocean."
-ARTIFACT = Path("testing/.cache/nla_artifacts/aggregate_faithfulness.pt")
 
 WIDTH = 80
 BAR = "=" * WIDTH
@@ -78,7 +77,9 @@ from _layer_hooks import LayerOutputReplaceHook  # noqa: E402
 
 def main() -> None:
     print("[1/4] loading saved poem trajectory artifact ...")
-    artifact = torch.load(ARTIFACT, weights_only=False)
+    artifact = torch.load(
+        read_artifact("aggregate_faithfulness.pt"), weights_only=False
+    )
     poem = next(p for p in artifact["prompts"] if p["id"] == "creative_poem")
     step0 = poem["captures"][0]
     h_original: torch.Tensor = step0["h"]

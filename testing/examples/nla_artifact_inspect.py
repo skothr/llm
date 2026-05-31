@@ -5,20 +5,20 @@ we're working with before deeper analysis.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 from pathlib import Path
 import torch
 
-
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
+from _nla_artifacts import CACHE, DATA, read_artifact
 
 
 def describe(obj: Any, indent: int = 0) -> None:
@@ -34,7 +34,9 @@ def describe(obj: Any, indent: int = 0) -> None:
                     sample = v[0]
                     for sk, sv in sample.items():
                         if isinstance(sv, torch.Tensor):
-                            print(f"{pad}    {sk!r}: Tensor {tuple(sv.shape)} {sv.dtype}")
+                            print(
+                                f"{pad}    {sk!r}: Tensor {tuple(sv.shape)} {sv.dtype}"
+                            )
                         elif isinstance(sv, str):
                             preview = sv[:60] + "..." if len(sv) > 60 else sv
                             print(f"{pad}    {sk!r}: str({len(sv)}) {preview!r}")
@@ -60,8 +62,28 @@ def describe(obj: Any, indent: int = 0) -> None:
                 print(f"{pad}{k!r}: {type(v).__name__}={v!r}"[:120])
 
 
+def _targets() -> list[Path]:
+    """Files to inspect. With a CLI arg: an existing path is loaded directly,
+    otherwise the arg is treated as a bare artifact name and resolved
+    cache-first / committed-fallback via read_artifact. With no arg: every
+    *.pt across the working cache and the committed data dir (cache wins on
+    name collision)."""
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        p = Path(arg)
+        if p.exists():
+            return [p]
+        return [read_artifact(arg)]
+    by_name: dict[str, Path] = {}
+    for d in (DATA, CACHE):  # CACHE iterated last so it wins on collision
+        if d.exists():
+            for p in sorted(d.glob("*.pt")):
+                by_name[p.name] = p
+    return [by_name[n] for n in sorted(by_name)]
+
+
 def main() -> None:
-    for p in sorted(ARTIFACTS.glob("*.pt")):
+    for p in _targets():
         print(f"\n{'=' * 80}")
         print(f"FILE: {p.name}  ({p.stat().st_size / 1e6:.1f} MB)")
         print("=" * 80)

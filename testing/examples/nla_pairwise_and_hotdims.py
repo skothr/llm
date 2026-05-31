@@ -29,22 +29,18 @@ from typing import Any, cast
 
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
-from pathlib import Path
 from collections import Counter
 import torch
 
-
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-OUT = ARTIFACTS / "pairwise_and_hotdims.pt"
+from _nla_artifacts import find_artifact, write_artifact
 
 
 def load_all() -> list[dict[str, Any]]:
     """Returns list of {src, prompt_id, token, h: Tensor(3584,), av_text}."""
     items: list[dict[str, Any]] = []
 
-    p = ARTIFACTS / "aggregate_faithfulness.pt"
-    if p.exists():
+    p = find_artifact("aggregate_faithfulness.pt")
+    if p is not None:
         data = torch.load(p, weights_only=False)
         for prompt in data["prompts"]:
             for cap in prompt.get("captures", []):
@@ -59,8 +55,8 @@ def load_all() -> list[dict[str, Any]]:
                     }
                 )
 
-    p = ARTIFACTS / "rabbit_haiku_gen_trajectory.pt"
-    if p.exists():
+    p = find_artifact("rabbit_haiku_gen_trajectory.pt")
+    if p is not None:
         data = torch.load(p, weights_only=False)
         for cap in data.get("captures", []):
             items.append(
@@ -74,8 +70,8 @@ def load_all() -> list[dict[str, Any]]:
                 }
             )
 
-    p = ARTIFACTS / "forced_continuation.pt"
-    if p.exists():
+    p = find_artifact("forced_continuation.pt")
+    if p is not None:
         data = torch.load(p, weights_only=False)
         for cap in data.get("captures", []):
             items.append(
@@ -89,8 +85,8 @@ def load_all() -> list[dict[str, Any]]:
                 }
             )
 
-    p = ARTIFACTS / "country_concept_vector.pt"
-    if p.exists():
+    p = find_artifact("country_concept_vector.pt")
+    if p is not None:
         data = torch.load(p, weights_only=False)
         for i, h in enumerate(data["h_country"]):
             items.append(
@@ -353,6 +349,7 @@ def main() -> None:
         for idx, lbl in labels.items():
             print(f"  idx {idx:>5}: {lbl}")
 
+    out = write_artifact("pairwise_and_hotdims.pt")
     torch.save(
         {
             "items_meta": [{k: v for k, v in it.items() if k != "h"} for it in items],
@@ -370,9 +367,9 @@ def main() -> None:
             "stats_by_dim": stats_by_dim,
             "labels": labels,
         },
-        OUT,
+        out,
     )
-    print(f"\nWrote {OUT}")
+    print(f"\nWrote {out}")
 
 
 if __name__ == "__main__":

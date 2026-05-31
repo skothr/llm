@@ -36,21 +36,16 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import time
-from pathlib import Path
 import torch
 
+from _nla_artifacts import read_artifact, write_artifact
 from llm_surgeon.probe import load_ar, nla_reconstruct, nla_score
 
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-SOURCE = ARTIFACTS / "dense_interp_near_pivot.pt"
-OUT = ARTIFACTS / "plateau_attractor_test.pt"
-
-
 def main() -> None:
-    print(f"loading dense_interp_near_pivot from {SOURCE}")
-    src = torch.load(SOURCE, weights_only=False)
+    source = read_artifact("dense_interp_near_pivot.pt")
+    print(f"loading dense_interp_near_pivot from {source}")
+    src = torch.load(source, weights_only=False)
     steps = sorted(src["steps"], key=lambda s: s["t"])
     h_A = src["h_A"]
     h_B = src["h_B"]
@@ -168,8 +163,9 @@ def main() -> None:
     del backbone, value_head, tok
     gc.collect()
 
-    torch.save({"results": results, "targets": [t[0] for t in targets]}, OUT)
-    print(f"\nWrote {OUT}")
+    out = write_artifact("plateau_attractor_test.pt")
+    torch.save({"results": results, "targets": [t[0] for t in targets]}, out)
+    print(f"\nWrote {out}")
 
 
 if __name__ == "__main__":

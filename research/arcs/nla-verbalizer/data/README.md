@@ -6,9 +6,11 @@ audit are generated from. Committed via **git-LFS** (see the repo
 clean clone — without these, the render scripts and the audit have no input to
 load. Total ~15 MB; provenance + integrity in [`MANIFEST.json`](MANIFEST.json).
 
-These are the canonical copy. The capture/render scripts in
-`testing/examples/` read and write a **gitignored working cache** at
-`testing/.cache/nla_artifacts/` instead (it predates this committed copy).
+These are the canonical copy. The scripts in `testing/examples/` resolve their
+inputs through the shared `_nla_artifacts` helper — **the gitignored working
+cache `testing/.cache/nla_artifacts/` first, this committed copy as fallback**
+— and write outputs only to the cache. So a clean clone reads straight from
+here, while a local re-capture writes to the cache and then takes precedence.
 
 ## Using the committed data
 
@@ -21,12 +23,11 @@ directory when the working cache is empty:
 # Expect: SUMMARY:  178 PASS  |  0 FAIL
 ```
 
-**Re-render a figure** — the render scripts still read the working cache, so
-seed it from this committed copy first:
+**Re-render a figure** — no setup either. Render scripts resolve their inputs
+from this committed dir when the working cache is empty (same `_nla_artifacts`
+fallback), so a clean clone re-renders directly:
 
 ```bash
-mkdir -p testing/.cache/nla_artifacts
-cp research/arcs/nla-verbalizer/data/*.pt testing/.cache/nla_artifacts/
 PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_vocab_atlas_render.py
 ```
 

@@ -38,9 +38,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+from _nla_artifacts import read_artifact
+
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
+FIGDIR = (
+    _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "observations" / "figures"
+)
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 SIBLING_COS_THRESHOLD = 0.80  # captures all 5 pairs that fig27 surfaced
@@ -119,8 +122,8 @@ def map_src_to_expected_cat(it: dict[str, Any]) -> str | None:
 
 
 def main() -> None:
-    vocab = torch.load(ARTIFACTS / "vocab_atlas.pt", weights_only=False)
-    pw = torch.load(ARTIFACTS / "pairwise_and_hotdims.pt", weights_only=False)
+    vocab = torch.load(read_artifact("vocab_atlas.pt"), weights_only=False)
+    pw = torch.load(read_artifact("pairwise_and_hotdims.pt"), weights_only=False)
     labels: dict[int, str] = pw["labels"]
     sink_dims = sorted([idx for idx, lbl in labels.items() if lbl == "sink"])
     categories = list(vocab["categories"])

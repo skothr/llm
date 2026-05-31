@@ -41,15 +41,14 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import time
-from pathlib import Path
 import torch
 
+from _nla_artifacts import write_artifact
 from llm_surgeon import surgery
 
 
 BASE_ID = "Qwen/Qwen2.5-7B-Instruct"
 LAYER = 20
-OUT = Path("testing/.cache/nla_artifacts/discriminant_stability.pt")
 
 
 ANCHORS: list[tuple[str, str, str]] = [
@@ -195,6 +194,7 @@ def main() -> None:
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
+    out_path = write_artifact("discriminant_stability.pt")
     torch.save(
         {
             "captures": captures,
@@ -202,9 +202,9 @@ def main() -> None:
             "base_id": BASE_ID,
             "layer": LAYER,
         },
-        OUT,
+        out_path,
     )
-    print(f"\nWrote {len(captures)} captures to {OUT}")
+    print(f"\nWrote {len(captures)} captures to {out_path}")
 
 
 if __name__ == "__main__":

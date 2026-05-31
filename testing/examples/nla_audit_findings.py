@@ -66,26 +66,20 @@ from typing import Any, cast
 
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
-from pathlib import Path
 from collections import Counter
 import statistics
 import torch
 import torch.nn.functional as F
 
+from _nla_artifacts import CACHE as _CACHE, DATA as _COMMITTED
 
-# Anchored to this file's location so the audit runs from any CWD. Two
-# candidate artifact locations, in precedence order:
-#   1. the live working cache  testing/.cache/nla_artifacts/  (gitignored;
-#      holds freshly (re)captured artifacts during local development)
-#   2. the committed canonical copy  research/arcs/nla-verbalizer/data/
-#      (git-LFS — what a clean clone has)
-# Preferring the cache means a local re-capture is audited immediately; the
-# fallback means the audit still runs from a fresh clone with no local capture
-# run (the whole point of committing the raw data). See
-# research/ARC_PROCESS.md § "Raw data is a deliverable".
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_CACHE = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-_COMMITTED = _REPO_ROOT / "research" / "arcs" / "nla-verbalizer" / "data"
+
+# CACHE / DATA come from the shared resolver (_nla_artifacts) so the cache and
+# committed-copy locations are defined in exactly one place. The audit picks a
+# directory: prefer the live working cache (gitignored; freshly (re)captured
+# artifacts) when it holds any .pt, else the committed git-LFS copy under
+# research/arcs/nla-verbalizer/data/ — so the audit replays from a clean clone
+# with no local capture run. See research/ARC_PROCESS.md § "Raw data is a deliverable".
 ARTIFACTS = _CACHE if (_CACHE.exists() and any(_CACHE.glob("*.pt"))) else _COMMITTED
 
 

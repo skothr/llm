@@ -563,10 +563,8 @@ PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_audit_find
 # Verify dataset integrity (sha256 of every .pt vs data/MANIFEST.json)
 testing/.venv/bin/python testing/examples/nla_data_manifest.py --check
 
-# Re-render a figure (~10s, no model load). Render scripts read the working
-# cache, so seed it from the committed copy first:
-mkdir -p testing/.cache/nla_artifacts
-cp research/arcs/nla-verbalizer/data/*.pt testing/.cache/nla_artifacts/
+# Re-render a figure (~10s, no model load). Inputs resolve from the committed
+# data/ dir when the working cache is empty (shared _nla_artifacts fallback).
 PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_discriminant_stability_render.py
 
 # Re-capture a .pt from scratch (loads the base model, slow on CPU)

@@ -42,19 +42,14 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import time
-from pathlib import Path
 import torch
 
+from _nla_artifacts import read_artifact, write_artifact
 from llm_surgeon import surgery
 
 
 BASE_ID = "Qwen/Qwen2.5-7B-Instruct"
 LAYER = 20
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-ARTIFACTS.mkdir(parents=True, exist_ok=True)
-OUT = ARTIFACTS / "mid_seq_vocab_atlas.pt"
-VOCAB_SRC = ARTIFACTS / "vocab_atlas.pt"
 
 PRE = "The text contains many words. Here is one specific word:"
 SUFFIX = " continues throughout subsequent discussion paragraphs."
@@ -92,8 +87,9 @@ def find_anchor_end_token_pos(tok: Any, chat_str: str, anchor: str) -> tuple[int
 
 
 def main() -> None:
-    print(f"loading source vocab atlas from {VOCAB_SRC}")
-    src = torch.load(VOCAB_SRC, weights_only=False)
+    vocab_src = read_artifact("vocab_atlas.pt")
+    print(f"loading source vocab atlas from {vocab_src}")
+    src = torch.load(vocab_src, weights_only=False)
     anchor_pairs = [(c["word"], c["category"]) for c in src["captures"]]
     print(f"  {len(anchor_pairs)} anchors across {len(src['categories'])} categories")
 
@@ -175,6 +171,7 @@ def main() -> None:
     del model, tok
     gc.collect()
 
+    out_path = write_artifact("mid_seq_vocab_atlas.pt")
     torch.save(
         {
             "captures": captures,
@@ -185,9 +182,9 @@ def main() -> None:
             "suffix": SUFFIX,
             "skipped": skipped,
         },
-        OUT,
+        out_path,
     )
-    print(f"\nWrote {len(captures)} captures to {OUT}")
+    print(f"\nWrote {len(captures)} captures to {out_path}")
     print(f"Skipped: {len(skipped)}")
     if skipped:
         for cat, w, reason in skipped:
