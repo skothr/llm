@@ -3,6 +3,40 @@
 **Date:** 2026-06-01 · **Branch:** `refactor/repo-reorg` · **Status:** decision-ready, PLANNING ONLY (no execution).
 **Verdict (synthesized + adversarially reviewed):** **STAY MONOREPO + CLEAN UP**, with armed tripwires for a future split.
 
+---
+
+## DECISION (2026-06-01) — user override → **SPLIT** (cleanup first)
+
+The RFC's STAY recommendation was technically sound on the evidence it weighed
+(no clean internal cut of `testing/`, branch/worktree teardown cost, LFS re-push).
+The user overrode it on **product grounds the technical RFC under-weighted**, and
+those grounds dissolve the RFC's strongest objection rather than ignoring it:
+
+1. **`llm_surgeon` is intended as a general, reusable surgery-ops library** → it
+   deserves its own repo, independent of any GUI or research consumer.
+2. **The React/FastAPI GUI (`testing/gui`) and llobotomy (`testing/gui_cpp`) are
+   redundant; llobotomy is the rework** and is to be **restarted with new info**.
+   Freezing the React GUI (pin-and-forget) instead of carrying it live **severs
+   the `tests` ↔ `gui.backend` ↔ `llm_surgeon` coupling** that was the RFC's #1
+   "no clean cut" — the coupling existed *because* the GUI was in-tree.
+3. **The research arcs are to be showcased for the Anthropic Fellows program** →
+   a focused `llm-research` repo keeps the showcase coherent, not "all over the place."
+
+**Locked target mapping** (from the user's 2026-06-01 decisions):
+
+| New repo | Source subtree(s) | History | Notes |
+|---|---|---|---|
+| `llm-research` | `theory/` + `research/` + research-flavored `testing/examples/*` | preserve | Fellows showcase; focused |
+| `llm_surgeon` | `testing/llm_surgeon/` + `tests/` + `experiments/` + `prompts/` + surgery `examples/` | preserve | general library; **no GUI dep** |
+| `llm-gui-react` | `testing/gui/` | preserve | **frozen/deprecated**; pins a snapshot of `llm_surgeon` |
+| `llobotomy` | `testing/gui_cpp/` **+** `testing/llm_engine_cpp/` (bundled) | preserve, then rework | existing `add_subdirectory(llm_engine_cpp)` keeps working |
+
+**Sequence:** clean up first (this branch) → fast-forward local master to origin →
+push/triage all local-only branches + quiesce all 9 worktrees (hard gate) →
+per-repo `git filter-repo` extraction → per-repo verification → archive the monorepo.
+The RFC's §3 if-split must-fixes and the four investigation appendices below now
+govern the **HOW**; a dedicated split-execution plan supersedes the STAY verdict.
+
 Produced by a 6-agent RFC workflow (boundaries/cross-deps · branches/history/LFS ·
 junk inventory · steelman-stay → synthesized RFC → adversarial critique). The
 recommendation is the RFC's; the critique's must-fixes apply to the *if-split
