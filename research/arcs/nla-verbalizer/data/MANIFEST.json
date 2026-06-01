@@ -1,0 +1,272 @@
+{
+  "arc": "nla-verbalizer",
+  "description": "Raw NLA capture/derived artifacts (layer-20 Qwen2.5-7B-Instruct h vectors and round-trip products). Committed via git-LFS so figures and nla_audit_findings.py reproduce from a clean clone.",
+  "trust_note": "Loaded with torch.load(weights_only=False) (pickle). Safe here: locally-generated tensor dumps, not third-party data. Verify sha256 with `--check` before loading on an untrusted copy.",
+  "total_files": 16,
+  "total_size_bytes": 15059571,
+  "files": [
+    {
+      "filename": "aggregate_faithfulness.pt",
+      "sha256": "1a1479240747b71d86fa4819c84bfc6538f910314b0d1bac8f6fb712fc6eaf8b",
+      "size_bytes": 3391315,
+      "class": "capture-root",
+      "producing_script": "testing/examples/nla_aggregate_faithfulness.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_aggregate_faithfulness.py",
+      "inputs": [],
+      "requires_model": "qwen+av+ar",
+      "consumers": [
+        "geometric_features.pt",
+        "pairwise_and_hotdims.pt",
+        "AUDIT 1/20"
+      ]
+    },
+    {
+      "filename": "concept_arithmetic_atlas.pt",
+      "sha256": "08c47546f862a3f5d85df4403fbb165cd5d926cb2b807cc1a0b0d7aa9e6f2092",
+      "size_bytes": 211341,
+      "class": "derived",
+      "producing_script": "testing/examples/nla_concept_arithmetic_atlas.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_concept_arithmetic_atlas.py",
+      "inputs": [
+        "vocab_atlas.pt"
+      ],
+      "requires_model": "av",
+      "consumers": [
+        "fig35",
+        "AUDIT 17"
+      ]
+    },
+    {
+      "filename": "country_concept_vector.pt",
+      "sha256": "8849375f490faf10f47adfe476ff94b2f879c2a49b7e9dc71e33a50b95c84536",
+      "size_bytes": 471933,
+      "class": "capture-root",
+      "producing_script": "testing/examples/nla_country_concept_vector.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_country_concept_vector.py",
+      "inputs": [],
+      "requires_model": "qwen+av",
+      "consumers": [
+        "fig13",
+        "pairwise_and_hotdims.pt",
+        "AUDIT 8"
+      ]
+    },
+    {
+      "filename": "dense_interp_near_pivot.pt",
+      "sha256": "1037a56a5ff0a46a2641eea8f68a9ca08e3c9d3f7b99189b73711eb42d20a9f1",
+      "size_bytes": 488803,
+      "class": "derived",
+      "producing_script": "testing/examples/nla_dense_interp_near_pivot.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_dense_interp_near_pivot.py",
+      "inputs": [
+        "interpolation_flipbook.pt"
+      ],
+      "requires_model": "av",
+      "consumers": [
+        "fig36",
+        "fig37",
+        "plateau_attractor_test.pt",
+        "AUDIT 18"
+      ]
+    },
+    {
+      "filename": "discriminant_stability.pt",
+      "sha256": "a2ffa724d69b21083af4f4518a7bc199301c8bec788f9491f270dfa1b821b57b",
+      "size_bytes": 471421,
+      "class": "capture-root",
+      "producing_script": "testing/examples/nla_discriminant_stability_capture.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_discriminant_stability_capture.py",
+      "inputs": [],
+      "requires_model": "qwen-base",
+      "consumers": [
+        "fig28",
+        "AUDIT 14"
+      ]
+    },
+    {
+      "filename": "forced_continuation.pt",
+      "sha256": "c45bf00414e57f8597c6dd84d80299f0ded59582ff9818d82631f868daf39b1c",
+      "size_bytes": 155589,
+      "class": "capture-root",
+      "producing_script": "testing/examples/nla_forced_continuation.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_forced_continuation.py",
+      "inputs": [],
+      "requires_model": "qwen+av",
+      "consumers": [
+        "fig15",
+        "fig16",
+        "geometric_features.pt",
+        "AUDIT 10"
+      ]
+    },
+    {
+      "filename": "geometric_features.pt",
+      "sha256": "70c8cfc9a98b38f576698d004c6f027c0a531009928feb13392f057bc1e522bf",
+      "size_bytes": 53039,
+      "class": "derived",
+      "producing_script": "testing/examples/nla_geometric_features.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_geometric_features.py",
+      "inputs": [
+        "aggregate_faithfulness.pt",
+        "rabbit_haiku_gen_trajectory.pt",
+        "forced_continuation.pt",
+        "country_concept_vector.pt"
+      ],
+      "requires_model": "none",
+      "consumers": [
+        "fig1-fig5"
+      ]
+    },
+    {
+      "filename": "interpolation_flipbook.pt",
+      "sha256": "9664bbf682bbef7cc773ba9be86aaf7c7f886bda9edfc9124a7cd8a3cd50c8b4",
+      "size_bytes": 336453,
+      "class": "capture-root",
+      "producing_script": "testing/examples/nla_interpolation_flipbook.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_interpolation_flipbook.py",
+      "inputs": [],
+      "requires_model": "qwen+av+ar",
+      "consumers": [
+        "fig17",
+        "fig18",
+        "fig21",
+        "dense_interp_near_pivot.pt",
+        "AUDIT 11"
+      ]
+    },
+    {
+      "filename": "mid_seq_compare.pt",
+      "sha256": "a374f783d2fac21eecd36afc13b9fc45e59873c46a5ca3ad05f4d64a98957c9c",
+      "size_bytes": 88413,
+      "class": "derived",
+      "producing_script": "testing/examples/nla_mid_seq_vocab_atlas_compare.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_mid_seq_vocab_atlas_compare.py",
+      "inputs": [
+        "vocab_atlas.pt",
+        "mid_seq_vocab_atlas.pt",
+        "pairwise_and_hotdims.pt"
+      ],
+      "requires_model": "none",
+      "consumers": [
+        "fig31",
+        "fig32"
+      ]
+    },
+    {
+      "filename": "mid_seq_native_compare.pt",
+      "sha256": "884fbb8f55490af343d529dcea8f86e00e795216e9dc27415658f800b84c6c98",
+      "size_bytes": 8221,
+      "class": "derived",
+      "producing_script": "testing/examples/nla_mid_seq_native_compare.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_mid_seq_native_compare.py",
+      "inputs": [
+        "vocab_atlas.pt",
+        "mid_seq_vocab_atlas.pt",
+        "pairwise_and_hotdims.pt"
+      ],
+      "requires_model": "none",
+      "consumers": [
+        "fig33",
+        "fig34"
+      ]
+    },
+    {
+      "filename": "mid_seq_vocab_atlas.pt",
+      "sha256": "938c528abf312124ded9246c908662621fbf0fd5b21afc7536f059f7c0a8fea4",
+      "size_bytes": 3767623,
+      "class": "capture-root",
+      "producing_script": "testing/examples/nla_mid_seq_vocab_atlas_capture.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_mid_seq_vocab_atlas_capture.py",
+      "inputs": [],
+      "requires_model": "qwen-base",
+      "consumers": [
+        "mid_seq_compare.pt",
+        "mid_seq_native_compare.pt",
+        "AUDIT 15/16"
+      ]
+    },
+    {
+      "filename": "pairwise_and_hotdims.pt",
+      "sha256": "6ae2d0319dfe1a04743d5d0a3f58ba938e9d79615b7b9bb96c5cd473398044d1",
+      "size_bytes": 3075505,
+      "class": "derived",
+      "producing_script": "testing/examples/nla_pairwise_and_hotdims.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_pairwise_and_hotdims.py",
+      "inputs": [
+        "aggregate_faithfulness.pt",
+        "rabbit_haiku_gen_trajectory.pt",
+        "forced_continuation.pt",
+        "country_concept_vector.pt"
+      ],
+      "requires_model": "none",
+      "consumers": [
+        "fig1-fig4, fig7-fig37 (hub artifact)"
+      ]
+    },
+    {
+      "filename": "plateau_attractor_test.pt",
+      "sha256": "648e6c1bfcc294ec0c675249d342dd104b0f14a21c5083d396f04684a749e2a2",
+      "size_bytes": 91593,
+      "class": "derived",
+      "producing_script": "testing/examples/nla_plateau_attractor_test.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_plateau_attractor_test.py",
+      "inputs": [
+        "dense_interp_near_pivot.pt"
+      ],
+      "requires_model": "ar",
+      "consumers": [
+        "AUDIT 19 (no figure \u2014 round-trip validation only)"
+      ]
+    },
+    {
+      "filename": "rabbit_haiku_gen_trajectory.pt",
+      "sha256": "2858e72f3c9d73d8c1a64d5d087a406a4ecf22149f07cdaa907d118330a73c78",
+      "size_bytes": 450713,
+      "class": "capture-root",
+      "producing_script": "testing/examples/nla_faithfulness.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_faithfulness.py",
+      "inputs": [],
+      "requires_model": "qwen+av+ar",
+      "consumers": [
+        "fig6",
+        "fig14",
+        "pairwise_and_hotdims.pt",
+        "AUDIT 21"
+      ]
+    },
+    {
+      "filename": "sink_removed_atlas.pt",
+      "sha256": "e4adf768087236eb7777af4575e76aa67c89e70963f41d45ac8a7a9da7387c3f",
+      "size_bytes": 121298,
+      "class": "derived",
+      "producing_script": "testing/examples/nla_sink_removed_atlas.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_sink_removed_atlas.py",
+      "inputs": [
+        "pairwise_and_hotdims.pt",
+        "geometric_features.pt"
+      ],
+      "requires_model": "none",
+      "consumers": [
+        "fig7",
+        "fig8",
+        "fig9",
+        "fig10",
+        "fig11"
+      ]
+    },
+    {
+      "filename": "vocab_atlas.pt",
+      "sha256": "3bd1810b2f486a437078af7d61dcd8d0418578d3281fd104eb546f6526735c31",
+      "size_bytes": 1876311,
+      "class": "capture-root",
+      "producing_script": "testing/examples/nla_vocab_atlas_capture.py",
+      "producing_command": "PYTHONPATH=$PWD/testing testing/.venv/bin/python testing/examples/nla_vocab_atlas_capture.py",
+      "inputs": [],
+      "requires_model": "qwen-base",
+      "consumers": [
+        "fig19-fig37 (atlas/discriminant figures)",
+        "AUDIT 12/13"
+      ]
+    }
+  ]
+}

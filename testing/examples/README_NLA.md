@@ -45,13 +45,14 @@ multi-GB checkpoints from HuggingFace.
 ## Figures + observations
 
 Scripts that produce visualizations write PNGs to
-`research/observations/figures/fig*.png` (committed canonical artifacts).
-Each figure is cataloged with provenance in
-`research/observations/figures/INVENTORY.md`. Observation `.md` files
-in `research/observations/` are evidence-first writeups citing audit-locked
-numbers. Session-resumption metadata (resume checkpoints, arc summaries
-written at compaction time) lives in `research/sessions/` — separate from
-evidence, see `research/sessions/README.md`.
+`research/arcs/nla-verbalizer/observations/figures/fig*.png` (committed
+canonical artifacts). Each figure is cataloged with provenance in
+`research/arcs/nla-verbalizer/observations/figures/INVENTORY.md`. Observation
+`.md` files in `research/arcs/nla-verbalizer/observations/` are evidence-first
+writeups citing audit-locked numbers. Session-resumption metadata (resume
+checkpoints, arc summaries written at compaction time) lives in
+`research/arcs/nla-verbalizer/sessions/` — separate from evidence, see
+`research/README.md` § Conventions.
 
 ## "Discriminant" naming — methodology note
 

@@ -10,7 +10,7 @@ Catalogue of all 36 figures in this directory (fig1-fig11, fig13-fig37 — fig12
 - **Toolkit:** `llm_surgeon.probe.{load_av, load_ar, nla_verbalize, nla_reconstruct, nla_score}` (see `testing/llm_surgeon/probe/_nla.py`).
 - **Sink dims:** {277, 458, 1427, 1627, 2107, 2570, 3110} — identified by the `classify_dim_character` heuristic in `nla_pairwise_and_hotdims.py`. "Sink-removed" preprocessing zeros these 7 component indices.
 - **Feature dims:** {20, 32, 392, 608, 1121, 1790, 2604, 2953} — same heuristic, content-bearing dims.
-- **Audit:** `testing/examples/nla_audit_findings.py` re-derives every load-bearing number from raw `.pt` artifacts. **129 PASS / 0 FAIL** (audits 1-10 base + 11-19 covering Path B, vocab atlas, discriminant validation, MAIN-44/47/48/34/70/71).
+- **Audit:** `testing/examples/nla_audit_findings.py` re-derives every load-bearing number from raw `.pt` artifacts. **178 PASS / 0 FAIL** (audits 1-10 base; 11-19 cover Path B, vocab atlas, discriminant validation, MAIN-44/47/48/34/70/71; 20-21 the round-trip faithfulness foundation; 17 the concept-arithmetic decode identities). Runs from a clean clone via the committed `../../data/` fallback. Dataset integrity: `testing/examples/nla_data_manifest.py --check`.
 
 ---
 
@@ -242,12 +242,13 @@ Capture → analyze → visualize → audit cycle:
 Qwen2.5-7B base model
     │
     ▼
-(testing/examples/{nla_aggregate_faithfulness.py, nla_gen_trajectory.py, nla_forced_continuation.py,
+(testing/examples/{nla_aggregate_faithfulness.py, nla_faithfulness.py, nla_forced_continuation.py,
                     nla_country_concept_vector.py, nla_vocab_atlas_capture.py,
                     nla_discriminant_stability_capture.py})
     │
     ▼
-testing/.cache/nla_artifacts/*.pt  (raw capture data, gitignored)
+testing/.cache/nla_artifacts/*.pt  (gitignored working cache)
+    │   committed canonical copy (git-LFS): research/arcs/nla-verbalizer/data/*.pt
     │
     ▼
 nla_geometric_features.py → geometric_features.pt
@@ -260,10 +261,10 @@ nla_vocab_atlas_render.py, nla_discriminant_*.py,
 nla_render_interpolation_flipbook.py, nla_hierarchical_classifier.py
     │
     ▼
-research/observations/figures/fig*.png  (committed)
+research/arcs/nla-verbalizer/observations/figures/fig*.png  (committed)
     │
     ▼
-nla_audit_findings.py — 129 PASS / 0 FAIL regression test
+nla_audit_findings.py — 178 PASS / 0 FAIL regression test
 ```
 
-Re-running the audit verifies that all numbers in the observation markdown files match what the artifacts actually contain. If anything drifts, the audit catches it.
+Re-running the audit re-derives every audited number from the artifacts and checks it against the script's expected constants (transcribed from the observation prose). If an artifact drifts from those expecteds, the audit catches it. (The expecteds live in the script, so prose↔script agreement is maintained by hand — the audit re-derives the artifact side, not the transcription.)

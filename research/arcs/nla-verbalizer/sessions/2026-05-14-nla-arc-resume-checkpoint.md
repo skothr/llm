@@ -110,7 +110,7 @@ Supersedes the earlier resume doc `2026-05-13-nla-arc-summary-for-compact.md` (w
 ### Figure quality cleanup (commit `2135289`)
 - Bumped DPI to 180 uniformly across all 13 render scripts
 - Fixed title-vs-first-row overlap on the 5 flipbook scripts (TITLE_RESERVE pattern)
-- Wrote `research/observations/figures/INVENTORY.md` cataloguing all 29 figures with full provenance (the inventory now covers 36, after fig31–37 were added in the final session)
+- Wrote `research/arcs/nla-verbalizer/observations/figures/INVENTORY.md` cataloguing all 29 figures with full provenance (the inventory now covers 36, after fig31–37 were added in the final session)
 
 ## The 6 most important findings (ranked)
 
@@ -195,7 +195,7 @@ PYTHONPATH=$PWD/testing /home/ai/ai-projects/llm/testing/.venv/bin/python \
     testing/examples/nla_audit_findings.py        # expect 129 PASS / 0 FAIL
 
 # Read the figure catalog
-$EDITOR research/observations/figures/INVENTORY.md
+$EDITOR research/arcs/nla-verbalizer/observations/figures/INVENTORY.md
 ```
 
 Then pick the next direction from the D1-D8 list in the 2026-05-30 update above (start with D3 — audit AV-decoder format-bias) and follow the linear skill's working flow: transition to In Progress with a starting comment, do the work, close with resolution comment + commit reference.

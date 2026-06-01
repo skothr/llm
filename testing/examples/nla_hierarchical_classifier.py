@@ -29,7 +29,6 @@ from typing import Any, cast
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 from collections import Counter
-from pathlib import Path
 import torch
 import matplotlib
 
@@ -38,9 +37,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "observations" / "figures"
+from _nla_artifacts import FIGURES as FIGDIR, load_artifact
+
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 SIBLING_COS_THRESHOLD = 0.80  # captures all 5 pairs that fig27 surfaced
@@ -119,8 +117,8 @@ def map_src_to_expected_cat(it: dict[str, Any]) -> str | None:
 
 
 def main() -> None:
-    vocab = torch.load(ARTIFACTS / "vocab_atlas.pt", weights_only=False)
-    pw = torch.load(ARTIFACTS / "pairwise_and_hotdims.pt", weights_only=False)
+    vocab = load_artifact("vocab_atlas.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
     labels: dict[int, str] = pw["labels"]
     sink_dims = sorted([idx for idx, lbl in labels.items() if lbl == "sink"])
     categories = list(vocab["categories"])

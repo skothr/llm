@@ -34,18 +34,14 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import time
-from pathlib import Path
 import torch
 
+from _nla_artifacts import write_artifact
 from llm_surgeon import surgery
 
 
 BASE_ID = "Qwen/Qwen2.5-7B-Instruct"
 LAYER = 20
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-ARTIFACTS.mkdir(parents=True, exist_ok=True)
-OUT = ARTIFACTS / "vocab_atlas.pt"
 
 
 # NOTE (2026-05-29): the existing committed `vocab_atlas.pt` (and the
@@ -174,6 +170,7 @@ def main() -> None:
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
+    out_path = write_artifact("vocab_atlas.pt")
     torch.save(
         {
             "captures": captures,
@@ -181,9 +178,9 @@ def main() -> None:
             "base_id": BASE_ID,
             "layer": LAYER,
         },
-        OUT,
+        out_path,
     )
-    print(f"\nWrote {len(captures)} captures to {OUT}")
+    print(f"\nWrote {len(captures)} captures to {out_path}")
 
 
 if __name__ == "__main__":

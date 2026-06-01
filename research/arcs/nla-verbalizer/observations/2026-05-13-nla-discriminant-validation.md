@@ -9,6 +9,8 @@
 
 After fixing the "all axes active" issue with discriminant directions (fig25/fig26 successors to fig23/fig24), three validations were needed to confirm the basis is **coherent**, **stable**, and actually **discriminating** between concepts:
 
+> **Terminology (per L6 in the arc README).** "Discriminant" here is shorthand for a per-category **mean-contrast** direction `d_C = unit(mean(h ∈ C) − mean(h ∉ C))` — *not* a Fisher LDA discriminant (which needs `S_W⁻¹(μ₁−μ₀)`; omitted because n=2–12 captures per category in 3584-dim makes `S_W` rank-deficient by orders of magnitude). Read "mean-contrast direction" wherever this file says "discriminant"; the name does not imply Fisher-style optimal separation.
+
 1. Are the 23 axes themselves coherent — do semantic siblings produce correlated axes; do opposites produce anti-correlated ones? → **fig27 connectivity**
 2. Do existing captures with known content project onto the expected discriminant? → **fig29 self-validation**
 3. Does the same anchor word in different contexts produce consistent discriminant readouts? → **fig28 stability**

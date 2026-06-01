@@ -47,10 +47,12 @@ cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import time
-from pathlib import Path
 
 import torch
 
+from _nla_artifacts import find_artifact, write_artifact
+
+_ARTIFACT = "forced_continuation.pt"
 from llm_surgeon import surgery
 from llm_surgeon.probe import load_av, nla_verbalize
 
@@ -58,8 +60,6 @@ from llm_surgeon.probe import load_av, nla_verbalize
 BASE_ID = "Qwen/Qwen2.5-7B-Instruct"
 LAYER = 20
 MAX_AV_TOKENS = 200
-
-ARTIFACT = Path("testing/.cache/nla_artifacts/forced_continuation.pt")
 
 # Each entry's "targets" lists strings to search for in the completion
 # token sequence. We capture h[20] at the first token of each match.
@@ -188,14 +188,13 @@ def capture_pair(model: Any, tok: Any, pair: dict[str, Any]) -> list[dict[str, A
 
 
 def main() -> None:
-    ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
-
-    if ARTIFACT.exists():
-        print(f"loading existing artifact: {ARTIFACT}")
-        artifact = torch.load(ARTIFACT, weights_only=False)
+    _existing = find_artifact(_ARTIFACT)
+    if _existing is not None:
+        print(f"loading existing artifact: {_existing}")
+        artifact = torch.load(_existing, weights_only=False)
     else:
         artifact = {"pairs": PAIRS, "captures": []}
-        torch.save(artifact, ARTIFACT)
+        torch.save(artifact, write_artifact(_ARTIFACT))
 
     if not artifact["captures"]:
         print(f"[1/2] capturing h[20] at forced + natural target positions ...")
@@ -210,7 +209,7 @@ def main() -> None:
             all_captures.extend(capture_pair(model, tok, pair))
 
         artifact["captures"] = all_captures
-        torch.save(artifact, ARTIFACT)
+        torch.save(artifact, write_artifact(_ARTIFACT))
         del model, tok
         gc.collect()
         if torch.cuda.is_available():
@@ -246,7 +245,7 @@ def main() -> None:
             )
             c["av_time"] = time.time() - t0
             print(f" {c['av_time']:.0f}s")
-            torch.save(artifact, ARTIFACT)
+            torch.save(artifact, write_artifact(_ARTIFACT))
         del av_model, av_tok
         gc.collect()
 

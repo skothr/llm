@@ -7,26 +7,26 @@ fig37: diagnostic — top-3 vocab anchor per step heatmap + ||h_t|| over t
 """
 
 import textwrap
-from pathlib import Path
 from typing import Any
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "observations" / "figures"
+from _nla_artifacts import FIGURES as FIGDIR
+from _nla_artifacts import load_artifact
+
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
-    flip = torch.load(ARTIFACTS / "dense_interp_near_pivot.pt", weights_only=False)
-    vocab = torch.load(ARTIFACTS / "vocab_atlas.pt", weights_only=False)
-    pw = torch.load(ARTIFACTS / "pairwise_and_hotdims.pt", weights_only=False)
+    flip = load_artifact("dense_interp_near_pivot.pt")
+    vocab = load_artifact("vocab_atlas.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
 
     labels: dict[int, str] = pw["labels"]
     sink_dims = sorted([idx for idx, lbl in labels.items() if lbl == "sink"])
@@ -52,12 +52,14 @@ def main() -> None:
         h_unit = h / (h.norm() + 1e-9)
         cos_to_anchors = (H_v_unit @ h_unit).numpy()
         top3 = np.argsort(-cos_to_anchors)[:3]
-        rows.append({
-            **s,
-            "top3_words": [v_words[i] for i in top3],
-            "top3_cos": [float(cos_to_anchors[i]) for i in top3],
-            "cos_to_anchors": cos_to_anchors,
-        })
+        rows.append(
+            {
+                **s,
+                "top3_words": [v_words[i] for i in top3],
+                "top3_cos": [float(cos_to_anchors[i]) for i in top3],
+                "cos_to_anchors": cos_to_anchors,
+            }
+        )
 
     # ---- fig36: flipbook strip ----
     TITLE_RESERVE = 0.025
@@ -73,47 +75,87 @@ def main() -> None:
         # t-marker column with background highlight
         ax_t = fig.add_axes((0.01, row_y, 0.10, row_h_frac))
         ax_t.axis("off")
-        ax_t.add_patch(plt.Rectangle((0.0, 0.0), 1.0, 1.0,
-                                       transform=ax_t.transAxes,
-                                       facecolor=bg_color, edgecolor="none"))
-        bar_color = (1 - t) * np.array([0.12, 0.46, 0.71]) + t * np.array([1.00, 0.50, 0.05])
+        ax_t.add_patch(
+            plt.Rectangle(
+                (0.0, 0.0),
+                1.0,
+                1.0,
+                transform=ax_t.transAxes,
+                facecolor=bg_color,
+                edgecolor="none",
+            )
+        )
+        bar_color = (1 - t) * np.array([0.12, 0.46, 0.71]) + t * np.array(
+            [1.00, 0.50, 0.05]
+        )
         ax_t.add_patch(plt.Rectangle((0.0, 0.35), t, 0.30, color=bar_color, alpha=0.85))
         ax_t.set_xlim(0, 1)
         ax_t.set_ylim(0, 1)
-        ax_t.text(0.5, 0.5, f"t = {t:.4f}", ha="center", va="center",
-                  fontsize=8, family="monospace",
-                  weight="bold" if in_dense else "normal")
+        ax_t.text(
+            0.5,
+            0.5,
+            f"t = {t:.4f}",
+            ha="center",
+            va="center",
+            fontsize=8,
+            family="monospace",
+            weight="bold" if in_dense else "normal",
+        )
 
         # top-3 anchors
         ax_n = fig.add_axes((0.12, row_y, 0.16, row_h_frac))
         ax_n.axis("off")
-        ax_n.add_patch(plt.Rectangle((0.0, 0.0), 1.0, 1.0,
-                                       transform=ax_n.transAxes,
-                                       facecolor=bg_color, edgecolor="none"))
+        ax_n.add_patch(
+            plt.Rectangle(
+                (0.0, 0.0),
+                1.0,
+                1.0,
+                transform=ax_n.transAxes,
+                facecolor=bg_color,
+                edgecolor="none",
+            )
+        )
         labels_top3 = "  ".join(
             f"{w}({c:+.2f})" for w, c in zip(r["top3_words"], r["top3_cos"])
         )
-        ax_n.text(0.02, 0.5, labels_top3, ha="left", va="center",
-                  fontsize=7, family="monospace")
+        ax_n.text(
+            0.02,
+            0.5,
+            labels_top3,
+            ha="left",
+            va="center",
+            fontsize=7,
+            family="monospace",
+        )
 
         # AV text
         ax_v = fig.add_axes((0.29, row_y, 0.69, row_h_frac))
         ax_v.axis("off")
-        ax_v.add_patch(plt.Rectangle((0.0, 0.0), 1.0, 1.0,
-                                       transform=ax_v.transAxes,
-                                       facecolor=bg_color, edgecolor="none"))
+        ax_v.add_patch(
+            plt.Rectangle(
+                (0.0, 0.0),
+                1.0,
+                1.0,
+                transform=ax_v.transAxes,
+                facecolor=bg_color,
+                edgecolor="none",
+            )
+        )
         first_para = (r["av_text"].split("\n\n") or [""])[0]
-        wrapped = textwrap.fill(first_para, width=160, break_long_words=False,
-                                  break_on_hyphens=False)
-        ax_v.text(0.005, 0.5, wrapped, ha="left", va="center",
-                  fontsize=7, family="serif")
+        wrapped = textwrap.fill(
+            first_para, width=160, break_long_words=False, break_on_hyphens=False
+        )
+        ax_v.text(
+            0.005, 0.5, wrapped, ha="left", va="center", fontsize=7, family="serif"
+        )
 
     fig.suptitle(
         f"fig36 — Dense interpolation near t=0.421 ({n_steps} steps, "
         f"dense zone [{dense_zone[0]}, {dense_zone[1]}] highlighted)\n"
         f"AR({flip['anchor_A_label']}) → AR({flip['anchor_B_label']}). "
         f"Top-3 vocab anchors per step (sink-removed cosine) + AV-decode first-paragraph.",
-        fontsize=10, y=0.995,
+        fontsize=10,
+        y=0.995,
     )
     fig.savefig(FIGDIR / "fig36_dense_interp_flipbook.png", dpi=180)
     plt.close(fig)
@@ -133,8 +175,9 @@ def main() -> None:
     # Top-1 anchor word per step (build category-flip series)
     top1_words = [r["top3_words"][0] for r in rows]
     # Find indices where top-1 changes
-    flip_indices = [i for i in range(1, len(top1_words))
-                     if top1_words[i] != top1_words[i - 1]]
+    flip_indices = [
+        i for i in range(1, len(top1_words)) if top1_words[i] != top1_words[i - 1]
+    ]
 
     fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
 
@@ -146,12 +189,23 @@ def main() -> None:
     prev_word = top1_words[0] if top1_words else ""
     for i, w in enumerate(top1_words):
         if i == 0 or w != prev_word:
-            ax.annotate(w, (ts[i], top1_cos[i]),
-                        textcoords="offset points", xytext=(0, 8),
-                        fontsize=7, ha="center", rotation=0)
+            ax.annotate(
+                w,
+                (ts[i], top1_cos[i]),
+                textcoords="offset points",
+                xytext=(0, 8),
+                fontsize=7,
+                ha="center",
+                rotation=0,
+            )
             prev_word = w
-    ax.axvspan(dense_zone[0], dense_zone[1], color="#fff5cc", alpha=0.7,
-               label=f"dense zone [{dense_zone[0]}, {dense_zone[1]}]")
+    ax.axvspan(
+        dense_zone[0],
+        dense_zone[1],
+        color="#fff5cc",
+        alpha=0.7,
+        label=f"dense zone [{dense_zone[0]}, {dense_zone[1]}]",
+    )
     for fi in flip_indices:
         ax.axvline(ts[fi], color="#d62728", linewidth=0.6, alpha=0.7, linestyle=":")
     ax.set_ylabel("top-1 anchor cosine")
@@ -168,8 +222,11 @@ def main() -> None:
     ax.plot(ts, norms, "o-", color="#2ca02c", linewidth=1.2)
     ax.axvspan(dense_zone[0], dense_zone[1], color="#fff5cc", alpha=0.7)
     ax.set_ylabel("||h_t||")
-    ax.set_title("fig37(mid) — ||h_t|| over t (should dip at midpoint for "
-                 "anti-parallel anchors)", fontsize=9)
+    ax.set_title(
+        "fig37(mid) — ||h_t|| over t (should dip at midpoint for "
+        "anti-parallel anchors)",
+        fontsize=9,
+    )
     ax.grid(True, alpha=0.3)
 
     # 3: step-to-step ||Δh_t||
@@ -179,9 +236,11 @@ def main() -> None:
     ax.axvspan(dense_zone[0], dense_zone[1], color="#fff5cc", alpha=0.7)
     ax.set_xlabel("t")
     ax.set_ylabel("||h_t - h_(t-1)||")
-    ax.set_title("fig37(bottom) — Per-step distance. Constant = linear interp "
-                 "(sanity check). Spike = artifact of resolution change.",
-                 fontsize=9)
+    ax.set_title(
+        "fig37(bottom) — Per-step distance. Constant = linear interp "
+        "(sanity check). Spike = artifact of resolution change.",
+        fontsize=9,
+    )
     ax.grid(True, alpha=0.3)
 
     fig.suptitle(
@@ -200,9 +259,11 @@ def main() -> None:
     for fi in flip_indices:
         t_before = rows[fi - 1]["t"]
         t_after = rows[fi]["t"]
-        print(f"  {top1_words[fi - 1]!r} → {top1_words[fi]!r}  "
-              f"between t={t_before:.4f} and t={t_after:.4f}  "
-              f"(Δt = {t_after - t_before:.4f})")
+        print(
+            f"  {top1_words[fi - 1]!r} → {top1_words[fi]!r}  "
+            f"between t={t_before:.4f} and t={t_after:.4f}  "
+            f"(Δt = {t_after - t_before:.4f})"
+        )
 
 
 if __name__ == "__main__":

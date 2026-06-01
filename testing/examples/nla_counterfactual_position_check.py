@@ -11,30 +11,37 @@ Outputs fig16_counterfactual_position_check.png.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
-from pathlib import Path
 import torch
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from _nla_artifacts import FIGURES as FIGDIR, load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "observations" / "figures"
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
-def draw_signature_glyph(ax: Any, cx: float, cy: float, values: np.ndarray,
-                          radius: float, scale_max: float, lw: float = 2.5) -> None:
+def draw_signature_glyph(
+    ax: Any,
+    cx: float,
+    cy: float,
+    values: np.ndarray,
+    radius: float,
+    scale_max: float,
+    lw: float = 2.5,
+) -> None:
     n = len(values)
     angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
     for i, v in enumerate(values):
@@ -44,8 +51,14 @@ def draw_signature_glyph(ax: Any, cx: float, cy: float, values: np.ndarray,
         x_end = cx + radius * mag * np.cos(angles[i])
         y_end = cy + radius * mag * np.sin(angles[i])
         color = "#d62728" if v >= 0 else "#1f77b4"
-        ax.plot([cx, x_end], [cy, y_end], color=color, linewidth=lw, alpha=0.9,
-                solid_capstyle="round")
+        ax.plot(
+            [cx, x_end],
+            [cy, y_end],
+            color=color,
+            linewidth=lw,
+            alpha=0.9,
+            solid_capstyle="round",
+        )
 
 
 def label_glyph_axes(ax: Any, feature_dims: list[int]) -> None:
@@ -57,8 +70,8 @@ def label_glyph_axes(ax: Any, feature_dims: list[int]) -> None:
 
 
 def main() -> None:
-    forced = torch.load(ARTIFACTS / "forced_continuation.pt", weights_only=False)
-    pw = torch.load(ARTIFACTS / "pairwise_and_hotdims.pt", weights_only=False)
+    forced = load_artifact("forced_continuation.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
     labels: dict[int, str] = pw["labels"]
     feature_dims = sorted([idx for idx, lbl in labels.items() if lbl == "feature"])
 
@@ -87,7 +100,9 @@ def main() -> None:
 
     # refusal_metaware: show all 3 forced tokens
     n = nat["refusal_metaware"]
-    for f in sorted(forced_caps_by_pair["refusal_metaware"], key=lambda c: c["abs_pos"]):
+    for f in sorted(
+        forced_caps_by_pair["refusal_metaware"], key=lambda c: c["abs_pos"]
+    ):
         dpos = f["abs_pos"] - n["abs_pos"]
         rows.append(("refusal_metaware", n, f, f"Δpos={dpos:+d}"))
 
@@ -115,12 +130,21 @@ def main() -> None:
         diff_norm_full = float((f_cap["h"] - n_cap["h"]).norm().item())
 
         cols = [
-            (f"natural  '{n_cap['actual_token']}'  pos={n_cap['abs_pos']}",
-             n_cap["h"][feature_dims].numpy(), abs_max),
-            (f"forced   '{f_cap['actual_token']}'  pos={f_cap['abs_pos']}  ({dpos_str})",
-             f_cap["h"][feature_dims].numpy(), abs_max),
-            (f"diff (||·||_feat = {diff_norm_feat:.2f}, full = {diff_norm_full:.1f})",
-             diff, abs_max_diff),
+            (
+                f"natural  '{n_cap['actual_token']}'  pos={n_cap['abs_pos']}",
+                n_cap["h"][feature_dims].numpy(),
+                abs_max,
+            ),
+            (
+                f"forced   '{f_cap['actual_token']}'  pos={f_cap['abs_pos']}  ({dpos_str})",
+                f_cap["h"][feature_dims].numpy(),
+                abs_max,
+            ),
+            (
+                f"diff (||·||_feat = {diff_norm_feat:.2f}, full = {diff_norm_full:.1f})",
+                diff,
+                abs_max_diff,
+            ),
         ]
         for c, (title, vec, normalizer) in enumerate(cols):
             ax = axes[r, c]
@@ -132,26 +156,42 @@ def main() -> None:
             ax.axis("off")
             ax.set_title(title, fontsize=9)
             if c == 0:
-                ax.text(-1.6, 1.4, f"{pid}\n{pair_meta['prompt']!r}",
-                        ha="left", va="top", fontsize=8,
-                        bbox={"boxstyle": "round,pad=0.3", "facecolor": "lightyellow", "edgecolor": "gray"})
+                ax.text(
+                    -1.6,
+                    1.4,
+                    f"{pid}\n{pair_meta['prompt']!r}",
+                    ha="left",
+                    va="top",
+                    fontsize=8,
+                    bbox={
+                        "boxstyle": "round,pad=0.3",
+                        "facecolor": "lightyellow",
+                        "edgecolor": "gray",
+                    },
+                )
 
-    fig.suptitle(f"fig16: position-matched counterfactual diff (corrects fig15)\n"
-                 f"For refusal_metaware, all 3 forced tokens shown to expose ||Δh||_feat sensitivity to position drift\n"
-                 f"feature dims = {feature_dims}",
-                 fontsize=11)
+    fig.suptitle(
+        f"fig16: position-matched counterfactual diff (corrects fig15)\n"
+        f"For refusal_metaware, all 3 forced tokens shown to expose ||Δh||_feat sensitivity to position drift\n"
+        f"feature dims = {feature_dims}",
+        fontsize=11,
+    )
     fig.tight_layout()
     fig.savefig(FIGDIR / "fig16_counterfactual_position_check.png", dpi=180)
     plt.close(fig)
     print(f"wrote {FIGDIR}/fig16_counterfactual_position_check.png")
 
     # Summary table to stdout
-    print(f"\n{'pair':<20} {'forced_token':>14} {'Δpos':>5}  {'||Δh||_feat':>12}  {'||Δh||_full':>12}")
+    print(
+        f"\n{'pair':<20} {'forced_token':>14} {'Δpos':>5}  {'||Δh||_feat':>12}  {'||Δh||_full':>12}"
+    )
     print("-" * 80)
     for _, n_cap, f_cap, _ in rows:
         diff = f_cap["h"] - n_cap["h"]
-        print(f"{f_cap['pair_id']:<20} {repr(f_cap['actual_token']):>14} {f_cap['abs_pos']-n_cap['abs_pos']:>+5}  "
-              f"{float(diff[feature_dims].norm().item()):>12.2f}  {float(diff.norm().item()):>12.2f}")
+        print(
+            f"{f_cap['pair_id']:<20} {repr(f_cap['actual_token']):>14} {f_cap['abs_pos'] - n_cap['abs_pos']:>+5}  "
+            f"{float(diff[feature_dims].norm().item()):>12.2f}  {float(diff.norm().item()):>12.2f}"
+        )
 
 
 if __name__ == "__main__":

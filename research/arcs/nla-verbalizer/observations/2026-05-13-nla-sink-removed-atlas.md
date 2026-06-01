@@ -4,7 +4,7 @@
 **Model:** Qwen/Qwen2.5-7B-Instruct, layer 20 (CPU bf16)
 **Toolkit:** `nla_sink_removed_atlas.py` + `nla_signature_atlas.py`
 **Inputs:** `pairwise_and_hotdims.pt` (167 h-vectors + dim-character labels)
-**Figures:** `fig7-fig11` in `research/observations/figures/`
+**Figures:** `fig7-fig11` in `research/arcs/nla-verbalizer/observations/figures/`
 
 ## Path-A goal
 

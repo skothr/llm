@@ -15,25 +15,33 @@ analysis doesn't require re-running the 30-min AV stage.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
 import gc
 import time
-from pathlib import Path
 
 import torch
 
+from _nla_artifacts import find_artifact, write_artifact
+
+_ARTIFACT = "rabbit_haiku_gen_trajectory.pt"
 from llm_surgeon import surgery
 from llm_surgeon.probe import (
-    AR_ID, AV_ID,
-    load_ar, load_av,
-    nla_reconstruct, nla_score, nla_verbalize,
+    AR_ID,
+    AV_ID,
+    load_ar,
+    load_av,
+    nla_reconstruct,
+    nla_score,
+    nla_verbalize,
 )
 
 
@@ -42,9 +50,6 @@ LAYER = 20
 MAX_NEW_TOKENS = 15
 MAX_AV_TOKENS = 200
 PROMPT = "Write me a haiku about a rabbit in spring."
-
-ARTIFACTS_DIR = Path("testing/.cache/nla_artifacts")
-ARTIFACT_FILE = ARTIFACTS_DIR / "rabbit_haiku_gen_trajectory.pt"
 
 WIDTH = 80
 BAR = "═" * WIDTH
@@ -61,7 +66,9 @@ def capture_generation_h() -> dict[str, Any]:
 
     enc = tok.apply_chat_template(
         [{"role": "user", "content": PROMPT}],
-        tokenize=True, add_generation_prompt=True, return_tensors="pt",
+        tokenize=True,
+        add_generation_prompt=True,
+        return_tensors="pt",
     )
     input_ids = enc["input_ids"]
     prompt_len = input_ids.shape[1]
@@ -93,11 +100,13 @@ def capture_generation_h() -> dict[str, Any]:
             h = layer_states[LAYER][0, -1, :]
         else:
             h = layer_states[LAYER][0, 0, :]
-        captures.append({
-            "step": step,
-            "token": gen_tokens[step],
-            "h": h.detach().float().cpu().clone(),
-        })
+        captures.append(
+            {
+                "step": step,
+                "token": gen_tokens[step],
+                "h": h.detach().float().cpu().clone(),
+            }
+        )
 
     del model, tok, gen
     gc.collect()
@@ -121,10 +130,15 @@ def verbalize_all(artifact: dict[str, Any]) -> None:
     print(f"   AV loaded in {time.time() - t0:.1f}s")
 
     for i, c in enumerate(artifact["captures"], 1):
-        print(f"   [{i}/{len(artifact['captures'])}] step={c['step']} → {c['token']!r} ...")
+        print(
+            f"   [{i}/{len(artifact['captures'])}] step={c['step']} → {c['token']!r} ..."
+        )
         t0 = time.time()
         c["av_text"] = nla_verbalize(
-            c["h"], model=av_model, tok=av_tok, meta=av_meta,
+            c["h"],
+            model=av_model,
+            tok=av_tok,
+            meta=av_meta,
             max_new_tokens=MAX_AV_TOKENS,
         )
         c["av_time"] = time.time() - t0
@@ -149,8 +163,10 @@ def reconstruct_all(artifact: dict[str, Any]) -> None:
         t0 = time.time()
         h_pred = nla_reconstruct(
             c["av_text"],
-            backbone=ar_backbone, value_head=ar_value_head,
-            tok=ar_tok, meta=ar_meta,
+            backbone=ar_backbone,
+            value_head=ar_value_head,
+            tok=ar_tok,
+            meta=ar_meta,
         )
         c["h_pred"] = h_pred
         c["ar_time"] = time.time() - t0
@@ -191,33 +207,36 @@ def print_report(artifact: dict[str, Any]) -> None:
     cos_vals = [c["cosine"] for c in artifact["captures"]]
     mse_vals = [c["normalized_mse"] for c in artifact["captures"]]
     print(f"\nSummary:")
-    print(f"  mean cosine:  {sum(cos_vals)/len(cos_vals):+.3f}  "
-          f"(min {min(cos_vals):+.3f}, max {max(cos_vals):+.3f})")
-    print(f"  mean MSE:     {sum(mse_vals)/len(mse_vals):.2f}  "
-          f"(min {min(mse_vals):.2f}, max {max(mse_vals):.2f})")
+    print(
+        f"  mean cosine:  {sum(cos_vals) / len(cos_vals):+.3f}  "
+        f"(min {min(cos_vals):+.3f}, max {max(cos_vals):+.3f})"
+    )
+    print(
+        f"  mean MSE:     {sum(mse_vals) / len(mse_vals):.2f}  "
+        f"(min {min(mse_vals):.2f}, max {max(mse_vals):.2f})"
+    )
 
 
 def main() -> None:
-    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-
-    if ARTIFACT_FILE.exists():
-        print(f"loading existing artifact: {ARTIFACT_FILE}")
-        artifact = torch.load(ARTIFACT_FILE, weights_only=False)
+    _existing = find_artifact(_ARTIFACT)
+    if _existing is not None:
+        print(f"loading existing artifact: {_existing}")
+        artifact = torch.load(_existing, weights_only=False)
         if "av_text" not in artifact["captures"][0]:
             print(f"  artifact has h but no AV text — running phase 2 ...")
             verbalize_all(artifact)
-            torch.save(artifact, ARTIFACT_FILE)
+            torch.save(artifact, write_artifact(_ARTIFACT))
         if "h_pred" not in artifact["captures"][0]:
             print(f"  artifact has AV text but no AR — running phase 3 ...")
             reconstruct_all(artifact)
-            torch.save(artifact, ARTIFACT_FILE)
+            torch.save(artifact, write_artifact(_ARTIFACT))
     else:
         artifact = capture_generation_h()
-        torch.save(artifact, ARTIFACT_FILE)
+        torch.save(artifact, write_artifact(_ARTIFACT))
         verbalize_all(artifact)
-        torch.save(artifact, ARTIFACT_FILE)
+        torch.save(artifact, write_artifact(_ARTIFACT))
         reconstruct_all(artifact)
-        torch.save(artifact, ARTIFACT_FILE)
+        torch.save(artifact, write_artifact(_ARTIFACT))
 
     print_report(artifact)
 

@@ -12,30 +12,37 @@ fraction of the CAV direction.
 """
 
 import os
+
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TQDM_DISABLE", "1")
 
 import sys
 from io import TextIOWrapper
 from typing import Any, cast
+
 cast(TextIOWrapper, sys.stdout).reconfigure(line_buffering=True)
 
-from pathlib import Path
 import torch
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from _nla_artifacts import FIGURES as FIGDIR, load_artifact
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = _REPO_ROOT / "testing" / ".cache" / "nla_artifacts"
-FIGDIR = _REPO_ROOT / "research" / "observations" / "figures"
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
 
-def draw_signature_glyph(ax: Any, cx: float, cy: float, values: np.ndarray,
-                          radius: float, scale_max: float, lw: float = 1.5) -> None:
+def draw_signature_glyph(
+    ax: Any,
+    cx: float,
+    cy: float,
+    values: np.ndarray,
+    radius: float,
+    scale_max: float,
+    lw: float = 1.5,
+) -> None:
     n = len(values)
     angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
     for i, v in enumerate(values):
@@ -45,13 +52,19 @@ def draw_signature_glyph(ax: Any, cx: float, cy: float, values: np.ndarray,
         x_end = cx + radius * mag * np.cos(angles[i])
         y_end = cy + radius * mag * np.sin(angles[i])
         color = "#d62728" if v >= 0 else "#1f77b4"
-        ax.plot([cx, x_end], [cy, y_end], color=color, linewidth=lw, alpha=0.9,
-                solid_capstyle="round")
+        ax.plot(
+            [cx, x_end],
+            [cy, y_end],
+            color=color,
+            linewidth=lw,
+            alpha=0.9,
+            solid_capstyle="round",
+        )
 
 
 def main() -> None:
-    cav_data = torch.load(ARTIFACTS / "country_concept_vector.pt", weights_only=False)
-    pw = torch.load(ARTIFACTS / "pairwise_and_hotdims.pt", weights_only=False)
+    cav_data = load_artifact("country_concept_vector.pt")
+    pw = load_artifact("pairwise_and_hotdims.pt")
     labels: dict[int, str] = pw["labels"]
     sink_dims = sorted([idx for idx, lbl in labels.items() if lbl == "sink"])
     feature_dims = sorted([idx for idx, lbl in labels.items() if lbl == "feature"])
@@ -75,14 +88,22 @@ def main() -> None:
     for j, idx in enumerate(top_idxs):
         val = direction_unit[idx].item()
         char = labels.get(idx, "(not in top-20 hot)")
-        share_av = (val ** 2) / float((direction_unit ** 2).sum().item())  # fraction of variance
-        print(f"  #{j+1:>2}  dim {idx:>5}: CAV_unit value = {val:+.4f}   "
-              f"sq share = {share_av:.4f}  char = {char}")
+        share_av = (val**2) / float(
+            (direction_unit**2).sum().item()
+        )  # fraction of variance
+        print(
+            f"  #{j + 1:>2}  dim {idx:>5}: CAV_unit value = {val:+.4f}   "
+            f"sq share = {share_av:.4f}  char = {char}"
+        )
 
     # specific dim 32 check
-    cos_e32 = float(direction_unit[32].item())  # CAV is already unit norm; cos with e_32 = direction_unit[32]
+    cos_e32 = float(
+        direction_unit[32].item()
+    )  # CAV is already unit norm; cos with e_32 = direction_unit[32]
     print(f"\nH3 specific: cos(CAV_unit, e_32) = direction_unit[32] = {cos_e32:+.4f}")
-    print(f"  (H3 prediction was >= +0.4; result: {'PASS' if abs(cos_e32) >= 0.4 else 'FAIL'})")
+    print(
+        f"  (H3 prediction was >= +0.4; result: {'PASS' if abs(cos_e32) >= 0.4 else 'FAIL'})"
+    )
 
     # feature-dim contributions
     print(f"\n--- CAV contribution at feature-classified dims ---")
@@ -102,7 +123,10 @@ def main() -> None:
         ("country_mean (8 prompts)", country_mean[feature_dims].numpy()),
         ("non_country_mean (8 prompts)", non_country_mean[feature_dims].numpy()),
         ("CAV @ unit (×150 for AV)", direction_unit[feature_dims].numpy() * 150.0),
-        ("country - non_country (raw diff)", (country_mean - non_country_mean)[feature_dims].numpy()),
+        (
+            "country - non_country (raw diff)",
+            (country_mean - non_country_mean)[feature_dims].numpy(),
+        ),
     ]
     abs_max = float(max(np.abs(v).max() for _, v in glyph_vectors))
 
@@ -117,15 +141,18 @@ def main() -> None:
         for ang, d, v in zip(angles_lbl, feature_dims, vec):
             x_lbl = 1.25 * np.cos(ang)
             y_lbl = 1.25 * np.sin(ang)
-            ax.annotate(f"d{d}\n{v:+.1f}", (x_lbl, y_lbl),
-                        ha="center", va="center", fontsize=8)
+            ax.annotate(
+                f"d{d}\n{v:+.1f}", (x_lbl, y_lbl), ha="center", va="center", fontsize=8
+            )
         ax.set_title(title, fontsize=11)
         ax.axis("off")
 
-    fig.suptitle(f"Country CAV direction as a signature glyph (feature-dim subspace)\n"
-                 f"cos(CAV_unit, e_32) = {cos_e32:+.4f}  "
-                 f"({'H3 PASS, dim-32-aligned' if abs(cos_e32) >= 0.4 else 'H3 FAIL, not dim-32-aligned'})",
-                 fontsize=12)
+    fig.suptitle(
+        f"Country CAV direction as a signature glyph (feature-dim subspace)\n"
+        f"cos(CAV_unit, e_32) = {cos_e32:+.4f}  "
+        f"({'H3 PASS, dim-32-aligned' if abs(cos_e32) >= 0.4 else 'H3 FAIL, not dim-32-aligned'})",
+        fontsize=12,
+    )
     fig.tight_layout()
     fig.savefig(FIGDIR / "fig13_cav_glyph.png", dpi=180)
     plt.close(fig)

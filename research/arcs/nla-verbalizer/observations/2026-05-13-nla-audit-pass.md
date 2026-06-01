@@ -4,6 +4,8 @@
 **Toolkit:** `nla_audit_findings.py`
 **Result:** **65 PASS / 0 FAIL.** Every load-bearing numerical claim verified from the four raw artifact files (without trusting the cached `pairwise_and_hotdims.pt` or `geometric_features.pt` intermediates).
 
+> **Write-time snapshot.** 65 was the count on 2026-05-13. The suite was later extended (93 → 129 → **178 PASS** as of 2026-05-31, now covering the faithfulness foundation and concept-arithmetic decode identities). See [`figures/INVENTORY.md`](figures/INVENTORY.md) and the arc README for the current count.
+
 ## Motivation
 
 A spot-check of fig15 (counterfactual glyph diff) revealed a position-drift confound — fig15's reported `||Δh||_feat = 35.55` for refusal_metaware was inflated from a true 28.06 by picking a forced token 10 positions away from natural. fig16 corrected that. The user's instruction "rigoramatize everything" called for the same scrutiny on all other claims.

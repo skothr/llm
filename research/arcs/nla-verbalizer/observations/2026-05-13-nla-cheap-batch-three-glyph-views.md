@@ -4,7 +4,7 @@
 **Model:** Qwen/Qwen2.5-7B-Instruct, layer 20 (CPU bf16)
 **Toolkit:** `nla_cav_glyph.py` + `nla_haiku_flipbook.py` + `nla_counterfactual_glyph_diff.py`
 **Inputs:** the four `.pt` artifacts in `testing/.cache/nla_artifacts/` (no model loading)
-**Figures:** `fig13`, `fig14`, `fig15` in `research/observations/figures/`
+**Figures:** `fig13`, `fig14`, `fig15` in `research/arcs/nla-verbalizer/observations/figures/`
 
 ## Path-batch goal
 

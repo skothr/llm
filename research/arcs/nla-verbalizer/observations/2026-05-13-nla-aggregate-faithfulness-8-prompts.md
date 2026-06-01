@@ -209,7 +209,7 @@ ln -s /home/ai/ai-projects/llm/testing/.cache testing/.cache
 Total runtime ~3 hours on warm cache, all-CPU (GPU optional and
 gave ~1.2x speedup on AV nf4, less than expected).
 
-Commit at time of observation: TBD (this file's commit).
+Commit at time of observation: `0f2c2cf`.
 
 ## References
 
