@@ -48,7 +48,6 @@ texput.log
 theory/build/llm-core-architecture/llm-core-architecture.pdf
 
 # Theory binary assets (large, not source)
-theory/archive/
 theory/sources/papers/
 
 # Python
@@ -59,6 +58,3 @@ testing/.venv/
 
 # Node (root-level lockfile is an empty stub)
 package-lock.json
-
-# Superpowers plans (auto-generated, not source)
-docs/superpowers/
